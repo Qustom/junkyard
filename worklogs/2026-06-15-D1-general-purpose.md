@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1
 - **Branch:** general-purpose/D1-inventory
-- **Commit:** 54b51d302e1d77ce905c25f6c8be7646903fcfea
+- **Commit:** 987c23f9e8245b23022a4c89be88375579219d03 (D1 implementation; this worklog's SHA-record fixup follows)
 
 ## What changed
 Implemented the run-state slot inventory model that owns "what is currently
