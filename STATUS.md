@@ -12,22 +12,39 @@ See `CLAUDE.md` → "The orchestrator loop".
 ---
 
 ## ▶ Next action (start here on a cold restart)
-M1 board is populated (19 tasks `A1`…`G4`, all `Todo`). Nothing dispatched yet. The first *unblocked*
-tasks (M0-only deps) are **A1, B1, C1** — they can run in parallel. Pick the top unblocked task from
-`TASKS.md`, claim it below, and dispatch per the orchestrator loop.
+**M1 wave 1 done & integrated into `main`** — A1, B1, C1 (the three M0-only foundations) verified
+green and merged. The next *unblocked* wave (dispatch in parallel, each in its OWN git worktree —
+see process note below):
+- **A2** — Interaction component (needs A1 ✅) · `general-purpose`
+- **A3** — In-dive clock (needs A1 ✅) · `general-purpose` (+ ui-ux-designer: meter readout)
+- **B2** — Room-graph generator (needs B1 ✅) · `general-purpose`
+- **D1** — Slot inventory data model (needs C1 ✅) · `general-purpose`
+
+Still blocked: **C2** (needs A2,B2,C1,D1), **B3** (needs B2,C1), **E1** (needs A2,D1). Build order &
+dep map: `design/M1_Tasks/Junkyard_M1_Breakdown.md` §4. Per-task specs in `design/M1_Tasks/`.
+
+> **PROCESS FIX (mandatory for parallel dispatch):** wave 1 ran 3 agents in ONE shared checkout →
+> `git switch` collisions; agents clobbered each other's untracked files and C1's commit swept in
+> stale A1 files (caught & excluded at integration). From now on dispatch parallel agents with
+> **`isolation: worktree`** (or serialize same-tree work). Logged in `DESIGN_DEVIATIONS.md`.
 
 ## In progress
-_(none — M1 not yet dispatched)_
-
-<!-- When a task is claimed, add a row here with everything needed to resume cold:
-| Task | Agent(s) | Branch | Started | State / next step |
-|---|---|---|---|---|
--->
+_(none — wave 1 complete; wave 2 not yet dispatched)_
 
 ## Blocked
 | Task | Blocked by | Note |
 |---|---|---|
 | ElevenLabs/PixelLab live generation | human | Connected; calling them spends paid credits — get human OK before a generation run. |
+| `Item` vs `JunkItem` schema reconcile | human/Director | Overlapping content schemas (see `DESIGN_DEVIATIONS.md`). Decide canonical/merge before content volume grows; saves/telemetry key off ids. |
+
+## Done (M1 — Greybox Core Loop)
+| Task | Proof |
+|---|---|
+| A1 — Player scene + top-down movement | merged `a6503fc`; `test_player_movement.gd` → **MOVE OK** (cardinal=diagonal=91.7px); worklog `worklogs/2026-06-15-A1-programmer.md` (impl `a0a485d`) |
+| B1 — Zone-piece authoring format (6 pieces) | merged `2e46681`; `tools/zone_piece_check.gd` → **ZONE PIECES OK** (6 load, sockets tagged, walkable); worklog `worklogs/2026-06-15-B1-programmer.md` (impl `81057c3`) |
+| C1 — `JunkItem` resource + 8-item catalog | integrated `24280f8`; `tools/check_junk_catalog.gd` → **JUNK CATALOG OK** (40× value spread); worklog `worklogs/2026-06-15-C1-game-director-designer.md` (impl `e32e286`) |
+
+_Integrated `main` re-verified after merge: `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK._
 
 ## Done (M0 — Pre-production & Tech Foundations)
 | Task | Proof |
