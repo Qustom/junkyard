@@ -26,15 +26,31 @@ M0 (pre-production & tech foundations) is **done**: repo + Git LFS, project skel
 For each task you pick up, run these steps. The four hard requirements — **consume a task, dispatch a subagent, set status in `STATUS.md`, capture a worklog+commit and any design deviation** — are non-negotiable.
 
 1. **Select.** Take the top *unblocked* task from `TASKS.md` (mirror of GitHub Projects). Respect `blockedBy`. For M1, the per-task specs live in `design/M1_Tasks/` (e.g. `A1_player_movement.md`) and `design/M1_Tasks/Junkyard_M1_Breakdown.md` holds the high-level sequence, dependency map, and build order — read the breakdown to pick the right next task.
-2. **Claim.** In `STATUS.md`, move it to **In progress** with the date, the assigned subagent(s), and its milestone.
+2. **Claim.** In `STATUS.md`, move it to **In progress** with the date, the assigned subagent(s), and its milestone. **Also set the task to `In Progress` on GitHub Projects** (see "Remote & board sync" below) — the board must reflect the claim, not just `STATUS.md`.
 3. **Brief.** Read the task spec (`design/M1_Tasks/<id>_*.md`), the matching `design/Role_Playbooks/NN_*.md`, and the relevant GDD/TDD sections. Capture the *design intent* in one line so deviations are detectable.
 4. **Dispatch — possibly more than one agent per task.** Spin up the matching subagent(s) (Agent tool, `subagent_type` = role name from the table below). Hand each: the task spec, its playbook path, the **definition of done**, and the **work-product contract** (next section).
    - **Most M1 tasks are programming-led** → dispatch `general-purpose` (the programmer) on the spec's "Code to generate" section.
    - **A single task can need multiple agents.** Many M1 specs have both a "Code to generate" half and an "Assets needed" half (placeholder sprites, tiles, UI, audio). Split it: the programmer builds the code/scene wiring while the matching asset role (`environment-artist`, `character-animator`, `ui-ux-designer`, `audio-designer-composer`) produces the placeholders. Decide the seam — if the code needs the asset to load, brief the asset agent first (or have the programmer stub a greybox `ColorRect`/placeholder so the two run in parallel), then integrate. One shared worklog per task records all agents that touched it and the commit(s).
    - **Independent tasks** → dispatch in parallel (one message, multiple Agent calls), respecting the `blockedBy` graph in the M1 breakdown.
 5. **Verify.** When it returns, check the definition of done yourself: run the smoke test / lint (see Commands), read the diff, read the worklog.
-6. **Record.** Update `STATUS.md` → **Done** (or **Blocked**, with why). Append any deviation to `design/DESIGN_DEVIATIONS.md`. Reflect status into GitHub Projects via `gh` (see `SETUP.md`).
+6. **Record.** Update `STATUS.md` → **Done** (or **Blocked**, with why). Append any deviation to `design/DESIGN_DEVIATIONS.md`. **Set the task to `Done` (or back to `Todo`/`In Progress`) on GitHub Projects** (see "Remote & board sync").
 7. **Surface judgment.** Any *vision / fun / tone / scope / date* call is the human's. Assemble the evidence and **recommend** — never decide silently. The M1 "is it fun?" gate is the canonical example.
+
+> **Two standing rules (apply throughout the loop, not just at one step):**
+> - **Push after every commit.** Whenever you commit to `main` (integration merges + bookkeeping), immediately `git push origin main`. `main` carries all integrated work, so pushing it syncs everything; subagent feature branches are ephemeral (merged then deleted) and are not pushed individually.
+> - **Mirror every task-status change to GitHub Projects**, the moment it happens — `In Progress` on claim (step 2), `Done`/`Blocked` on record (step 6) — so the board never lags `STATUS.md`.
+
+### Remote & board sync (concrete handles)
+
+- **Remote:** `origin` → `https://github.com/Qustom/junkyard.git`. After committing to `main`: `git push origin main` (LFS objects upload automatically). `gh` is authenticated as `Qustom` with `project` scope.
+- **GitHub Project:** #1 "Junkyard" — project id `PVT_kwHOAAXnOs4BasyM` (owner `Qustom`).
+- **Status field:** `PVTSSF_lAHOAAXnOs4BasyMzhVic7M` → options `Todo`=`f75ad846`, `In Progress`=`47fc9ee4`, `Done`=`98236657`.
+- **Set a task's status** (get the item id from `gh project item-list 1 --owner Qustom --format json`):
+  ```bash
+  gh project item-edit --id <ITEM_ID> --project-id PVT_kwHOAAXnOs4BasyM \
+    --field-id PVTSSF_lAHOAAXnOs4BasyMzhVic7M --single-select-option-id <STATUS_OPTION_ID>
+  ```
+  Each of the 19 M1 board items (`A1`…`G4`) already exists; you only change its Status.
 
 ### Work-product contract (every dispatched subagent MUST)
 
