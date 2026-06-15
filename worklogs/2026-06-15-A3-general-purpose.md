@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer) — full task, no asset-role split (greybox meter built inline)
 - **Milestone:** M1 (wave 2)
 - **Branch:** general-purpose/A3-dive-clock
-- **Commit:** c801eccb7a0567fb30fbae1b1a1ceb48a30b3c37 (worklog committed in this same commit via amend)
+- **Commit:** 55088e55789466d4865f42a81a5a936fbccdf16d (HEAD of general-purpose/A3-dive-clock)
 
 ## What changed
 Added the in-dive "light" clock — a single depleting run-state resource that drains
