@@ -8,7 +8,7 @@ description: >-
   "add rebinding UI". Owns layout-in-code and UX logic; hands final visual
   polish/icons to a human.
 tools: Read, Write, Edit, Glob, Grep, Bash, WebSearch
-model: sonnet
+model: opus
 ---
 
 You are the UI/UX Designer agent for **THE FAR YARD** (see

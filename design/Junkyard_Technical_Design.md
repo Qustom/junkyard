@@ -1,8 +1,9 @@
 # THE FAR YARD — Technical Design Document
 
 **Companion to:** `Junkyard_GDD.md` (v0.2)
-**Version 0.4 — living document**
+**Version 0.5 — living document**
 **Changelog:**
+- v0.5 — folded in M0 build deviations (see `DESIGN_DEVIATIONS.md`): clarified §4 testing — the **headless smoke test is the standing CI/boot gate** that ships first and persists, with GdUnit4 layered on top for logic tests (vendored in M1). MCP tooling deviations already reconciled in `Role_Subagents/README.md`.
 - v0.4 — **art pipeline decided: 2D pixel art only** (no Blender/3D tooling); HD-2D/rendered option rejected. Reconciled §4 and §9 to the pixel-art commitment.
 - v0.3 — consistency review: added `Telemetry` autoload + privacy note (§2), enumerated the 3 currencies / 4 tracks (§3), standardized testing on GdUnit4 and added a performance budget (§4), gave the economy workbook a home (§9), refreshed stale "to decide" language (M0, §8), and flagged the **open art-pipeline conflict** with a tooling note (§4).
 - v0.2 — folded in recommendations from the §9 research spikes (see `/research`). Resolved decisions promoted into §1–§4; §9 now records each question's outcome.
@@ -94,7 +95,7 @@ All three candidates **APPROVED**: MIT-licensed, Godot 4.6-compatible, actively 
 - **VCS:** Git + **Git LFS** for binary assets (art, audio). Host on GitHub/GitLab.
 - **Project structure:** feature-first folders (`/entities`, `/systems`, `/bands`, `/ui`, `/data`, `/art`, `/audio`), plus a `/tools` folder for editor scripts.
 - **CI/CD:** GitHub Actions running **`godot --headless`** for export builds and test runs; itch.io (Butler) for nightly playtest builds, Steam pipeline later.
-- **Testing:** standardize on **GdUnit4** (active Godot 4.x maintenance, CI runner, scene/integration support) for unit/integration tests on pure-logic systems (economy, exposure, save/load, proc-gen determinism). Headless smoke test in CI. *(GUT remains a viable alternative; pick one to avoid split tooling — GdUnit4 is the default.)*
+- **Testing:** the **headless smoke test** (`tools/ci_smoke_test.gd`, a plain `SceneTree` script) is the standing CI/boot gate — it ships first (green/red from day one, zero addon dependency) and **persists as the boot check**. Layer **GdUnit4** (active Godot 4.x maintenance, CI runner, scene/integration support) on top for unit/integration tests on pure-logic systems (economy, exposure, save/load, proc-gen determinism); the addon is vendored in M1. *(GUT remains a viable alternative; pick one to avoid split tooling — GdUnit4 is the default.)*
 - **Issue tracking / planning:** GitHub Projects, Linear, or Trello — team's choice.
 - **Profiling & performance budget:** Godot's built-in profiler + monitors; custom in-game perf overlay. **Targets (placeholder — confirm at M2):** 60 FPS on a mid-range laptop (e.g. integrated GPU) at the locked base resolution; frame budget ~16 ms; cap loot/enemy node counts per band and profile against them. Optimize only against these numbers (see §8).
 

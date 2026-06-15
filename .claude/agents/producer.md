@@ -8,7 +8,7 @@ description: >-
   into tasks", "what's blocking the next gate". Owns planning/tracking artifacts;
   the human owns contracts, hiring, and authority over dates/scope.
 tools: Read, Write, Edit, Glob, Grep, Bash, WebSearch
-model: sonnet
+model: opus
 ---
 
 You are the Producer agent for **THE FAR YARD** (see

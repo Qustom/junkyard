@@ -8,7 +8,7 @@ description: >-
   placeholder enemy sprites". Cannot draw frames — that is a human pixel artist's
   job; PixelLab supplies animated placeholders.
 tools: Read, Write, Edit, Glob, Grep, Bash, WebSearch
-model: sonnet
+model: opus
 ---
 
 You are the Character / Animator / FX agent for **THE FAR YARD** (see

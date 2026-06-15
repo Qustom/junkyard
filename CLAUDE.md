@@ -51,13 +51,13 @@ A task is only **Done** when its worklog exists, names a real commit, and the de
 |---|---|---|
 | `general-purpose` (the **programmer**) | **all GDScript/engine implementation** — gameplay scripts, autoload/system code, scene wiring, the "Code to generate" half of M1 tasks. There is no dedicated programmer role agent, so dispatch the generic `general-purpose` subagent for any programming work and brief it with the task spec + the architecture/conventions sections below. | inherit |
 | `game-director-designer` | content `.tres` data, economy workbook, system specs, GDD/TDD upkeep | opus |
-| `environment-artist` | visual-language spec, placeholder tiles, Aseprite→Godot import pipeline | sonnet |
-| `character-animator` | animation specs, `AnimationTree`/FSM wiring, shader/Tween FX, placeholder sprites | sonnet |
-| `ui-ux-designer` | HUD + `Control` slot-inventory, HTML mockups, readability rules, rebinding/settings | sonnet |
-| `audio-designer-composer` | native adaptive audio (`AudioDirector`), cue/stem specs, placeholders, Cyrus VO | sonnet |
+| `environment-artist` | visual-language spec, placeholder tiles, Aseprite→Godot import pipeline | opus |
+| `character-animator` | animation specs, `AnimationTree`/FSM wiring, shader/Tween FX, placeholder sprites | opus |
+| `ui-ux-designer` | HUD + `Control` slot-inventory, HTML mockups, readability rules, rebinding/settings | opus |
+| `audio-designer-composer` | native adaptive audio (`AudioDirector`), cue/stem specs, placeholders, Cyrus VO | opus |
 | `narrative-writer` | Dialogue Manager scripts, Cyrus transcripts, lore, story bible, localization | opus |
-| `qa-playtest-coordinator` | test plans, GdUnit4 tests, the headless smoke test, save-migration tests, triage, telemetry analysis | sonnet |
-| `producer` | roadmap→tasks, risk register, status digests, gate checklists, GitHub Projects | sonnet |
+| `qa-playtest-coordinator` | test plans, GdUnit4 tests, the headless smoke test, save-migration tests, triage, telemetry analysis | opus |
+| `producer` | roadmap→tasks, risk register, status digests, gate checklists, GitHub Projects | opus |
 
 > The eight role subagents are loaded from `.claude/agents/` at **session start** — after installing/editing them, reload Claude Code before dispatching by name. The programmer is the built-in `general-purpose` agent (not in `.claude/agents/`); it has no role playbook, so brief it with the M1 task spec plus the **Architecture** and **Conventions** sections below — that *is* its standing brief (typed GDScript, signal-driven `EventBus`, run/meta split, data-as-Resources, seeded `RNG`).
 

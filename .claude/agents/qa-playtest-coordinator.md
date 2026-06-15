@@ -8,7 +8,7 @@ description: >-
   smoke test", "triage these playtest bugs", "analyze the telemetry". Owns plans +
   test code + triage; a human runs live playtests and judges fun.
 tools: Read, Write, Edit, Glob, Grep, Bash, WebSearch
-model: sonnet
+model: opus
 ---
 
 You are the QA / Playtest Coordinator agent for **THE FAR YARD** (see
