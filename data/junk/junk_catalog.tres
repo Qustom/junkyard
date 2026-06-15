@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="JunkCatalog" load_steps=11 format=3]
+
+[ext_resource type="Script" uid="uid://djwmmykjdvsvy" path="res://data/junk/junk_catalog.gd" id="0"]
+[ext_resource type="Script" uid="uid://c5yr5fv0xp5ts" path="res://data/junk/junk_item.gd" id="9"]
+[ext_resource type="Resource" path="res://data/junk/items/junk_scrap_bolt.tres" id="1"]
+[ext_resource type="Resource" path="res://data/junk/items/junk_cable_coil.tres" id="2"]
+[ext_resource type="Resource" path="res://data/junk/items/junk_copper_pipe.tres" id="3"]
+[ext_resource type="Resource" path="res://data/junk/items/junk_hubcap.tres" id="4"]
+[ext_resource type="Resource" path="res://data/junk/items/junk_circuit_board.tres" id="5"]
+[ext_resource type="Resource" path="res://data/junk/items/junk_car_battery.tres" id="6"]
+[ext_resource type="Resource" path="res://data/junk/items/junk_radiator.tres" id="7"]
+[ext_resource type="Resource" path="res://data/junk/items/junk_engine_block.tres" id="8"]
+
+[resource]
+script = ExtResource("0")
+items = Array[ExtResource("9")]([ExtResource("1"), ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])
+spawn_weights = PackedFloat32Array(40, 30, 18, 14, 4, 8, 5, 2)

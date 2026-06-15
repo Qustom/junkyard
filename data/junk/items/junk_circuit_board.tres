@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="JunkItem" load_steps=2 format=3]
+
+[ext_resource type="Script" uid="uid://c5yr5fv0xp5ts" path="res://data/junk/junk_item.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"junk_circuit_board"
+display_name = "Circuit Board"
+slot_size = 1
+grid_footprint = Vector2i(1, 1)
+containment_flags = 1
+base_sell_value = 45
+greybox_color = Color(0.1, 0.6, 0.45, 1.0)
+greybox_shape = 3
