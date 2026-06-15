@@ -6,6 +6,9 @@
 script = ExtResource("1")
 id = &"junk_circuit_board"
 display_name = "Circuit Board"
+description = "A salvaged board dense with components. Temporal-band tech, high value for its size."
+origin_band = "temporal"
+tier = 3
 slot_size = 1
 grid_footprint = Vector2i(1, 1)
 containment_flags = 1

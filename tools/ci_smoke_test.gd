@@ -50,9 +50,10 @@ func _initialize() -> void:
 			failures.append("migration did not reach current schema_version")
 
 	# --- Resource loads as data ---------------------------------------------
-	var item: Resource = load("res://data/items/sample_junk.tres")
-	if item == null or item.base_value != 12:
-		failures.append("sample item Resource failed to load with expected data")
+	# C1b: Item was merged into the canonical JunkItem; smoke-load a real JunkItem.
+	var item: JunkItem = load("res://data/junk/items/junk_copper_pipe.tres") as JunkItem
+	if item == null or item.base_sell_value != 15 or item.tier != 2:
+		failures.append("sample JunkItem Resource failed to load with expected data")
 
 	# --- Verdict -------------------------------------------------------------
 	if failures.is_empty():

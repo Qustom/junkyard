@@ -40,6 +40,10 @@ func _initialize() -> void:
 		seen_ids[it.id] = true
 		if it.base_sell_value <= 0:
 			failures.append("item '%s' has non-positive base_sell_value" % it.id)
+		# C1b: every junk item must carry a depth/rarity tier (1–5) for B3's
+		# tier-threshold unlocks.
+		if it.tier < 1 or it.tier > 5:
+			failures.append("item '%s' has tier %d outside the 1–5 range" % [it.id, it.tier])
 		min_val = mini(min_val, it.base_sell_value)
 		max_val = maxi(max_val, it.base_sell_value)
 

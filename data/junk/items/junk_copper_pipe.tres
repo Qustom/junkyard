@@ -6,6 +6,9 @@
 script = ExtResource("1")
 id = &"junk_copper_pipe"
 display_name = "Copper Pipe"
+description = "A length of copper plumbing from the near band. The metal still has resale value."
+origin_band = "near"
+tier = 2
 slot_size = 2
 grid_footprint = Vector2i(2, 1)
 containment_flags = 1

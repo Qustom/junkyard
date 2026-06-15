@@ -6,6 +6,9 @@
 script = ExtResource("1")
 id = &"junk_engine_block"
 display_name = "Engine Block"
+description = "A massive cast-iron block from the far band. The biggest payday, if you can carry it out."
+origin_band = "far"
+tier = 5
 slot_size = 6
 grid_footprint = Vector2i(3, 3)
 containment_flags = 1

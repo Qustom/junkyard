@@ -6,6 +6,9 @@
 script = ExtResource("1")
 id = &"junk_car_battery"
 display_name = "Car Battery"
+description = "A heavy lead-acid battery from the temporal band. Valuable, but it eats slots."
+origin_band = "temporal"
+tier = 3
 slot_size = 3
 grid_footprint = Vector2i(2, 2)
 containment_flags = 1

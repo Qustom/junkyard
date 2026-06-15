@@ -6,9 +6,10 @@ extends Resource
 ## footprint, economic value, and greybox appearance. Designers add new junk by
 ## duplicating a `.tres` and editing fields in the inspector — no recompile.
 ##
-## NOTE: This is intentionally SEPARATE from the generic `Item` class (data/item.gd).
-## C1 introduces JunkItem as the M1 junk backbone; the Item/JunkItem overlap is a
-## known follow-up to reconcile post-M1 (see worklog).
+## C1b consolidation: this is now the SINGLE canonical content Resource for junk.
+## The former generic `Item` class (data/item.gd) was merged into JunkItem and
+## retired — its useful fields (`description`, `origin_band`) live here now;
+## `Item.needs_containment` is subsumed by `containment_flags`. (See worklog C1b.)
 
 enum GreyboxShape { RECT, CIRCLE, TRIANGLE, DIAMOND }
 
@@ -22,6 +23,15 @@ enum ContainmentFlag {
 # --- Identity ---
 @export var id: StringName = &""            # stable; used in events/telemetry/save
 @export var display_name: String = "Junk"
+@export_multiline var description: String = ""   # folded from Item; flavor / inspector text
+
+# --- Provenance (folded from Item) ---
+## Which depth band this junk originates from (GDD §4 "junkyard-ness" gradient).
+@export_enum("surface", "near", "temporal", "lateral", "far") var origin_band: String = "surface"
+
+## Depth / rarity tier (1–5). B3's depth curve gates higher tiers behind deeper
+## dives; tracks the value curve so "deeper unlocks higher tiers" reads honestly.
+@export_range(1, 5) var tier: int = 1
 
 # --- Slot footprint (D1 reads whichever model it implements) ---
 @export_range(1, 9) var slot_size: int = 1          # count-model: slots consumed
