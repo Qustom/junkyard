@@ -28,8 +28,16 @@ dep map: `design/M1_Tasks/Junkyard_M1_Breakdown.md` §4. Per-task specs in `desi
 > stale A1 files (caught & excluded at integration). From now on dispatch parallel agents with
 > **`isolation: worktree`** (or serialize same-tree work). Logged in `DESIGN_DEVIATIONS.md`.
 
-## In progress
-_(none — wave 1 complete; wave 2 not yet dispatched)_
+## In progress — M1 wave 2 (each agent in its OWN git worktree)
+EventBus signal contract for all four pre-locked on `main` (`a180f75`) so none edit `event_bus.gd`.
+Only **D1** edits `game_state.gd`; only **A2** edits `player.tscn`. → no shared-file merge conflicts expected.
+
+| Task | Agent(s) | Branch | Started | State / next step |
+|---|---|---|---|---|
+| A2 — Interaction component | general-purpose | `general-purpose/A2-interaction` | 2026-06-15 | Dispatched (worktree). Verify: prompt near interactable; `interact` fires `interaction_requested` naming target. |
+| A3 — In-dive clock | general-purpose (meter folded in) | `general-purpose/A3-dive-clock` | 2026-06-15 | Dispatched (worktree). Keys off existing `run_started`/`run_ended` (NOT new dive_started). Verify: meter depletes; zero → `dive_clock_timeout` once. |
+| B2 — Room-graph generator | general-purpose | `general-purpose/B2-band-generator` | 2026-06-15 | Dispatched (worktree). Real RNG API (`seed_from`, integer weighted pick). Verify: same seed → identical layout (test); connected/walkable. |
+| D1 — Slot inventory model | general-purpose | `general-purpose/D1-inventory` | 2026-06-15 | Dispatched (worktree). SOLE editor of `game_state.gd`; integrates with existing `start_run`/`unbanked_value`. Verify: accept/reject by capacity; full blocks; run-state only. |
 
 ## Blocked
 | Task | Blocked by | Note |
