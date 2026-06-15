@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git lfs *)",
+      "Bash(gh --version)",
+      "Bash(timeout 8 curl -sI https://github.com)",
+      "Bash(python3 -c \"import PIL; print\\('PIL ok'\\)\")",
+      "Bash(python3 -c \"import numpy; print\\('numpy ok'\\)\")",
+      "Bash(sudo -n true)",
+      "Bash(python3 -m pip --version)",
+      "Bash(timeout 20 curl -s \"https://api.github.com/repos/godotengine/godot/releases?per_page=10\")",
+      "Bash(timeout 20 curl -s \"https://api.github.com/repos/git-lfs/git-lfs/releases/latest\")",
+      "Bash(timeout 20 curl -s \"https://api.github.com/repos/cli/cli/releases/latest\")",
+      "Bash(python3 -m ensurepip --version)",
+      "Bash(mkdir -p ~/.local/bin ~/.cache/dl)",
+      "Read(//home/qustom/.cache/**)",
+      "Bash(timeout 20 curl -s \"https://api.github.com/repos/godotengine/godot/releases/tags/4.6.3-stable\")",
+      "Bash(curl -sL -o godot.zip \"https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip\")",
+      "Bash(echo \"godot download exit: $?\")",
+      "Bash(unzip -o -q godot.zip)",
+      "Bash(mv Godot_v4.6.3-stable_linux.x86_64 ~/.local/bin/godot)",
+      "Bash(chmod +x ~/.local/bin/godot)",
+      "Bash(python3 -c \"import zipfile; zipfile.ZipFile\\('godot.zip'\\).extractall\\('.'\\)\")",
+      "Bash(~/.local/bin/godot --version)",
+      "Bash(curl -sL -o get-pip.py https://bootstrap.pypa.io/get-pip.py)",
+      "Bash(python3 get-pip.py --user -q)",
+      "Bash(python3 -m pip install --user -q Pillow numpy)",
+      "Bash(python3 -c \"import PIL, numpy; print\\('PIL', PIL.__version__, '| numpy', numpy.__version__\\)\")",
+      "Bash(curl -sL -o get-pip38.py https://bootstrap.pypa.io/pip/3.8/get-pip.py)",
+      "Bash(python3 get-pip38.py --user -q)",
+      "Bash(python3 -m pip install --user -q \"Pillow<11\" \"numpy<1.25\")",
+      "WebFetch(domain:fal.ai)",
+      "WebFetch(domain:github.com)",
+      "Bash(awk '{print $2}')",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(gh project *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(i.get\\('content',{}\\).get\\('id'\\), '|', i['id'], '|', i['title']\\) for i in d['items']]\")",
+      "Bash(python3 -c \"import sys,json; print\\('items remaining:', len\\(json.load\\(sys.stdin\\)['items']\\)\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,102 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
+## What this is
+
+**THE FAR YARD** — a top-down **roguelite extraction + life-sim** game in **Godot 4.6.x / GDScript**. You inherit a junkyard that is secretly *every* junkyard; dive through portals into deeper "bands," salvage, extract before the instability kills you, and manage a life (and a debt) on the surface. Full design lives in `design/`:
+
+- `design/Junkyard_GDD.md` — game design (loop, economy, exposure, acts).
+- `design/Junkyard_Technical_Design.md` — engine/architecture decisions, **M0–M5 roadmap**, the source of truth for *how* we build.
+- `design/research/` — 13 closed research spikes feeding the decisions above.
+- `design/Role_Playbooks/` + `.claude/agents/` — the 8 non-programmer **role subagents** this orchestrator dispatches.
+
+## Project status: **M0 reached → orchestrator mode is ACTIVE**
+
+M0 (pre-production & tech foundations) is **done**: repo + Git LFS, project skeleton, autoloads, EventBus, seeded RNG, the decided save stub, a headless CI smoke test, pinned toolchain, and the installed subagents/MCP tools. See `STATUS.md`.
+
+**This document is now the orchestrator.** From here on, you (Claude Code) do not implement features by hand — you **consume tasks, dispatch the right role subagent, and enforce the work-product contract** below. Milestone work (M1 →) flows through that loop.
+
+---
+
+## The orchestrator loop
+
+For each task you pick up, run these steps. The four hard requirements — **consume a task, dispatch a subagent, set status in `STATUS.md`, capture a worklog+commit and any design deviation** — are non-negotiable.
+
+1. **Select.** Take the top *unblocked* task from `TASKS.md` (mirror of GitHub Projects). Respect `blockedBy`. For M1, the per-task specs live in `design/M1_Tasks/` (e.g. `A1_player_movement.md`) and `design/M1_Tasks/Junkyard_M1_Breakdown.md` holds the high-level sequence, dependency map, and build order — read the breakdown to pick the right next task.
+2. **Claim.** In `STATUS.md`, move it to **In progress** with the date, the assigned subagent(s), and its milestone.
+3. **Brief.** Read the task spec (`design/M1_Tasks/<id>_*.md`), the matching `design/Role_Playbooks/NN_*.md`, and the relevant GDD/TDD sections. Capture the *design intent* in one line so deviations are detectable.
+4. **Dispatch — possibly more than one agent per task.** Spin up the matching subagent(s) (Agent tool, `subagent_type` = role name from the table below). Hand each: the task spec, its playbook path, the **definition of done**, and the **work-product contract** (next section).
+   - **Most M1 tasks are programming-led** → dispatch `general-purpose` (the programmer) on the spec's "Code to generate" section.
+   - **A single task can need multiple agents.** Many M1 specs have both a "Code to generate" half and an "Assets needed" half (placeholder sprites, tiles, UI, audio). Split it: the programmer builds the code/scene wiring while the matching asset role (`environment-artist`, `character-animator`, `ui-ux-designer`, `audio-designer-composer`) produces the placeholders. Decide the seam — if the code needs the asset to load, brief the asset agent first (or have the programmer stub a greybox `ColorRect`/placeholder so the two run in parallel), then integrate. One shared worklog per task records all agents that touched it and the commit(s).
+   - **Independent tasks** → dispatch in parallel (one message, multiple Agent calls), respecting the `blockedBy` graph in the M1 breakdown.
+5. **Verify.** When it returns, check the definition of done yourself: run the smoke test / lint (see Commands), read the diff, read the worklog.
+6. **Record.** Update `STATUS.md` → **Done** (or **Blocked**, with why). Append any deviation to `design/DESIGN_DEVIATIONS.md`. Reflect status into GitHub Projects via `gh` (see `SETUP.md`).
+7. **Surface judgment.** Any *vision / fun / tone / scope / date* call is the human's. Assemble the evidence and **recommend** — never decide silently. The M1 "is it fun?" gate is the canonical example.
+
+### Work-product contract (every dispatched subagent MUST)
+
+- **Branch, don't touch `main` directly.** `git switch -c <role>/<task-id>`. When several agents share one task, they share one branch.
+- **Write a worklog** at `worklogs/<YYYY-MM-DD>-<task-id>-<role>.md` from `worklogs/TEMPLATE.md`, recording: the task, what changed, files touched, **the commit SHA**, tests/checks run, and a **Design deviations** section (what departed from GDD/TDD/playbook and why — or "none"). **One worklog per task, not per agent** — when a task is split across a programmer + an asset role, the single worklog lists every agent that contributed and every commit SHA.
+- **Commit** with a message referencing the task id (e.g. `M1-03: slot inventory grid`). End commit messages with the `Co-Authored-By` trailer (see repo git rules). The worklog records that commit SHA.
+- **Leave verifiable proof of done**: tests pass / smoke test green / a mockup link — per the playbook's "definition of done."
+
+A task is only **Done** when its worklog exists, names a real commit, and the definition of done is met. No worklog → not done.
+
+### Roster — which subagent for which work
+
+| Subagent (`subagent_type`) | Use it for | Model |
+|---|---|---|
+| `general-purpose` (the **programmer**) | **all GDScript/engine implementation** — gameplay scripts, autoload/system code, scene wiring, the "Code to generate" half of M1 tasks. There is no dedicated programmer role agent, so dispatch the generic `general-purpose` subagent for any programming work and brief it with the task spec + the architecture/conventions sections below. | inherit |
+| `game-director-designer` | content `.tres` data, economy workbook, system specs, GDD/TDD upkeep | opus |
+| `environment-artist` | visual-language spec, placeholder tiles, Aseprite→Godot import pipeline | sonnet |
+| `character-animator` | animation specs, `AnimationTree`/FSM wiring, shader/Tween FX, placeholder sprites | sonnet |
+| `ui-ux-designer` | HUD + `Control` slot-inventory, HTML mockups, readability rules, rebinding/settings | sonnet |
+| `audio-designer-composer` | native adaptive audio (`AudioDirector`), cue/stem specs, placeholders, Cyrus VO | sonnet |
+| `narrative-writer` | Dialogue Manager scripts, Cyrus transcripts, lore, story bible, localization | opus |
+| `qa-playtest-coordinator` | test plans, GdUnit4 tests, the headless smoke test, save-migration tests, triage, telemetry analysis | sonnet |
+| `producer` | roadmap→tasks, risk register, status digests, gate checklists, GitHub Projects | sonnet |
+
+> The eight role subagents are loaded from `.claude/agents/` at **session start** — after installing/editing them, reload Claude Code before dispatching by name. The programmer is the built-in `general-purpose` agent (not in `.claude/agents/`); it has no role playbook, so brief it with the M1 task spec plus the **Architecture** and **Conventions** sections below — that *is* its standing brief (typed GDScript, signal-driven `EventBus`, run/meta split, data-as-Resources, seeded `RNG`).
+
+---
+
+## Architecture (the load-bearing patterns — read before changing systems)
+
+- **Autoload singletons** (in `systems/`, registered in `project.godot`): `EventBus`, `RNG`, `GameState`, `SaveManager`, `AudioDirector`, `Telemetry`. Keep them few and disciplined.
+- **Signal-driven decoupling.** Systems talk through `EventBus` signals, not hard references. Add a signal there rather than wiring nodes directly.
+- **Run-state vs. meta-state is a hard boundary** (`systems/game_state.gd`). Run-state (current dive, unbanked haul) is disposable; meta-state (money, salvage, lore, exposure, knowledge, recipes) persists. Never persist run-state or let progress live in run-state.
+- **Data as Resources.** Items/recipes/enemies/bands/upgrades are `.tres` authored against `class_name` scripts (see `data/item.gd`). Content is data, not code — the `game-director-designer` owns it.
+- **Deterministic seeded RNG.** All randomness goes through the `RNG` autoload (`RNG.randi()`, never the global). Proc-gen must be reproducible from a seed — the smoke test enforces it.
+- **Saves** (`systems/save_manager.gd`): typed state → `FileAccess.store_var(v, false)` (objects OFF), per-slot `meta.sav`/`run.sav` + integer `schema_version`, ordered stepwise migrations, **atomic write + `.bak`**. Bump `schema_version` and add a migration step + a QA fixture on every schema change.
+
+## Conventions (locked)
+
+- **Typed GDScript everywhere** (the free perf win, TDD §1). C# only for a *proven* compute-bound kernel — decide per-system, never project-wide.
+- **Pixel art only** — no Blender/3D/rendered-to-2D. Texture filtering is OFF (`project.godot`). Band contrast = palette/silhouette/lighting/shaders.
+- **Pinned add-ons** (vet license + 4.6 compat before adding; prefer built-ins): Dialogue Manager v3.10.4, LimboAI v1.7.1 (Beehave v2.9.2 fallback), Phantom Camera v0.11.0.2. Vendor critical ones into the repo.
+- **Git LFS** tracks binary art/audio (`.gitattributes`); `.gd/.tres/.tscn/.import` stay plain-text diffable. **Never commit `APIKEYS.md`** (gitignored).
+- **GdUnit4** is the test framework (not GUT). Until the addon is vendored, the runnable check is the headless smoke test below.
+
+## Commands
+
+`godot` is installed user-local at `~/.local/bin/godot` (4.6.3-stable). Ensure `export PATH="$HOME/.local/bin:$PATH"`.
+
+```bash
+godot --headless --import                                   # build .godot, compile all scripts (catches parse errors)
+godot --headless --script res://tools/ci_smoke_test.gd      # M0 headless smoke test → exits non-zero on failure (CI gate)
+godot project.godot                                         # open in the editor (GUI)
+
+git lfs status                                              # confirm binaries are LFS pointers, not blobs
+claude mcp list                                             # health-check fal-ai / elevenlabs / pixellab MCP servers
+```
+
+New environment? Run `SETUP.md` first (toolchain, LFS, MCP keys, `gh auth login`).
+
+---
+
+## When NOT to use the orchestrator loop
+
+Trivial doc/typo fixes, answering questions, and inspecting state are direct work — don't spin up a subagent for them. The loop is for **milestone implementation tasks**. And if a request is a genuine design decision (cut a system, move a date, change the tone target), that is a recommendation to the human, not a task to dispatch.

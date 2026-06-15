@@ -1,0 +1,31 @@
+# THE FAR YARD — Git LFS tracking for binary game assets (TDD §4: "Git + Git LFS").
+# Source-of-truth art/audio binaries are large and re-saved often → LFS keeps the
+# git history lean. Text assets (.tres, .gd, .tscn, .import) stay in plain git so
+# they remain diffable and reviewable.
+
+# --- Images / sprites ---
+*.png   filter=lfs diff=lfs merge=lfs -text
+*.jpg   filter=lfs diff=lfs merge=lfs -text
+*.jpeg  filter=lfs diff=lfs merge=lfs -text
+*.webp  filter=lfs diff=lfs merge=lfs -text
+*.aseprite filter=lfs diff=lfs merge=lfs -text
+*.ase   filter=lfs diff=lfs merge=lfs -text
+*.kra   filter=lfs diff=lfs merge=lfs -text
+*.psd   filter=lfs diff=lfs merge=lfs -text
+
+# --- Audio ---
+*.wav   filter=lfs diff=lfs merge=lfs -text
+*.ogg   filter=lfs diff=lfs merge=lfs -text
+*.mp3   filter=lfs diff=lfs merge=lfs -text
+
+# --- Fonts / misc binary ---
+*.ttf   filter=lfs diff=lfs merge=lfs -text
+*.otf   filter=lfs diff=lfs merge=lfs -text
+*.xlsx  filter=lfs diff=lfs merge=lfs -text
+
+# --- Keep these as plain text (diffable), even though Godot calls them resources ---
+*.gd        text
+*.tres      text
+*.tscn      text
+*.import    text
+*.godot     text

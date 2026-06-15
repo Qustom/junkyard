@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  GODOT_VERSION: 4.6.3-stable
+
+jobs:
+  smoke:
+    name: Headless import + smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true  # pull LFS binaries so imports resolve
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}
+
+      - name: Install Godot (headless)
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-bin
+          url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          curl -sL -o /tmp/godot.zip "$url"
+          python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot.zip').extractall('$HOME/godot-bin')"
+          mv ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+
+      - name: Import project (compile scripts)
+        run: ~/godot-bin/godot --headless --import
+
+      - name: Run smoke test (CI gate)
+        run: ~/godot-bin/godot --headless --script res://tools/ci_smoke_test.gd
+
+      # When GdUnit4 is vendored (M1-07), add its headless runner here:
+      # - name: Unit tests
+      #   run: ~/godot-bin/godot --headless -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests

@@ -1,0 +1,25 @@
+# --- Secrets (NEVER COMMIT) ---
+APIKEYS.md
+*.key
+.env
+.env.*
+.mcp.local.json
+
+# --- Godot 4.x ---
+.godot/
+/android/
+/build/
+/exports/
+export_presets.cfg          # per-machine paths; keep out of VCS
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# --- Test / CI artifacts ---
+/reports/
+/.gdunit4_testadapter/

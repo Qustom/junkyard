@@ -1,0 +1,32 @@
+; THE FAR YARD — Godot project file.
+; M0 architecture spike (TDD §2): autoload singletons + EventBus + Resource data
+; + seeded RNG + save stub. Engine pinned to 4.6.x (see .godot-version).
+
+config_version=5
+
+[application]
+
+config/name="THE FAR YARD"
+config/description="Roguelite extraction + life-sim overworld. Design docs in design/."
+config/features=PackedStringArray("4.6", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+; Order matters: dependency-free services first, then state, then consumers.
+EventBus="*res://systems/event_bus.gd"
+RNG="*res://systems/rng.gd"
+GameState="*res://systems/game_state.gd"
+SaveManager="*res://systems/save_manager.gd"
+AudioDirector="*res://systems/audio_director.gd"
+Telemetry="*res://systems/telemetry.gd"
+
+[debug]
+
+gdscript/warnings/untyped_declaration=1
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+; Pixel-art commitment (TDD §4/§5): nearest-neighbour, filtering OFF.
+textures/canvas_textures/default_texture_filter=0
