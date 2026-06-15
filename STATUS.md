@@ -12,32 +12,27 @@ See `CLAUDE.md` → "The orchestrator loop".
 ---
 
 ## ▶ Next action (start here on a cold restart)
-**M1 wave 1 done & integrated into `main`** — A1, B1, C1 (the three M0-only foundations) verified
-green and merged. The next *unblocked* wave (dispatch in parallel, each in its OWN git worktree —
-see process note below):
-- **A2** — Interaction component (needs A1 ✅) · `general-purpose`
-- **A3** — In-dive clock (needs A1 ✅) · `general-purpose` (+ ui-ux-designer: meter readout)
-- **B2** — Room-graph generator (needs B1 ✅) · `general-purpose`
-- **D1** — Slot inventory data model (needs C1 ✅) · `general-purpose`
+**M1 waves 1 & 2 done & integrated into `main` (`b9a50f7`)** — A1, B1, C1, A2, A3, B2, D1 (7/19) all
+verified green. The next *unblocked* wave (dispatch each in its OWN git worktree; pre-lock any shared
+EventBus signals on `main` first, as in wave 2):
+- **D2** — Inventory UI (needs D1 ✅) · `ui-ux-designer` · independent → safe to parallelize
+- **E1** — Gate node + extract-and-bank (needs A2 ✅, D1 ✅) · `general-purpose` · ~independent (calls existing `GameState.bank_haul`)
+- **B3** — Band depth / "push deeper" (needs B2 ✅, C1 ✅) · `general-purpose` (+ game-director-designer: depth value curve)
+- **C2** — Junk pickup in the band (needs A2 ✅, B2 ✅, C1 ✅, D1 ✅) · `general-purpose`
 
-Still blocked: **C2** (needs A2,B2,C1,D1), **B3** (needs B2,C1), **E1** (needs A2,D1). Build order &
-dep map: `design/M1_Tasks/Junkyard_M1_Breakdown.md` §4. Per-task specs in `design/M1_Tasks/`.
+> **Sequencing note:** B3 and C2 both shape junk-by-depth (B3 defines the depth→value/density curve;
+> C2 consumes it to place pickups). Recommend **B3 before C2** (or share one branch) to avoid colliding
+> spawn logic. D2 + E1 are independent of both → run them in parallel with B3.
 
-> **PROCESS FIX (mandatory for parallel dispatch):** wave 1 ran 3 agents in ONE shared checkout →
-> `git switch` collisions; agents clobbered each other's untracked files and C1's commit swept in
-> stale A1 files (caught & excluded at integration). From now on dispatch parallel agents with
-> **`isolation: worktree`** (or serialize same-tree work). Logged in `DESIGN_DEVIATIONS.md`.
+Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → **F2** (F1,D2) →
+**G1/G2** → **G3** build → **G4** the fun gate. Dep map: `design/M1_Tasks/Junkyard_M1_Breakdown.md` §4.
 
-## In progress — M1 wave 2 (each agent in its OWN git worktree)
-EventBus signal contract for all four pre-locked on `main` (`a180f75`) so none edit `event_bus.gd`.
-Only **D1** edits `game_state.gd`; only **A2** edits `player.tscn`. → no shared-file merge conflicts expected.
+> **PROCESS (locked):** parallel agents run with **`isolation: worktree`**; pre-declare any shared
+> EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`. Both proven in wave 2
+> (zero shared-file collisions). See `DESIGN_DEVIATIONS.md`.
 
-| Task | Agent(s) | Branch | Started | State / next step |
-|---|---|---|---|---|
-| A2 — Interaction component | general-purpose | `general-purpose/A2-interaction` | 2026-06-15 | Dispatched (worktree). Verify: prompt near interactable; `interact` fires `interaction_requested` naming target. |
-| A3 — In-dive clock | general-purpose (meter folded in) | `general-purpose/A3-dive-clock` | 2026-06-15 | Dispatched (worktree). Keys off existing `run_started`/`run_ended` (NOT new dive_started). Verify: meter depletes; zero → `dive_clock_timeout` once. |
-| B2 — Room-graph generator | general-purpose | `general-purpose/B2-band-generator` | 2026-06-15 | Dispatched (worktree). Real RNG API (`seed_from`, integer weighted pick). Verify: same seed → identical layout (test); connected/walkable. |
-| D1 — Slot inventory model | general-purpose | `general-purpose/D1-inventory` | 2026-06-15 | Dispatched (worktree). SOLE editor of `game_state.gd`; integrates with existing `start_run`/`unbanked_value`. Verify: accept/reject by capacity; full blocks; run-state only. |
+## In progress
+_(none — waves 1 & 2 complete; wave 3 not yet dispatched)_
 
 ## Blocked
 | Task | Blocked by | Note |
@@ -51,8 +46,13 @@ Only **D1** edits `game_state.gd`; only **A2** edits `player.tscn`. → no share
 | A1 — Player scene + top-down movement | merged `a6503fc`; `test_player_movement.gd` → **MOVE OK** (cardinal=diagonal=91.7px); worklog `worklogs/2026-06-15-A1-programmer.md` (impl `a0a485d`) |
 | B1 — Zone-piece authoring format (6 pieces) | merged `2e46681`; `tools/zone_piece_check.gd` → **ZONE PIECES OK** (6 load, sockets tagged, walkable); worklog `worklogs/2026-06-15-B1-programmer.md` (impl `81057c3`) |
 | C1 — `JunkItem` resource + 8-item catalog | integrated `24280f8`; `tools/check_junk_catalog.gd` → **JUNK CATALOG OK** (40× value spread); worklog `worklogs/2026-06-15-C1-game-director-designer.md` (impl `e32e286`) |
+| A2 — Interaction component | merged `5f9bbc3`; `tests/test_interaction.gd` → **INTERACT OK** (focus/nearest, `interaction_requested`, hysteresis, enabled-guard); worklog `worklogs/2026-06-15-A2-general-purpose.md` (impl `b8f60e3`) |
+| A3 — In-dive clock + greybox meter | merged `744d6f5`; `tests/test_dive_clock.gd` → **DIVE CLOCK OK** (drains to 0, `dive_clock_timeout` once, run_ended stops, modify_light clamps); worklog `worklogs/2026-06-15-A3-general-purpose.md` (impl `55088e5`) |
+| B2 — Seeded room-graph generator | merged `869274b`; `tests/test_bandgen_determinism.tscn` → **BANDGEN OK** (9 seeds: same→identical fp, diff→differ, connected/walkable); worklog `worklogs/2026-06-15-B2-general-purpose.md` (impl `c060d6b`) |
+| D1 — Run-state slot inventory model | merged `b9a50f7`; `tests/test_run_inventory.gd` → **INV OK** (capacity reject, full blocks, pure can_accept, PLACEABLE gate, run-state-only); worklog `worklogs/2026-06-15-D1-general-purpose.md` (impl `987c23f`) |
 
-_Integrated `main` re-verified after merge: `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK._
+_Integrated `main` re-verified after every merge: `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK._
+_Open test-hygiene nit (QA): B2's determinism scene leaks "2 resources still in use at exit" (un-freed PackedScene instances) — cosmetic, non-failing; tidy when GdUnit4 is vendored (G2)._
 
 ## Done (M0 — Pre-production & Tech Foundations)
 | Task | Proof |
