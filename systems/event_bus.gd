@@ -22,3 +22,24 @@ signal exposure_threshold_crossed(threshold: int)
 signal player_died(cause: StringName)
 signal light_low()
 signal stamina_low()
+
+# === M1 wave-2 contract (orchestrator-locked 2026-06-15) =====================
+# Signals declared centrally so A2/A3/B2/D1 build against a stable contract and
+# never have to edit this file in parallel. Owning task noted per group.
+
+# --- Interaction (A2) --------------------------------------------------------
+signal interaction_requested(interactable_id: StringName, target: Node)
+signal interactable_focused(target: Node)
+signal interactable_unfocused(target: Node)
+
+# --- In-dive clock (A3) — clock resets on run_started, stops on run_ended ----
+signal dive_clock_changed(current: float, maximum: float)
+signal dive_clock_timeout()
+
+# --- Procedural band assembly (B2) -------------------------------------------
+signal band_generation_started(seed: int)
+signal band_generated(seed: int, piece_count: int)
+signal band_generation_failed(seed: int, reason: StringName)
+
+# --- Slot inventory (D1) -----------------------------------------------------
+signal run_inventory_changed(used_slots: int, max_slots: int)
