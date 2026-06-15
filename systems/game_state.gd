@@ -9,6 +9,7 @@ extends Node
 ## (minus a "pockets" fraction) on death; banked value flows into meta money.
 
 const POCKETS_FRACTION := 0.15  # GDD §6: fraction of unbanked haul kept on death
+const INVENTORY_CONFIG_PATH := "res://data/inventory/inventory_config.tres"  # D1: bag size source
 
 # --- META-STATE (persists; serialized by SaveManager) ------------------------
 var money: int = 0
@@ -24,6 +25,7 @@ var run_seed: int = 0
 var current_band: StringName = &""
 var current_depth: int = 0
 var unbanked_value: int = 0    # value carried but not yet banked at a gate
+var run_inventory: RunInventory      # D1: the carried-junk slot bag; fresh each run, never banked
 
 func _ready() -> void:
 	EventBus.player_died.connect(_on_player_died)
@@ -35,8 +37,21 @@ func start_run(band_id: StringName, seed: int) -> void:
 	current_band = band_id
 	current_depth = 0
 	unbanked_value = 0
+	run_inventory = _make_run_inventory()   # D1: fresh, empty bag sized from config
 	RNG.seed_from(seed)
 	EventBus.run_started.emit(band_id, seed)
+
+## D1: construct a fresh run-state bag, reading max_slots once from the authored
+## InventoryConfig. The capacity *value* is config-derived; the live bag stays
+## run-state (rebuilt every start_run, never persisted).
+func _make_run_inventory() -> RunInventory:
+	var inv := RunInventory.new()
+	var cfg: InventoryConfig = load(INVENTORY_CONFIG_PATH) as InventoryConfig
+	if cfg != null:
+		inv.max_slots = cfg.base_max_slots
+	else:
+		push_warning("InventoryConfig missing at %s; using RunInventory default." % INVENTORY_CONFIG_PATH)
+	return inv
 
 func enter_band(band_id: StringName) -> void:
 	current_band = band_id
@@ -51,6 +66,8 @@ func bank_haul() -> void:
 
 func end_run(reason: StringName, duration_s: float) -> void:
 	run_active = false
+	if run_inventory != null:        # D1: wipe the bag so it never survives into the next run
+		run_inventory.clear_run()
 	EventBus.run_ended.emit(reason, duration_s, current_depth)
 
 # --- Ledger ------------------------------------------------------------------
@@ -75,6 +92,8 @@ func _on_player_died(_cause: StringName) -> void:
 	var kept := int(round(float(unbanked_value) * POCKETS_FRACTION))
 	add_currency(&"money", kept, &"pockets")
 	unbanked_value = 0
+	if run_inventory != null:        # D1: carried junk is lost on death, never banked
+		run_inventory.clear_run()
 
 # --- Save bridge (SaveManager reads/writes these) ----------------------------
 func to_meta_dict() -> Dictionary:
