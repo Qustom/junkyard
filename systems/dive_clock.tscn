@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://systems/dive_clock.gd" id="1"]
+[ext_resource type="Resource" path="res://data/dive/dive_clock_config.tres" id="2"]
+
+[node name="DiveClock" type="Node"]
+script = ExtResource("1")
+config = ExtResource("2")

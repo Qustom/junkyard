@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="DiveClockConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/dive/dive_clock_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+max_light = 60.0
+start_light = 0.0
+drain_per_second = 1.0
