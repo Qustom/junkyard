@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1
 - **Branch:** general-purpose/B2-band-generator
-- **Commit:** 0eb950d203172581bee87e428cf2bd6d0c5b418b   ← required; a worklog without a real commit means the task is NOT done
+- **Commit:** c060d6ba30ab6d363b8f2c62d126a3a3f8ca49fb (implementation) — worklog SHA sync in the immediate follow-up commit on this branch.   ← required; a worklog without a real commit means the task is NOT done
 
 ## What changed
 Built the seeded modular room-graph generator (B2): it instances B1 zone-piece
