@@ -4,7 +4,7 @@
 - **Subagent:** programmer (general-purpose)
 - **Milestone:** M1
 - **Branch:** programmer/A1-player-movement
-- **Commit:** f09691ae621a0f0b9dcaf95dac21b8a253d1246f
+- **Commit:** a0a485d0c5785ec9ab19ba202a4f2c92cbf7726f   (A1 implementation; this worklog is a trailing commit on top)
 
 ## What changed
 Built the `Player` entity foundation: a `CharacterBody2D` scene with greybox
