@@ -4,7 +4,7 @@
 - **Subagent:** game-director-designer
 - **Milestone:** M1
 - **Branch:** game-director-designer/C1b-junk-schema
-- **Commit:** feabf965e1407e1f57b6316f68c9454a5d589109
+- **Commit:** 202fb6542eeffa42ba207844db25da84ae1212d6 (worklog SHA self-reference; see `git log` for the canonical hash)
 
 ## What changed
 Resolved human design decision #1 and unblocked B3. Merged the generic `Item`
