@@ -82,6 +82,11 @@ pause={
 ]
 }
 
+[global_group]
+
+; B1 zone-piece sockets — tagged connection points queried by B2.
+socket=""
+
 [layer_names]
 
 ; Locked A1 collision layer map (layer = "who I am", mask = "who I detect").
@@ -91,6 +96,8 @@ pause={
 2d_physics/layer_3="interactable"
 2d_physics/layer_4="enemy"
 2d_physics/layer_5="hazard"
+; B1 debug pawn — own layer so it never clashes with the locked 1-5 map.
+2d_physics/layer_6="pawn"
 
 [rendering]
 
