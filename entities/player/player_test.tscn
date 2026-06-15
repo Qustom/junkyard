@@ -1,0 +1,71 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://entities/player/player.tscn" id="1"]
+
+[sub_resource type="RectangleShape2D" id="wall_shape"]
+size = Vector2(40, 40)
+
+[node name="PlayerTest" type="Node2D"]
+
+[node name="Player" parent="." instance=ExtResource("1")]
+position = Vector2(320, 200)
+
+[node name="WallN" type="StaticBody2D" parent="."]
+position = Vector2(320, 60)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallN"]
+shape = SubResource("wall_shape")
+
+[node name="ColorRect" type="ColorRect" parent="WallN"]
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+color = Color(0.4, 0.4, 0.45, 1)
+
+[node name="WallE" type="StaticBody2D" parent="."]
+position = Vector2(520, 200)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallE"]
+shape = SubResource("wall_shape")
+
+[node name="ColorRect" type="ColorRect" parent="WallE"]
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+color = Color(0.4, 0.4, 0.45, 1)
+
+[node name="WallS" type="StaticBody2D" parent="."]
+position = Vector2(320, 360)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallS"]
+shape = SubResource("wall_shape")
+
+[node name="ColorRect" type="ColorRect" parent="WallS"]
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+color = Color(0.4, 0.4, 0.45, 1)
+
+[node name="WallW" type="StaticBody2D" parent="."]
+position = Vector2(120, 200)
+collision_layer = 2
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallW"]
+shape = SubResource("wall_shape")
+
+[node name="ColorRect" type="ColorRect" parent="WallW"]
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+color = Color(0.4, 0.4, 0.45, 1)
