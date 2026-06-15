@@ -12,7 +12,7 @@ extends Node
 ##     so autosave-on-sleep/extract can never corrupt meta-state.
 
 const SAVE_ROOT := "user://saves"
-const META_SCHEMA_VERSION := 1
+const META_SCHEMA_VERSION := 2
 const RUN_SCHEMA_VERSION := 1
 
 func slot_dir(slot: int) -> String:
@@ -80,6 +80,11 @@ func _migrate_meta(data: Dictionary) -> Dictionary:
 				# v0 -> v1: example shape — set defaults for newly added fields.
 				if not data.has("knowledge_level"):
 					data["knowledge_level"] = 0
+			1:
+				# v1 -> v2 (E1): banked_junk added. Old saves have none; default
+				# to an empty id list so from_meta_dict rehydrates to [].
+				if not data.has("banked_junk"):
+					data["banked_junk"] = []
 		v += 1
 		data["schema_version"] = v
 	return data
