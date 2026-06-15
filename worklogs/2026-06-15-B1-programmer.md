@@ -4,7 +4,7 @@
 - **Subagent:** programmer (general-purpose)
 - **Milestone:** M1
 - **Branch:** programmer/B1-zone-piece-format
-- **Commit:** 238a502639430a70d2d7f0db673c46e866de7622
+- **Commit:** 81057c31369f914685803a69b323dd449b414895
 
 ## What changed
 Defined the atomic zone-piece authoring format and authored the greybox piece
