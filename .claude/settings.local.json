@@ -36,7 +36,12 @@
       "Bash(gh repo *)",
       "Bash(gh project *)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(i.get\\('content',{}\\).get\\('id'\\), '|', i['id'], '|', i['title']\\) for i in d['items']]\")",
-      "Bash(python3 -c \"import sys,json; print\\('items remaining:', len\\(json.load\\(sys.stdin\\)['items']\\)\\)\")"
+      "Bash(python3 -c \"import sys,json; print\\('items remaining:', len\\(json.load\\(sys.stdin\\)['items']\\)\\)\")",
+      "Bash(cat)",
+      "Bash(python3 /tmp/populate_m1.py)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 /tmp/set_status.py)",
+      "Bash(rm -f /tmp/populate_m1.py /tmp/set_status.py)"
     ]
   }
 }

@@ -1,21 +1,33 @@
 # STATUS — THE FAR YARD
 
-The orchestrator's single source of truth for task state. Mirror of GitHub Projects.
-Updated every time a task is claimed, blocked, or finished. See `CLAUDE.md` → "The orchestrator loop".
+**Resume point — read this first.** This is where the orchestrator picks up after any interruption,
+with no other context. It holds only *current* work: what's in progress (and how to continue it),
+what's blocked, and the immediate next action. The full task queue lives in `TASKS.md`; the board
+mirror lives in GitHub Projects. Update this every time a task is claimed, blocked, or finished.
+See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)** next.
+**Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)**, in progress.
 **Last updated:** 2026-06-15
 
 ---
 
+## ▶ Next action (start here on a cold restart)
+M1 board is populated (19 tasks `A1`…`G4`, all `Todo`). Nothing dispatched yet. The first *unblocked*
+tasks (M0-only deps) are **A1, B1, C1** — they can run in parallel. Pick the top unblocked task from
+`TASKS.md`, claim it below, and dispatch per the orchestrator loop.
+
 ## In progress
 _(none — M1 not yet dispatched)_
+
+<!-- When a task is claimed, add a row here with everything needed to resume cold:
+| Task | Agent(s) | Branch | Started | State / next step |
+|---|---|---|---|---|
+-->
 
 ## Blocked
 | Task | Blocked by | Note |
 |---|---|---|
-| `gh` GitHub Projects sync | human | Needs interactive `gh auth login -s project` (see `SETUP.md`). |
-| ElevenLabs/PixelLab live generation | — | Connected; calling them spends paid credits — get human OK before a generation run. |
+| ElevenLabs/PixelLab live generation | human | Connected; calling them spends paid credits — get human OK before a generation run. |
 
 ## Done (M0 — Pre-production & Tech Foundations)
 | Task | Proof |
