@@ -20,25 +20,34 @@ EventBus signals on `main` first, as in wave 2):
 - **B3** — Band depth / "push deeper" (needs B2 ✅, C1 ✅) · `general-purpose` (+ game-director-designer: depth value curve)
 - **C2** — Junk pickup in the band (needs A2 ✅, B2 ✅, C1 ✅, D1 ✅) · `general-purpose`
 
-> **Sequencing note:** B3 and C2 both shape junk-by-depth (B3 defines the depth→value/density curve;
-> C2 consumes it to place pickups). Recommend **B3 before C2** (or share one branch) to avoid colliding
-> spawn logic. D2 + E1 are independent of both → run them in parallel with B3.
+**Wave-3 build order (design decisions now resolved):**
+- **3a (parallel, worktrees):** **C1b** schema task (merge `Item`→`JunkItem` + add `tier`) · **D2** inventory UI · **E1** gate/extract-bank. Independent files: C1b owns `junk_item.gd`+junk data, D2 owns `ui/`, E1 owns `game_state.gd`+`entities/gate/`.
+- **3b (after 3a):** **B3** (needs `tier` from C1b; +game-director-designer for the depth curve) → then **C2** (shares the `JunkPickup` entity + spawn path with B3). B3 before C2 to avoid colliding spawn logic.
 
 Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → **F2** (F1,D2) →
 **G1/G2** → **G3** build → **G4** the fun gate. Dep map: `design/M1_Tasks/Junkyard_M1_Breakdown.md` §4.
 
 > **PROCESS (locked):** parallel agents run with **`isolation: worktree`**; pre-declare any shared
-> EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`. Both proven in wave 2
-> (zero shared-file collisions). See `DESIGN_DEVIATIONS.md`.
+> EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
+> commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress
-_(none — waves 1 & 2 complete; wave 3 not yet dispatched)_
+## In progress — M1 wave 3a (each agent in its OWN git worktree)
+3a needs NO new EventBus signals (D2 uses existing `run_inventory_changed`; E1 reuses `run_ended`+`haul_banked`; C1b is data-only).
+
+| Task | Agent(s) | Branch | Started | State / next step |
+|---|---|---|---|---|
+| C1b — Junk schema consolidation (merge `Item`→`JunkItem` + `tier`) | game-director-designer | `game-director-designer/C1b-junk-schema` | 2026-06-15 | Dispatched (worktree). Sole editor of `junk_item.gd`+junk data. Verify: `Item` retired, `tier` authored on 8 items, catalog loads. |
+| D2 — Inventory UI (greybox) | ui-ux-designer | `ui-ux-designer/D2-inventory-ui` | 2026-06-15 | Dispatched (worktree). Owns `ui/`. Verify: grid reflects inventory live, capacity legible, drop gesture. |
+| E1 — Gate node + extract-and-bank | general-purpose | `general-purpose/E1-gate-extract` | 2026-06-15 | Dispatched (worktree). Sole editor of `game_state.gd`; banks items to `banked_junk`. Verify: gate ends run + transfers junk to meta; extract run-end fires. |
 
 ## Blocked
 | Task | Blocked by | Note |
 |---|---|---|
 | ElevenLabs/PixelLab live generation | human | Connected; calling them spends paid credits — get human OK before a generation run. |
-| `Item` vs `JunkItem` schema reconcile | human/Director | Overlapping content schemas (see `DESIGN_DEVIATIONS.md`). Decide canonical/merge before content volume grows; saves/telemetry key off ids. |
+
+> **M1 design decisions resolved by the human Director (2026-06-15)** — recorded in
+> `design/M1_Tasks/M1_Design_Decisions.md`. Both prior human-judgment items are now decided:
+> `Item`→`JunkItem` **merge** (became the schema task below); `max_light = 60` confirmed.
 
 ## Done (M1 — Greybox Core Loop)
 | Task | Proof |
