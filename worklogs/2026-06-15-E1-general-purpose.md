@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1
 - **Branch:** general-purpose/E1-gate-extract
-- **Commit:** 7da1a6546dc895f417baec1edc64ccd579eab4f4
+- **Commit:** 9b18d83db7f7d7142d1126073bfff7f57e59a0a5 (implementation); worklog SHA pointer follow-up commits this file)
 
 ## What changed
 Built the M1 extraction gate and the run-state → meta-state bank path. A greybox
