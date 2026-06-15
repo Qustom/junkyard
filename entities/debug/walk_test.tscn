@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://entities/debug/walk_test.gd" id="1_2axab"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_room_hub.tscn" id="2_bry6e"]
+
+[node name="WalkTest" type="Node2D" unique_id=12206852]
+script = ExtResource("1_2axab")
+piece_scene = ExtResource("2_bry6e")

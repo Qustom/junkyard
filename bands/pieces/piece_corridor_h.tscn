@@ -1,0 +1,25 @@
+[gd_scene format=4]
+
+[ext_resource type="Script" path="res://bands/pieces/zone_piece.gd" id="1_3mhy4"]
+[ext_resource type="TileSet" path="res://data/tilesets/greybox.tres" id="2_rctsi"]
+
+[node name="ZonePiece" type="Node2D" unique_id=1187403102]
+script = ExtResource("1_3mhy4")
+piece_id = &"piece_corridor_h"
+size_cells = Vector2i(8, 4)
+
+[node name="Geometry" type="TileMapLayer" parent="." unique_id=1229683865]
+tile_map_data = PackedByteArray("AAAAAAAAAAABAAAAAAABAAAAAAABAAAAAAACAAAAAAABAAAAAAADAAAAAAABAAAAAAAEAAAAAAABAAAAAAAFAAAAAAABAAAAAAAGAAAAAAABAAAAAAAHAAAAAAABAAAAAAAAAAEAAAAAAAAAAAABAAEAAAAAAAAAAAACAAEAAAAAAAAAAAADAAEAAAAAAAAAAAAEAAEAAAAAAAAAAAAFAAEAAAAAAAAAAAAGAAEAAAAAAAAAAAAHAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAABAAIAAAAAAAAAAAACAAIAAAAAAAAAAAADAAIAAAAAAAAAAAAEAAIAAAAAAAAAAAAFAAIAAAAAAAAAAAAGAAIAAAAAAAAAAAAHAAIAAAAAAAAAAAAAAAMAAAABAAAAAAABAAMAAAABAAAAAAACAAMAAAABAAAAAAADAAMAAAABAAAAAAAEAAMAAAABAAAAAAAFAAMAAAABAAAAAAAGAAMAAAABAAAAAAAHAAMAAAABAAAAAAA=")
+tile_set = ExtResource("2_rctsi")
+
+[node name="Sockets" type="Node2D" parent="." unique_id=211327906]
+
+[node name="Socket_W" type="Marker2D" parent="Sockets" unique_id=1510426640 groups=["socket"]]
+position = Vector2(24, 32)
+metadata/dir = 3
+metadata/width_cells = 2
+
+[node name="Socket_E" type="Marker2D" parent="Sockets" unique_id=1014143757 groups=["socket"]]
+position = Vector2(104, 32)
+metadata/dir = 1
+metadata/width_cells = 2
