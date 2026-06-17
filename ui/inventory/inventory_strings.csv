@@ -1,0 +1,7 @@
+keys,en
+INV_CAPACITY,{used} / {max} slots
+INV_FULL,BAG FULL — {used} / {max}
+INV_NO_RUN,No active dive
+INV_CELL_VALUE,${value}
+INV_CELL_PER_SLOT,{per_slot}/slot
+INV_CELL_SLOTS,{slots} slots

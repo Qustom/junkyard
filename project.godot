@@ -99,6 +99,12 @@ socket=""
 ; B1 debug pawn — own layer so it never clashes with the locked 1-5 map.
 2d_physics/layer_6="pawn"
 
+[internationalization]
+
+; D2: inventory UI strings are externalized (playbook: "externalize all strings
+; for localization"). tr() keys resolve against this CSV-derived translation.
+locale/translations=PackedStringArray("res://ui/inventory/inventory_strings.en.translation")
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
