@@ -34,6 +34,10 @@ var resolved_seed: int = 0
 ## The original seed requested by the caller (stable across retries).
 var requested_seed: int = 0
 
+## Deepest depth_index found by DepthGrader (entry == 0). 0 before grading or on
+## a single-piece band. Used to normalise depth_norm.
+var max_depth: int = 0
+
 
 ## Mark a piece's footprint as occupied. Cells are already band-global.
 func occupy(piece: PlacedPiece) -> void:
