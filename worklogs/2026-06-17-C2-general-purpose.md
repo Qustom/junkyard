@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1
 - **Branch:** general-purpose/C2-junk-pickup
-- **Commit:** c3387b97c77d35861bd97206d2c2528299dba622 (implementation; worklog SHA-fix follow-up amends on top)
+- **Commit:** 5adacac6a8203f7b06c4e26c1d36b4187d6be274 (implementation commit; this worklog SHA line is fixed via a no-op amend on top, so the recorded SHA names a commit containing the full C2 change)
 
 ## What changed
 Built the C2 integration capstone that ties content (C1b), generation (B2), depth
