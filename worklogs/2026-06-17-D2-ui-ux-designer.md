@@ -4,7 +4,7 @@
 - **Subagent:** ui-ux-designer
 - **Milestone:** M1
 - **Branch:** ui-ux-designer/D2-inventory-ui
-- **Commit:** 66b9f0d6c0f14365a09c9660a584b7b534f2cdad
+- **Commit:** 0681894b742d2ce73b9f26624ef5e77ea56a4156 (+ this worklog SHA-fix amend; see `git log`)
 
 ## What changed
 Built the greybox inventory UI: a persistent HUD `InventoryPanel` that is a pure
