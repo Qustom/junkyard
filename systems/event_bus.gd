@@ -48,3 +48,23 @@ signal run_inventory_changed(used_slots: int, max_slots: int)
 # Emitted by the JunkPlacer when a junk item is PLANNED into a piece (placement /
 # telemetry). NOT pickup: the interactive grab + junk_picked_up are C2's.
 signal junk_spawned(item_id: StringName, depth: int)
+
+# --- Junk pickup (C2) --------------------------------------------------------
+# Fired by a JunkPickup on every interact attempt — accepted OR rejected (full
+# bag). Payload is PRIMITIVES ONLY (no JunkItem ref) so Telemetry serializes it
+# straight to JSONL. `value` is base_sell_value SNAPSHOT at pickup time (already
+# depth-scaled by B3) so later value-tuning never rewrites historical telemetry.
+# `slot_size` rides along for capacity-pressure analytics ("value-per-slot taken
+# vs left"). `accepted == false` means D1 rejected it (full / no fit) and the
+# junk stayed in the world — still logged.
+signal junk_picked_up(item_id: StringName, value: int, slot_size: int, world_pos: Vector2, accepted: bool)
+
+# Fired by D2's drop gesture (one-line follow-up in D2, not wired here yet): the
+# player dropped a carried item back into the world. The JunkSpawner subscribes
+# and re-spawns a re-grabbable JunkPickup via spawn_one() at world_pos, so
+# drop-to-swap is reversible. Carries the JunkItem ref (this is an in-engine
+# gameplay event, not a telemetry row).
+signal junk_dropped(item: JunkItem, world_pos: Vector2)
+
+# Optional Telemetry hook: a band finished being populated with `count` pickups.
+signal band_populated(count: int)
