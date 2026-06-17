@@ -43,3 +43,8 @@ signal band_generation_failed(seed: int, reason: StringName)
 
 # --- Slot inventory (D1) -----------------------------------------------------
 signal run_inventory_changed(used_slots: int, max_slots: int)
+
+# --- Depth-scaled junk placement (B3) ----------------------------------------
+# Emitted by the JunkPlacer when a junk item is PLANNED into a piece (placement /
+# telemetry). NOT pickup: the interactive grab + junk_picked_up are C2's.
+signal junk_spawned(item_id: StringName, depth: int)

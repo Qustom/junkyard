@@ -39,6 +39,21 @@ var open_sockets: Array[OpenSocket] = []
 ## Part of the fingerprint so a rotated/mirrored mate is distinguishable.
 var mated_socket_index: int = -1
 
+# --- B3 depth axis (assigned by DepthGrader; default-safe pre-grading) --------
+
+## BFS hops from the entry piece (entry == 0). On the linear M1 spine this equals
+## the placement index. Set by DepthGrader.grade(); -1 means "not yet graded".
+var depth_index: int = -1
+
+## Normalised depth in [0,1] = depth_index / band.max_depth. 0 when max_depth==0.
+## Set by DepthGrader.grade(). The DepthCurve samples reward at this value.
+var depth_norm: float = 0.0
+
+## Shortest hops back to the entry gate (reverse BFS). On the linear spine this
+## equals depth_index, but it is computed independently so divergent branches get
+## correct return distances the moment B2's branch_chance goes > 0.
+var dist_to_gate: int = -1
+
 
 func pixel_position(cell_size_px: int) -> Vector2:
 	return Vector2(offset_cell * cell_size_px)
