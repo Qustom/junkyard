@@ -33,8 +33,9 @@ adds a new EventBus signal (e.g. `band_depth_changed`), pre-declare it on `main`
 
 | Task | Agent(s) | Branch | Started | State / next step |
 |---|---|---|---|---|
-| B3 — Band depth / "push deeper" | general-purpose (+ game-director-designer for depth→tier curve) | `general-purpose/B3-band-depth` | 2026-06-17 | Dispatched (worktree). Verify: depth increments, deeper bands gate higher `JunkItem.tier`, determinism holds. |
-| C2 — Junk pickup in the band | general-purpose | _pending B3_ | — | Queued after B3 (shares `JunkPickup` spawn path). |
+| C2 — Junk pickup in the band | general-purpose | `general-purpose/C2-junk-pickup` | 2026-06-17 | Dispatched (worktree). Builds the interactive `JunkPickup` entity (A2 + D1 `try_add`) + `JunkSpawner` consuming B3's `JunkPlacer.plan()`; emits `junk_picked_up`. Verify: junk spawns, interact picks up + removes + adds to inventory, full bag rejects + leaves it, event fires. |
+
+**B3 done & merged (`f78aff7`)** — `tests/test_band_depth.tscn` → **BAND DEPTH OK**; worklog `worklogs/2026-06-17-B3-general-purpose.md` (impl `ffbe875`). B3 deviations recorded for the wave-3 close-out. C2 is the last 3b task; after it lands, run the **wave-3 Director deviation close-out**.
 
 ## Blocked
 | Task | Blocked by | Note |
@@ -58,8 +59,9 @@ adds a new EventBus signal (e.g. `band_depth_changed`), pre-declare it on `main`
 | C1b — Junk schema consolidation (`Item`→`JunkItem` + `tier`) | merged `ce85b55`; `Item` retired, `tier` 1–5 authored on all 8 items, `check_junk_catalog.gd` → **JUNK CATALOG OK**, smoke repointed; worklog `worklogs/2026-06-15-C1b-game-director-designer.md` (impl `202fb65`) |
 | E1 — Gate node + extract-and-bank | merged `ce85b55`; `tests/test_extract_bank.gd` → **EXTRACT OK** (banks ids to `banked_junk`, wipes run-state, `haul_banked`+`run_ended[extract]`, no Money credit, zero-haul valid, persists by id); schema 1→2 + migration; worklog `worklogs/2026-06-15-E1-general-purpose.md` (impl `9b18d83`) |
 | D2 — Inventory UI (greybox) | merged `061c6aa`; `tests/test_inventory_ui.gd` → **INV UI OK** (pure projection, signal-driven rebuild, item+free-slot cell count, capacity label, BAG FULL state, drop gesture); worklog `worklogs/2026-06-17-D2-ui-ux-designer.md` (impl `0681894`) |
+| B3 — Band depth / "push deeper" | merged `f78aff7`; `tests/test_band_depth.tscn` → **BAND DEPTH OK** (depth BFS, depth-scaled value $31.9→$121.6, tier gate, plan determinism, no RNG cross-talk, duplicate isolation); worklog `worklogs/2026-06-17-B3-general-purpose.md` (impl `ffbe875`) |
 
-_Integrated `main` re-verified after every merge: `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK._
+_Integrated `main` re-verified after every merge: `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK._
 _Open test-hygiene nit (QA): B2's determinism scene leaks "2 resources still in use at exit" (un-freed PackedScene instances) — cosmetic, non-failing; tidy when GdUnit4 is vendored (G2)._
 
 ## Done (M0 — Pre-production & Tech Foundations)
