@@ -16,9 +16,17 @@ See `CLAUDE.md` → "The orchestrator loop".
 total: A1, B1, C1, A2, A3, B2, D1, C1b, E1, D2). Wave-3a deviations recorded in
 `design/DESIGN_DEVIATIONS.md` **awaiting Director evaluation at the wave-3 close-out** (after 3b).
 
-**Now in flight: wave 3b (sequential — B3 then C2; they share the `JunkPickup` entity + spawn path):**
-- **B3** — Band depth / "push deeper" (needs B2 ✅, C1/C1b ✅ for `tier`) · `general-purpose` (+ `game-director-designer` for the depth→tier value curve). **Do B3 first** so its spawn logic lands before C2 builds on it.
-- **C2** — Junk pickup in the band (needs A2 ✅, B2 ✅, C1b ✅, D1 ✅) · `general-purpose`. Reuses the `JunkPickup` entity + the `run_inventory_changed` path D2 already projects; also re-spawns junk dropped via D2's drop gesture.
+**Wave 3 COMPLETE & integrated into `main` (`aa9a610`)** — C1b, E1, D2, B3, C2 all merged + verified
+(12/19 M1 tasks done). **NEXT ACTION: run the wave-3 Director deviation close-out** — present every
+entry in `design/DESIGN_DEVIATIONS.md` (C1b/E1/D2/B3/C2) to the human Director for a Reviewed/Addressed
+verdict, then reapply + archive. **Do this before dispatching wave 4.**
+
+**Then-unblocked wave 4 (after the close-out):**
+- **E2** — death/timeout end-run + haul loss (needs E1 ✅, B3 ✅, D2 ✅, A3 ✅)
+- **E3** — respawn/return-to-surface (needs E1 ✅, A3 ✅)
+- **F1** — surface scene + sell screen / `banked_junk`→Money (needs E1 ✅) → **F2** sell UI (F1, D2 ✅)
+- Two recommended new tasks surfaced by wave-3 deviations (pending Director): a **v1→v2 meta save-migration QA fixture** (E1/schema), and a **D2 `junk_dropped` emit** to activate drop-to-swap re-spawn (C2/dropwiring).
+- Dep map: `design/M1_Tasks/Junkyard_M1_Breakdown.md` §4.
 
 Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → **F2** (F1,D2) →
 **G1/G2** → **G3** build → **G4** the fun gate. Dep map: `design/M1_Tasks/Junkyard_M1_Breakdown.md` §4.
@@ -27,15 +35,10 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — M1 wave 3b
-B3 and C2 share the `JunkPickup` entity + spawn path, so they run **sequentially** (B3 first). If B3
-adds a new EventBus signal (e.g. `band_depth_changed`), pre-declare it on `main` before dispatch.
-
-| Task | Agent(s) | Branch | Started | State / next step |
-|---|---|---|---|---|
-| C2 — Junk pickup in the band | general-purpose | `general-purpose/C2-junk-pickup` | 2026-06-17 | Dispatched (worktree). Builds the interactive `JunkPickup` entity (A2 + D1 `try_add`) + `JunkSpawner` consuming B3's `JunkPlacer.plan()`; emits `junk_picked_up`. Verify: junk spawns, interact picks up + removes + adds to inventory, full bag rejects + leaves it, event fires. |
-
-**B3 done & merged (`f78aff7`)** — `tests/test_band_depth.tscn` → **BAND DEPTH OK**; worklog `worklogs/2026-06-17-B3-general-purpose.md` (impl `ffbe875`). B3 deviations recorded for the wave-3 close-out. C2 is the last 3b task; after it lands, run the **wave-3 Director deviation close-out**.
+## In progress — wave-3 Director deviation close-out (no code tasks in flight)
+All wave-3 code (C1b, E1, D2, B3, C2) is merged & green. The only open work is the **deviation close-out**:
+the human Director must disposition each entry in `design/DESIGN_DEVIATIONS.md` (Reviewed/Addressed);
+then Claude reapplies to the design + archives to `DESIGN_DEVIATIONS_HISTORY.md`. No subagent is running.
 
 ## Blocked
 | Task | Blocked by | Note |
@@ -60,8 +63,9 @@ adds a new EventBus signal (e.g. `band_depth_changed`), pre-declare it on `main`
 | E1 — Gate node + extract-and-bank | merged `ce85b55`; `tests/test_extract_bank.gd` → **EXTRACT OK** (banks ids to `banked_junk`, wipes run-state, `haul_banked`+`run_ended[extract]`, no Money credit, zero-haul valid, persists by id); schema 1→2 + migration; worklog `worklogs/2026-06-15-E1-general-purpose.md` (impl `9b18d83`) |
 | D2 — Inventory UI (greybox) | merged `061c6aa`; `tests/test_inventory_ui.gd` → **INV UI OK** (pure projection, signal-driven rebuild, item+free-slot cell count, capacity label, BAG FULL state, drop gesture); worklog `worklogs/2026-06-17-D2-ui-ux-designer.md` (impl `0681894`) |
 | B3 — Band depth / "push deeper" | merged `f78aff7`; `tests/test_band_depth.tscn` → **BAND DEPTH OK** (depth BFS, depth-scaled value $31.9→$121.6, tier gate, plan determinism, no RNG cross-talk, duplicate isolation); worklog `worklogs/2026-06-17-B3-general-purpose.md` (impl `ffbe875`) |
+| C2 — Junk pickup in the band | merged `aa9a610`; `tests/test_junk_pickup.tscn` → **JUNK PICKUP OK** (24 pickups from B3 plan, interact adds+frees, full-bag reject leaves it in-world, `junk_picked_up` fires, drop re-spawn via `spawn_one`); worklog `worklogs/2026-06-17-C2-general-purpose.md` (impl `5adacac`) |
 
-_Integrated `main` re-verified after every merge: `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK._
+_Integrated `main` re-verified after every merge (full suite green): `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK · JUNK PICKUP OK._
 _Open test-hygiene nit (QA): B2's determinism scene leaks "2 resources still in use at exit" (un-freed PackedScene instances) — cosmetic, non-failing; tidy when GdUnit4 is vendored (G2)._
 
 ## Done (M0 — Pre-production & Tech Foundations)
