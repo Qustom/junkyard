@@ -1,41 +1,21 @@
-# Design Deviations Log
+# Design Deviations Log (active working set)
 
 Append-only record of every place the build departed from `Junkyard_GDD.md`,
-`Junkyard_Technical_Design.md`, the role playbooks, or the documented setup — with rationale
-and whether it needs human sign-off. The orchestrator appends here whenever a task is consumed
-(`CLAUDE.md` → "Record"). Each subagent's per-task deviations land here too.
+`Junkyard_Technical_Design.md`, the role playbooks, or the documented setup — with rationale.
+The orchestrator and each dispatched subagent append here whenever a task departs from spec.
+
+**Lifecycle (`CLAUDE.md` → "Wave close-out — deviation assessment"):** this file holds only
+**un-assessed** deviations from the current (or a not-yet-closed) wave. After each wave lands and is
+verified, every entry here is dispositioned **Reviewed** or **Addressed**, reapplied to the design
+(usually `design/M1_Tasks/M1_As_Built.md` or `M1_Design_Decisions.md`), then **moved to
+`DESIGN_DEVIATIONS_HISTORY.md`**. Between waves this file is ideally empty.
 
 Format: `[date] <id/area> — what changed vs. the doc · why · sign-off?`
 
 ---
 
-## M1 — first wave (A1, B1, C1), 2026-06-15
+## Open (un-assessed) deviations
 
-- `[2026-06-15] A1/B1/C1 — greybox placeholders stubbed inline` instead of dispatching the asset-role subagents (character-animator / environment-artist) or PixelLab. Player = a `ColorRect`; tiles = two flat-color tiles; junk = `greybox_color`+`greybox_shape` encoded in data. · Why: the specs mandate flat greybox ("ColorRect is fine", "two flat color tiles"), and live generation is human-gated (paid credits). · **Sign-off: not needed** — on-spec.
-- `[2026-06-15] A1 — extracted a pure `step_velocity()` helper` not in the spec sketch, so movement is unit-testable headlessly. · Behavior byte-identical; structural only. · **Sign-off: not needed.**
-- `[2026-06-15] B1 — fixed the spec's `opposite()` sketch` (`Dir[(int(d)+2)%4]` doesn't compile — the enum is a Dictionary) to `((int(d)+2)%4) as Dir`. Aligned geometry to A1's locked `world`=layer_2 and gave the debug pawn its own `pawn`=layer_6. · Why: spec sketch bug + keep the locked 1–5 layer map intact. · **Sign-off: not needed.**
-- `[2026-06-15] C1 — engine_block authored at `slot_size = 6`** (spec sketch showed 4) to sharpen the bulky-ceiling carry choice (pins value/slot at 20). · Tunable in playtest. · **Sign-off: not needed** (a balance placeholder, not a design change).
+*None. M1 waves 1 & 2 assessed and archived to `DESIGN_DEVIATIONS_HISTORY.md` on 2026-06-17.*
 
-## M1 — wave 2 (A3 in-dive clock), 2026-06-15
-
-- `[2026-06-15] A3 — clock keys off the existing run lifecycle signals, not new dive_started/dive_ended` · The A3 spec sketch proposed adding `dive_started()`/`dive_ended()` to EventBus and listening on them. Per the wave-2 orchestrator lock, EventBus already carries `run_started(band_id, seed)` / `run_ended(reason, duration_s, depth_reached)` (GameState is the sole emitter), so `DiveClock` resets/starts on `run_started` and stops on `run_ended` instead. The spec itself anticipated this ("dive_started may already exist"). No new signals added; `systems/event_bus.gd` and `systems/game_state.gd` untouched (D1 owns GameState this wave). · **Sign-off: not needed** — orchestrator-directed adaptation, on-spec intent.
-- `[2026-06-15] A3 — greybox dive-clock meter built inline by the programmer` instead of dispatching `ui-ux-designer`. `ui/dive_clock_meter.tscn` = `CanvasLayer > Control > ProgressBar`, red modulate under 25%. · Why: the spec mandates a flat greybox meter ("a ProgressBar … pure view"); no real asset work. · **Sign-off: not needed** — on-spec.
-- `[2026-06-15] A3 — tuning set to the spec's "Open questions" recommendations`: `max_light = 60`, `start_light = 0` (=> full), `drain_per_second = 1.0` (60s linear dive); junk does NOT modify the clock; light modeled as fuel via one guarded `modify_light(amount)` (clamp [0,max], emit changed, fire timeout-once on zero-cross) left wired-but-unused by M1 gameplay; `PROCESS_MODE_PAUSABLE`; `_fired_timeout` guard; clock is transient run-state (created/destroyed per dive, not an autoload). · **Sign-off: 60 is a playtest dial, flagged to the human as the most-tuned M1 number** (see worklog follow-ups).
-
-### ⚠ Open follow-ups surfaced by M1 wave 1 (need a human/Director call)
-
-- **`Item` vs `JunkItem` schema overlap.** `data/item.gd` (`class_name Item`, pre-existing generic content schema) and the new `data/junk/junk_item.gd` (`class_name JunkItem`) overlap heavily (id, display_name, slot_size, base_value/base_sell_value, needs_containment/containment_flags, origin_band). C1 was briefed NOT to touch `Item`. The sample `data/items/sample_junk.tres` is an `Item`, unrelated to the junk catalog. **Decision needed:** does `JunkItem` become canonical (retire/repurpose `Item`) or do the two merge? Saves/telemetry key off ids, so resolve before content volume grows. → Recommend a producer task post-wave-1.
-- **Parallel-dispatch tooling.** Running 3 agents in one shared checkout caused `git switch` collisions: agents clobbered each other's untracked files, and C1's commit swept in stale copies of A1's player files (excluded during integration). **Process fix:** dispatch parallel agents with `isolation: worktree` (or serialize same-tree work). Adopted going forward.
-
-## M1 — wave 2 (B2 band generator), 2026-06-15
-
-- `[2026-06-15] B2 — RNG API adaptation` (orchestrator-directed). Spec pseudocode used `RNG.set_seed`/`RNG.weighted_pick`/`RNG.fork`; the real `systems/rng.gd` exposes `seed_from`/`randi`/`randi_range`/`randf`/`pick`. Implemented: one `RNG.seed_from(seed)` per attempt + a self-written INTEGER cumulative-weight pick (`ZonePieceData.weight` scaled ×1000 to ints) rolled against `RNG.randi_range(0,total-1)`. Keeps all branch-affecting decisions on integer math for cross-build determinism. · **Sign-off: not needed** (orchestrator-directed; behavior matches spec intent).
-- `[2026-06-15] B2 — flush-edge socket alignment` instead of the spec's raw seam formula `cand_cell == sock_cell + dir`. B1's greybox pieces are solid-walled rects with openings at the EDGE and the socket marker one cell IN, so the raw formula double-counts the inset and overlaps mated pieces by two columns. `_alignment_offset` places the candidate flush against the host footprint edge (facing axis) and aligns socket lanes (perpendicular axis), pure integer-cell. · Adaptation to B1's actual geometry, not a design change. · **Sign-off: not needed.**
-- `[2026-06-15] B2 — connectivity = FLOOR-cell adjacency` (TileSet atlas (0,0)), not whole-footprint adjacency, so "connected AND walkable" is a true traversability guarantee (a shared perimeter wall does not count as a link). · **Sign-off: not needed.**
-- `[2026-06-15] B2 — acceptance test runs as a headless scene` (`tests/test_bandgen_determinism.tscn`), not a `--script` SceneTree harness, because `--script` mode does not register the `EventBus`/`RNG` autoload globals at compile time and the generator (correctly) uses the global form like `game_state.gd`. · **Sign-off: not needed.**
-## M1 — wave 2 (D1 slot inventory), 2026-06-15
-
-- `[2026-06-15] D1 — integrated with the REAL GameState`, not the spec's idealized `banked_money`/`cash_out`/`start_run()` excerpt. Added only `run_inventory` (run-state) + its fresh-on-`start_run` / clear-on-`end_run`+death lifecycle; left `money`/`unbanked_value`/`bank_haul`/pockets untouched. Junk→value reconciliation is C2/E1/F1's. · Why: the excerpt was illustrative; the real autoload already enforces the run/meta boundary. · **Sign-off: not needed** (orchestrator-directed).
-- `[2026-06-15] D1 — `max_slots` from an authored `InventoryConfig.tres`** (`base_max_slots = 12`), read once in `start_run()`. · Adopts the spec's own Open-question recommendation; keeps bag size designer-tunable. · **Sign-off: not needed.**
-- `[2026-06-15] D1 — RunInventory emits via a SceneTree-resolved EventBus lookup` (`_emit_changed()` → `Engine.get_main_loop().root.get_node("EventBus")`) instead of the compile-time `EventBus` global. · Why: a `class_name` script loaded standalone in a `--script` test harness can't resolve autoload *names* as globals (the Node still exists in the tree), so a direct `EventBus.…emit()` fails to compile there though it's fine in the booted project. Same node at runtime; keeps the model unit-testable. Still signal-driven, no hard refs. Did NOT edit `event_bus.gd` (signal already on main). · **Sign-off: not needed** (implementation detail, on-spec behaviorally).
-- `[2026-06-15] D1 — added `remove_at(index)` alongside `remove(item)`** and made `remove()` instance-identity-based. · Adopts the spec's Open-question recommendation (index-safe removal is D2's preferred path; `find()`-by-value alone was rejected). · **Sign-off: not needed.**
+*Wave 3 (C1b, D2, E1, …) deviations land here as those tasks integrate, then get assessed at the wave-3 close-out.*

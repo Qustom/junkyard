@@ -52,6 +52,19 @@ For each task you pick up, run these steps. The four hard requirements — **con
   ```
   Each of the 19 M1 board items (`A1`…`G4`) already exists; you only change its Status.
 
+### Wave close-out — deviation assessment (run after EVERY wave, before dispatching the next)
+
+A "wave" is a batch of tasks integrated together. After a wave lands on `main` and is verified, **stop and assess every entry in `design/DESIGN_DEVIATIONS.md`** before any new dispatch. For each deviation, do all four:
+
+1. **Disposition it** — exactly one of:
+   - **Reviewed** — the deviation is fine as-is; the design needs no change.
+   - **Addressed** — the design must change. Make the change now; if it's larger than an edit, **plan it as a new task** (add it to `TASKS.md` + the GitHub Projects board) and reference it.
+2. **Reapply to the overall design** — fold the now-canonical reality back into the design docs (`Junkyard_GDD.md`, `Junkyard_Technical_Design.md`, the task specs, `design/M1_Tasks/M1_As_Built.md`, or `M1_Design_Decisions.md`) so the design and the build agree. **Skip this only if "Addressed" means reverting the change entirely** (then the design already matches).
+3. **Archive it** — move the entry out of `design/DESIGN_DEVIATIONS.md` into `design/DESIGN_DEVIATIONS_HISTORY.md`, tagging it `Reviewed` / `Addressed`, the date, and where it was reapplied.
+4. After the sweep, `design/DESIGN_DEVIATIONS.md` holds only **un-assessed** (current-wave or newer) entries — ideally empty between waves.
+
+The canonical as-built reality of the M1 build lives in `design/M1_Tasks/M1_As_Built.md` (corrected APIs/contracts) and `design/M1_Tasks/M1_Design_Decisions.md` (human-ratified design calls) — those are the usual reapply targets.
+
 ### Work-product contract (every dispatched subagent MUST)
 
 - **Branch, don't touch `main` directly.** `git switch -c <role>/<task-id>`. When several agents share one task, they share one branch.
