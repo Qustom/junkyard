@@ -6,6 +6,9 @@
 script = ExtResource("1")
 id = &"junk_hubcap"
 display_name = "Hubcap"
+description = "A dented chrome hubcap from the near band. Bulky for its worth, but it cleans up."
+origin_band = "near"
+tier = 2
 slot_size = 2
 grid_footprint = Vector2i(2, 2)
 containment_flags = 1

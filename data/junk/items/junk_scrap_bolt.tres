@@ -6,6 +6,9 @@
 script = ExtResource("1")
 id = &"junk_scrap_bolt"
 display_name = "Scrap Bolt"
+description = "A rusted bolt off the surface heaps. Worth almost nothing, but it barely takes up room."
+origin_band = "surface"
+tier = 1
 slot_size = 1
 grid_footprint = Vector2i(1, 1)
 containment_flags = 1

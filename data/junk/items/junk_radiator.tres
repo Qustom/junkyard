@@ -6,6 +6,9 @@
 script = ExtResource("1")
 id = &"junk_radiator"
 display_name = "Radiator"
+description = "A finned cooling core from the lateral band. Big and awkward, but genuinely worth hauling."
+origin_band = "lateral"
+tier = 4
 slot_size = 4
 grid_footprint = Vector2i(3, 2)
 containment_flags = 1

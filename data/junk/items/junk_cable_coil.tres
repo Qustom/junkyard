@@ -6,6 +6,9 @@
 script = ExtResource("1")
 id = &"junk_cable_coil"
 display_name = "Cable Coil"
+description = "A tangled loop of insulated wire. Common surface salvage, easy to carry."
+origin_band = "surface"
+tier = 1
 slot_size = 1
 grid_footprint = Vector2i(1, 1)
 containment_flags = 1
