@@ -9,6 +9,11 @@ target for `Addressed` design deviations (see `CLAUDE.md` → "Wave close-out").
 **Scope:** reflects `main` through **M1 wave 2** (A1, B1, C1, A2, A3, B2, D1). Wave-3 additions
 (C1b's `tier`, E1's `banked_junk`, …) are folded in as those waves integrate.
 
+> ⏳ **Status: proposed, pending Director ratification.** The contents below were drafted from the
+> waves 1–2 deviations, which are **awaiting the Director's Reviewed/Addressed verdicts** in
+> `DESIGN_DEVIATIONS.md`. Once ratified, this banner is removed. (The API/contract facts here are
+> as-built truths regardless; what's pending is the formal disposition of each underlying deviation.)
+
 ---
 
 ## Autoload APIs (real surface)

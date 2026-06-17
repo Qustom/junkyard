@@ -54,14 +54,18 @@ For each task you pick up, run these steps. The four hard requirements — **con
 
 ### Wave close-out — deviation assessment (run after EVERY wave, before dispatching the next)
 
-A "wave" is a batch of tasks integrated together. After a wave lands on `main` and is verified, **stop and assess every entry in `design/DESIGN_DEVIATIONS.md`** before any new dispatch. For each deviation, do all four:
+A "wave" is a batch of tasks integrated together. After a wave lands on `main` and is verified, **stop and assess every entry in `design/DESIGN_DEVIATIONS.md`** before any new dispatch.
 
-1. **Disposition it** — exactly one of:
+**The human Director dispositions every deviation — not Claude.** Claude's job is to *assemble* each deviation, attach a clear **recommendation** and the evidence, and **present them to the Director for evaluation**. Claude never self-dispositions a deviation or proceeds on its own judgment, even when the call seems obvious. Only after the Director gives a verdict on each does Claude reapply + archive. For each deviation:
+
+1. **The Director dispositions it** — exactly one of (Claude presents a recommendation; the Director decides):
    - **Reviewed** — the deviation is fine as-is; the design needs no change.
-   - **Addressed** — the design must change. Make the change now; if it's larger than an edit, **plan it as a new task** (add it to `TASKS.md` + the GitHub Projects board) and reference it.
-2. **Reapply to the overall design** — fold the now-canonical reality back into the design docs (`Junkyard_GDD.md`, `Junkyard_Technical_Design.md`, the task specs, `design/M1_Tasks/M1_As_Built.md`, or `M1_Design_Decisions.md`) so the design and the build agree. **Skip this only if "Addressed" means reverting the change entirely** (then the design already matches).
-3. **Archive it** — move the entry out of `design/DESIGN_DEVIATIONS.md` into `design/DESIGN_DEVIATIONS_HISTORY.md`, tagging it `Reviewed` / `Addressed`, the date, and where it was reapplied.
+   - **Addressed** — the design must change. Claude makes the change per the Director's call; if it's larger than an edit, **plan it as a new task** (add it to `TASKS.md` + the GitHub Projects board) and reference it.
+2. **Reapply to the overall design** (Claude, per the verdict) — fold the now-canonical reality back into the design docs (`Junkyard_GDD.md`, `Junkyard_Technical_Design.md`, the task specs, `design/M1_Tasks/M1_As_Built.md`, or `M1_Design_Decisions.md`) so the design and the build agree. **Skip this only if "Addressed" means reverting the change entirely** (then the design already matches).
+3. **Archive it** (Claude) — move the entry out of `design/DESIGN_DEVIATIONS.md` into `design/DESIGN_DEVIATIONS_HISTORY.md`, tagging it with the Director's disposition (`Reviewed` / `Addressed`), the date, and where it was reapplied.
 4. After the sweep, `design/DESIGN_DEVIATIONS.md` holds only **un-assessed** (current-wave or newer) entries — ideally empty between waves.
+
+Claude must not skip, batch-approve on the Director's behalf, or treat silence as consent — every deviation needs an explicit Director verdict.
 
 The canonical as-built reality of the M1 build lives in `design/M1_Tasks/M1_As_Built.md` (corrected APIs/contracts) and `design/M1_Tasks/M1_Design_Decisions.md` (human-ratified design calls) — those are the usual reapply targets.
 
