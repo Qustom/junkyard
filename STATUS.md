@@ -7,22 +7,18 @@ mirror lives in GitHub Projects. Update this every time a task is claimed, block
 See `CLAUDE.md` → "The orchestrator loop".
 
 **Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)**, in progress.
-**Last updated:** 2026-06-15
+**Last updated:** 2026-06-17
 
 ---
 
 ## ▶ Next action (start here on a cold restart)
-**M1 waves 1 & 2 done & integrated into `main` (`b9a50f7`)** — A1, B1, C1, A2, A3, B2, D1 (7/19) all
-verified green. The next *unblocked* wave (dispatch each in its OWN git worktree; pre-lock any shared
-EventBus signals on `main` first, as in wave 2):
-- **D2** — Inventory UI (needs D1 ✅) · `ui-ux-designer` · independent → safe to parallelize
-- **E1** — Gate node + extract-and-bank (needs A2 ✅, D1 ✅) · `general-purpose` · ~independent (calls existing `GameState.bank_haul`)
-- **B3** — Band depth / "push deeper" (needs B2 ✅, C1 ✅) · `general-purpose` (+ game-director-designer: depth value curve)
-- **C2** — Junk pickup in the band (needs A2 ✅, B2 ✅, C1 ✅, D1 ✅) · `general-purpose`
+**M1 wave 3a done & integrated into `main` (`061c6aa`)** — C1b, D2, E1 merged + verified green (10/19
+total: A1, B1, C1, A2, A3, B2, D1, C1b, E1, D2). Wave-3a deviations recorded in
+`design/DESIGN_DEVIATIONS.md` **awaiting Director evaluation at the wave-3 close-out** (after 3b).
 
-**Wave-3 build order (design decisions now resolved):**
-- **3a (parallel, worktrees):** **C1b** schema task (merge `Item`→`JunkItem` + add `tier`) · **D2** inventory UI · **E1** gate/extract-bank. Independent files: C1b owns `junk_item.gd`+junk data, D2 owns `ui/`, E1 owns `game_state.gd`+`entities/gate/`.
-- **3b (after 3a):** **B3** (needs `tier` from C1b; +game-director-designer for the depth curve) → then **C2** (shares the `JunkPickup` entity + spawn path with B3). B3 before C2 to avoid colliding spawn logic.
+**Now in flight: wave 3b (sequential — B3 then C2; they share the `JunkPickup` entity + spawn path):**
+- **B3** — Band depth / "push deeper" (needs B2 ✅, C1/C1b ✅ for `tier`) · `general-purpose` (+ `game-director-designer` for the depth→tier value curve). **Do B3 first** so its spawn logic lands before C2 builds on it.
+- **C2** — Junk pickup in the band (needs A2 ✅, B2 ✅, C1b ✅, D1 ✅) · `general-purpose`. Reuses the `JunkPickup` entity + the `run_inventory_changed` path D2 already projects; also re-spawns junk dropped via D2's drop gesture.
 
 Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → **F2** (F1,D2) →
 **G1/G2** → **G3** build → **G4** the fun gate. Dep map: `design/M1_Tasks/Junkyard_M1_Breakdown.md` §4.
@@ -31,14 +27,14 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — M1 wave 3a (each agent in its OWN git worktree)
-3a needs NO new EventBus signals (D2 uses existing `run_inventory_changed`; E1 reuses `run_ended`+`haul_banked`; C1b is data-only).
+## In progress — M1 wave 3b
+B3 and C2 share the `JunkPickup` entity + spawn path, so they run **sequentially** (B3 first). If B3
+adds a new EventBus signal (e.g. `band_depth_changed`), pre-declare it on `main` before dispatch.
 
 | Task | Agent(s) | Branch | Started | State / next step |
 |---|---|---|---|---|
-| C1b — Junk schema consolidation (merge `Item`→`JunkItem` + `tier`) | game-director-designer | `game-director-designer/C1b-junk-schema` | 2026-06-15 | Dispatched (worktree). Sole editor of `junk_item.gd`+junk data. Verify: `Item` retired, `tier` authored on 8 items, catalog loads. |
-| D2 — Inventory UI (greybox) | ui-ux-designer | `ui-ux-designer/D2-inventory-ui` | 2026-06-15 | Dispatched (worktree). Owns `ui/`. Verify: grid reflects inventory live, capacity legible, drop gesture. |
-| E1 — Gate node + extract-and-bank | general-purpose | `general-purpose/E1-gate-extract` | 2026-06-15 | Dispatched (worktree). Sole editor of `game_state.gd`; banks items to `banked_junk`. Verify: gate ends run + transfers junk to meta; extract run-end fires. |
+| B3 — Band depth / "push deeper" | general-purpose (+ game-director-designer for depth→tier curve) | `general-purpose/B3-band-depth` | 2026-06-17 | Dispatched (worktree). Verify: depth increments, deeper bands gate higher `JunkItem.tier`, determinism holds. |
+| C2 — Junk pickup in the band | general-purpose | _pending B3_ | — | Queued after B3 (shares `JunkPickup` spawn path). |
 
 ## Blocked
 | Task | Blocked by | Note |
@@ -59,8 +55,11 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 | A3 — In-dive clock + greybox meter | merged `744d6f5`; `tests/test_dive_clock.gd` → **DIVE CLOCK OK** (drains to 0, `dive_clock_timeout` once, run_ended stops, modify_light clamps); worklog `worklogs/2026-06-15-A3-general-purpose.md` (impl `55088e5`) |
 | B2 — Seeded room-graph generator | merged `869274b`; `tests/test_bandgen_determinism.tscn` → **BANDGEN OK** (9 seeds: same→identical fp, diff→differ, connected/walkable); worklog `worklogs/2026-06-15-B2-general-purpose.md` (impl `c060d6b`) |
 | D1 — Run-state slot inventory model | merged `b9a50f7`; `tests/test_run_inventory.gd` → **INV OK** (capacity reject, full blocks, pure can_accept, PLACEABLE gate, run-state-only); worklog `worklogs/2026-06-15-D1-general-purpose.md` (impl `987c23f`) |
+| C1b — Junk schema consolidation (`Item`→`JunkItem` + `tier`) | merged `ce85b55`; `Item` retired, `tier` 1–5 authored on all 8 items, `check_junk_catalog.gd` → **JUNK CATALOG OK**, smoke repointed; worklog `worklogs/2026-06-15-C1b-game-director-designer.md` (impl `202fb65`) |
+| E1 — Gate node + extract-and-bank | merged `ce85b55`; `tests/test_extract_bank.gd` → **EXTRACT OK** (banks ids to `banked_junk`, wipes run-state, `haul_banked`+`run_ended[extract]`, no Money credit, zero-haul valid, persists by id); schema 1→2 + migration; worklog `worklogs/2026-06-15-E1-general-purpose.md` (impl `9b18d83`) |
+| D2 — Inventory UI (greybox) | merged `061c6aa`; `tests/test_inventory_ui.gd` → **INV UI OK** (pure projection, signal-driven rebuild, item+free-slot cell count, capacity label, BAG FULL state, drop gesture); worklog `worklogs/2026-06-17-D2-ui-ux-designer.md` (impl `0681894`) |
 
-_Integrated `main` re-verified after every merge: `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK._
+_Integrated `main` re-verified after every merge: `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK._
 _Open test-hygiene nit (QA): B2's determinism scene leaks "2 resources still in use at exit" (un-freed PackedScene instances) — cosmetic, non-failing; tidy when GdUnit4 is vendored (G2)._
 
 ## Done (M0 — Pre-production & Tech Foundations)
