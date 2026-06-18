@@ -86,3 +86,15 @@ No Reviewed item was a revert; all 3 Addressed items were reapplied (one as a bu
 drop-to-swap re-spawn) — both added to `TASKS.md` and the GitHub Projects board (Todo). W3-13 was actioned
 directly (translation gitignored). W3-6 slot-routing and W3-21 Telemetry watch-list fold into later tasks
 (save/slot layer; **G1**).
+
+---
+
+## M1 wave 4 — Director-evaluated (partial: E3 pockets dispositioned 2026-06-18)
+
+The wave-4 close-out is **in progress** — the Director dispositioned the one substantive design call
+(E3 pockets) on 2026-06-18; the remaining wave-4 reconciliation-class deviations are still under
+Director review in `DESIGN_DEVIATIONS.md` and will be archived here once verdicts land.
+
+| # | Deviation | Verdict | Reapplied to |
+|---|---|---|---|
+| W4-1 | E3 pockets-on-fail: `0.15` value-fraction-credited-to-Money → **`0.20` whole-items-banked-to `banked_junk`** (death & extract converge on the run→meta transfer; fail keeps a subset). Data-driven in `run_rules.tres`. | **Addressed** | Ratified as **decision #13** (`M1_Design_Decisions.md`); `M1_As_Built.md` §GameState (death/timeout) + §Tuning dials; GDD §6 (whole-item pockets clarified). Old `_on_player_died` value-fraction + `POCKETS_FRACTION=0.15` retired. 0.20 stays a G4 sweep dial (0.15–0.25). |

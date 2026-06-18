@@ -85,7 +85,7 @@ The organizing idea. **Every zone you can reach is, by some definition, a junkya
 
 - **Run = a descent.** Procedurally assembled from the chosen band's zone-pieces. You enter through a portal and aim to go as deep as your nerve and gear allow.
 - **Extraction banks loot.** Loot is *unbanked* until you return to a gate. Gates appear at band thresholds and as found shortcuts. Reaching a new gate lets you bank-and-continue or bank-and-leave.
-- **Death/timeout is soft-roguelite.** You lose the current unbanked haul (minus a pockets fraction) and consumables spent, but keep tools, blueprints, yard upgrades, relationships, and Knowledge. No total resets — the *run* resets, the *life* persists.
+- **Death/timeout is soft-roguelite.** You lose the current unbanked haul (minus a "pockets" save — you keep a few *whole items* worth a small fraction of the haul's value, not an abstract percentage) and consumables spent, but keep tools, blueprints, yard upgrades, relationships, and Knowledge. No total resets — the *run* resets, the *life* persists. *(M1 greybox value: keep whole items up to 20% of haul value, highest-value first — tuned at the M1 fun gate; data-driven in `run_rules.tres`. Ratified decision #13.)*
 - **Instability pressure.** The longer you linger in a zone (especially deep), the more it destabilizes — light dims, entities multiply, the terrain shifts. Internal time pressure even though the overworld day is generous.
 - **Run modifiers / "weather."** Some days a portal opens onto an unusually rich or unusually hostile version of a band (storms of static, a "low tide" exposing rare wrecks, a migration of deep things). Encourages choosing which portal to take.
 

@@ -18,6 +18,7 @@ across the M1 task specs. Dispatched agents MUST build to these (they override t
 | 10 | Inventory: persistent vs toggled | **Per rec:** persistent compact corner HUD panel (always-on capacity read). | D2 |
 | 11 | Drop-to-swap in M1 | **Per rec:** ship it. Deliberate gesture (right-click / hold) → `RunInventory.remove` → C2 re-instantiates the dropped `JunkPickup` at the player. | D1, D2, C2 |
 | 12 | Depth/danger spawn gradient in C2 | **Per rec:** C2 uses a flat per-anchor spawn roll; B3's depth curve is the sole depth signal. | C2, B3 |
+| 13 | Death/timeout pockets model *(ratified 2026-06-18, wave-4 close-out)* | **Whole-item pockets, fraction `0.20`.** On death/timeout, keep **whole items** up to `floor(total_haul_value × 0.20)` (policy `highest_value`) and bank those *item identities* into `banked_junk` — the SAME run→meta transfer as extract, just a subset (extract and fail converge; F2 itemizes "what you barely saved"). Replaces the prior `0.15` *value-fraction credited straight to Money*. Fraction + policy are data-driven in `data/economy/run_rules.tres` for the G4 sweep (0.15–0.25). **Supersedes the old GDD §6 0.15/value-fraction reading.** | E3, F2, GDD §6 |
 
 ## Consequences for the build
 

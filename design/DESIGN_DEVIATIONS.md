@@ -19,7 +19,9 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ### Wave 4a (E2, E3, D3, G5 — integrated to `main` 2026-06-17; evaluate at wave-4 close-out after 4b F1/F2)
 
-- **[2026-06-17] E3/pockets-economy — pockets-on-fail changed from 0.15 value-fraction-to-Money → 0.20 whole-item-to-`banked_junk`.** The pre-existing `_on_player_died` kept `POCKETS_FRACTION = 0.15` of unbanked *value* and credited it straight to **Money**. E3's spec (and now `data/economy/run_rules.tres`) instead keeps **whole items up to `floor(total_value * 0.20)`** (policy `highest_value`) and banks those *item identities* into `banked_junk` — matching E1's "bank items, F2 sells" model and making the failed-run haul itemizable. Two coupled changes: (a) the fraction `0.15 → 0.20`, (b) value-to-Money → whole-items-to-bank. The old const was tagged "GDD §6". · *Why:* one unified drop/bank code path (extract & fail both resolve into `banked_junk`); the headline push-your-luck tuning knob is now data-driven for the G4 fun-gate sweep (0.15–0.25). · **Claude's recommendation: Addressed — ratify 0.20 + whole-item, and update GDD §6 to match** (the 0.15/value-fraction line is now stale). If the Director wants to keep 0.15 as the *starting* value, that's a one-field edit in `run_rules.tres`; the whole-item-vs-value-fraction model change should stand regardless.
+> **E3/pockets-economy** was Director-dispositioned **Addressed** (ratify 0.20 + whole-item) on 2026-06-18
+> and archived to `DESIGN_DEVIATIONS_HISTORY.md` (W4-1 → ratified decision #13). The remaining entries
+> below are **still pending Director review** ("let me read them first").
 
 - **[2026-06-17] E3/idempotency — added a `_run_ended: bool` guard on `GameState`.** New run-end guard so a same-frame extract+timeout tie can't double-bank or fire `run_ended` twice; extract is wired ahead of timeout so reaching the gate wins. Resets in `start_run()`. · *Why:* E3 Open-question #122; `run_active` alone didn't early-return on an already-inactive run. · **Recommendation: Reviewed** — minimal correct implementation of a behavior the spec called for; no design change.
 
