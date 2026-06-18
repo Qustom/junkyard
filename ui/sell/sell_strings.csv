@@ -1,0 +1,8 @@
+keys,en
+SELL_TITLE_EXTRACT,EXTRACTED
+SELL_TITLE_LOST,RUN LOST — kept {count}
+SELL_SUBTOTAL,Haul value: {value}
+SELL_MONEY_TOTAL,Money: {value}
+SELL_EMPTY,(nothing salvaged)
+SELL_ROW,{name}    {value}
+SELL_CONTINUE,Continue
