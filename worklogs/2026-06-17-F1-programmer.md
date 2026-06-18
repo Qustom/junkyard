@@ -4,7 +4,7 @@
 - **Subagent:** programmer (general-purpose)
 - **Milestone:** M1
 - **Branch:** programmer/F1
-- **Commit:** be84e1a077c7258a0734dc3bf7bb2d3400695133
+- **Commit:** 54f4f5979758e8845b5b4ecc280d215ee0bc9a6b
 
 ## What changed
 Added `GameState.sell_banked_junk(source := &"sell") -> Array[Dictionary]` — the
