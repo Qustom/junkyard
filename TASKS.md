@@ -158,11 +158,17 @@ real art. Full milestone breakdown, dependency map, and build order: `design/M1_
 - Goal: a runnable build (itch.io/Butler nightly) of the full loop — spawn → dive → pick up junk → decide push/extract → bank/lose → sell → repeat.
 - Done when: a fresh build runs the complete loop without blockers; multiple runs are possible in one session.
 
+### G6 — In-build telemetry consent prompt
+- Milestone: M1   Assignee: ui-ux-designer   BlockedBy: G3
+- Spec: `M1_As_Built.md` §Telemetry seam + `systems/settings/` (G1 infra) — wave-5 close-out deviation G3 #1 (Director: **Addressed** 2026-06-18)
+- Goal: close the G3 #1 deviation — the G3 build shipped no in-build consent prompt, risking empty G4 telemetry. Add a first-run modal (Enable / Not now) shown once before the player reaches gameplay in `scenes/game/main_game.tscn`, stating plainly what is logged, that there is no PII, and that it stays local until sent back (reuse `TelemetrySettingsPanel.CONSENT_COPY`). Default OFF; only write telemetry after an affirmative Enable. Persist an "asked" flag so it never re-prompts (add a `telemetry.asked` key to `settings.cfg` via `Settings`); wire the choice through `Telemetry.set_enabled()` / `Settings.set_telemetry_enabled()`. The existing settings toggle (G1) remains the way to change the choice later.
+- Done when: a fresh profile (no `settings.cfg`) shows the prompt once at launch; choosing Enable makes a subsequent run write `user://telemetry/run_log.jsonl`, choosing Not now writes nothing; the prompt does not reappear after a choice; verified headless (the asked-flag gate + that Enable→writes / Not-now→no-write); existing suite stays green (SMOKE OK, GdUnit4 30/30, telemetry-jsonl check).
+
 ### G4 — Run the M1 feedback gate (internal playtest)
-- Milestone: M1   Assignee: producer (+ qa-playtest-coordinator: telemetry analysis)   BlockedBy: G3
+- Milestone: M1   Assignee: producer (+ qa-playtest-coordinator: telemetry analysis)   BlockedBy: G3, G6
 - Spec: design/M1_Tasks/G4_feedback_gate.md
 - Goal: run the internal playtest — *is the push/cash-out tension fun in 30 seconds?* Combine direct feedback with telemetry (run-length histograms, mid-run abandonment, runs/session > 1.5). Record a go/iterate/pivot decision.
-- Done when: playtest run with ≥ a few testers; a written verdict backed by telemetry; an explicit go/iterate/pivot call recorded.
+- Done when: playtest run with ≥ a few testers; a written verdict backed by telemetry; an explicit go/iterate/pivot call recorded. **Human-run** (dev-machine internal playtest); Claude prepares the loop-smoke checklist + analyzes telemetry and recommends, the Director decides.
 
 ---
 
