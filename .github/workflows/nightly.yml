@@ -1,0 +1,176 @@
+name: nightly-playtest
+
+# G3 — nightly greybox playtest build → itch.io via Butler.
+#
+# Scheduled nightly (UTC) + manual on-demand. The export/publish job is GATED on a
+# test job (decision: gate the nightly on tests passing — blocking a publish when
+# parse/tests are already red costs nothing and stops broken nightlies reaching itch;
+# the manual loop-smoke checklist is the SECOND line of defence, not the first).
+#
+# !!! HUMAN-GATED — this workflow cannot publish until a human provisions: !!!
+#   1. BUTLER_API_KEY  — a GitHub repo secret. Generate from itch.io
+#        Account > Settings > API Keys, store as repo secret `BUTLER_API_KEY`.
+#   2. An itch.io project owned by the STUDIO account (not a personal one), set to
+#        restricted/draft so nightlies are not public, with channel slug
+#        `studio/the-far-yard:win-nightly`. Update ITCH_TARGET below to the real slug
+#        and confirm once with a manual `butler push` before relying on the cron.
+#   3. Windows export TEMPLATES for the pinned Godot version (fetched in the export job).
+# Claude did NOT invent a key or a slug — the placeholders below must be filled by a human.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC nightly
+  workflow_dispatch: {}
+
+env:
+  GODOT_VERSION: 4.6.3-stable
+  # HUMAN: replace with the real studio itch slug once the project + channel exist.
+  ITCH_TARGET: "studio/the-far-yard:win-nightly"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Gate job: re-run the same import + smoke + save-migration + GdUnit4 gate the
+  # CI workflow runs. export-and-publish `needs:` this, so a red gate blocks publish.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test gate (import + smoke + migration + GdUnit4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}
+
+      - name: Install Godot (headless)
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot-bin
+          url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          curl -sL -o /tmp/godot.zip "$url"
+          python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot.zip').extractall('$HOME/godot-bin')"
+          mv ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 ~/godot-bin/godot
+          chmod +x ~/godot-bin/godot
+
+      - name: Import project (compile scripts)
+        run: ~/godot-bin/godot --headless --import
+
+      - name: Smoke test
+        run: ~/godot-bin/godot --headless --script res://tools/ci_smoke_test.gd
+
+      - name: Save-migration test
+        run: ~/godot-bin/godot --headless res://tests/test_save_migration.tscn
+
+      - name: Loop-drive verification (G3 full-loop gate)
+        run: ~/godot-bin/godot --headless res://tests/test_loop_drive.tscn
+
+      - name: Main-game integration drive (G3 assembled-scene gate)
+        run: ~/godot-bin/godot --headless res://tests/test_main_game_loop.tscn
+
+      - name: GdUnit4 logic tests
+        run: |
+          ~/godot-bin/godot --headless --path . \
+            -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+            --ignoreHeadlessMode \
+            -a res://tests
+
+  # ---------------------------------------------------------------------------
+  # Export + publish job: gated on `test`. Builds the Win64 release and pushes to
+  # itch via Butler. Skipped automatically if BUTLER_API_KEY is not set (so the
+  # workflow does not fail loudly before a human provisions the secret).
+  # ---------------------------------------------------------------------------
+  export-and-publish:
+    name: Export Win64 + publish to itch (Butler)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0   # need full history for the git short SHA stamp
+
+      - name: Guard — Butler secret must be provisioned by a human
+        id: guard
+        run: |
+          if [ -z "${{ secrets.BUTLER_API_KEY }}" ]; then
+            echo "::warning::BUTLER_API_KEY is not set — skipping publish. A human must add the"
+            echo "::warning::repo secret + create the studio itch project before nightlies publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/godot-bin
+          key: godot-${{ env.GODOT_VERSION }}
+
+      - name: Install Godot (headless) + export templates
+        run: |
+          mkdir -p ~/godot-bin
+          if [ ! -x ~/godot-bin/godot ]; then
+            url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+            curl -sL -o /tmp/godot.zip "$url"
+            python3 -c "import zipfile; zipfile.ZipFile('/tmp/godot.zip').extractall('$HOME/godot-bin')"
+            mv ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 ~/godot-bin/godot
+            chmod +x ~/godot-bin/godot
+          fi
+          # Export templates MUST match the editor version exactly, or the export
+          # fails (the classic headless gotcha). Install them where Godot looks.
+          tpl="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          curl -sL -o /tmp/templates.tpz "$tpl"
+          tdir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION//-/.}"
+          mkdir -p "$tdir"
+          python3 -c "import zipfile; zipfile.ZipFile('/tmp/templates.tpz').extractall('/tmp/tpl')"
+          mv /tmp/tpl/templates/* "$tdir/"
+
+      - name: Stamp build version (bake git short SHA)
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          echo "BUILD_SHA=$SHA" >> "$GITHUB_ENV"
+          echo "USER_VERSION=m1-$(date -u +%Y%m%d)-$SHA" >> "$GITHUB_ENV"
+          # Bake the SHA into project.godot so BuildVersion.id() / telemetry stamp the
+          # real build (overwrites the committed dev fallback in [application]).
+          sed -i "s|config/build_sha=\"[^\"]*\"|config/build_sha=\"$SHA\"|" project.godot
+
+      - name: Import project (build .godot)
+        run: ~/godot-bin/godot --headless --import
+
+      - name: Export Win64 (release)
+        run: |
+          mkdir -p build/win
+          ~/godot-bin/godot --headless --path . \
+            --export-release "Win64" build/win/TheFarYard.exe
+          # A produced binary is NOT proof of a clean export — a partial export can
+          # still emit a file. Fail if the expected exe is missing.
+          test -f build/win/TheFarYard.exe
+
+      - name: Install Butler
+        if: steps.guard.outputs.publish == 'true'
+        run: |
+          curl -sL -o /tmp/butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          python3 -c "import zipfile; zipfile.ZipFile('/tmp/butler.zip').extractall('/tmp/butler')"
+          chmod +x /tmp/butler/butler
+          /tmp/butler/butler -V
+
+      - name: Push to itch.io (Butler)
+        if: steps.guard.outputs.publish == 'true'
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          /tmp/butler/butler push build/win "${ITCH_TARGET}" \
+            --userversion "${USER_VERSION}"
+
+      - name: Upload build artifact (always — usable even without itch)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TheFarYard-Win64-${{ env.USER_VERSION }}
+          path: build/win/**
+          if-no-files-found: error

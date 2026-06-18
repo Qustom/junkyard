@@ -35,6 +35,7 @@ extends Node
 const Schema := preload("res://systems/telemetry/telemetry_schema.gd")
 const JsonlWriterScript := preload("res://systems/telemetry/jsonl_writer.gd")
 const SettingsScript := preload("res://systems/settings/settings.gd")
+const BuildVersionScript := preload("res://systems/version.gd")  # G3: build-id stamp
 
 var _enabled: bool = false
 var _writer: JsonlWriter = null
@@ -110,7 +111,10 @@ func _on_run_started(band_id: StringName, seed: int) -> void:
 	_accepted_value = 0
 	_last_banked = 0
 	_max_depth = 0
-	_emit_row(Schema.RUN_STARTED, {"band_id": String(band_id), "seed": seed})
+	# G3: stamp the build id on the run_started row so a feedback report + its JSONL
+	# tie to one exact build. Extra `data` field only — the schema envelope + every
+	# other row are untouched (G2 tests assert envelope keys, not run_started payload).
+	_emit_row(Schema.RUN_STARTED, {"band_id": String(band_id), "seed": seed, "build": BuildVersionScript.id()})
 
 
 func _on_band_entered(band_id: StringName, depth: int) -> void:
