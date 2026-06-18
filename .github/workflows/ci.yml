@@ -47,6 +47,23 @@ jobs:
       - name: Run save-migration test (release gate)
         run: ~/godot-bin/godot --headless res://tests/test_save_migration.tscn
 
-      # When GdUnit4 is vendored (M1-07), add its headless runner here:
-      # - name: Unit tests
-      #   run: ~/godot-bin/godot --headless -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
+      # G2: vendored GdUnit4 logic suites (proc-gen determinism, inventory capacity,
+      # banking math, death-drop pockets). The CLI runner returns non-zero on any
+      # failed/aborted test (100) or orphan-node warning (101), so this gates merge.
+      # --ignoreHeadlessMode: our logic suites use no InputEvents, so the headless
+      # UI-input guard does not apply. The addon is committed under addons/gdUnit4/,
+      # so no editor step is needed. GdUnit4 v6.1.3 (Godot 4.5+; verified on 4.6.3).
+      - name: Run GdUnit4 logic tests (CI gate)
+        run: |
+          ~/godot-bin/godot --headless --path . \
+            -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+            --ignoreHeadlessMode \
+            -a res://tests
+
+      - name: Publish GdUnit4 report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdunit4-report
+          path: reports/**/*.xml
+          if-no-files-found: ignore
