@@ -175,6 +175,47 @@ func add_currency(kind: StringName, delta: int, source: StringName) -> void:
 		_: push_error("Unknown currency: %s" % kind)
 	EventBus.currency_changed.emit(kind, delta, source)
 
+## F1: convert the whole banked junk pile → Money at each item's base_sell_value.
+## This is the loop-closing cash-out: E1/E3 bank item IDENTITIES into meta
+## (decision: Option B, "bank items not Money"); Money only increments here, when
+## F2's sell screen calls this. Steps:
+##   1. build a per-item breakdown {id, name, value} so F2 can itemize the payoff,
+##      summing the total,
+##   2. clear banked_junk (the items are consumed by the sale),
+##   3. credit the total through the canonical ledger mutation add_currency(&"money",
+##      total, source) — ONE currency_changed event for the lot (Telemetry's
+##      currency-in hook; F2 animates per-item purely from the returned breakdown),
+##   4. persist meta synchronously (atomic write + .bak) so the new Money total and
+##      the emptied bank survive,
+##   5. return the breakdown.
+## `source` tags the credit so a failed-run sale (E3 pockets) can be analyzed as
+## &"pockets" vs a clean extract &"sell"/&"extract" (Telemetry currency-in-by-source).
+## Selling an empty bank is a safe no-op: total 0, add_currency(0) is benign, returns [].
+func sell_banked_junk(source: StringName = &"sell") -> Array[Dictionary]:
+	var breakdown: Array[Dictionary] = []
+	var total: int = 0
+	for item in banked_junk:
+		if item == null:
+			continue
+		breakdown.append({
+			"id": item.id,
+			"name": item.display_name,
+			"value": item.base_sell_value,
+		})
+		total += item.base_sell_value
+
+	# Consume the pile: the items are gone once sold.
+	var empty: Array[JunkItem] = []
+	banked_junk = empty
+
+	# One ledger event for the lot (emits currency_changed(&"money", total, source)).
+	add_currency(&"money", total, source)
+
+	# Persist the new Money total + emptied bank (slot 0; same path as E1/E3).
+	SaveManager.save_meta(0)
+
+	return breakdown
+
 func add_exposure(delta: int) -> void:
 	var before := exposure
 	exposure = clampi(exposure + delta, 0, 100)
