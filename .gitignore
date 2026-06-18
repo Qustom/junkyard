@@ -10,7 +10,11 @@ APIKEYS.md
 /android/
 /build/
 /exports/
-export_presets.cfg          # per-machine paths; keep out of VCS
+# G3: export_presets.cfg IS committed (CI references the "Win64" preset by name).
+# Our preset carries NO per-machine absolute paths (custom_template empty, export_path
+# is the relative build/win/...), so the usual "keep out of VCS" caveat does not apply.
+# If anyone adds machine-specific template paths, scrub them before committing.
+# export_presets.cfg
 
 # --- OS / editor cruft ---
 .DS_Store

@@ -141,35 +141,17 @@ func _on_cell_drop_requested(index: int) -> void:
 	EventBus.junk_dropped.emit(dropped, _player_world_pos())
 
 
-# Resolve the active player's world position as the drop point. D3 keeps this in
-# the UI lane (no edits to Player or the spawner): scan the current scene for the
-# first Player (CharacterBody2D, class_name Player). Returns Vector2.ZERO when no
-# player is in the tree (between dives / tests) — the spawner ignores the emit in
-# that case (no drop-container registered), so the fallback is inert rather than
-# dropping junk at the world origin mid-dive.
+# Resolve the active player's world position as the drop point. The player joins
+# the "player" group (added in player.tscn for G3's assembled dive scene), so the
+# drop lookup is an O(1) group query instead of a current_scene tree-walk (close-out
+# reapply note W4-6). Returns Vector2.ZERO when no player is in the tree (between
+# dives / tests) — the spawner ignores the emit in that case (no drop-container
+# registered), so the fallback is inert rather than dropping junk at the origin.
 func _player_world_pos() -> Vector2:
 	var tree := get_tree()
 	if tree == null:
 		return Vector2.ZERO
-	var scene := tree.current_scene
-	if scene == null:
-		return Vector2.ZERO
-	var player := _find_player(scene)
+	var player := tree.get_first_node_in_group(&"player") as Node2D
 	if player != null:
 		return player.global_position
 	return Vector2.ZERO
-
-
-# Depth-first search for the active Player node under `node`. Cheap enough: the
-# drop gesture is a discrete, infrequent action (not per-frame) and the dive scene
-# tree is small at M1. Typed against the Player class_name so it cannot match an
-# unrelated body.
-func _find_player(node: Node) -> Player:
-	var as_player := node as Player
-	if as_player != null:
-		return as_player
-	for child in node.get_children():
-		var found := _find_player(child)
-		if found != null:
-			return found
-	return null
