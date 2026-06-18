@@ -7,7 +7,7 @@ mirror lives in GitHub Projects. Update this every time a task is claimed, block
 See `CLAUDE.md` → "The orchestrator loop".
 
 **Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)**, in progress.
-**Last updated:** 2026-06-18 (G1+G2+G3 merged + verified green; 21/22 M1 tasks done — full loop playable; only G4 = the human fun-gate remains + wave-5 close-out)
+**Last updated:** 2026-06-18 (G1+G2+G3+G6 merged + verified green; full loop playable w/ first-run consent prompt — remaining: finish wave-5 close-out [13 deviations awaiting per-entry Director verdict] + G4 the human fun-gate)
 
 ---
 
@@ -66,11 +66,20 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — nothing dispatched (G1+G2+G3 merged + verified; awaiting human on close-out + G4)
-No subagent running. G1 + G2 + G3 merged into `main` and the **full suite re-verified green** (main scene set ·
-import clean · SMOKE OK · TELEMETRY OK · LOOP OK · MAIN GAME OK · clean 120-frame boot · GdUnit4 30/30 · all 18
-legacy ad-hoc checks OK). Board: G1 + G2 + G3 set **Done**. All programmable M1 work is complete — the two
-remaining items (wave-5 close-out disposition + the G4 human fun-gate) are **both human calls** (see ▶ Next action).
+## In progress — nothing dispatched (G1+G2+G3+G6 merged + verified; awaiting Director on 13 deviations + G4)
+No subagent running. G1 + G2 + G3 + G6 merged into `main` and re-verified green (main scene set · import clean ·
+SMOKE OK · CONSENT OK · TELEMETRY OK · LOOP OK · MAIN GAME OK · GdUnit4 30/30 · 18 legacy checks OK). Board:
+G1 + G2 + G3 set **Done**; G6 set **Done**.
+
+**Wave-5 close-out — partial.** 16 total wave-5 deviation entries (G1×5, G2×5, G3×5, G6×1). Director verdicts
+2026-06-18: **G1 #2 Reviewed** (telemetry opt-in stays in `settings.cfg`); **G3 #1 Addressed** → built **G6**
+(in-build first-run consent prompt, now merged). The remaining **14 are awaiting the Director's per-entry
+verdict** (the 13 reconciliations presented in chat + G6's 1; Director asked to review first — do NOT archive
+until verdicted). After verdicts: reapply minor doc notes + archive all 16 to `DESIGN_DEVIATIONS_HISTORY.md`.
+
+**Then G4** = the human fun-gate (internal playtest on the dev machine: `godot project.godot` → play
+`main_game.tscn`). Claude preps `tools/playtest/loop_smoke_checklist.md` + analyzes telemetry after, recommends a
+go/iterate/pivot verdict; the Director decides.
 
 ## Blocked
 | Task | Blocked by | Note |
@@ -104,6 +113,7 @@ remaining items (wave-5 close-out disposition + the G4 human fun-gate) are **bot
 | F2 — Placeholder sell screen | merged `ce9f51b`; `tests/test_sell_screen.gd` → **SELL SCREEN OK** (presents on `run_ended` extract/death/timeout, "EXTRACTED"/"RUN LOST — kept N", itemized rows, count-up to live `GameState.money`, zero-haul valid); Continue emits `continue_pressed` (G3 wires restart); worklog `worklogs/2026-06-17-F2-ui-ux.md` (impl `ce9f51b`) |
 | G1 — Wire M1 telemetry events | merged via `Merge G1`; `tests/test_telemetry_jsonl.tscn` → **TELEMETRY OK** (opt-in respected — no file when off; enabled run wrote 9 parseable JSONL rows w/ duration, end cause, depth, haul banked + dedicated amount-lost-on-fail row); `systems/telemetry/{telemetry,telemetry_schema,jsonl_writer}.gd` + opt-in `settings.cfg`; no `event_bus.gd`/`game_state.gd` edits; worklog `worklogs/2026-06-18-G1-qa.md` (impl `c0c2268`) |
 | G2 — Determinism & logic tests (GdUnit4) | merged via `Merge G2`; GdUnit4 v6.1.3 vendored at `addons/gdUnit4/`; `tools/run_gdunit.sh` → **30 test cases · 0 failures · PASSED** (proc-gen determinism, inventory capacity, banking math, death-drop pockets @ 0.20 highest_value); CI gate wired in `.github/workflows/ci.yml` (non-zero exit on failure verified); worklog `worklogs/2026-06-18-G2-qa.md` (impl `3f57f38`) |
+| G6 — In-build telemetry consent prompt (Addressed from G3 #1) | merged via `Merge G6`; `tests/test_telemetry_consent.tscn` → **CONSENT OK** (fresh profile prompts once; Enable→telemetry writes + asked set; Not now→OFF, no file; never re-shows); `systems/settings/telemetry_consent_prompt.gd` + `Settings.get/set_telemetry_asked()`; shown once at `main_game` launch before gameplay, default OFF; worklog `worklogs/2026-06-18-G6-ui-ux.md` (impl `835a97a`) |
 | G3 — Greybox playtest build | merged via `Merge G3`; `scenes/game/main_game.tscn` set as `run/main_scene` (first full-loop assembly); `tests/test_loop_drive.tscn` → **LOOP OK** (3 runs/session, run-state resets + meta persists, extract & death paths) + `tests/test_main_game_loop.tscn` → **MAIN GAME OK** (assembled scene: band+pickups+gate, group-based player, interaction pickup + gate extract → sell → clean restart); `start_new_run()` loop entry wires `SellScreen.continue_pressed` (W4-11); player `"player"` group + `get_first_node_in_group` (W4-6); build-id `systems/version.gd` on telemetry `run_started`; `tools/playtest/{loop_smoke_checklist,tester_readme}.md`; `export_presets.cfg` (Win64) + scaffolded `nightly.yml` (**publish human-gated: BUTLER_API_KEY + itch project + export templates**); worklog `worklogs/2026-06-18-G3-programmer.md` (impl `9107a2a`) |
 
 _Integrated `main` re-verified after every merge (full suite green): `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK · JUNK PICKUP OK · DEATH DROP OK · DECISION HUD OK · DROP SWAP OK · SAVE MIGRATION OK · MONEY LEDGER OK · SELL SCREEN OK (18 legacy checks) · **TELEMETRY OK** · **GdUnit4 30/30** (G1+G2)._
