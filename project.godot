@@ -111,7 +111,8 @@ socket=""
 
 ; D2: inventory UI strings are externalized (playbook: "externalize all strings
 ; for localization"). tr() keys resolve against this CSV-derived translation.
-locale/translations=PackedStringArray("res://ui/inventory/inventory_strings.en.translation")
+; E2: decision-HUD strings live in ui/hud/hud_strings.csv (same CSV→.translation pipeline).
+locale/translations=PackedStringArray("res://ui/inventory/inventory_strings.en.translation", "res://ui/hud/hud_strings.en.translation")
 
 [rendering]
 
