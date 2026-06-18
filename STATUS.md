@@ -7,24 +7,34 @@ mirror lives in GitHub Projects. Update this every time a task is claimed, block
 See `CLAUDE.md` → "The orchestrator loop".
 
 **Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)**, in progress.
-**Last updated:** 2026-06-17 (wave 4a integrated; 16/16 M1 tasks done)
+**Last updated:** 2026-06-17 (wave 4 complete; 18/19 M1 tasks done — awaiting wave-4 close-out)
 
 ---
 
-## ▶ Next action (start here on a cold restart) — **dispatch WAVE 4b: F1 → F2**
-Wave 4a (E2, E3, D3, G5) is integrated + green on `main` (`0d6c484`). **16/19 M1 tasks done.**
-Remaining: **F1** (Money sell) → **F2** (sell screen) → **G1** (telemetry, needs E3✅) →
-**G2** (logic tests, needs E3✅+F1) → **G3** (build) → **G4** (fun gate).
+## ▶ Next action (start here on a cold restart) — **WAVE-4 CLOSE-OUT (Director), then dispatch G1+G2**
+Wave 4 (E2, E3, D3, G5, F1, F2) is **fully integrated + green on `main`** — the complete greybox core
+loop now exists end-to-end (move → dive → pick up → decide at gate → extract/fail → sell → Money persists).
+**18/19 M1 tasks done.** Only the G-series remains: **G1** (telemetry) and **G2** (GdUnit4 logic tests)
+are now **unblocked** (their deps E1/E3/C2/B2/D1/F1 are all ✅) → then **G3** (full playtest build,
+needs A–F + G1) → **G4** (the "is it fun?" gate).
 
-**Dispatch F1 next** (general-purpose, worktree). Key brief notes from the as-built read:
-- `GameState.money` **already exists and already persists** (schema is already v2) — so F1 needs **no schema bump**; it's smaller than its spec. The real new work is **`sell_banked_junk()`** (converts `banked_junk` → Money at `base_sell_value`, clears the bank, `save_meta(0)`, returns a per-item breakdown for F2) + **reuse the existing `add_currency(&"money", amt, source)`** (which already emits `currency_changed`) instead of adding a parallel `credit_money`/`money_changed`.
-- F1 **writes `game_state.gd`** — it branches off this main which already has E3's changes, so no conflict. Solo dispatch (no other agent touches game_state.gd in 4b until F2, which is UI-only).
-- Then **F2** (ui-ux-designer): post-extract sell screen consuming `sell_banked_junk()`'s breakdown; per E3+F1 recs, route **failed runs through the same screen** ("RUN LOST — kept N"). Needs F1 + D2 (✅).
+**BLOCKING the next dispatch: the wave-4 close-out.** Per `CLAUDE.md`, stop and have the **Director
+disposition** every entry in `design/DESIGN_DEVIATIONS.md` before any new dispatch. The entries are
+assembled with recommendations; the one substantive design call is:
+- **E3 pockets: GDD §6 `0.15` value-fraction-credited-to-Money → `0.20` whole-items-banked-to-`banked_junk`.**
+  Claude recommends **Addressed**: ratify 0.20 + whole-item (now data-driven in `run_rules.tres` for the
+  G4 sweep) and update GDD §6 to match. If the Director prefers 0.15 as the starting fraction, it's a
+  one-field `.tres` edit; the whole-item model should stand regardless.
 
-**Wave-4 close-out (after F1/F2 land):** Director must disposition the wave-4a deviations now in
-`design/DESIGN_DEVIATIONS.md` — the one real call is **E3 pockets `0.15` value-fraction-to-Money →
-`0.20` whole-item-to-bank** (Claude recommends Addressed + update GDD §6); the rest are reconciliations
-or close already-Addressed wave-3 items (D3 closes `C2/dropwiring`, G5 closes `E1/schema`).
+  The rest are **Reviewed**-class: As-Built signal reconciliations (E2/F1/F2), an engine workaround (F2
+  tween), and two that **close already-Addressed wave-3 items** (D3 closes `C2/dropwiring`; G5 closes
+  `E1/schema`). G5/D3 also have small reapply notes (mark the As-Built E1-schema follow-up closed; note
+  the player-group follow-up for G3).
+
+**After the Director dispositions:** reapply per verdict (→ `M1_As_Built.md` / GDD §6), archive to
+`DESIGN_DEVIATIONS_HISTORY.md`, then dispatch **G1 + G2 in parallel** (worktrees; G1=telemetry wiring,
+G2=GdUnit4 — both touch disjoint files, no game_state.gd writes). Then **G3** build (will wire F2's
+`continue_pressed` → a `start_new_run()` loop) → **G4** fun gate (producer + qa).
 
 ---
 
@@ -53,9 +63,10 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — nothing dispatched (wave 4a integrated; ready to dispatch wave 4b = F1→F2)
-No subagent running. Wave 4a (E2, E3, D3, G5) merged to `main` (`0d6c484`) and re-verified — full
-16-check suite green. Next: dispatch **F1** (see ▶ Next action above), then **F2**.
+## In progress — nothing dispatched (wave 4 complete; blocked on Director close-out before G1/G2)
+No subagent running. Wave 4 (E2, E3, D3, G5, F1, F2) fully merged to `main` and re-verified — full
+**18-check** suite green. Next gate: **Director disposes the wave-4 deviations** (see ▶ Next action),
+then dispatch **G1 + G2**.
 
 ## Blocked
 | Task | Blocked by | Note |
@@ -85,8 +96,10 @@ No subagent running. Wave 4a (E2, E3, D3, G5) merged to `main` (`0d6c484`) and r
 | E2 — Push/cash-out decision HUD | merged `43284f5`; `tests/test_decision_hud.gd` → **DECISION HUD OK** (Holding=`run_haul_value`, clock bar/tint green→amber→red off `dive_clock_changed`, Depth=`current_depth`, gate-only extract prompt w/ live value); composes D2 panel; worklog `worklogs/2026-06-17-E2-ui-ux.md` (impl `7e0eb0a`) |
 | D3 — Activate drop-to-swap re-spawn | merged `923a815`; `tests/test_drop_swap.tscn` → **DROP SWAP OK** (drop removes from bag + emits `junk_dropped(item, player_pos)`, C2 spawner re-instantiates pickup); closes wave-3 `C2/dropwiring`; worklog `worklogs/2026-06-17-D3-ui-ux.md` (impl `e188a50`) |
 | G5 — Meta save-migration fixture (v1→v2) | merged `0d6c484`; `tests/test_save_migration.tscn` → **SAVE MIGRATION OK** (binary `meta_v1.sav` fixture migrates to v2, `banked_junk`→`[]`, fields intact, round-trip + `.bak`); CI-wired; closes wave-3 `E1/schema`; worklog `worklogs/2026-06-17-G5-qa.md` (impl `8655454`) |
+| F1 — Money ledger (`sell_banked_junk`) | merged via F1 branch; `tests/test_money_ledger.gd` → **MONEY LEDGER OK** (sells `banked_junk`→Money at `base_sell_value`, empties bank, one `currency_changed`, source-tagged sell/pockets, empty-bag no-op, persists round-trip); reused existing v2 schema + `add_currency` (no schema bump); worklog `worklogs/2026-06-17-F1-programmer.md` (impl `54f4f59`) |
+| F2 — Placeholder sell screen | merged `ce9f51b`; `tests/test_sell_screen.gd` → **SELL SCREEN OK** (presents on `run_ended` extract/death/timeout, "EXTRACTED"/"RUN LOST — kept N", itemized rows, count-up to live `GameState.money`, zero-haul valid); Continue emits `continue_pressed` (G3 wires restart); worklog `worklogs/2026-06-17-F2-ui-ux.md` (impl `ce9f51b`) |
 
-_Integrated `main` re-verified after every merge (full suite green): `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK · JUNK PICKUP OK · DEATH DROP OK · DECISION HUD OK · DROP SWAP OK · SAVE MIGRATION OK (16 checks)._
+_Integrated `main` re-verified after every merge (full suite green): `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK · JUNK PICKUP OK · DEATH DROP OK · DECISION HUD OK · DROP SWAP OK · SAVE MIGRATION OK · MONEY LEDGER OK · SELL SCREEN OK (18 checks)._
 _Open test-hygiene nit (QA): B2's determinism scene leaks "2 resources still in use at exit" (un-freed PackedScene instances) — cosmetic, non-failing; tidy when GdUnit4 is vendored (G2)._
 
 ## Done (M0 — Pre-production & Tech Foundations)

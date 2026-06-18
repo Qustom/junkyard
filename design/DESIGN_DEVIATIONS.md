@@ -33,4 +33,17 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 - **[2026-06-17] G5/closes wave-3 `E1/schema` (Director: Addressed) — the v1→v2 meta migration fixture now exists.** Committed binary `tests/fixtures/meta_v1.sav` + `tests/test_save_migration.gd` (→ `SAVE MIGRATION OK`), wired into CI. Establishes the per-schema-bump template (one migration step + one binary fixture + one round-trip assert). Added `*.sav -text` to `.gitattributes`. · *Why:* fulfills the TDD "a QA fixture on every schema change" rule the E1 bump skipped. · **Recommendation: Reviewed (closes an already-Addressed deviation).** Reapply note: the "tracked as a follow-up task" line in `M1_As_Built.md` §Save schema (E1) can now be marked closed.
 
-*Wave-4b (F1, F2) deviations will be appended here as those land; the whole of wave 4 is then Director-evaluated together at the wave-4 close-out.*
+### Wave 4b (F1, F2 — integrated to `main` 2026-06-17)
+
+- **[2026-06-17] F1/scope-reconciliation — F1 shipped smaller than its spec.** The spec assumed F1 must bump the save schema, add a `money` migration step, and introduce a new `credit_money()` + `EventBus.money_changed` signal. The as-built codebase **already** had all of that: `money` exists and persists at schema v2, and `add_currency(&"money", delta, source)` already emits `currency_changed`. So F1 added only the genuinely-new `sell_banked_junk(source) -> Array[Dictionary]` (Option B sell-at-F2). · *Why:* avoid duplicating existing ledger/persistence machinery; one canonical currency mutation path. · **Recommendation: Reviewed (reconciliation, not a design change).** `event_bus.gd` and `save_manager.gd` untouched.
+
+- **[2026-06-17] F2/signal-reconciliation — built against `run_ended`, not the spec's `run_end(cause, payload)`.** F2 listens to the real `run_ended(reason, duration_s, depth_reached)` and switches on `reason`. · **Recommendation: Reviewed (reconciliation).**
+
+- **[2026-06-17] F2/present-on-all-causes — the sell screen presents on extract AND death/timeout.** Title "EXTRACTED" vs "RUN LOST — kept N"; sale tagged `source = &"extract"` vs `&"pockets"`. · *Why:* the ratified E3 + F2 Open-question #1 recommendation — every run ends on the same reward beat, closing the loop symmetrically. · **Recommendation: Reviewed** (implements an already-recommended call; confirm at close-out).
+
+- **[2026-06-17] F2/paused-tween-workaround — count-up uses a manual `_process` lerp on a `PROCESS_MODE_ALWAYS` node, not a `Tween`.** Godot 4 has a standing regression where a tween set to process while paused doesn't reliably tick (godotengine/godot#81994, #67504); the screen pauses the tree, so a manual lerp is used. Behaviourally identical. · **Recommendation: Reviewed** (engine-workaround, no design impact).
+
+- **[2026-06-17] F2/Continue-deferred + `project.godot` string registration.** `SellScreen.Continue` only unpauses, hides, and emits a local `continue_pressed` signal — the actual restart/overworld loop is **deferred to G3** (which subscribes). F2 also appended one line to `project.godot` `locale/translations` registering `ui/sell/sell_strings.en.translation` (same convention D2/E2 used). · **Recommendation: Reviewed** — G3 owns wiring `continue_pressed` to `start_new_run()`; noted as a G3 dependency.
+
+---
+*All wave-4 tasks (E2, E3, D3, G5, F1, F2) are integrated + green on `main`. **Awaiting the wave-4 close-out Director disposition** — the one substantive design call is the E3 pockets change (top of this section); the rest are reconciliations or close already-Addressed wave-3 items.*
