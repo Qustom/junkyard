@@ -40,6 +40,13 @@ jobs:
       - name: Run smoke test (CI gate)
         run: ~/godot-bin/godot --headless --script res://tools/ci_smoke_test.gd
 
+      # G5: save-migration gate. Loads the committed v1 meta fixture, migrates to
+      # v2, and asserts the migrated state (banked_junk default + field survival +
+      # round-trip with .bak). Runs as a scene (autoloads resolve), exits non-zero
+      # on any failed assertion → red CI. Add a step/fixture on every schema bump.
+      - name: Run save-migration test (release gate)
+        run: ~/godot-bin/godot --headless res://tests/test_save_migration.tscn
+
       # When GdUnit4 is vendored (M1-07), add its headless runner here:
       # - name: Unit tests
       #   run: ~/godot-bin/godot --headless -s addons/gdUnit4/bin/GdUnitCmdTool.gd -a res://tests
