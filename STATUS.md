@@ -61,10 +61,14 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — nothing dispatched (wave 4 closed out; ready to dispatch G-series)
-No subagent running. Wave 4 fully merged + re-verified (**18-check** suite green) and **Director-closed-out**
-(11 deviations dispositioned, all reapplied + archived). Next: dispatch **G1 + G2** in parallel worktrees
-(see ▶ Next action).
+## In progress — G1 + G2 dispatched (wave 5, parallel worktrees) — 2026-06-18
+- **G1** (qa-playtest-coordinator, worktree) — wire `Telemetry` autoload → JSONL run log; opt-in toggle.
+  Includes close-out reapply note W4-3 (dedicated amount-lost-on-fail row; `currency_changed.source`
+  for currency-in-by-source; do NOT widen `run_ended`).
+- **G2** (qa-playtest-coordinator, worktree) — vendor GdUnit4 + logic tests (proc-gen determinism,
+  inventory capacity, banking math, death-drop pockets math) + headless CI wiring.
+Both unblocked (deps all ✅); disjoint files; neither writes `game_state.gd`/`event_bus.gd`. Board: both
+set **In Progress**. On return: verify, merge to `main`, push, record deviations → wave-5 close-out.
 
 ## Blocked
 | Task | Blocked by | Note |
