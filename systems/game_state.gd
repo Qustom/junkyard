@@ -67,6 +67,18 @@ func enter_band(band_id: StringName) -> void:
 	current_depth += 1
 	EventBus.band_entered.emit(band_id, current_depth)
 
+## Shared read helper (orchestrator-seeded contract for wave 4): sum of
+## base_sell_value across the current run bag. Pure read, run-state only — no
+## mutation, no signals. Consumed by E2's decision HUD ("Holding: N"), E3's
+## pockets math, and F2's sell tally so they never recompute this independently.
+func run_haul_value() -> int:
+	var total: int = 0
+	if run_inventory != null:
+		for item in run_inventory.items:
+			if item != null:
+				total += item.base_sell_value
+	return total
+
 ## Bank the unbanked haul at a gate → commits to meta money.
 func bank_haul() -> void:
 	add_currency(&"money", unbanked_value, &"extraction")
