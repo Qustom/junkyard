@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="RunRules" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/economy/run_rules.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+pockets_fraction = 0.2
+pockets_policy = 0
