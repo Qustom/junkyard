@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1
 - **Branch:** programmer/E3
-- **Commit:** <SET-BELOW>   ← required; a worklog without a real commit means the task is NOT done
+- **Commit:** 9f238519b117d958181f06eb0124097869897d75 (implementation; this worklog-SHA fix is a trivial follow-up commit on the same branch)
 
 ## What changed
 On death or clock timeout, the run now ends UNSUCCESSFULLY: the player keeps only a
