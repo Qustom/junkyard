@@ -25,6 +25,11 @@ const JUNK_CATALOG_PATH := "res://data/junk/junk_catalog.tres"
 const DEPTH_CURVE_PATH := "res://systems/depth/depth_curve.tres"
 const GATE_SCENE_PATH := "res://entities/gate/extract_gate.tscn"
 
+## G6: first-run telemetry consent prompt (Director-ratified G3 #1 → Addressed). Shown
+## once over the menu before gameplay so the G4 cohort actually opts in; telemetry stays
+## opt-in / default OFF.
+const ConsentPromptScript := preload("res://systems/settings/telemetry_consent_prompt.gd")
+
 ## The band id GameState tags the run with. M1 has a single greybox band.
 const BAND_ID := &"near"
 
@@ -51,6 +56,9 @@ var _spawner: JunkSpawner = null
 var _run_count: int = 0
 var _band_cell_size_px: int = DEFAULT_CELL_SIZE_PX
 
+# G6: true while the first-run consent modal is up; blocks starting a run until answered.
+var _consent_pending: bool = false
+
 
 func _ready() -> void:
 	_load_fixtures()
@@ -64,6 +72,9 @@ func _ready() -> void:
 	# parking the player. The sell screen + continue drive the loop forward.
 	EventBus.run_ended.connect(_on_run_ended)
 	_show_menu()
+	# G6: first-run only — surface the telemetry consent modal over the menu and block
+	# starting a run until the player answers. After the first answer it never re-shows.
+	_maybe_show_consent_prompt()
 
 
 func _load_fixtures() -> void:
@@ -194,7 +205,33 @@ func _clear_band() -> void:
 # --- Menu --------------------------------------------------------------------
 
 func _on_start_pressed() -> void:
+	# G6: while the first-run consent modal is up, the menu is blocked — ignore Start.
+	if _consent_pending:
+		return
 	start_new_run()
+
+
+# --- G6: first-run telemetry consent ----------------------------------------
+
+## Show the consent modal exactly once (first launch / wiped profile). Blocks the
+## Start button until the player answers; after any answer the asked-flag is set so
+## this never shows again. No-op when already asked.
+func _maybe_show_consent_prompt() -> void:
+	if not ConsentPromptScript.should_show():
+		return
+	_consent_pending = true
+	_start_button.disabled = true
+	var prompt: TelemetryConsentPrompt = ConsentPromptScript.new()
+	prompt.choice_made.connect(_on_consent_choice)
+	add_child(prompt)
+
+
+func _on_consent_choice(_enabled: bool) -> void:
+	# Either choice unblocks the menu. The prompt itself persisted the choice + the
+	# asked-flag and (on Enable) toggled Telemetry; we only restore the menu here.
+	_consent_pending = false
+	_start_button.disabled = false
+	_start_button.grab_focus()
 
 
 func _show_menu() -> void:
