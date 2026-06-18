@@ -19,9 +19,15 @@ class_name Settings
 const CONFIG_PATH: String = "user://settings.cfg"
 const SECTION: String = "telemetry"
 const KEY_ENABLED: String = "enabled"
+## G6: tracks whether the first-run consent prompt has been shown+answered, so it
+## appears exactly once. Default false (never asked) → a fresh/wiped profile prompts.
+const KEY_ASKED: String = "asked"
 
 ## Opt-in default: telemetry is OFF until the player explicitly enables it.
 const DEFAULT_TELEMETRY_ENABLED: bool = false
+
+## Default for the consent-asked flag: false means "not yet asked" → show the prompt.
+const DEFAULT_TELEMETRY_ASKED: bool = false
 
 
 ## Read the persisted opt-in flag. Any read failure → the safe default (OFF).
@@ -40,4 +46,23 @@ static func set_telemetry_enabled(value: bool) -> int:
 	# Preserve any other keys already in the file.
 	cfg.load(CONFIG_PATH)
 	cfg.set_value(SECTION, KEY_ENABLED, value)
+	return cfg.save(CONFIG_PATH)
+
+
+## G6: read the consent-asked flag. Read failure → the safe default (false = not yet
+## asked → the first-run prompt should show).
+static func get_telemetry_asked() -> bool:
+	var cfg := ConfigFile.new()
+	var err := cfg.load(CONFIG_PATH)
+	if err != OK:
+		return DEFAULT_TELEMETRY_ASKED
+	return bool(cfg.get_value(SECTION, KEY_ASKED, DEFAULT_TELEMETRY_ASKED))
+
+
+## G6: persist the consent-asked flag. Set true after EITHER consent choice so the
+## first-run prompt never reappears. Preserves the existing enabled key.
+static func set_telemetry_asked(value: bool) -> int:
+	var cfg := ConfigFile.new()
+	cfg.load(CONFIG_PATH)
+	cfg.set_value(SECTION, KEY_ASKED, value)
 	return cfg.save(CONFIG_PATH)
