@@ -7,34 +7,32 @@ mirror lives in GitHub Projects. Update this every time a task is claimed, block
 See `CLAUDE.md` → "The orchestrator loop".
 
 **Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)**, in progress.
-**Last updated:** 2026-06-17 (wave 4 complete; 18/19 M1 tasks done — awaiting wave-4 close-out)
+**Last updated:** 2026-06-18 (wave 4 closed out; 18/19 M1 tasks done — ready to dispatch G-series)
 
 ---
 
-## ▶ Next action (start here on a cold restart) — **WAVE-4 CLOSE-OUT (Director), then dispatch G1+G2**
-Wave 4 (E2, E3, D3, G5, F1, F2) is **fully integrated + green on `main`** — the complete greybox core
-loop now exists end-to-end (move → dive → pick up → decide at gate → extract/fail → sell → Money persists).
-**18/19 M1 tasks done.** Only the G-series remains: **G1** (telemetry) and **G2** (GdUnit4 logic tests)
-are now **unblocked** (their deps E1/E3/C2/B2/D1/F1 are all ✅) → then **G3** (full playtest build,
-needs A–F + G1) → **G4** (the "is it fun?" gate).
+## ▶ Next action (start here on a cold restart) — **dispatch the G-series (G1 + G2 in parallel)**
+Wave 4 (E2, E3, D3, G5, F1, F2) is **integrated + green** and the **wave-4 close-out is COMPLETE**
+(Director-evaluated 2026-06-18: W4-1 E3 pockets **Addressed** → ratified decision #13; W4-2…W4-11
+**Reviewed**; all reapplied to `M1_As_Built.md` §UI/HUD & loop wiring / `M1_Design_Decisions.md` / GDD §6
+and archived to `DESIGN_DEVIATIONS_HISTORY.md`). `DESIGN_DEVIATIONS.md` is empty (between-waves).
+**18/19 M1 tasks done** — only the G-series remains.
 
-**BLOCKING the next dispatch: the wave-4 close-out.** Per `CLAUDE.md`, stop and have the **Director
-disposition** every entry in `design/DESIGN_DEVIATIONS.md` before any new dispatch. The entries are
-assembled with recommendations; the one substantive design call is:
-- **E3 pockets: GDD §6 `0.15` value-fraction-credited-to-Money → `0.20` whole-items-banked-to-`banked_junk`.**
-  Claude recommends **Addressed**: ratify 0.20 + whole-item (now data-driven in `run_rules.tres` for the
-  G4 sweep) and update GDD §6 to match. If the Director prefers 0.15 as the starting fraction, it's a
-  one-field `.tres` edit; the whole-item model should stand regardless.
+**Dispatch G1 + G2 in parallel** (worktrees; both now unblocked — deps E1/E3/C2/B2/D1/F1 all ✅; they
+touch disjoint files and **neither writes `game_state.gd`/`event_bus.gd`**, so no contention):
+- **G1** (qa-playtest-coordinator) — wire the `Telemetry` autoload to log M1 `EventBus` events to JSONL:
+  run start/end + duration + cause, junk picked up, junk banked vs lost, depth reached. **Reapply note
+  from close-out (W4-3):** add a dedicated **amount-lost-on-fail** row (E3's `value_lost` currently only
+  rides `haul_banked` + a print); use the `currency_changed` `source` tag (`extract`/`sell` vs `pockets`)
+  for currency-in-by-source. Do NOT widen the locked `run_ended` signature.
+- **G2** (qa-playtest-coordinator) — GdUnit4 logic tests for proc-gen determinism, inventory capacity,
+  banking math, death-drop pockets math; wire into headless CI. (Vendoring GdUnit4 also lets the existing
+  `.tscn`/`--script` autoload-workaround tests fold into a proper harness — see §Testing constraints.)
 
-  The rest are **Reviewed**-class: As-Built signal reconciliations (E2/F1/F2), an engine workaround (F2
-  tween), and two that **close already-Addressed wave-3 items** (D3 closes `C2/dropwiring`; G5 closes
-  `E1/schema`). G5/D3 also have small reapply notes (mark the As-Built E1-schema follow-up closed; note
-  the player-group follow-up for G3).
-
-**After the Director dispositions:** reapply per verdict (→ `M1_As_Built.md` / GDD §6), archive to
-`DESIGN_DEVIATIONS_HISTORY.md`, then dispatch **G1 + G2 in parallel** (worktrees; G1=telemetry wiring,
-G2=GdUnit4 — both touch disjoint files, no game_state.gd writes). Then **G3** build (will wire F2's
-`continue_pressed` → a `start_new_run()` loop) → **G4** fun gate (producer + qa).
+**Then G3** (qa + producer) — greybox playtest build of the full loop. **Close-out reapply notes for G3:**
+(a) wire F2's `continue_pressed` → a single `start_new_run()` loop entry (W4-11); (b) add the player to a
+`"player"` group so D3's drop-position lookup can use `get_first_node_in_group` (W4-6). **Then G4** — the
+internal playtest / "is the push-cash-out tension fun?" gate (producer + qa telemetry analysis).
 
 ---
 
@@ -63,10 +61,10 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — nothing dispatched (wave 4 complete; blocked on Director close-out before G1/G2)
-No subagent running. Wave 4 (E2, E3, D3, G5, F1, F2) fully merged to `main` and re-verified — full
-**18-check** suite green. Next gate: **Director disposes the wave-4 deviations** (see ▶ Next action),
-then dispatch **G1 + G2**.
+## In progress — nothing dispatched (wave 4 closed out; ready to dispatch G-series)
+No subagent running. Wave 4 fully merged + re-verified (**18-check** suite green) and **Director-closed-out**
+(11 deviations dispositioned, all reapplied + archived). Next: dispatch **G1 + G2** in parallel worktrees
+(see ▶ Next action).
 
 ## Blocked
 | Task | Blocked by | Note |
