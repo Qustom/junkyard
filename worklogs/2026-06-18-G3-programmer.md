@@ -4,7 +4,7 @@
 - **Subagent:** programmer (general-purpose)
 - **Milestone:** M1
 - **Branch:** worktree branch `worktree-agent-ae8c5901c78482bba` (isolated G3 worktree)
-- **Commit:** 9ff8e33466a35bc3a8c9ae7b92f906d453b0fdc2 (`M1-G3: assemble full greybox playtest loop`)
+- **Commit:** 9107a2a1392f4318781c400643d654cebf375c50 (`M1-G3: assemble full greybox playtest loop`; this worklog's SHA reference is finalised in the immediately-following bookkeeping commit)
 
 ## What changed
 Assembled the whole M1 loop — built+tested in isolation through waves 1–4 — into ONE
