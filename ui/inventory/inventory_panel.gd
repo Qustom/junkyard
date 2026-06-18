@@ -119,10 +119,57 @@ func _update_capacity(inv: RunInventory) -> void:
 
 
 # Drop gesture from a cell: remove from the MODEL (the single source of truth).
-# That fires run_inventory_changed → _refresh rebuilds the grid. Re-spawning the
-# dropped JunkPickup in the world is C2's job (handoff noted in the worklog).
+# That fires run_inventory_changed → _refresh rebuilds the grid. THEN emit
+# EventBus.junk_dropped(item, world_pos) so C2's JunkSpawner (already subscribed)
+# re-spawns a re-grabbable JunkPickup at the drop position — closing drop-to-swap
+# (D3). Removal happens FIRST so the item is never both carried AND on the ground
+# (swap integrity); we capture the removed JunkItem from remove_at's return value.
 func _on_cell_drop_requested(index: int) -> void:
 	var inv: RunInventory = GameState.run_inventory
 	if inv == null:
 		return
-	inv.remove_at(index)
+	var dropped: JunkItem = inv.remove_at(index)
+	if dropped == null:
+		# Stale/invalid index (e.g. a rebuild raced the gesture) — nothing was
+		# removed, so there is nothing to re-spawn. Do NOT emit a phantom drop.
+		return
+	# Drop where the player is standing ("I dropped it where I'm standing"). The
+	# panel is a Control with no world transform, so we resolve the player's world
+	# position from the scene tree (see _player_world_pos). The spawner only acts
+	# when a band drop-container is registered, so an unresolved player (e.g. the
+	# inventory open outside a live dive) harmlessly re-spawns nothing.
+	EventBus.junk_dropped.emit(dropped, _player_world_pos())
+
+
+# Resolve the active player's world position as the drop point. D3 keeps this in
+# the UI lane (no edits to Player or the spawner): scan the current scene for the
+# first Player (CharacterBody2D, class_name Player). Returns Vector2.ZERO when no
+# player is in the tree (between dives / tests) — the spawner ignores the emit in
+# that case (no drop-container registered), so the fallback is inert rather than
+# dropping junk at the world origin mid-dive.
+func _player_world_pos() -> Vector2:
+	var tree := get_tree()
+	if tree == null:
+		return Vector2.ZERO
+	var scene := tree.current_scene
+	if scene == null:
+		return Vector2.ZERO
+	var player := _find_player(scene)
+	if player != null:
+		return player.global_position
+	return Vector2.ZERO
+
+
+# Depth-first search for the active Player node under `node`. Cheap enough: the
+# drop gesture is a discrete, infrequent action (not per-frame) and the dive scene
+# tree is small at M1. Typed against the Player class_name so it cannot match an
+# unrelated body.
+func _find_player(node: Node) -> Player:
+	var as_player := node as Player
+	if as_player != null:
+		return as_player
+	for child in node.get_children():
+		var found := _find_player(child)
+		if found != null:
+			return found
+	return null
