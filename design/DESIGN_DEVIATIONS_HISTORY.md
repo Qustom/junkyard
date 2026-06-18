@@ -110,3 +110,40 @@ Director review in `DESIGN_DEVIATIONS.md` and will be archived here once verdict
 | W4-11 | F2 count-up = manual `_process` lerp on `PROCESS_MODE_ALWAYS` (Godot paused-tree tween bug #81994); Continue emits `continue_pressed` only; +1 `project.godot` translation line | **Reviewed** | `M1_As_Built.md` §UI/HUD (`continue_pressed` seam → **G3** wires `start_new_run()`) |
 
 **Wave-4 close-out complete (2026-06-18).** 11 deviations dispositioned: **1 Addressed** (W4-1, E3 pockets → decision #13), **10 Reviewed**. W4-6 and W4-7 also closed the two wave-3 `Addressed` follow-ups (D3↔W3-24, G5↔W3-7). All reapplied to `M1_As_Built.md` (new §UI/HUD & loop wiring) / `M1_Design_Decisions.md` / GDD §6. Carried into the G-series: **G1** telemetry amount-lost row (W4-3); **G3** wires `continue_pressed`→`start_new_run()` and adds the player `"player"` group (W4-6, W4-11).
+
+---
+
+## M1 wave 5 (G-series) — Director-evaluated 2026-06-18
+
+The final M1 build wave: **G1** (telemetry JSONL), **G2** (GdUnit4 vendored + logic tests), **G3** (full-loop
+greybox build / first playable assembly), **G6** (in-build first-run telemetry consent prompt, itself the
+disposition of G3 #1). 16 deviation entries: **1 Addressed** (G3 #1 → built G6), **15 Reviewed**. The two
+recurring themes from earlier waves recur once more — the specs' **idealized API sketches** and the
+**headless-test autoload constraint** — both already canonical in `M1_As_Built.md` (which supersedes the spec
+sketches on conflict). The new canonical **§Telemetry (G1/G6)** section in `M1_As_Built.md` is the consolidated
+reapply target for the telemetry-shape entries.
+
+| # | Deviation | Verdict | Reapplied to |
+|---|---|---|---|
+| W5-G1-1 | No `Settings` autoload / `telemetry_toggled` signal — opt-in is a static `Settings` (RefCounted) over `ConfigFile`, applied via `Telemetry.set_enabled()` | **Reviewed** | `M1_As_Built.md` §Telemetry (opt-in / consent) |
+| W5-G1-2 | Opt-in flag persisted in `user://settings.cfg`, **not** the SaveManager meta schema (acceptance criterion said "via SaveManager") | **Reviewed** (Director call 2026-06-18: keep ConfigFile — a UI consent pref is profile config, not gameplay meta-state; no schema bump) | `M1_As_Built.md` §Telemetry (opt-in / consent) |
+| W5-G1-3 | `run_started` row logs `band_id`+`seed`, not `tier_label` (no tier field in M1; tier is a G4 analysis-time bucket from `duration_s`) | **Reviewed** | `M1_As_Built.md` §Telemetry |
+| W5-G1-4 | `run_id` derived in Telemetry as `r_<hex(seed)>`, not owned by GameState (brief forbade editing `game_state.gd`) | **Reviewed** (revisit at G4 if seed-reuse collisions matter) | `M1_As_Built.md` §Telemetry |
+| W5-G1-5 | Log path is `user://telemetry/run_log.jsonl` (supersedes old `events.jsonl`) | **Reviewed** | `M1_As_Built.md` §Telemetry + **Playbook 07** prose fixed `events.jsonl`→`run_log.jsonl` |
+| W5-G2-1 | Tests written against the real as-built surface — the spec's `LayoutGen.generate` / `Inventory.new(cap)` / `Economy.bank/sell/CURRENCY_RATE` / `DeathDrop.resolve` APIs don't exist | **Reviewed** | (no doc change — `M1_As_Built.md` already canonical over spec sketches) |
+| W5-G2-2 | Tests assert ratified pockets `0.20` whole-item `HIGHEST_VALUE`, not the spec open-q's stale `0.0` | **Reviewed** | (matches decision #13; no change) |
+| W5-G2-3 | `test_jsonl_writer` deferred (G1's `JsonlWriter` was on a parallel branch) | **Reviewed** | Follow-up (backlog): fold a GdUnit4 `test_jsonl_writer` in now that both are on `main` |
+| W5-G2-4 | GdUnit4 **v6.1.3** vendored at `addons/gdUnit4/`; headless runner needs `--ignoreHeadlessMode` (in `tools/run_gdunit.sh` + CI) | **Reviewed** | `M1_As_Built.md` §Telemetry note + **Playbook 07** (framework/runner) |
+| W5-G2-5 | Economy suites snapshot/restore global meta around each test rather than a pure `EconomyMath` helper (avoided editing `game_state.gd` mid-wave) | **Reviewed** | Follow-up (backlog, optional): static `EconomyMath` helper for autoload-free economy math |
+| W5-G3-1 | No in-build first-run telemetry **consent prompt** (G3 shipped README + the G1 settings toggle only) | **Addressed** | **Built G6** (in-build Enable/Not-now first-run modal, default OFF, show-once); `M1_As_Built.md` §Telemetry (opt-in / consent). New task G6 added to `TASKS.md` + board, completed 2026-06-18 |
+| W5-G3-2 | Per-run seed minted locally in MainGame (`time*31 + run_count*const`); M1 has no meta seed/run-counter system | **Reviewed** | (M1 scope; a real meta layer owns seed policy post-M1) |
+| W5-G3-3 | MainGame calls `enter_band(BAND_ID)` once after `start_run` so the HUD reads "Depth 1" in M1's single band | **Reviewed** | (M1 ships one band; multi-band descent is post-M1) |
+| W5-G3-4 | Additive `build` field (`m1-<date>-<sha>`, via new `systems/version.gd`) on the telemetry `run_started` data dict; schema envelope unchanged (not a bump) | **Reviewed** | `M1_As_Built.md` §Telemetry (build field documented) |
+| W5-G3-5 | Publish pipeline human-gated (a flag, not a design change): `nightly.yml` scaffolds the Butler/itch publish but can't run until a human provisions `BUTLER_API_KEY` + a studio itch project/slug (publish steps skip when the secret is absent); Win64 export needs templates. Also un-ignored `export_presets.cfg` in `.gitignore` so the preset commits (Godot ignores it by default; no per-machine paths). | **Reviewed** | (correctly human-gated per brief — producer/human action item; preset committed) |
+| W5-G6-1 | Consent "asked" flag persisted in `user://settings.cfg` via `Settings` (not SaveManager meta), consistent with the ratified G1 #2 | **Reviewed** | `M1_As_Built.md` §Telemetry (opt-in / consent) |
+
+**Wave-5 close-out complete (2026-06-18).** 16 deviations dispositioned: **1 Addressed** (G3 #1 → built G6,
+the in-build consent prompt), **15 Reviewed**. All reapplied to `M1_As_Built.md` (new **§Telemetry (G1/G6)** +
+scope line bumped to wave 5) and **Playbook 07** (`events.jsonl`→`run_log.jsonl`, GdUnit4 runner note). Two
+optional backlog follow-ups noted (GdUnit4 `test_jsonl_writer`; static `EconomyMath` helper). `DESIGN_DEVIATIONS.md`
+is now empty. **All M1 build work is complete (A–G + G6); only G4 — the human fun-gate playtest — remains.**

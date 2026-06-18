@@ -7,7 +7,7 @@
 
 ## What you test against
 - **Framework:** GdUnit4 (CI runner, scene/integration). Don't split onto GUT. *(Addon not yet vendored — see `SETUP.md`; the M0 headless smoke test in `tools/ci_smoke_test.gd` runs today with no addon.)*
-- **Telemetry:** the opt-in JSONL log (`user://telemetry/events.jsonl`) — run start/end + duration + cause, currency in/out per source/sink, exposure crossings, band-depth, deaths. Your job is **analysis**, not building hooks.
+- **Telemetry:** the opt-in JSONL log (`user://telemetry/run_log.jsonl`) — run start/end + duration + cause, currency in/out per source/sink, exposure crossings, band-depth, deaths. Your job is **analysis**, not building hooks. *(As-built M1: GdUnit4 v6.1.3 vendored at `addons/gdUnit4/`, run via `tools/run_gdunit.sh` with `--ignoreHeadlessMode`; the telemetry as-built contract — schema v1 envelope, `run_id`, `build` field, opt-in `settings.cfg` + first-run consent prompt — lives in `M1_As_Built.md` §Telemetry.)*
 - **Save format:** per-slot `meta.sav` + `run.sav` via `store_var` (objects off), JSON header, integer `schema_version`, ordered migrations, atomic write + `.bak`.
 - **Perf budget:** 60 FPS / ~16 ms on a mid-range laptop at the locked base resolution; per-band loot/enemy node caps.
 

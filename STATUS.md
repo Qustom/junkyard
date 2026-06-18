@@ -66,16 +66,17 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — nothing dispatched (G1+G2+G3+G6 merged + verified; awaiting Director on 13 deviations + G4)
+## In progress — nothing dispatched (wave-5 close-out COMPLETE; only G4 the human fun-gate remains)
 No subagent running. G1 + G2 + G3 + G6 merged into `main` and re-verified green (main scene set · import clean ·
 SMOKE OK · CONSENT OK · TELEMETRY OK · LOOP OK · MAIN GAME OK · GdUnit4 30/30 · 18 legacy checks OK). Board:
 G1 + G2 + G3 set **Done**; G6 set **Done**.
 
-**Wave-5 close-out — partial.** 16 total wave-5 deviation entries (G1×5, G2×5, G3×5, G6×1). Director verdicts
-2026-06-18: **G1 #2 Reviewed** (telemetry opt-in stays in `settings.cfg`); **G3 #1 Addressed** → built **G6**
-(in-build first-run consent prompt, now merged). The remaining **14 are awaiting the Director's per-entry
-verdict** (the 13 reconciliations presented in chat + G6's 1; Director asked to review first — do NOT archive
-until verdicted). After verdicts: reapply minor doc notes + archive all 16 to `DESIGN_DEVIATIONS_HISTORY.md`.
+**Wave-5 close-out — COMPLETE (2026-06-18).** All 16 wave-5 deviations (G1×5, G2×5, G3×5, G6×1) dispositioned by
+the Director: **1 Addressed** (G3 #1 → built G6, the in-build consent prompt) / **15 Reviewed**. Reapplied to
+`M1_As_Built.md` (new **§Telemetry (G1/G6)** + scope bumped to wave 5) and **Playbook 07** (`events.jsonl`→
+`run_log.jsonl`, GdUnit4 runner note); all 16 archived to `DESIGN_DEVIATIONS_HISTORY.md`. `DESIGN_DEVIATIONS.md`
+is empty (between-waves). Two optional backlog follow-ups noted (GdUnit4 `test_jsonl_writer`; static `EconomyMath`
+helper).
 
 **Then G4** = the human fun-gate (internal playtest on the dev machine: `godot project.godot` → play
 `main_game.tscn`). Claude preps `tools/playtest/loop_smoke_checklist.md` + analyzes telemetry after, recommends a
