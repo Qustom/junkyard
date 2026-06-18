@@ -7,11 +7,28 @@ mirror lives in GitHub Projects. Update this every time a task is claimed, block
 See `CLAUDE.md` → "The orchestrator loop".
 
 **Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)**, in progress.
-**Last updated:** 2026-06-17 (wave 4a dispatched)
+**Last updated:** 2026-06-17 (wave 4a integrated; 16/16 M1 tasks done)
 
 ---
 
-## ▶ Next action (start here on a cold restart)
+## ▶ Next action (start here on a cold restart) — **dispatch WAVE 4b: F1 → F2**
+Wave 4a (E2, E3, D3, G5) is integrated + green on `main` (`0d6c484`). **16/19 M1 tasks done.**
+Remaining: **F1** (Money sell) → **F2** (sell screen) → **G1** (telemetry, needs E3✅) →
+**G2** (logic tests, needs E3✅+F1) → **G3** (build) → **G4** (fun gate).
+
+**Dispatch F1 next** (general-purpose, worktree). Key brief notes from the as-built read:
+- `GameState.money` **already exists and already persists** (schema is already v2) — so F1 needs **no schema bump**; it's smaller than its spec. The real new work is **`sell_banked_junk()`** (converts `banked_junk` → Money at `base_sell_value`, clears the bank, `save_meta(0)`, returns a per-item breakdown for F2) + **reuse the existing `add_currency(&"money", amt, source)`** (which already emits `currency_changed`) instead of adding a parallel `credit_money`/`money_changed`.
+- F1 **writes `game_state.gd`** — it branches off this main which already has E3's changes, so no conflict. Solo dispatch (no other agent touches game_state.gd in 4b until F2, which is UI-only).
+- Then **F2** (ui-ux-designer): post-extract sell screen consuming `sell_banked_junk()`'s breakdown; per E3+F1 recs, route **failed runs through the same screen** ("RUN LOST — kept N"). Needs F1 + D2 (✅).
+
+**Wave-4 close-out (after F1/F2 land):** Director must disposition the wave-4a deviations now in
+`design/DESIGN_DEVIATIONS.md` — the one real call is **E3 pockets `0.15` value-fraction-to-Money →
+`0.20` whole-item-to-bank** (Claude recommends Addressed + update GDD §6); the rest are reconciliations
+or close already-Addressed wave-3 items (D3 closes `C2/dropwiring`, G5 closes `E1/schema`).
+
+---
+
+## (archived) ▶ prior next-action
 **M1 wave 3a done & integrated into `main` (`061c6aa`)** — C1b, D2, E1 merged + verified green (10/19
 total: A1, B1, C1, A2, A3, B2, D1, C1b, E1, D2). Wave-3a deviations recorded in
 `design/DESIGN_DEVIATIONS.md` **awaiting Director evaluation at the wave-3 close-out** (after 3b).
@@ -36,24 +53,9 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — WAVE 4a dispatched 2026-06-17 (4 agents, worktrees)
-Pre-seed: `GameState.run_haul_value()` shared read helper landed on `main` (`e6b28ed`) so E3 owns
-`game_state.gd` alone this wave. **No new EventBus signals needed** — every wave-4 task reuses the
-existing contract (verified against `event_bus.gd` + `M1_As_Built.md`).
-
-| Task | Agent | Branch | Touches | Status |
-|---|---|---|---|---|
-| **E2** Push/cash-out decision surface | ui-ux-designer (+gp wiring) | `ui-ux/E2` | new `ui/hud/*` only (composes existing dive_clock_meter + inventory_panel + interaction_prompt; reuses `run_inventory_changed`/`interactable_focused`/`dive_clock_changed`; `run_haul_value()`) | dispatched |
-| **E3** Death/timeout drops haul | general-purpose | `programmer/E3` | **sole writer of `game_state.gd`** (`fail_run`, `_resolve_pockets`, refactor `_on_player_died`); `run_rules.tres`; `debug_kill` in project.godot | dispatched |
-| **D3** Activate drop-to-swap | ui-ux-designer | `ui-ux/D3` | `ui/inventory/*` drop gesture → emit `junk_dropped` | dispatched |
-| **G5** Meta save-migration fixture | qa-playtest-coordinator | `qa/G5` | `tests/*` + a v1 `meta.sav` fixture only | dispatched |
-
-**Wave 4b (after E3 lands):** F1 (Money `sell_banked_junk` — `money` already persists @ schema v2, so F1
-is smaller than its spec) → F2 sell screen. Then G1 (needs E3), G2 (needs E3+F1), then G3 build → G4 gate.
-
-> **game_state.gd contention resolved:** E2's only GameState need (`run_haul_value`) was pre-seeded on
-> main; E3 is the lone wave-4a writer of that file. F1 (also a game_state.gd writer) is deferred to 4b so
-> it branches off a main that already contains E3's changes — no merge conflict.
+## In progress — nothing dispatched (wave 4a integrated; ready to dispatch wave 4b = F1→F2)
+No subagent running. Wave 4a (E2, E3, D3, G5) merged to `main` (`0d6c484`) and re-verified — full
+16-check suite green. Next: dispatch **F1** (see ▶ Next action above), then **F2**.
 
 ## Blocked
 | Task | Blocked by | Note |
@@ -79,8 +81,12 @@ is smaller than its spec) → F2 sell screen. Then G1 (needs E3), G2 (needs E3+F
 | D2 — Inventory UI (greybox) | merged `061c6aa`; `tests/test_inventory_ui.gd` → **INV UI OK** (pure projection, signal-driven rebuild, item+free-slot cell count, capacity label, BAG FULL state, drop gesture); worklog `worklogs/2026-06-17-D2-ui-ux-designer.md` (impl `0681894`) |
 | B3 — Band depth / "push deeper" | merged `f78aff7`; `tests/test_band_depth.tscn` → **BAND DEPTH OK** (depth BFS, depth-scaled value $31.9→$121.6, tier gate, plan determinism, no RNG cross-talk, duplicate isolation); worklog `worklogs/2026-06-17-B3-general-purpose.md` (impl `ffbe875`) |
 | C2 — Junk pickup in the band | merged `aa9a610`; `tests/test_junk_pickup.tscn` → **JUNK PICKUP OK** (24 pickups from B3 plan, interact adds+frees, full-bag reject leaves it in-world, `junk_picked_up` fires, drop re-spawn via `spawn_one`); worklog `worklogs/2026-06-17-C2-general-purpose.md` (impl `5adacac`) |
+| E3 — Death/timeout drops haul | merged `1f18910`; `tests/test_death_drop.gd` → **DEATH DROP OK** (whole-item pockets @ `floor(value*0.20)` highest_value, banks kept items to `banked_junk`, empty-bag valid, cheapest-exceeds-budget edge, `_run_ended` idempotency, extract-wins-tie, one `run_ended`); `run_rules.tres`; `debug_kill` key K; worklog `worklogs/2026-06-17-E3-programmer.md` (impl `9f23851`) |
+| E2 — Push/cash-out decision HUD | merged `43284f5`; `tests/test_decision_hud.gd` → **DECISION HUD OK** (Holding=`run_haul_value`, clock bar/tint green→amber→red off `dive_clock_changed`, Depth=`current_depth`, gate-only extract prompt w/ live value); composes D2 panel; worklog `worklogs/2026-06-17-E2-ui-ux.md` (impl `7e0eb0a`) |
+| D3 — Activate drop-to-swap re-spawn | merged `923a815`; `tests/test_drop_swap.tscn` → **DROP SWAP OK** (drop removes from bag + emits `junk_dropped(item, player_pos)`, C2 spawner re-instantiates pickup); closes wave-3 `C2/dropwiring`; worklog `worklogs/2026-06-17-D3-ui-ux.md` (impl `e188a50`) |
+| G5 — Meta save-migration fixture (v1→v2) | merged `0d6c484`; `tests/test_save_migration.tscn` → **SAVE MIGRATION OK** (binary `meta_v1.sav` fixture migrates to v2, `banked_junk`→`[]`, fields intact, round-trip + `.bak`); CI-wired; closes wave-3 `E1/schema`; worklog `worklogs/2026-06-17-G5-qa.md` (impl `8655454`) |
 
-_Integrated `main` re-verified after every merge (full suite green): `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK · JUNK PICKUP OK._
+_Integrated `main` re-verified after every merge (full suite green): `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK · JUNK PICKUP OK · DEATH DROP OK · DECISION HUD OK · DROP SWAP OK · SAVE MIGRATION OK (16 checks)._
 _Open test-hygiene nit (QA): B2's determinism scene leaks "2 resources still in use at exit" (un-freed PackedScene instances) — cosmetic, non-failing; tidy when GdUnit4 is vendored (G2)._
 
 ## Done (M0 — Pre-production & Tech Foundations)
