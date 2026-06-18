@@ -16,12 +16,13 @@ See `CLAUDE.md` → "The orchestrator loop".
 total: A1, B1, C1, A2, A3, B2, D1, C1b, E1, D2). Wave-3a deviations recorded in
 `design/DESIGN_DEVIATIONS.md` **awaiting Director evaluation at the wave-3 close-out** (after 3b).
 
-**Wave 3 COMPLETE & integrated into `main` (`aa9a610`)** — C1b, E1, D2, B3, C2 all merged + verified
-(12/19 M1 tasks done). **NEXT ACTION: run the wave-3 Director deviation close-out** — present every
-entry in `design/DESIGN_DEVIATIONS.md` (C1b/E1/D2/B3/C2) to the human Director for a Reviewed/Addressed
-verdict, then reapply + archive. **Do this before dispatching wave 4.**
+**Wave 3 COMPLETE + close-out DONE** — C1b, E1, D2, B3, C2 merged + verified (12/19 M1 tasks).
+Director dispositioned all 24 wave-3 deviations on 2026-06-17 (**21 Reviewed, 3 Addressed**); reapplied
+to `M1_As_Built.md` + archived to `DESIGN_DEVIATIONS_HISTORY.md`. The 3 Addressed: translation
+gitignored (done); **G5** (meta save-migration fixture) + **D3** (activate drop-to-swap) added to
+`TASKS.md` + board. `DESIGN_DEVIATIONS.md` is now empty (between-waves).
 
-**Then-unblocked wave 4 (after the close-out):**
+**NEXT ACTION: dispatch wave 4.** Candidates (check `Junkyard_M1_Breakdown.md` §4 for the exact order):**
 - **E2** — death/timeout end-run + haul loss (needs E1 ✅, B3 ✅, D2 ✅, A3 ✅)
 - **E3** — respawn/return-to-surface (needs E1 ✅, A3 ✅)
 - **F1** — surface scene + sell screen / `banked_junk`→Money (needs E1 ✅) → **F2** sell UI (F1, D2 ✅)
@@ -35,10 +36,9 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — wave-3 Director deviation close-out (no code tasks in flight)
-All wave-3 code (C1b, E1, D2, B3, C2) is merged & green. The only open work is the **deviation close-out**:
-the human Director must disposition each entry in `design/DESIGN_DEVIATIONS.md` (Reviewed/Addressed);
-then Claude reapplies to the design + archives to `DESIGN_DEVIATIONS_HISTORY.md`. No subagent is running.
+## In progress — nothing dispatched (wave 3 closed out; ready to start wave 4)
+No subagent running. Wave-3 close-out complete. Pick the next unblocked wave-4 task(s) per the build order
+(E2/E3/F1, plus the two new follow-ups D3 + G5 once their blockers allow) and dispatch in worktrees.
 
 ## Blocked
 | Task | Blocked by | Note |

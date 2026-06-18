@@ -92,6 +92,12 @@ real art. Full milestone breakdown, dependency map, and build order: `design/M1_
 - Goal: a `Control`-based grid showing carried junk and remaining capacity; greybox styling, but readability matters because the player makes the keep/drop decision here.
 - Done when: the grid reflects current inventory in real time; capacity/fullness is legible at a glance.
 
+### D3 — Activate drop-to-swap re-spawn (emit `junk_dropped`)
+- Milestone: M1   Assignee: ui-ux-designer   BlockedBy: D2, C2
+- Spec: design/M1_Tasks/D2_inventory_ui.md (drop affordance) + `M1_As_Built.md` §B3↔C2 seam
+- Goal: close the wave-3 `C2/dropwiring` deviation (Director: **Addressed**) — D2's drop gesture must `EventBus.junk_dropped.emit(removed_item, drop_world_pos)` after `RunInventory.remove_at()`, so C2's already-wired `JunkSpawner` (`spawn_one` + `junk_dropped` listener) re-spawns the dropped junk in the world. A one-line emit + the world position to drop at.
+- Done when: right-clicking a cell drops that item from the bag AND a re-grabbable `JunkPickup` appears in the world at the player; verified headless (emit fires, spawner re-instantiates).
+
 ### Workstream E — The gate: extraction, banking & death-drop
 
 ### E1 — Gate node + extract-and-bank
@@ -139,6 +145,12 @@ real art. Full milestone breakdown, dependency map, and build order: `design/M1_
 - Spec: design/M1_Tasks/G2_tests_gdunit4.md
 - Goal: GdUnit4 tests for the pure-logic pieces — proc-gen determinism, inventory capacity rules, banking math, death-drop pockets math — wired into the headless CI smoke test.
 - Done when: tests pass in CI headless; determinism and economy/inventory math are covered.
+
+### G5 — Meta save-migration fixture (v1→v2)
+- Milestone: M1   Assignee: qa-playtest-coordinator   BlockedBy: E1
+- Spec: `M1_As_Built.md` §Save schema (E1) + Technical Design save rules
+- Goal: close the wave-3 `E1/schema` deviation (Director: **Addressed**) — the meta `schema_version` bump 1→2 (added `banked_junk`) needs a QA migration fixture, per the TDD rule "a QA fixture on every schema change". Add a v1 `meta.sav` fixture and a test that loads it, runs `_migrate_meta`, and asserts `banked_junk` defaults to `[]` and existing fields survive intact (atomic write + `.bak` preserved).
+- Done when: a headless test loads a v1 meta fixture, migrates to v2, and asserts the migrated state; runs green in CI. (Can fold into G2's GdUnit4 suite once the addon is vendored.)
 
 ### G3 — Greybox playtest build
 - Milestone: M1   Assignee: qa-playtest-coordinator (+ producer: build/distribution)   BlockedBy: A1, A2, A3, B1, B2, B3, C1, C2, D1, D2, E1, E2, E3, F1, F2, G1

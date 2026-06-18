@@ -43,3 +43,46 @@ No deviation was a revert; all `Addressed` items were reapplied. The Group-B tun
 | W2-17 | D1 added index-safe `remove_at(index)` alongside `remove(item)` | **Reviewed** | — (adopts the D1 spec's own recommendation) |
 
 **New tasks from this assessment:** none beyond existing — W2-8 → **C1b** (on the board, in progress); W2-9 → standing worktree process rule; W2-13/16 "revisit" already scoped under **G2** (vendor GdUnit4).
+
+---
+
+## M1 wave 3 (C1b, E1, D2, B3, C2) — Director-evaluated 2026-06-17
+
+Every entry below was dispositioned by the Director on 2026-06-17 (Claude assembled + recommended; the
+Director ruled). **21 Reviewed, 3 Addressed.** The recurring themes are unchanged from waves 1 & 2:
+the specs' **idealized API sketches** (now `JunkItem`/`base_sell_value`, real `RNG` surface) and the
+**headless-test autoload constraint** (tests run as `.tscn`) — both already canonical in
+`M1_As_Built.md`. The new structural fact is the **B3↔C2 seam** (B3 plans, C2 spawns), also folded in.
+No Reviewed item was a revert; all 3 Addressed items were reapplied (one as a build change, two as new tasks).
+
+| # | Deviation | Verdict | Reapplied to |
+|---|---|---|---|
+| W3-1 | C1b folded `Item`'s useful fields into `JunkItem`; retired `Item` | **Reviewed** | `M1_As_Built.md` §Junk schema (executes ratified decision #1) |
+| W3-2 | C1b deleted `sample_junk.tres` (not converted) | **Reviewed** | — (curated catalog is the real content) |
+| W3-3 | C1b repointed the smoke test's load-as-data step to a real catalog `JunkItem` | **Reviewed** | — (CI guarantee preserved) |
+| W3-4 | E1 reused `run_ended`+`haul_banked` instead of a new `run_end(cause,payload)` | **Reviewed** | `M1_As_Built.md` §EventBus / §GameState (tracks decision #6) |
+| W3-5 | E1 `banked_junk` persists as ids, rehydrated from catalog (objects-OFF save) | **Reviewed** | `M1_As_Built.md` §Save schema |
+| W3-6 | E1 real signature `save_meta(slot)`; `extract_and_end_run()` hardcodes slot 0 | **Reviewed** | `M1_As_Built.md` §GameState (slot-routing is a later follow-up) |
+| W3-7 | E1 meta schema bump 1→2 with no QA migration fixture yet | **Addressed** | New task **G5** (v1→v2 meta save-migration fixture) + `M1_As_Built.md` §Save schema |
+| W3-8 | D2 panel also listens to `run_started`/`run_ended` (start builds / end clears the bag) | **Reviewed** | — (still pure-projection / EventBus-only) |
+| W3-9 | D2 drop gesture is right-click only (spec allowed right-click or hold-to-drop) | **Reviewed** | — (deliberate gesture; hold-to-drop deferrable) |
+| W3-10 | D2 cell rebuild uses `queue_free()`+hide vs synchronous `free()` | **Reviewed** | — (engine-correctness; rebuild can fire from a cell's own signal) |
+| W3-11 | D2 added a "No active dive" idle state for `run_inventory == null` | **Reviewed** | — (additive; needed for an always-on HUD) |
+| W3-12 | D2 authored no `theme.tres` (spec marked it optional) | **Reviewed** | — (per-cell overrides sufficed; deferred to human visual pass) |
+| W3-13 | D2 committed generated `inventory_strings.en.translation` (binary build product) | **Addressed** | Gitignored `*.translation` + untracked the file; regenerated from `.csv` on import (verified). `.gitignore` updated |
+| W3-14 | B3 used a local `RandomNumberGenerator` sub-stream (no `RNG.fork`); autoload RNG untouched | **Reviewed** | `M1_As_Built.md` §RNG (deterministic sub-streams — canonical pattern) |
+| W3-15 | B3 consumed `JunkItem`/`base_sell_value` from catalog (no `junk_pool.tres`) | **Reviewed** | `M1_As_Built.md` §Junk schema |
+| W3-16 | B3 produces a placement *plan* + debug overlay only; added only `junk_spawned` | **Reviewed** | `M1_As_Built.md` §B3↔C2 seam |
+| W3-17 | B3 acceptance test runs as `.tscn` (needs autoloads) | **Reviewed** | `M1_As_Built.md` §Testing constraints (revisit at G2) |
+| W3-18 | B3 real reverse-BFS return distance; curves near-linear value / stepped tier / flat density | **Reviewed** | `M1_As_Built.md` §Junk schema (depth axis) |
+| W3-19 | C2 `JunkSpawner` is a pure consumer of B3's plan (no own weighting / no `RNG.stream`) | **Reviewed** | `M1_As_Built.md` §B3↔C2 seam |
+| W3-20 | C2 spawner invoked directly after generation, not via a signal | **Reviewed** | — (per spec recommendation: hard ordering + data dependency) |
+| W3-21 | C2 `junk_picked_up(...,slot_size,...)` + `band_populated` + `junk_dropped` signals | **Reviewed** | `M1_As_Built.md` §EventBus (Telemetry watch-list confirm = G1 scope) |
+| W3-22 | C2 `base_sell_value` + reject UX keyed off the same `can_accept()`/`is_full()` D2 reads | **Reviewed** | `M1_As_Built.md` §B3↔C2 seam |
+| W3-23 | C2 acceptance test runs as `.tscn` (needs autoloads) | **Reviewed** | `M1_As_Built.md` §Testing constraints (revisit at G2) |
+| W3-24 | C2 drop-to-swap re-spawn wired on spawner side but dormant until D2 emits `junk_dropped` | **Addressed** | New task **D3** (D2 emits `junk_dropped` to activate it) |
+
+**New tasks from this assessment:** **G5** (W3-7, meta save-migration fixture) and **D3** (W3-24, activate
+drop-to-swap re-spawn) — both added to `TASKS.md` and the GitHub Projects board (Todo). W3-13 was actioned
+directly (translation gitignored). W3-6 slot-routing and W3-21 Telemetry watch-list fold into later tasks
+(save/slot layer; **G1**).
