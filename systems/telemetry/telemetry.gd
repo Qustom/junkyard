@@ -1,0 +1,216 @@
+extends Node
+## Telemetry — opt-in, structured, timestamped JSONL event log (TDD §2; G1).
+##
+## Listens on EventBus and appends one JSON object per line to
+## `user://telemetry/run_log.jsonl` so run-length + economy validation (the M1/M3
+## feedback gates) can be computed offline by the QA/G4 analysis layer. Privacy:
+## opt-in via the Settings flag (default OFF), no PII — when disabled NOTHING is
+## written to disk.
+##
+## Design seams (per G1 spec + M1_As_Built):
+##  * The schema (version + event-type strings) lives in `telemetry_schema.gd`,
+##    shared with G2 tests and G4 analysis.
+##  * The file I/O lives in `jsonl_writer.gd`, a dumb autoload-free seam G2 unit-
+##    tests directly (autoloads don't resolve under `--headless --script`).
+##  * This node only: reads the opt-in flag, connects signals, normalizes each
+##    event into a schema row (stamping wall-clock + monotonic time + version +
+##    ids), and appends via the writer.
+##
+## Real-signal adaptation (the G1 sketch was idealized; M1_As_Built wins):
+##  * The locked lifecycle signals are `run_started(band_id, seed)` and the
+##    FIXED-ARITY `run_ended(reason, duration_s, depth_reached)` — they carry NO
+##    run_id, tier_label, banked_total or lost_total. So Telemetry mints a stable
+##    per-run id from the seed, and reconstructs banked/lost totals from the
+##    economy signals it sees during the run (haul_banked + junk_picked_up).
+##  * `junk_picked_up(item_id, value, slot_size, world_pos, accepted)` (C2) — has
+##    no run_id/depth; we stamp current_depth from GameState and only count value
+##    for accepted pickups.
+##  * `haul_banked(total_value)` (E1/E3) — the kept/banked amount on BOTH extract
+##    and fail; we cache it so run_ended can report banked_total and derive the
+##    amount-lost-on-fail (E3's value_lost detail, which the locked run_ended could
+##    not carry — G1 owns this dedicated `junk_lost` row).
+##  * `currency_changed(kind, delta, source)` — drives currency-in-by-source rows.
+##  * `exposure_threshold_crossed(threshold)` — exposure pacing rows.
+
+const Schema := preload("res://systems/telemetry/telemetry_schema.gd")
+const JsonlWriterScript := preload("res://systems/telemetry/jsonl_writer.gd")
+const SettingsScript := preload("res://systems/settings/settings.gd")
+
+var _enabled: bool = false
+var _writer: JsonlWriter = null
+var _session_id: String = ""
+var _run_id: String = ""
+var _run_t0_ms: int = 0
+
+# --- Per-run economy bookkeeping (reconstructs the totals the locked run_ended
+#     signal cannot carry). Reset every run_started. -----------------------------
+var _accepted_value: int = 0   # sum of accepted-pickup values seen this run
+var _last_banked: int = 0      # latest haul_banked total (kept on extract OR fail)
+var _max_depth: int = 0        # highest depth reached this run
+
+
+func _ready() -> void:
+	# session_id: one stable id for the whole process lifetime (logging infra,
+	# not gameplay state — so it lives here, not in GameState).
+	_session_id = "s_" + _short_id(Time.get_unix_time_from_system() as int)
+	_enabled = SettingsScript.get_telemetry_enabled()
+
+	EventBus.run_started.connect(_on_run_started)
+	EventBus.run_ended.connect(_on_run_ended)
+	EventBus.band_entered.connect(_on_band_entered)
+	EventBus.junk_picked_up.connect(_on_junk_picked_up)
+	EventBus.haul_banked.connect(_on_haul_banked)
+	EventBus.currency_changed.connect(_on_currency_changed)
+	EventBus.exposure_threshold_crossed.connect(_on_exposure_threshold)
+
+
+## Public toggle entry point for the settings UI. Persists the flag and applies it
+## live. Disabling stops writing immediately but KEEPS rows already on disk
+## (consent was in effect when they were captured; G4 keys on complete run pairs).
+func set_enabled(value: bool) -> void:
+	SettingsScript.set_telemetry_enabled(value)
+	_enabled = value
+	if not _enabled and _writer != null:
+		_writer.close()
+		_writer = null
+
+
+func is_enabled() -> bool:
+	return _enabled
+
+
+# --- Row assembly + write ----------------------------------------------------
+func _emit_row(type: String, data: Dictionary) -> void:
+	if not _enabled:
+		return
+	if _writer == null:
+		_writer = JsonlWriterScript.new(Schema.LOG_PATH)
+		if not _writer.is_open():
+			# Open failed (e.g. read-only user dir): drop the writer and bail. Never
+			# crash the game over telemetry; we retry the open on the next event.
+			_writer = null
+			return
+	var t_ms: int = Time.get_ticks_msec() - _run_t0_ms
+	var row := {
+		"v": Schema.SCHEMA_VERSION,
+		"ts": Time.get_datetime_string_from_system(true) + "Z",  # UTC ISO-8601
+		"t_ms": t_ms,
+		"run_id": _run_id,
+		"session_id": _session_id,
+		"type": type,
+		"data": data,
+	}
+	_writer.append_line(JSON.stringify(row))
+
+
+# --- Signal handlers ---------------------------------------------------------
+func _on_run_started(band_id: StringName, seed: int) -> void:
+	_run_t0_ms = Time.get_ticks_msec()
+	_run_id = "r_" + _short_id(seed)
+	_accepted_value = 0
+	_last_banked = 0
+	_max_depth = 0
+	_emit_row(Schema.RUN_STARTED, {"band_id": String(band_id), "seed": seed})
+
+
+func _on_band_entered(band_id: StringName, depth: int) -> void:
+	# Fire band_depth_reached once per NEW max depth (the funnel-defining moment).
+	if depth > _max_depth:
+		_max_depth = depth
+		_emit_row(Schema.BAND_DEPTH_REACHED, {"band_id": String(band_id), "depth": depth})
+		if _writer != null:
+			_writer.flush()  # high-value event → flush for crash safety
+
+
+func _on_junk_picked_up(item_id: StringName, value: int, slot_size: int, _world_pos: Vector2, accepted: bool) -> void:
+	var depth: int = _current_depth()
+	if accepted:
+		_accepted_value += value
+	_emit_row(Schema.JUNK_PICKED_UP, {
+		"item_id": String(item_id),
+		"value": value,
+		"slot_size": slot_size,
+		"depth": depth,
+		"accepted": accepted,
+	})
+
+
+func _on_haul_banked(total_value: int) -> void:
+	# Emitted on BOTH extract and fail (E1/E3). Cache it for run_ended's totals and
+	# log a per-bank row (depth-of-bank distribution for G4). Flush: high-value.
+	_last_banked = total_value
+	_emit_row(Schema.JUNK_BANKED, {"value": total_value, "depth": _current_depth()})
+	if _writer != null:
+		_writer.flush()
+
+
+func _on_currency_changed(kind: StringName, delta: int, source: StringName) -> void:
+	# Currency-IN only (positive deltas) tagged by source — feeds the currency
+	# in-by-source analysis (sell / extract / pockets). Sinks are out of M1 scope.
+	if delta <= 0:
+		return
+	_emit_row(Schema.CURRENCY_IN, {"kind": String(kind), "delta": delta, "source": String(source)})
+
+
+func _on_exposure_threshold(threshold: int) -> void:
+	_emit_row(Schema.EXPOSURE_THRESHOLD, {"threshold": threshold})
+
+
+func _on_run_ended(reason: StringName, duration_s: float, depth_reached: int) -> void:
+	var cause := String(reason)
+	var banked_total: int = _last_banked
+	# Reconstruct lost_total the locked run_ended signature cannot carry:
+	#  * extract → the whole carried haul was banked, nothing lost.
+	#  * death/timeout (fail) → kept = haul_banked(kept_value); lost = carried - kept.
+	#  * quit → treat the whole carried haul as lost (no bank happened).
+	var lost_total: int = 0
+	match cause:
+		"extract":
+			lost_total = 0
+		"quit":
+			lost_total = maxi(_accepted_value, 0)
+		_:  # death / timeout — the E3 fail path
+			lost_total = maxi(_accepted_value - banked_total, 0)
+
+	# G1-owned dedicated amount-lost-on-fail row (the E3 seam: value_lost could not
+	# ride on the fixed-arity run_ended, so it lived only on a debug print).
+	if lost_total > 0:
+		_emit_row(Schema.JUNK_LOST, {
+			"value": lost_total,
+			"depth": depth_reached,
+			"cause": cause,
+		})
+
+	_emit_row(Schema.RUN_ENDED, {
+		"cause": cause,
+		"duration_s": duration_s,
+		"banked_total": banked_total,
+		"lost_total": lost_total,
+		"max_depth": maxi(_max_depth, depth_reached),
+	})
+	if _writer != null:
+		_writer.flush()
+
+
+func _exit_tree() -> void:
+	if _writer != null:
+		_writer.flush()
+		_writer.close()
+		_writer = null
+
+
+# --- Helpers -----------------------------------------------------------------
+## Resolve current dive depth from GameState if present (autoload may be absent in
+## a bare writer unit test; default 0). Looked up via the SceneTree, not the
+## compile-time global, so this stays robust under headless scene runs.
+func _current_depth() -> int:
+	var gs := get_node_or_null("/root/GameState")
+	if gs != null:
+		return gs.current_depth
+	return 0
+
+
+## Short stable hex id from an int (run/session id). Not cryptographic — just a
+## compact, reproducible-from-seed handle for correlating rows in one run.
+func _short_id(value: int) -> String:
+	return "%06x" % (absi(value) % 0x1000000)

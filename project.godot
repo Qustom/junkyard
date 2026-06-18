@@ -19,7 +19,7 @@ RNG="*res://systems/rng.gd"
 GameState="*res://systems/game_state.gd"
 SaveManager="*res://systems/save_manager.gd"
 AudioDirector="*res://systems/audio_director.gd"
-Telemetry="*res://systems/telemetry.gd"
+Telemetry="*res://systems/telemetry/telemetry.gd"
 
 [debug]
 

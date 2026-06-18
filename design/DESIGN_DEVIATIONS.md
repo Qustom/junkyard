@@ -17,6 +17,16 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ## ⏳ Pending Director evaluation
 
-*None. M1 waves 1 & 2, wave 3, and **wave 4** (E2, E3, D3, G5, F1, F2 — 11 deviations, Director-evaluated 2026-06-18: 1 Addressed / 10 Reviewed) have all been dispositioned and moved to `DESIGN_DEVIATIONS_HISTORY.md`. This file is empty between waves.*
+*M1 waves 1 & 2, wave 3, and **wave 4** (E2, E3, D3, G5, F1, F2 — 11 deviations, Director-evaluated 2026-06-18: 1 Addressed / 10 Reviewed) have all been dispositioned and moved to `DESIGN_DEVIATIONS_HISTORY.md`.*
 
 *Wave-5 (G1, G2, G3, G4) deviations land here as those tasks integrate, then get evaluated at the wave-5 close-out.*
+
+### Wave 5 — G1 (telemetry JSONL)
+
+All five below are spec-sketch-vs-as-built reconciliations (the `G1_telemetry_events.md` sketch is idealized; `M1_As_Built.md` is canonical). None changes gameplay; none touched `event_bus.gd` or `game_state.gd`; no new EventBus signals.
+
+1. `[2026-06-18] G1 / Settings architecture` — **No `Settings` autoload and no `telemetry_toggled` signal** (the sketch assumes both). Instead opt-in is a static `Settings` (RefCounted) helper over a `ConfigFile`; the toggle applies via `Telemetry.set_enabled()`. · *Why:* avoid adding an autoload mid-wave; avoid a signal that would need pre-declaring on `event_bus.gd`. · *Recommendation:* **Reviewed** — minimal surface, on-architecture for a single preference.
+2. `[2026-06-18] G1 / opt-in persistence` — **Opt-in flag persisted in `user://settings.cfg`, NOT via the SaveManager meta schema** (acceptance criterion says "persisted via SaveManager"). · *Why:* a meta-schema home needs a v2→v3 bump + migration + binary fixture + an edit to `game_state.gd` (a G2-contention file the brief says to avoid); a UI consent preference is arguably profile config, not gameplay meta-state. · *Recommendation:* **Reviewed** (keep ConfigFile). If the Director wants it in `meta.sav`, that's a follow-up task (schema bump + fixture).
+3. `[2026-06-18] G1 / run_started payload` — **`run_started` row logs `band_id`+`seed`, not `tier_label`** (sketch field). · *Why:* the real `run_started(band_id, seed)` has no tier label and M1 run-state has no run-length-target field; `tier_label` (15/30/60-min bucket) is a G4 analysis-time classification from `run_ended.duration_s`. · *Recommendation:* **Reviewed**.
+4. `[2026-06-18] G1 / run_id source` — **`run_id` derived inside Telemetry as `r_<hex(seed)>`, not owned by GameState** (sketch recommendation). · *Why:* the brief forbids touching `game_state.gd` this wave; the brief itself permits Telemetry-derived ids when GameState edits risk conflict. Stable per run; not unique if a seed is reused (rows also carry `session_id`+`t_ms`). · *Recommendation:* **Reviewed** for M1; revisit at G4 if seed-reuse collisions matter.
+5. `[2026-06-18] G1 / log path` — **Log path is `user://telemetry/run_log.jsonl`** (G1 spec + As-Built), superseding the old `events.jsonl`. The old autoload + the QA playbook prose used `events.jsonl`. · *Why:* match the canonical contract. · *Recommendation:* **Reviewed** + reapply doc: update playbook 07 prose `events.jsonl` → `run_log.jsonl` at close-out.
