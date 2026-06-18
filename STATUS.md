@@ -7,32 +7,30 @@ mirror lives in GitHub Projects. Update this every time a task is claimed, block
 See `CLAUDE.md` → "The orchestrator loop".
 
 **Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)**, in progress.
-**Last updated:** 2026-06-18 (wave 4 closed out; 18/19 M1 tasks done — ready to dispatch G-series)
+**Last updated:** 2026-06-18 (G1+G2 merged + verified green; 20/22 M1 tasks done — next: G3 build, then G4 fun gate)
 
 ---
 
-## ▶ Next action (start here on a cold restart) — **dispatch the G-series (G1 + G2 in parallel)**
-Wave 4 (E2, E3, D3, G5, F1, F2) is **integrated + green** and the **wave-4 close-out is COMPLETE**
-(Director-evaluated 2026-06-18: W4-1 E3 pockets **Addressed** → ratified decision #13; W4-2…W4-11
-**Reviewed**; all reapplied to `M1_As_Built.md` §UI/HUD & loop wiring / `M1_Design_Decisions.md` / GDD §6
-and archived to `DESIGN_DEVIATIONS_HISTORY.md`). `DESIGN_DEVIATIONS.md` is empty (between-waves).
-**18/19 M1 tasks done** — only the G-series remains.
+## ▶ Next action (start here on a cold restart) — **dispatch G3 (greybox playtest build of the full loop)**
+**G1 + G2 are merged + verified green** (2026-06-18). Telemetry JSONL logging is live (opt-in, default off);
+GdUnit4 v6.1.3 is vendored with 30 logic-test cases (proc-gen determinism / inventory / banking / death-drop)
+green in headless + a local `tools/run_gdunit.sh` CI gate. **20/22 M1 tasks done — G3 + G4 remain.**
+Wave-5 deviations (G1 ×5, G2 ×5) are recorded in `DESIGN_DEVIATIONS.md` **awaiting the wave-5 close-out**
+(run after G3+G4 land, per project framing — G1–G4 are one wave).
 
-**Dispatch G1 + G2 in parallel** (worktrees; both now unblocked — deps E1/E3/C2/B2/D1/F1 all ✅; they
-touch disjoint files and **neither writes `game_state.gd`/`event_bus.gd`**, so no contention):
-- **G1** (qa-playtest-coordinator) — wire the `Telemetry` autoload to log M1 `EventBus` events to JSONL:
-  run start/end + duration + cause, junk picked up, junk banked vs lost, depth reached. **Reapply note
-  from close-out (W4-3):** add a dedicated **amount-lost-on-fail** row (E3's `value_lost` currently only
-  rides `haul_banked` + a print); use the `currency_changed` `source` tag (`extract`/`sell` vs `pockets`)
-  for currency-in-by-source. Do NOT widen the locked `run_ended` signature.
-- **G2** (qa-playtest-coordinator) — GdUnit4 logic tests for proc-gen determinism, inventory capacity,
-  banking math, death-drop pockets math; wire into headless CI. (Vendoring GdUnit4 also lets the existing
-  `.tscn`/`--script` autoload-workaround tests fold into a proper harness — see §Testing constraints.)
+**Dispatch G3** (qa-playtest-coordinator + producer) — produce a runnable greybox build that runs the WHOLE
+loop start→finish: spawn → dive → pick up junk → decide push/extract → bank/lose → sell → repeat. This is the
+first time the systems are wired into one playable scene. **Close-out reapply notes that land in G3:**
+- (W4-11) wire F2's `SellScreen.continue_pressed` → a single `start_new_run()` loop entry point (dive → decide
+  → extract/fail → sell → dive again). The sell screen deliberately does NOT restart a dive itself.
+- (W4-6) add the player to a `"player"` group and switch D3's drop-position lookup from the `current_scene`
+  tree-walk to `get_first_node_in_group("player")`.
+- (G2 dev-note) optionally fold a GdUnit4 `test_jsonl_writer` in now that G1's `JsonlWriter` is on `main`.
 
-**Then G3** (qa + producer) — greybox playtest build of the full loop. **Close-out reapply notes for G3:**
-(a) wire F2's `continue_pressed` → a single `start_new_run()` loop entry (W4-11); (b) add the player to a
-`"player"` group so D3's drop-position lookup can use `get_first_node_in_group` (W4-6). **Then G4** — the
-internal playtest / "is the push-cash-out tension fun?" gate (producer + qa telemetry analysis).
+**Then G4** — the internal playtest / "is the push/cash-out tension fun in 30s?" **kill/pivot gate** (producer
+runs the playtest, qa analyzes G1 telemetry: run-length histograms, mid-run abandonment, runs/session > 1.5).
+⚠️ **G4 requires a human playtest + a human go/iterate/pivot verdict** — Claude assembles evidence & recommends,
+the Director decides. Surface this when G3 is done rather than auto-proceeding.
 
 ---
 
@@ -61,14 +59,10 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — G1 + G2 dispatched (wave 5, parallel worktrees) — 2026-06-18
-- **G1** (qa-playtest-coordinator, worktree) — wire `Telemetry` autoload → JSONL run log; opt-in toggle.
-  Includes close-out reapply note W4-3 (dedicated amount-lost-on-fail row; `currency_changed.source`
-  for currency-in-by-source; do NOT widen `run_ended`).
-- **G2** (qa-playtest-coordinator, worktree) — vendor GdUnit4 + logic tests (proc-gen determinism,
-  inventory capacity, banking math, death-drop pockets math) + headless CI wiring.
-Both unblocked (deps all ✅); disjoint files; neither writes `game_state.gd`/`event_bus.gd`. Board: both
-set **In Progress**. On return: verify, merge to `main`, push, record deviations → wave-5 close-out.
+## In progress — nothing dispatched (G1+G2 merged + verified; ready to dispatch G3)
+No subagent running. G1 + G2 merged into `main` (`Merge G1`, `Merge G2`) and the **full suite re-verified
+green** (import clean · SMOKE OK · TELEMETRY OK · GdUnit4 30/30 · all 18 legacy ad-hoc checks OK). Board:
+G1 + G2 set **Done**. Next: dispatch **G3** (see ▶ Next action).
 
 ## Blocked
 | Task | Blocked by | Note |
@@ -100,9 +94,11 @@ set **In Progress**. On return: verify, merge to `main`, push, record deviations
 | G5 — Meta save-migration fixture (v1→v2) | merged `0d6c484`; `tests/test_save_migration.tscn` → **SAVE MIGRATION OK** (binary `meta_v1.sav` fixture migrates to v2, `banked_junk`→`[]`, fields intact, round-trip + `.bak`); CI-wired; closes wave-3 `E1/schema`; worklog `worklogs/2026-06-17-G5-qa.md` (impl `8655454`) |
 | F1 — Money ledger (`sell_banked_junk`) | merged via F1 branch; `tests/test_money_ledger.gd` → **MONEY LEDGER OK** (sells `banked_junk`→Money at `base_sell_value`, empties bank, one `currency_changed`, source-tagged sell/pockets, empty-bag no-op, persists round-trip); reused existing v2 schema + `add_currency` (no schema bump); worklog `worklogs/2026-06-17-F1-programmer.md` (impl `54f4f59`) |
 | F2 — Placeholder sell screen | merged `ce9f51b`; `tests/test_sell_screen.gd` → **SELL SCREEN OK** (presents on `run_ended` extract/death/timeout, "EXTRACTED"/"RUN LOST — kept N", itemized rows, count-up to live `GameState.money`, zero-haul valid); Continue emits `continue_pressed` (G3 wires restart); worklog `worklogs/2026-06-17-F2-ui-ux.md` (impl `ce9f51b`) |
+| G1 — Wire M1 telemetry events | merged via `Merge G1`; `tests/test_telemetry_jsonl.tscn` → **TELEMETRY OK** (opt-in respected — no file when off; enabled run wrote 9 parseable JSONL rows w/ duration, end cause, depth, haul banked + dedicated amount-lost-on-fail row); `systems/telemetry/{telemetry,telemetry_schema,jsonl_writer}.gd` + opt-in `settings.cfg`; no `event_bus.gd`/`game_state.gd` edits; worklog `worklogs/2026-06-18-G1-qa.md` (impl `c0c2268`) |
+| G2 — Determinism & logic tests (GdUnit4) | merged via `Merge G2`; GdUnit4 v6.1.3 vendored at `addons/gdUnit4/`; `tools/run_gdunit.sh` → **30 test cases · 0 failures · PASSED** (proc-gen determinism, inventory capacity, banking math, death-drop pockets @ 0.20 highest_value); CI gate wired in `.github/workflows/ci.yml` (non-zero exit on failure verified); worklog `worklogs/2026-06-18-G2-qa.md` (impl `3f57f38`) |
 
-_Integrated `main` re-verified after every merge (full suite green): `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK · JUNK PICKUP OK · DEATH DROP OK · DECISION HUD OK · DROP SWAP OK · SAVE MIGRATION OK · MONEY LEDGER OK · SELL SCREEN OK (18 checks)._
-_Open test-hygiene nit (QA): B2's determinism scene leaks "2 resources still in use at exit" (un-freed PackedScene instances) — cosmetic, non-failing; tidy when GdUnit4 is vendored (G2)._
+_Integrated `main` re-verified after every merge (full suite green): `--import` clean · **SMOKE OK** · MOVE OK · ZONE PIECES OK · JUNK CATALOG OK · INTERACT OK · DIVE CLOCK OK · BANDGEN OK · INV OK · EXTRACT OK · INV UI OK · BAND DEPTH OK · JUNK PICKUP OK · DEATH DROP OK · DECISION HUD OK · DROP SWAP OK · SAVE MIGRATION OK · MONEY LEDGER OK · SELL SCREEN OK (18 legacy checks) · **TELEMETRY OK** · **GdUnit4 30/30** (G1+G2)._
+_Open test-hygiene nit (QA): B2's determinism scene leaks "2 resources still in use at exit" (un-freed PackedScene instances) — cosmetic, non-failing; now that GdUnit4 is vendored (G2), tidy by porting that scene to a GdUnitTestSuite._
 
 ## Done (M0 — Pre-production & Tech Foundations)
 | Task | Proof |
