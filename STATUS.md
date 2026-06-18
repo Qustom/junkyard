@@ -7,7 +7,7 @@ mirror lives in GitHub Projects. Update this every time a task is claimed, block
 See `CLAUDE.md` → "The orchestrator loop".
 
 **Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)**, in progress.
-**Last updated:** 2026-06-17
+**Last updated:** 2026-06-17 (wave 4a dispatched)
 
 ---
 
@@ -36,9 +36,24 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — nothing dispatched (wave 3 closed out; ready to start wave 4)
-No subagent running. Wave-3 close-out complete. Pick the next unblocked wave-4 task(s) per the build order
-(E2/E3/F1, plus the two new follow-ups D3 + G5 once their blockers allow) and dispatch in worktrees.
+## In progress — WAVE 4a dispatched 2026-06-17 (4 agents, worktrees)
+Pre-seed: `GameState.run_haul_value()` shared read helper landed on `main` (`e6b28ed`) so E3 owns
+`game_state.gd` alone this wave. **No new EventBus signals needed** — every wave-4 task reuses the
+existing contract (verified against `event_bus.gd` + `M1_As_Built.md`).
+
+| Task | Agent | Branch | Touches | Status |
+|---|---|---|---|---|
+| **E2** Push/cash-out decision surface | ui-ux-designer (+gp wiring) | `ui-ux/E2` | new `ui/hud/*` only (composes existing dive_clock_meter + inventory_panel + interaction_prompt; reuses `run_inventory_changed`/`interactable_focused`/`dive_clock_changed`; `run_haul_value()`) | dispatched |
+| **E3** Death/timeout drops haul | general-purpose | `programmer/E3` | **sole writer of `game_state.gd`** (`fail_run`, `_resolve_pockets`, refactor `_on_player_died`); `run_rules.tres`; `debug_kill` in project.godot | dispatched |
+| **D3** Activate drop-to-swap | ui-ux-designer | `ui-ux/D3` | `ui/inventory/*` drop gesture → emit `junk_dropped` | dispatched |
+| **G5** Meta save-migration fixture | qa-playtest-coordinator | `qa/G5` | `tests/*` + a v1 `meta.sav` fixture only | dispatched |
+
+**Wave 4b (after E3 lands):** F1 (Money `sell_banked_junk` — `money` already persists @ schema v2, so F1
+is smaller than its spec) → F2 sell screen. Then G1 (needs E3), G2 (needs E3+F1), then G3 build → G4 gate.
+
+> **game_state.gd contention resolved:** E2's only GameState need (`run_haul_value`) was pre-seeded on
+> main; E3 is the lone wave-4a writer of that file. F1 (also a game_state.gd writer) is deferred to 4b so
+> it branches off a main that already contains E3's changes — no merge conflict.
 
 ## Blocked
 | Task | Blocked by | Note |
