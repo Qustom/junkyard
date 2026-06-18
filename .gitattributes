@@ -23,6 +23,11 @@
 *.otf   filter=lfs diff=lfs merge=lfs -text
 *.xlsx  filter=lfs diff=lfs merge=lfs -text
 
+# --- Binary save blobs (FileAccess.store_var, objects-OFF) — NOT line-ending normalized ---
+# G5: committed save-migration fixtures (e.g. tests/fixtures/meta_v<N>.sav) are
+# raw binary; mark -text so Git never applies autocrlf/text munging to them.
+*.sav   -text
+
 # --- Keep these as plain text (diffable), even though Godot calls them resources ---
 *.gd        text
 *.tres      text
