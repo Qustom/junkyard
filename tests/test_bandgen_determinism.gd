@@ -107,12 +107,16 @@ func _run() -> int:
 	# --- BUG3.6 + BUG3.7: socket-seal determinism + no-open-socket invariant ---
 	_run_seal_checks(gen, cfg, catalog, failures)
 
+	# --- R4 (M1.1): (seed + config) determinism contract + branching takes effect ---
+	_run_r4_checks(gen, cfg, catalog, failures)
+
 	if failures.is_empty():
 		var sample := gen.generate(12345, cfg, catalog)
 		print("BANDGEN OK — determinism + connectivity verified across %d seeds (sample seed 12345 -> %d pieces, fp=%s)"
 			% [SEEDS.size(), sample.pieces.size(), sample.fingerprint().substr(0, 12)])
 		_free_band(sample)
 		print("BUG3 SOCKET SEAL OK")
+		print("R4 NAV OK")
 		return 0
 	for f in failures:
 		printerr("BANDGEN FAIL: ", f)
@@ -191,6 +195,121 @@ func _count_floor_facing_void(band: Band) -> int:
 				leaks += 1
 				break
 	return leaks
+
+
+# --- R4 (M1.1): navigation determinism + branching acceptance --------------------
+
+## R4 acceptance over the determinism contract `fingerprint(seed + config)`:
+##   R4.1 ALL-OFF CONTROL: an all-off RunConfig (and rc == null) byte-matches the
+##        M1.0 band for every seed — the permanent control is preserved.
+##   R4.2 (seed + config) STABILITY: an R4-on config (non-zero branch curve) is
+##        run-to-run stable for the same (seed + config).
+##   R4.3 BRANCHING TAKES EFFECT: the R4-on config produces TRUE intersection pieces
+##        (≥3 distinct neighbours) where the linear M1.0 spine has exactly ZERO —
+##        deeper layouts fork/branch. (Counting ≥2 would not work: every interior
+##        spine piece already has 2 neighbours, and dead-end branches DROP the ≥2
+##        count; the unambiguous "a fork appeared" signal is the ≥3 intersection.)
+##   R4.4 CONFIG CHANGES THE BAND: at least one seed's R4-on fingerprint differs from
+##        its all-off fingerprint (config is legitimately part of the seed key).
+##   R4.5 STILL CONNECTED + SEALABLE: every R4-on band stays connected, and after
+##        sealing no floor cell faces off-map void (branchy dead-ends stay sealed).
+func _run_r4_checks(gen: BandGenerator, cfg, catalog: Array[ZonePieceData],
+		failures: Array[String]) -> void:
+	var all_off := RunConfig.new()          # default = all oppositions off (M1.0 baseline)
+	var r4_on := _make_r4_on_config()
+	var sealer := SocketSealer.new()
+
+	var total_baseline_intersections := 0   # ≥3-degree pieces on the all-off spine (== 0)
+	var total_r4_intersections := 0         # ≥3-degree pieces under the R4-on config
+	var any_config_differs := false
+
+	for seed in SEEDS:
+		# R4.1 — all-off control byte-matches the no-config (M1.0) band.
+		var m10 := gen.generate(seed, cfg, catalog)               # rc default null
+		var off := gen.generate(seed, cfg, catalog, all_off)      # explicit all-off
+		if m10.fingerprint() != off.fingerprint():
+			failures.append("R4 seed %d: all-off config did NOT byte-match M1.0 band (%s vs %s)"
+				% [seed, m10.fingerprint().substr(0, 12), off.fingerprint().substr(0, 12)])
+
+		# R4.2 — (seed + config) run-to-run stability under the R4-on config.
+		var on_a := gen.generate(seed, cfg, catalog, r4_on)
+		var on_b := gen.generate(seed, cfg, catalog, r4_on)
+		if on_a.fingerprint() != on_b.fingerprint():
+			failures.append("R4 seed %d: R4-on config NOT deterministic (%s vs %s)"
+				% [seed, on_a.fingerprint().substr(0, 12), on_b.fingerprint().substr(0, 12)])
+
+		# R4.4 — config legitimately changes the band on at least one seed.
+		if on_a.fingerprint() != off.fingerprint():
+			any_config_differs = true
+
+		# R4.3 — branching takes effect: count TRUE intersection pieces (≥3 neighbours).
+		total_baseline_intersections += _count_intersection_pieces(off)
+		total_r4_intersections += _count_intersection_pieces(on_a)
+
+		# R4.5 — R4-on band stays connected + seals clean (no walk-off-void). Within the
+		# realistic sweep envelope (S1-like curve) the branchy band still seals fully.
+		if not gen.is_band_connected(on_a):
+			failures.append("R4 seed %d: R4-on band is DISCONNECTED" % seed)
+		sealer.seal_unused_sockets(on_a, 16)
+		var leaks := _count_floor_facing_void(on_a)
+		if leaks > 0:
+			failures.append("R4 seed %d: R4-on band has %d floor cell(s) facing void after sealing"
+				% [seed, leaks])
+
+		_free_band(m10)
+		_free_band(off)
+		_free_band(on_a)
+		_free_band(on_b)
+
+	# The linear spine has ZERO ≥3 intersections; an R4-on band must produce some.
+	if total_baseline_intersections != 0:
+		failures.append("R4: baseline (all-off) unexpectedly had %d intersection pieces — spine should be linear"
+			% total_baseline_intersections)
+	if total_r4_intersections <= 0:
+		failures.append("R4: branching did NOT take effect — R4-on produced %d intersection pieces (≥3 neighbours) across the sweep"
+			% total_r4_intersections)
+	if not any_config_differs:
+		failures.append("R4: R4-on config produced the SAME band as all-off on every seed (config not part of the key?)")
+
+
+## Build the R4-on RunConfig for the determinism test. Uses the recommended S1-class
+## sweep curve (per the R4 spec §7: branch_per_depth ≈ 0.06, cap 8) — deliberately
+## within the realistic Director sweep envelope, where the branchy band still seals
+## fully (no walk-off-void). Acceptance is "the knob takes effect", not a balanced
+## value. Higher branch rates surface a known BUG3 seal gap (flagged to BUG3 owner —
+## see worklog), so the test pins the realistic envelope, not a pathological one.
+func _make_r4_on_config() -> RunConfig:
+	var rc := RunConfig.new()
+	rc.r4_enabled = true
+	rc.r4_branch_chance_base = 0.0
+	rc.r4_branch_per_depth = 0.06        # S1 "Branchy" preset (R4 spec §7)
+	rc.r4_max_branch_depth = 8           # top of the M1 band; deepest pieces stay linear
+	return rc
+
+
+## Count TRUE intersection pieces: ≥3 DISTINCT neighbouring pieces via a walkable
+## (FLOOR 4-adjacent) doorway — the same adjacency the generator's connectivity uses.
+## The linear M1.0 spine has ZERO of these (interior pieces have exactly 2 neighbours,
+## ends have 1), so a non-zero count is the unambiguous "a fork appeared" signal.
+func _count_intersection_pieces(band: Band) -> int:
+	var cell_owner := {}
+	for i in band.pieces.size():
+		for c in band.pieces[i].floor_cells:
+			cell_owner[c] = i
+	var steps := [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
+	var intersections := 0
+	for i in band.pieces.size():
+		var seen := {}
+		for c in band.pieces[i].floor_cells:
+			for step in steps:
+				var n: Vector2i = c + step
+				if cell_owner.has(n):
+					var j: int = cell_owner[n]
+					if j != i:
+						seen[j] = true
+		if seen.size() >= 3:
+			intersections += 1
+	return intersections
 
 
 func _free_band(band: Band) -> void:
