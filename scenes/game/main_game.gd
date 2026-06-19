@@ -71,6 +71,18 @@ var _band_cell_size_px: int = DEFAULT_CELL_SIZE_PX
 # Vector2i band-global floor cell -> Vector2i(depth_index, dist_to_gate) (Decision 4).
 var _cell_to_depth: Dictionary = {}
 var _depth_tick_accum: float = 0.0
+
+# R4 (M1.1): junction-entry detection for nav_branch_taken. Built per run from the
+# graded band alongside _cell_to_depth. Maps each band-global FLOOR cell to
+# Vector2i(piece_index, junction_degree) where junction_degree = the count of
+# distinct neighbouring pieces this piece connects to (≥2 = a real fork). We emit
+# nav_branch_taken once per junction-entry by tracking the player's current piece
+# index and firing on a change into a piece with junction_degree ≥ 2. Reuses the
+# same per-cell resolution as the BUG2 depth driver — no second spatial system.
+var _cell_to_junction: Dictionary = {}
+var _player_piece_index: int = -1
+## R4 vision/fog node packed scene (Lever 2). Spawned per dive; inert when R4 off.
+const VISION_FOG_SCENE_PATH := "res://entities/dive/vision_fog.tscn"
 ## BUG2: throttle for the live-depth resolution (~every 9 physics frames). Pure
 ## perf/responsiveness knob — correctness is throttle-independent (we emit on change,
 ## not on tick), so it is safe to tune (ratified Decision 2).
@@ -123,9 +135,16 @@ func start_new_run() -> void:
 	_run_count += 1
 	var seed: int = _next_seed()
 
-	# 1. Generate + grade + plan (B2 → B3) — pure functions of the seed.
+	# M1.1 CFG / R4: resolve the run config BEFORE generation so R4's depth-scaled
+	# branching (Lever 1) can read it inside generate(). We stage this SAME config
+	# object onto GameState in step 6, so generation and the run share one config —
+	# the M1.1 determinism key is (seed + config). Fall back to the all-off default
+	# if the CFG rail is missing so behaviour is identical either way.
+	var run_cfg: RunConfig = _config_menu.apply_and_get_config() if _config_menu != null else (load(RUN_CONFIG_PATH) as RunConfig)
+
+	# 1. Generate + grade + plan (B2 → B3) — pure functions of (seed + config).
 	var generator := BandGenerator.new()
-	var band := generator.generate(seed, _cfg, _piece_catalog)
+	var band := generator.generate(seed, _cfg, _piece_catalog, run_cfg)
 	if band == null or band.pieces.is_empty():
 		push_error("MainGame: band generation produced no pieces (seed %d)." % seed)
 		return
@@ -160,14 +179,10 @@ func start_new_run() -> void:
 	#    via run_started, depth 0, _run_ended guard cleared) and emits run_started,
 	#    which the DiveClock / HUD / Telemetry all react to. enter_band advances to
 	#    depth 1 so the player reads "in the band" rather than depth 0 at the gate.
-	# M1.1 R0: stage the run config BEFORE start_run so GameState binds it as the
-	# active config for this run. CFG will later hand a menu-built config here; for
-	# now we stage the all-off default, which keeps the loop at the M1.0 baseline.
-	# Backward-compatible: if staging fails to load, start_run falls back to its own
-	# all-off default, so behaviour is identical either way.
-	# M1.1 CFG: stage the menu-built working config (shape (a)); fall back to the
-	# all-off default if the rail is missing so behaviour is identical either way.
-	var run_cfg: RunConfig = _config_menu.apply_and_get_config() if _config_menu != null else (load(RUN_CONFIG_PATH) as RunConfig)
+	# M1.1 R0/CFG: stage the SAME run config we generated with (resolved at the top of
+	# start_new_run) BEFORE start_run, so GameState binds it as active_run_config for
+	# this run and generation + run agree. start_run resets run-state; if run_cfg were
+	# null start_run falls back to its own all-off default, so behaviour is identical.
 	GameState.stage_run_config(run_cfg)
 	GameState.start_run(BAND_ID, seed)
 	GameState.enter_band(BAND_ID)
@@ -175,6 +190,12 @@ func start_new_run() -> void:
 	# player is at the entry → depth 0) before the throttled driver takes over.
 	_depth_tick_accum = 0.0
 	_resolve_player_depth()
+
+	# R4 (M1.1): instantiate the run-state vision/fog + lost-proxy nodes for this dive.
+	# Both no-op internally when R4 is off (vision: no overlay; lost-proxy: set_process
+	# false), so the all-off control path adds inert nodes only. Added under the band
+	# container so _clear_band() frees them with the band (run-state, never persisted).
+	_spawn_r4_nodes()
 
 
 # --- Run-end handling --------------------------------------------------------
@@ -209,6 +230,23 @@ func _materialise_band(band: Band) -> int:
 	return cell_size
 
 
+# --- R4 (M1.1): run-state nav nodes ------------------------------------------
+
+## Instantiate the R4 vision/fog (Lever 2) + lost-proxy (§3) nodes for this dive.
+## Both read GameState.active_run_config in their _ready() and self-disable when R4
+## is off (vision: no overlay, set_process false; lost-proxy: set_process false), so
+## with the all-off control they are inert. Parented under the band container so they
+## are torn down with the band each run (run-state only, never persisted). Keeping
+## this in one helper keeps the R4 edits localized for R1's later sequential merge.
+func _spawn_r4_nodes() -> void:
+	var vision_scene := load(VISION_FOG_SCENE_PATH) as PackedScene
+	if vision_scene != null:
+		_band_container.add_child(vision_scene.instantiate())
+	else:
+		push_warning("MainGame: R4 vision/fog scene missing at %s." % VISION_FOG_SCENE_PATH)
+	_band_container.add_child(LostProxy.new())
+
+
 # --- BUG2: live within-band depth driver -------------------------------------
 
 ## Flatten the graded band's depth model into a per-cell lookup that outlives the
@@ -222,6 +260,42 @@ func _build_cell_depth_map(band: Band) -> void:
 			continue
 		for cell in p.floor_cells:   # band-global floor cells (B3)
 			_cell_to_depth[cell] = Vector2i(p.depth_index, p.dist_to_gate)
+	# R4: build the parallel junction map (piece_index, junction_degree per cell).
+	_build_junction_map(band)
+	_player_piece_index = -1
+
+
+## R4 (M1.1): flatten per-piece junction degree into a per-cell lookup. A piece's
+## junction_degree = the number of DISTINCT neighbouring pieces it connects to via a
+## walkable doorway (FLOOR cells 4-adjacent across a piece boundary) — the same
+## adjacency the generator's is_band_connected uses. 2 = pass-through corridor,
+## ≥3 = a real branch/intersection. Used only to emit nav_branch_taken on entry.
+func _build_junction_map(band: Band) -> void:
+	_cell_to_junction.clear()
+	# Map every FLOOR cell -> owning piece index.
+	var cell_owner := {}
+	for i in band.pieces.size():
+		for c in band.pieces[i].floor_cells:
+			cell_owner[c] = i
+	# Per-piece distinct-neighbour count via 4-adjacent floor doorways.
+	var steps := [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
+	var degree: Array[int] = []
+	degree.resize(band.pieces.size())
+	for i in band.pieces.size():
+		var seen := {}
+		for c in band.pieces[i].floor_cells:
+			for step in steps:
+				var n: Vector2i = c + step
+				if cell_owner.has(n):
+					var j: int = cell_owner[n]
+					if j != i:
+						seen[j] = true
+		degree[i] = seen.size()
+	# Project the degree back onto every floor cell, keyed with the piece index so the
+	# driver can detect a true piece-to-piece entry (not just a cell move).
+	for i in band.pieces.size():
+		for c in band.pieces[i].floor_cells:
+			_cell_to_junction[c] = Vector2i(i, degree[i])
 
 
 ## Throttled driver: while a run is active, resolve the player's live within-band
@@ -250,6 +324,30 @@ func _resolve_player_depth() -> void:
 	if _cell_to_depth.has(cell):
 		var d: Vector2i = _cell_to_depth[cell]
 		GameState.set_current_depth(d.x, d.y)   # (depth_index, dist_to_gate)
+	# R4 (M1.1): junction-entry detection for nav_branch_taken. Reuse the same cell
+	# resolution: when the player crosses into a NEW piece whose junction_degree ≥ 2
+	# (a real fork), emit once. Only fires while R4 is enabled.
+	_maybe_emit_branch_taken(cell)
+
+
+## R4: emit nav_branch_taken(depth, junction_degree) exactly once per junction-entry.
+## A junction-entry = the player's owning piece changed to a piece with ≥2 distinct
+## neighbouring pieces (a fork/intersection). Tracks the last owning piece index so
+## staying within a piece (or re-resolving the same cell) never re-emits.
+func _maybe_emit_branch_taken(cell: Vector2i) -> void:
+	var rc := GameState.active_run_config
+	if rc == null or not rc.r4_enabled:
+		return
+	if not _cell_to_junction.has(cell):
+		return
+	var meta: Vector2i = _cell_to_junction[cell]   # (piece_index, junction_degree)
+	var piece_index := meta.x
+	if piece_index == _player_piece_index:
+		return   # same piece — no new entry
+	_player_piece_index = piece_index
+	var junction_degree := meta.y
+	if junction_degree >= 2:
+		EventBus.nav_branch_taken.emit(GameState.current_depth_index, junction_degree)
 
 
 ## World position the player spawns at: the centre of the entry piece's first floor

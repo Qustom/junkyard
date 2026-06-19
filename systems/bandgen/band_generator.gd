@@ -33,7 +33,18 @@ class _PieceData:
 	var socket_widths: Array[int]
 
 
-func generate(seed: int, cfg: BandGenConfig, catalog: Array[ZonePieceData]) -> Band:
+# R4 (M1.1): fixed-point precision for the depth-scaled branch-chance integer
+# compare. The branch roll stays on the RNG autoload, on integer math, at the
+# SAME draw site/order as M1.0 — R4 only makes the COMPARED THRESHOLD depth-
+# dependent, so the (seed + config) layout stays byte-reproducible. With R4 off
+# (rc == null or r4_enabled == false) the threshold is cfg.branch_chance (0.0 in
+# M1.0), so the integer compare is always false → identical M1.0 draw sequence
+# and a pure linear spine.
+const _R4_BRANCH_SCALE := 10000
+
+
+func generate(seed: int, cfg: BandGenConfig, catalog: Array[ZonePieceData],
+		rc: RunConfig = null) -> Band:
 	EventBus.band_generation_started.emit(seed)
 
 	# Pre-compute the integer cumulative-weight table once (stable catalog order).
@@ -44,7 +55,7 @@ func generate(seed: int, cfg: BandGenConfig, catalog: Array[ZonePieceData]) -> B
 	var best: Band = null
 	while attempt < cfg.max_band_attempts:
 		var attempt_seed := seed if attempt == 0 else _derive_seed(seed, attempt)
-		var band := _generate_once(attempt_seed, cfg, catalog, weight_table, cell_size_px)
+		var band := _generate_once(attempt_seed, cfg, catalog, weight_table, cell_size_px, rc)
 		band.requested_seed = seed
 		band.resolved_seed = attempt_seed
 
@@ -67,7 +78,7 @@ func generate(seed: int, cfg: BandGenConfig, catalog: Array[ZonePieceData]) -> B
 # --- One deterministic assembly attempt --------------------------------------
 
 func _generate_once(seed: int, cfg: BandGenConfig, catalog: Array[ZonePieceData],
-		weight_table: Array[int], cell_size_px: int) -> Band:
+		weight_table: Array[int], cell_size_px: int, rc: RunConfig = null) -> Band:
 	# DETERMINISM: reset the shared stream to this attempt's seed before any
 	# random call. RNG.seed_from is the real autoload surface (not set_seed).
 	RNG.seed_from(seed)
@@ -89,7 +100,7 @@ func _generate_once(seed: int, cfg: BandGenConfig, catalog: Array[ZonePieceData]
 	while band.pieces.size() < cfg.target_piece_count and not frontier.is_empty():
 		_sort_frontier(frontier)  # stable order before any RNG indexing
 
-		var grow_idx := _select_frontier_index(frontier, cfg)
+		var grow_idx := _select_frontier_index(frontier, cfg, rc)
 		var sock: OpenSocket = frontier[grow_idx]
 
 		var placed := _try_attach_piece(band, sock, cfg, catalog, weight_table,
@@ -231,13 +242,46 @@ func _weighted_pick_index(catalog: Array[ZonePieceData], table: Array[int]) -> i
 	return catalog.size() - 1  # unreachable; defensive
 
 
-## Which open socket to grow from. With branch_chance == 0.0 (M1) the randf
-## branch never fires, so the band is a strictly linear spine growing from the
-## deepest (last, post-stable-sort) socket. The fork code is kept but dormant.
-func _select_frontier_index(frontier: Array[OpenSocket], cfg: BandGenConfig) -> int:
-	if cfg.branch_chance > 0.0 and RNG.randf() < cfg.branch_chance:
-		return RNG.randi_range(0, frontier.size() - 1)
-	return frontier.size() - 1
+## Which open socket to grow from. With branch_chance == 0.0 (M1) and R4 off the
+## branch roll never fires, so the band is a strictly linear spine growing from
+## the deepest (last, post-stable-sort) socket.
+##
+## R4 (M1.1) — depth-scaled branching. When the active RunConfig enables R4, the
+## fork chance becomes a function of the grow socket's gen-time depth (the
+## owner's placement-order index, OpenSocket.depth — §10 Q6, NOT
+## DepthGrader.depth_index which isn't assigned during growth). The deepest
+## socket is frontier[-1] after the stable sort, so its .depth is the gen-time
+## depth proxy this hook scales off.
+##
+## DETERMINISM (RATIFIED §10 Q5, contract = fingerprint(seed + config)): the roll
+## stays on the RNG autoload, on INTEGER math, at the SAME draw site/order as
+## M1.0 — R4 only changes the COMPARED THRESHOLD. To byte-match the M1.0 band
+## with R4 off, the draw is gated exactly as M1.0 was: it only happens when the
+## effective chance is > 0. With R4 off (rc null / disabled) and cfg.branch_chance
+## == 0.0 the effective chance is 0 → NO draw → identical M1.0 RNG sequence and a
+## pure linear spine.
+func _select_frontier_index(frontier: Array[OpenSocket], cfg: BandGenConfig,
+		rc: RunConfig = null) -> int:
+	var chance := cfg.branch_chance  # M1.0 baseline path (0.0 when R4 off)
+	if rc != null and rc.r4_enabled:
+		# Gen-time depth = placement-order index of the deepest socket's owner.
+		var grow_depth: int = frontier[frontier.size() - 1].depth
+		if grow_depth <= rc.r4_max_branch_depth:
+			chance = rc.r4_branch_chance_base + rc.r4_branch_per_depth * float(grow_depth)
+		else:
+			# Above the branch cap: force linear so the deepest pieces still chain
+			# and the band reaches target_piece_count.
+			chance = 0.0
+	chance = clampf(chance, 0.0, 1.0)
+
+	# Gate the draw on chance > 0 exactly as M1.0 did (chance == 0.0 means no draw,
+	# preserving the M1.0 RNG sequence). The roll is an INTEGER compare on the RNG
+	# autoload — never randf(), never a second stream.
+	if chance > 0.0:
+		var threshold := int(round(chance * _R4_BRANCH_SCALE))
+		if RNG.randi_range(0, _R4_BRANCH_SCALE - 1) < threshold:
+			return RNG.randi_range(0, frontier.size() - 1)  # FORK: random socket
+	return frontier.size() - 1                               # SPINE: deepest socket
 
 
 ## Stable frontier ordering so RNG indexing is reproducible regardless of append
