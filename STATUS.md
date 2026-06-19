@@ -107,16 +107,22 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — ⏸ PAUSED (Director request) after R0 merged; nothing dispatched
-**R0 is DONE** — merged to `main` (`30e41b9`) + verified green (import ok · SMOKE OK · **R0 OK** · MAIN GAME OK ·
-LOOP OK · GdUnit4 30/30). `RunConfig` data model + `GameState.active_run_config` wiring in place; all-off default
-reproduces M1.0 exactly (existing tests unchanged). Board: R0 → Done. Worktree cleaned up.
+## In progress — BUG1 + BUG2 (combined `game_state.gd` pass) — dispatched 2026-06-19
+**R0 is DONE** — merged to `main` (`30e41b9`) + verified green. `RunConfig` + `GameState.active_run_config` in place.
 
-**⏸ Paused at the Director's request after R0.** No subagent running. **Resume = M1.1 Wave 1, next steps:**
-1. **BUG1** (`duration_s` real) → then **BUG2** (within-band depth) — sequential (both touch `game_state.gd`).
-2. **Pre-declare on `main`** (via TEL, the sole `event_bus.gd` editor) the new signals — `depth_changed` + the 7
+**▶ DISPATCHED (2026-06-19):** one `general-purpose` programmer on branch `general-purpose/bug1-bug2-game-state`
+doing the **combined BUG1+BUG2 `game_state.gd` pass** (BUG1 §8 Decision 4 — both small/adjacent, one open of the
+file). BUG1 = real `duration_s` (start-time capture + `_elapsed_s()` + two call-site swaps). BUG2 = live within-band
+depth (`current_depth_index`/`current_dist_to_gate`/`max_depth_reached` run-state + `set_current_depth()` mutator +
+`main_game.gd` cell→depth driver + feed `max_depth_reached` into `run_ended.depth_reached`). Board: BUG1, BUG2 → In Progress.
+- **`depth_changed` PRE-DECLARED on `main` by the orchestrator (`2450cde`)** so BUG2 emits an already-declared signal
+  and never edits `event_bus.gd` (BUG2 §3 sequencing + Decision 3). TEL later adds the 7 opposition signals and must
+  **not** re-declare `depth_changed`.
+
+**Next after BUG1+BUG2 merges:**
+1. **Pre-declare on `main`** (via TEL, the sole `event_bus.gd` editor) the new signals — `depth_changed` + the 7
    opposition signals — before the parallel fan-out.
-3. **CFG / TEL / BUG3** in parallel worktrees.
+2. **CFG / TEL / BUG3** in parallel worktrees.
 Then Wave 2 (R1–R4 parallel), Wave 3 (re-gate). Full plan: `design/M1_1_Tasks/M1.1_Breakdown.md`.
 
 **Wave-5 close-out — COMPLETE (2026-06-18).** All 16 wave-5 deviations (G1×5, G2×5, G3×5, G6×1) dispositioned by
