@@ -107,24 +107,24 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## ▶ Next action — M1.1 Wave 2 close-out (Director dispositions W2-R4-1), then Wave 3 re-gate
-**Wave 2 COMPLETE** — all four oppositions merged + verified green on `main` (`0c80622`): SMOKE OK · PURSUING HAZARD OK ·
-RETURN COST OK · EXPOSURE METER OK · EXPOSURE HUD OK · R4 NAV OK · BANDGEN OK · BUG3 SOCKET SEAL OK · DECISION HUD OK ·
-MAIN GAME OK · GdUnit 30/30; all-off fingerprint `e943ac9c8bc1` unchanged → M1.0 control preserved. Board: R1–R4 → Done.
+## In progress — M1.1 Wave 3: RG1 (playtest build) DISPATCHED 2026-06-19
+**Wave 2 COMPLETE + close-out done** (W2-R4-1 → Addressed → BUG4 filed). `main` at `f367a88`. Board: R1–R4 Done, BUG4 Todo.
 
-**▶ Wave 2 close-out deviation sweep (Director dispositions, then Claude reapplies + archives):** 1 entry —
-**W2-R4-1** (residual BUG3 seal gap at aggressive R4 branch rates; recommended presets seal cleanly). Claude recommends
-**Addressed** = file a small BUG3 follow-up task (cap all outward perimeter floor edges, branch-rate-independent).
-R1/R2/R3 reported "none." See `DESIGN_DEVIATIONS.md`.
+**▶ DISPATCHED — RG1** (general-purpose): assemble the runnable M1.1 loop + verify. Most wiring already exists —
+**CFG already routes the menu config into `start_new_run` (shape a, carry-forward works); R1 + R4 already self-wired
+their spawns into `main_game.gd`.** RG1's real work:
+- **Wire R2 `ReturnCost` + R3 `ExposureMeter` as PERSISTENT children of `main_game`** (like `DiveClock` — they self-gate
+  per run via `active_run_config.rN_enabled` in `_on_run_started`, so no per-run spawn needed); **inject the `DiveClock`
+  node into `ReturnCost.dive_clock`**. R3's HUD readout already lives in `decision_hud.tscn`.
+- Add a **"Back to Config" button on the sell screen** (§8 Q2) to switch configs mid-session.
+- Run the **V1–V18 verification matrix** (objective; headless drives + telemetry JSONL inspection): each opposition
+  isolated (V1–V4), all-four stacked (V5), all-off = M1.0 (V6/V7), 4 end-causes reachable (V8–V11), loop+telemetry
+  integrity (V12–V18). Update `tools/playtest/{loop_smoke_checklist,tester_readme}.md`.
+- Spec: `design/M1_1_Tasks/RG1_playtest_build.md`.
 
-**Then Wave 3 — re-gate (sequential):**
-- **RG1** (general-purpose + qa) — assemble the runnable M1.1 loop: Config menu → dive with risk → push/extract/die/
-  timeout/lost → bank/lose → sell → repeat. **RG1 wires R2's `ReturnCost` + R3's `ExposureMeter` run-state nodes into
-  the dive scene** (both built standalone in wave 2, awaiting wiring) + injects `DiveClock` into `ReturnCost`. Verify each
-  opposition individually + all stacked; config-marked telemetry writes. Spec: `design/M1_1_Tasks/RG1_playtest_build.md`.
-- **RG2** (qa) — telemetry analysis vs the M1.0 all-off baseline (after the *human* playtest).
-- **RG3** (qa assembles → Director decides) — go/iterate/pivot verdict in `G4_findings_M1.1.md`.
-RG2/RG3 need a **human playtest** (dev-machine: `godot project.godot` → play `main_game.tscn`) — Claude can't self-run them.
+**After RG1 lands → HUMAN PLAYTEST GATE.** RG2 (telemetry analysis vs M1.0 baseline) + RG3 (go/iterate/pivot verdict,
+Director decides) require a human to play the build (`godot project.godot` → `main_game.tscn`, set configs, sweep runs).
+Claude cannot self-run RG2/RG3. RG1 is the last autonomously-dispatchable M1.1 task.
 
 **Shared as-built contract briefed to all four** (specs predate BUG2 merge — these are the real names):
 live depth = `GameState.current_depth_index`; max = `GameState.max_depth_reached`; dist home = `GameState.current_dist_to_gate`
