@@ -26,15 +26,45 @@ Build under test: `m1-<YYYYMMDD>-<shortsha>` (shown bottom-right of the main men
     required-but-missing input.
 ```
 
-## M1.1 cost-axis matrix (RG1 §4) — manual pass on the integrated build
+## M1.2 legibility + level-scale matrix (RG1) — manual pass on the integrated build
 
-The base loop checklist above is the **all-off (V6) baseline** — the permanent in-build
-control. M1.1 adds four toggleable oppositions (R1 hazard · R2 costlier return ·
-R3 exposure meter · R4 maze/nav). Set a config in the **Config menu** (the rail beside
-START RUN; see `tester_readme.md`), then run the loop. **The objective rows (V1–V18) are
-also auto-checked headless** by `godot --headless res://tests/test_rg1_loop_verify.tscn`
-(prints `RG1 BUILD VERIFY OK`); this manual pass confirms the *felt / on-screen* half a
-human must judge.
+> **M1.2 = "make the cost axis legible + fair, then re-gate."** The M1.1 oppositions stay;
+> M1.2 fixes them: the hazard now CATCHES (M1.1 `caught=0`), the level scale is configurable
+> (no more 17 s sprint), R2/R3 attrition is VISIBLE, the dark OCCLUDES (not dims), the build
+> SHA is real, and the R2 exposure toll actually moves R3's meter. **The objective rows (M0–M6,
+> V8–V18) are auto-checked headless** by `godot --headless res://tests/test_rg1_m12_verify.tscn`
+> (prints `RG1 M1.2 VERIFY OK`); this manual pass confirms the *felt / on-screen* half (the
+> legibility a human must judge), which is the whole point of M1.2.
+
+Per-fix manual pass (set each in the **Config menu** — including the new **Level Scale** section;
+see `tester_readme.md`):
+```
+[ ] I1 Level scale: turn on Level Scale, raise Room Size (1.5/2.0/3.0) and/or Room Count —
+                    the band is VISIBLY bigger and a dive FEELS like a journey, not a 17s sprint.
+                    Junk lands inside the scaled rooms; pieces abut with no doorway gap.
+[ ] I2 Hazard:      with R1 on (catch radius ~32, depth-scaled lunge on), the hazard VISIBLY
+                    closes through the halls (no permanent wall-stick) and CAN CATCH you → death.
+[ ] I3 R2/R3 cues:  R3 = a prominent exposure BAR with threshold ticks + a penalty BANNER/flash on
+                    each crossing; R2 (egress toll) = a clock-bar pulse + a floating "−N" when the
+                    toll bites. Both are legible; both vanish when their opposition is off.
+[ ] I4 Vision:      beyond the vision radius geometry is HIDDEN (near-black), not faintly visible;
+                    fog memory shows a cool/desaturated ghost of seen rooms; a "lost" cue (screen-
+                    edge pulse + HUD word) fires when you wander. Band stays SEALED (BUG4).
+[ ] I5 Build SHA:   the build stamp bottom-right is m1-<date>-<REAL sha> (NOT the old 852b6e2);
+                    it matches the commit you were given. (If it shows 0000000 the stamp step
+                    didn't run for this build — flag it.)
+[ ] BUG5 Exp toll:  with R2 egress toll set to the EXPOSURE resource + R3 on, retreating makes the
+                    EXPOSURE bar JUMP (the toll feeds R3's meter) — not just the floating number.
+```
+
+## M1.1 cost-axis matrix (RG1 §4) — still applies (M1.2 layers on top)
+
+The base loop checklist above is the **all-off (M0/V6) baseline** — the permanent in-build
+control. M1.1's four toggleable oppositions (R1 hazard · R2 costlier return · R3 exposure
+meter · R4 maze/nav) remain; M1.2 fixes + makes them legible (above). Set a config in the
+**Config menu** (the rail beside START RUN; see `tester_readme.md`), then run the loop. The
+M1.1 objective rows are also auto-checked headless by
+`godot --headless res://tests/test_rg1_loop_verify.tscn` (`RG1 BUILD VERIFY OK`).
 
 Per-opposition isolation (each ON alone, the other three OFF; use the Config menu):
 ```
@@ -95,3 +125,8 @@ Telemetry defaults **OFF** (privacy). To verify the telemetry rows, enable it fi
   - `godot --headless res://tests/test_main_game_loop.tscn`    -> prints `MAIN GAME OK — ...`
   - `godot --headless res://tests/test_rg1_loop_verify.tscn`   -> prints `RG1 BUILD VERIFY OK` (the
     M1.1 cost-axis matrix objective half: V1–V18 isolation/stacked/baseline/end-causes/telemetry).
+  - `godot --headless res://tests/test_rg1_m12_verify.tscn`    -> prints `RG1 M1.2 VERIFY OK` (the
+    M1.2 matrix objective half: M0–M6 per-fix isolation/stacked, the all-off fingerprint unmoved
+    (fp=e943ac9c8bc1), level scale takes effect (I1), depth-scaled hazard catch (I2), BUG5 exposure
+    toll moves R3's meter, real build SHA + duration_s>0 (I5), the new lvl_*/r1_catch_radius_per_depth
+    knobs in the snapshot, carry-forward + repeated runs with no leak).
