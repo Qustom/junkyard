@@ -6,8 +6,20 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 (both built; M1.1 playtested → **ITERATE**) → **M1.2 (Legibility & Level Scale)** — **Wave 1 DONE + closed out; Wave 2 ready to dispatch.**
-**Last updated:** 2026-06-19 (M1.2 Wave 1 integrated on `main`: I1 + BUG4 + I5 all Done/pushed/board-Done; close-out deviation sweep complete — 4 deviations, all Director-Reviewed, archived. Next: Wave 2. Breakdown: `design/M1_2_Tasks/M1.2_Breakdown.md`.)
+**Current milestone:** M1.0 → M1.1 (both built; M1.1 playtested → **ITERATE**) → **M1.2 (Legibility & Level Scale)** — **Wave 1 DONE; Wave 2 DISPATCHED (in progress).**
+**Last updated:** 2026-06-19 (M1.2 Wave 2 dispatched: I2 ∥ I4 ∥ I3 in parallel worktrees, ownership-split so `main_game.gd` has a single writer. Board items created + In Progress. Breakdown: `design/M1_2_Tasks/M1.2_Breakdown.md`.)
+
+---
+
+## In progress — M1.2 Wave 2 (dispatched 2026-06-19; parallel `isolation: worktree`, ownership-split)
+
+| Task | Agent(s) | Owns (sole writer this wave) | Board |
+|---|---|---|---|
+| **I2** Hazard refuge fix | general-purpose (+ character-animator: greybox tell) | `scenes/hazards/hazard_entity.gd/.tscn`, `run_config.gd`, `config_menu.gd`, `config_strings.csv` (+ `test_run_config.gd`/`test_config_menu.gd` knob counts). **Must NOT touch `main_game.gd`** | In Progress |
+| **I4** Vision/fog rework | general-purpose (+ environment-artist: greybox look) | `vision_fog.gd/.tscn`, **`scenes/game/main_game.gd` (sole writer)**, its own lost-cue overlay. **Must NOT touch `decision_hud.gd`** | In Progress |
+| **I3** R2/R3 cues | ui-ux-designer | `decision_hud.gd/.tscn`, `exposure_readout.gd`, `hud_strings.csv` | In Progress |
+
+**Collision plan:** `main_game.gd` → I4 only (I2's spawn seam already works; if I2 finds it truly needs a `main_game.gd` tweak it flags it for the orchestrator to apply post-merge). HUD: `decision_hud.gd` → I3 only (I4 keeps its lost-cue word in its own overlay). `run_config.gd`+CFG → I2 only. No `event_bus.gd` signal needed by any task (all three subscribe to already-declared, already-emitted signals).
 
 ---
 
