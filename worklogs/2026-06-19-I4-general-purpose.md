@@ -4,7 +4,8 @@
 - **Subagent:** general-purpose (programmer). Greybox look/colours (occlusion floor, fog ghost hue, pulse/word styling) authored inline by the programmer per the environment-artist-handoff constants in the spec — no separate asset agent was needed (all greybox is procedural/ColorRect, no art file).
 - **Milestone:** M1.2 (Wave 2)
 - **Branch:** gp/I4
-- **Commit:** d339489ed1374a28be5de9afde2889754033284d
+- **Commit:** dc4d40d4f33d45bb7db861b9295edfef5357ecdd (build commit; this SHA line was finalized
+  in a follow-up worklog-only commit, recorded below).
 
 ## What changed
 Reworked `entities/dive/vision_fog.gd` from the M1.1 "dim-not-hide" approach (CanvasModulate
