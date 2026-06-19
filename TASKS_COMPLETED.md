@@ -209,3 +209,15 @@ Depth-scaled integer branch roll in `band_generator.gd` (contract `fingerprint(s
 Assembled the runnable M1.1 loop. Wired R2 `ReturnCost` + R3 `ExposureMeter` as persistent self-gating children of `main_game` (DiveClock injected into ReturnCost in `_ready`); added a "Back to Config" button on the sell screen; CFG config-rebind + R1/R4 spawns inherited (already wired). `tests/test_rg1_loop_verify.tscn` → **RG1 BUILD VERIFY OK** (16/18 matrix rows headless-verified: V1–V4 isolation, V5 stacked, V6/V7 all-off=M1.0, V8–V11 four end-causes, V12–V16/V18 loop+telemetry integrity; 6 rows + subjective deferred to the human checklist). Updated `tools/playtest/{loop_smoke_checklist,tester_readme}.md`. Flagged W3-RG1-1/2 (minor as-built notes).
 
 **RG2 + RG3 are HUMAN-GATED** — require a dev-machine playtest (`godot project.godot` → `main_game.tscn`, sweep configs). Claude assembles + analyzes + recommends; the Director plays + decides go/iterate/pivot.
+
+---
+
+## M1.1 — Greybox Cost Axis · Wave 3 (re-gate) — closed 2026-06-19 (verdict ITERATE → M1.2)
+
+### RG2 — Telemetry analysis + M1.0 comparison — **Done** (`design/M1_1_Tasks/G4_findings_M1.1.md`)
+Director playtested the RG1 build (57 M1.1 runs, `playtest_data/M1.1/run_log_2026-06-19.jsonl`). Analysis: cost axis half-landed — R2/R3 produced the 5 `timeout` losses M1.0 never had + shortened runs, but R1 caught 0× (body==hall geometry), levels too small/uniform, R2/R3/R4 fired invisibly. Triaged into I1–I5 + BUG4.
+
+### RG3 — Re-gate verdict — **Done** (verdict: **ITERATE → M1.2**)
+Director's verdict on the M1.1 re-gate: ITERATE. Bumped to M1.2 (Legibility & Level Scale), authored via the four-phase process (`design/M1_2_Tasks/`). The cost-axis mechanics stay; M1.2 makes them legible + fair, then re-gates.
+
+**M1.1 fully complete** — Wave 1 (foundations) + Wave 2 (R1–R4 oppositions) + Wave 3 (RG1 build + RG2 analysis + RG3 verdict). All close-outs done (W1.1-1/2, W2-R4-1→BUG4, W3-RG1-1/2). Detailed Done tables + proof: `STATUS_ARCHIVE.md`.

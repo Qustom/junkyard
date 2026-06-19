@@ -3,81 +3,108 @@
 The orchestrator's task queue (mirror of GitHub Projects). The orchestrator consumes the
 top *unblocked* task, dispatches the assigned subagent(s), and moves it through `STATUS.md`.
 Each task carries: **id · milestone · assignee subagent · spec · definition of done · blockedBy**.
+Finished tasks move to `TASKS_COMPLETED.md` (this file holds only **active + backlog**).
 
 Format:
 ```
 ### <ID> — <title>
 - Milestone: M<n>   Assignee: <subagent(s)>   BlockedBy: <ids|none>
-- Spec: <path to the full design/M1_Tasks spec>
+- Spec: <path to the design doc>
 - Goal: <one sentence>
 - Done when: <verifiable acceptance criteria>
 ```
 
 > A single task may span a programmer + an asset role (see `CLAUDE.md` → Dispatch). The
 > primary assignee is listed first; a `(+ role: scope)` note marks the secondary agent.
-> `BlockedBy: none` means its only dependency was M0, which is complete.
 
 ---
 
-## M1.1 — Greybox Cost Axis (ACTIVE — iterating on the G4 ITERATE verdict)
+## M1.2 — Legibility & Level Scale (ACTIVE — iterating on the M1.1 playtest ITERATE verdict)
 
-Add a depth-scaled **cost/risk axis** so push-vs-extract becomes a real gamble, then re-run the gate.
-Full breakdown, dependency map, wave order, and the configurable-knob + telemetry contracts:
-`design/M1_1_Tasks/M1.1_Breakdown.md`. All greybox; every opposition is configurable via a pre-run menu and
-config-marked in telemetry; the all-off `RunConfig` reproduces the M1.0 baseline (the permanent in-build control).
+Make the M1.1 cost axis **legible + fair**, then re-gate. Full breakdown, dependency map, wave order, and
+cross-cutting contracts: `design/M1_2_Tasks/M1.2_Breakdown.md`. Provenance: `design/M1_Tasks/G4_findings_M1.1.md`.
+**Design is LOCKED** — every task's design doc ends with a "Director Disposition (FINAL)". Greybox; all-off `RunConfig`
+still reproduces the M1.1 baseline (permanent control); config-marked telemetry; `run_ended` arity stays locked.
 
-### Wave 1 — Foundations — ✅ **COMPLETE (2026-06-19)**
-R0 · BUG1 · BUG2 · TEL · BUG3 · CFG all done + merged (R0 `30e41b9`; BUG1+BUG2 `33eb786`; TEL+BUG3 `c940ae4`; CFG `62e16b9`) and verified green (SMOKE OK · RUN DURATION OK · WITHIN BAND DEPTH OK · TEL CONFIG MARKING OK · BUG3 SOCKET SEAL OK · CONFIG MENU OK · MAIN GAME OK · GdUnit4 30/30). Close-out deviation sweep done (W1.1-1 Reviewed, W1.1-2 Addressed). Specs + proof archived to `TASKS_COMPLETED.md`. `depth_changed` + 11 opposition/penalty signals are on `main`; the band is sealed; telemetry config-marks every run.
+### Wave 1 — Spatial & data foundation  *(parallel worktrees, file-disjoint)*
 
-### Wave 2 — The four oppositions — ✅ **COMPLETE (2026-06-19)**
-R1 · R2 · R3 · R4 all done + merged (`b0566c2` R2/R3/R4; `0c80622` R1) and verified green (PURSUING HAZARD OK · RETURN COST OK · EXPOSURE METER OK · EXPOSURE HUD OK · R4 NAV OK · BANDGEN/SEAL OK · MAIN GAME OK · GdUnit 30/30; all-off fingerprint `e943ac9c8bc1` = M1.0 control). Each reads `active_run_config` + live within-band depth, emits TEL's pre-declared signals, edits neither `event_bus.gd` nor `game_state.gd`. **R2's `ReturnCost` + R3's `ExposureMeter` are built standalone and await RG1 dive-scene wiring.** Specs + proof archived to `TASKS_COMPLETED.md`. **Wave 2 close-out pending:** Director dispositions W2-R4-1 (BUG3 seal gap at high branch rates); R1/R2/R3 = none.
+### I1 — Configurable level scale (room count + size + new larger pieces)
+- Milestone: M1.2 (Wave 1)   Assignee: general-purpose + environment-artist (new larger greybox pieces)   BlockedBy: none
+- Spec: `design/M1_2_Tasks/I1_level_scale.md`
+- Goal: expose **room count** + **room-size multiplier** as `lvl_` `RunConfig` knobs (CFG-surfaced) **and author new larger/varied greybox pieces** (Director-confirmed scope); thread into the generator + `junk_placer.gd` (Phase-3 loot-scale fix); default = current M1.1 baseline; new knobs join `fingerprint(seed+config)` + CFG coverage + TEL snapshot.
+- Done when: room count + size settable from CFG visibly change the band; new pieces stitch/seal/grade; default = M1.1 baseline; determinism preserved; CFG/TEL pick up the new knobs.
+
+### BUG4 — Branch-rate-independent socket seal
+- Milestone: M1.2 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_2_Tasks/BUG4_robust_seal.md` (origin: M1.1 close-out W2-R4-1, Director Addressed)
+- Goal: generalize `SocketSealer` from frontier-keyed (`band.open_sockets` only) to **geometry-keyed** — cap every floor cell's outward non-floor, non-doorway neighbour — so the seal is branch-rate-independent. Geometry-only pass, no RNG/piece changes → `fingerprint()` byte-identical.
+- Done when: a determinism+seal sweep at high branch rates (`branch_per_depth` 0.12–0.20) shows 0 void-facing cells on every seed; fingerprint unchanged; existing seal/determinism tests green.
+
+### I5 — Telemetry hygiene (duration regression-lock + real build SHA)
+- Milestone: M1.2 (Wave 1)   Assignee: qa-playtest-coordinator   BlockedBy: none
+- Spec: `design/M1_2_Tasks/I5_telemetry_hygiene.md`
+- Goal: (a) `duration_s=0` was a **stale pre-fix binary** (confirmed) → add a CI regression-lock (headless loop-re-entry asserts nonzero duration), no duration-path code change; (b) bake the real HEAD SHA at build time into a git-ignored generated artifact read at runtime (drop the stale `project.godot config/build_sha`); show `+dirty` when uncommitted.
+- Done when: every completed run logs a real `duration_s` (asserted via the loop-re-entry test); `run_started.data.build` reflects the actual HEAD SHA; suite stays green.
+
+### Wave 2 — Oppositions retuned to the new canvas  *(parallel; watch the I2/I4 `main_game.gd` collision)*
+
+### I2 — Hazard fix (size, navigation, catch)
+- Milestone: M1.2 (Wave 2)   Assignee: general-purpose (+ character-animator: greybox tell)   BlockedBy: I1 (tune to new room scale)
+- Spec: `design/M1_2_Tasks/I2_hazard_fix.md`
+- Goal: M1.1 `hazard_caught=0` (body 32px == 32px hall → wall-stick; catch radius 24 < 30px contact → impossible). **Refuge** (Director): keep wall collision, shrink the body (~r10), raise catch radius above combined contact, add anti-wall-stick steering (next-frame tangent), add depth-scaled `r1_catch_radius_per_depth`, retune awaken to I1's depths. Kill via existing `fail_run(&"death")`.
+- Done when: with R1 on the hazard visibly closes + **catches → `death`** at a fair rate; off = M1.0; knobs take effect; `hazard_caught` rows appear.
+
+### I4 — Vision/fog rework (real occlusion + legible fog/lost)
+- Milestone: M1.2 (Wave 2)   Assignee: general-purpose (+ environment-artist: greybox look)   BlockedBy: I1 (radius vs scale)
+- Spec: `design/M1_2_Tasks/I4_vision_rework.md`
+- Goal: M1.1 vision only *dims*. Make it **occlude** (hide beyond the radius) via a node-based **radial-dark world mask** (darkness ~0.94, anti-blindness floor; no shader); three-state fog (never-seen / cool-ghost remembered / live); a legible **"lost" cue** (screen-edge pulse + HUD word) tied to `lost_proxy_threshold`. Cosmetic-only; radius tuned to I1.
+- Done when: beyond the radius geometry is hidden (not faintly visible); fog + lost cue legible; off = full M1.0 vision; determinism/seal intact; knobs take effect.
+
+### I3 — R2/R3 visual cues
+- Milestone: M1.2 (Wave 2)   Assignee: ui-ux-designer   BlockedBy: none (R2/R3 already emit)
+- Spec: `design/M1_2_Tasks/I3_r2_r3_cues.md`
+- Goal: R2/R3 fire invisibly. R3 = colour-ramped exposure bar + threshold ticks + penalty banner on `exposure_crossed`/`exposure_penalty` (keyed on the confirmed `penalty_kind` StringNames `speed`/`vision`/`clock`/`none`); R2 = clock-bar pulse + floating "−N {unit}" on `return_cost_incurred`; optional small penalty screen-shake. Pure HUD projection, non-colour channel, no new EventBus signal; invisible when the opposition is off.
+- Done when: the player sees exposure climbing + each penalty + each retreat toll; off = M1.0 HUD; honors E2 readability rules.
 
 ### Wave 3 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
 
-### RG1 — Playtest build (risk active)
-- Milestone: M1.1 (Wave 3)   Assignee: general-purpose + qa-playtest-coordinator (verification)   BlockedBy: R1, R2, R3, R4, TEL
-- Spec: `design/M1_1_Tasks/RG1_playtest_build.md` (expanded design + verification matrix + ratified decisions)
-- Goal: assemble the runnable M1.1 loop (Config menu → dive with risk → push/extract/die/timeout/lost → bank/lose → sell → repeat); verify each opposition individually + all stacked; config-marked telemetry writes.
-- Done when: a fresh build runs the full loop with oppositions on; per-run menu toggling works; telemetry logs config + opposition events; multiple runs/session.
+### RG1 — M1.2 playtest build + verify
+- Milestone: M1.2 (Wave 3)   Assignee: general-purpose + qa-playtest-coordinator   BlockedBy: I1, BUG4, I5, I2, I4, I3
+- Spec: template `design/M1_1_Tasks/RG1_playtest_build.md` (M1.2 doc authored when Wave 3 approaches)
+- Goal: assemble the runnable M1.2 loop, verify each fix individually + stacked, config-marked telemetry writes.
+- Done when: a fresh build runs the full loop with the fixes; per-run config works; telemetry logs clean; multiple runs/session.
 
-### RG2 — Telemetry analysis + M1.0 comparison
-- Milestone: M1.1 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + playtest data
-- Spec: `design/M1_1_Tasks/RG2_telemetry_analysis.md` (expanded design + metrics + ratified decisions)
-- Goal: analyze end-cause / run-length / max-depth distributions per config, per-opposition event frequencies, side-by-side vs the all-off M1.0 baseline; surface which oppositions broke the dominant strategy.
-- Done when: an analysis artifact comparing distributions across configs and against M1.0, with a clear read on whether the cost axis created a real outcome spread.
+### RG2 — Telemetry analysis vs M1.0/M1.1 baselines
+- Milestone: M1.2 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data
+- Spec: template `design/M1_1_Tasks/RG2_telemetry_analysis.md`
+- Goal: end-cause / run-length / depth distributions per config, side-by-side vs M1.0 (all-off) and M1.1; did legibility + level scale create a real, felt outcome spread?
+- Done when: an analysis artifact comparing distributions across configs + the two baselines, with a clear read.
 
 ### RG3 — Re-gate verdict (Director decides)
-- Milestone: M1.1 (Wave 3)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
-- Spec: `design/M1_1_Tasks/RG3_regate_verdict.md` (expanded gate design + criteria + ratified decisions)
-- Goal: re-run G4's question against M1.1; record a go/iterate/pivot verdict in `design/M1_1_Tasks/G4_findings_M1.1.md` (mirrors M1.0's). go → M2; iterate → M1.2 (this template); pivot → Director design rework.
-- Done when: a recorded go/iterate/pivot verdict backed by config-marked telemetry, comparable to the M1.0 G4 finding.
+- Milestone: M1.2 (Wave 3)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
+- Spec: template `design/M1_1_Tasks/RG3_regate_verdict.md`
+- Goal: record go/iterate/pivot in `design/M1_2_Tasks/G4_findings_M1.2.md` (mirrors M1.1). go → M2; iterate → M1.3 (this template); pivot → design rework.
+- Done when: a recorded go/iterate/pivot verdict backed by config-marked telemetry, comparable to the M1.0/M1.1 findings.
 
-## M1.1 follow-ups (from wave close-outs)
+---
 
-### BUG4 — SocketSealer misses branchy perimeter edges at high R4 branch rates
-- Milestone: M1.1 (follow-up)   Assignee: general-purpose   BlockedBy: none (R4 + BUG3 on `main`)
-- Spec: `systems/bandgen/socket_sealer.gd` + `design/M1_1_Tasks/R4_maze_navigation.md` §6; origin = Wave-2 close-out **W2-R4-1** (Director: Addressed, 2026-06-19)
-- Goal: at `r4_branch_per_depth ≳ 0.12` some seeds leave 2–6 floor cells facing off-map void after `SocketSealer`, because the sealer caps only `band.open_sockets` (unmated frontier) and misses branchy socket-opening edges not in that set. Cap **all** outward-facing perimeter floor edges (any floor cell whose outward neighbour is neither floor nor a mated doorway) so the seal is **branch-rate-independent**. Also add a CFG soft-cap note on `r4_branch_per_depth`.
-- Done when: a determinism+seal sweep at high branch rates (e.g. `branch_per_depth` 0.12–0.20) shows **0 void-facing cells** on every seed; `band.fingerprint()` unchanged (geometry-only pass, no RNG/piece changes); existing seal + determinism tests stay green.
-- Note: **non-blocking** for Wave 3 — the recommended playtest presets (S1=0.06, S3=0.05) already seal cleanly (0 leaks/9 seeds). Needed before any high-branch-rate sweep.
+## M1 follow-ups (deferred tech-debt — non-blocking, backlog)
 
-## M1 follow-ups (deferred tech-debt — non-blocking; from the wave-5 close-out)
-
-Small, optional cleanups surfaced as `Reviewed` deviations at the M1 wave-5 close-out (2026-06-18) and
-ratified for tracking by the Director (2026-06-19). Neither blocks G4 or M1 sign-off; pick up opportunistically.
-Provenance: `DESIGN_DEVIATIONS_HISTORY.md` §"M1 wave 5" (W5-G2-3, W5-G2-5).
+From the M1 wave-5 close-out (`DESIGN_DEVIATIONS_HISTORY.md` §"M1 wave 5"). Neither blocks M1.2; pick up opportunistically.
 
 ### FU1 — GdUnit4 `test_jsonl_writer`
-- Milestone: M1 (follow-up)   Assignee: qa-playtest-coordinator   BlockedBy: none (G1+G2 on `main`)
-- Spec: `M1_As_Built.md` §Telemetry + `systems/telemetry/jsonl_writer.gd`; origin = close-out W5-G2-3
-- Goal: add the GdUnit4 `test_jsonl_writer` suite that G2 deferred (G1's `JsonlWriter` was on a parallel branch at the time; both are now on `main`). Exercise the writer seam directly — write rows, read back, assert parseable JSON + required envelope fields (`v, ts, t_ms, run_id, session_id, type, data`).
-- Done when: a GdUnit4 suite under `tests/telemetry/` covers `JsonlWriter` round-trip + envelope field presence; green in headless (`tools/run_gdunit.sh`); test count rises from 30.
+- Milestone: M1 (follow-up)   Assignee: qa-playtest-coordinator   BlockedBy: none
+- Spec: `M1_As_Built.md` §Telemetry + `systems/telemetry/jsonl_writer.gd`
+- Goal: add the GdUnit4 `test_jsonl_writer` suite G2 deferred — exercise the writer seam (write rows, read back, assert parseable JSON + envelope fields `v, ts, t_ms, run_id, session_id, type, data`).
+- Done when: a GdUnit4 suite under `tests/telemetry/` covers `JsonlWriter` round-trip + envelope fields; green headless; test count rises.
 
 ### FU2 — Static `EconomyMath` helper
 - Milestone: M1 (follow-up)   Assignee: general-purpose   BlockedBy: none
-- Spec: `systems/game_state.gd` (`_resolve_pockets`/`_sum_values`/`run_haul_value`); origin = close-out W5-G2-5
-- Goal: lift the pure economy math out of `GameState` into a static `EconomyMath` helper so it's testable without snapshotting global meta (G2's economy suites currently save/restore `money`/`banked_junk`/`run_rules` around each test). `GameState` then calls the helper; no behavior change.
-- Done when: a static `EconomyMath` (or similar) owns the pockets/sum/haul math; `GameState` delegates to it; the G2 economy suites are refactored to call the helper directly (no global-meta snapshot/restore); full suite stays green (GdUnit4 + legacy + SMOKE).
+- Spec: `systems/game_state.gd` (`_resolve_pockets`/`_sum_values`/`run_haul_value`)
+- Goal: lift the pure economy math out of `GameState` into a static `EconomyMath` helper so it's testable without snapshotting global meta; `GameState` delegates; no behavior change.
+- Done when: a static `EconomyMath` owns pockets/sum/haul; `GameState` delegates; G2 economy suites call it directly (no meta snapshot); suite green.
+
+---
 
 ## Backlog (M2+)
-Pulled forward when M1 passes its gate. See TDD §7 for M2 (vertical slice: full day loop, recipe repair, first enemy, real art for one band), M3 (bands 1–3, currencies/tracks, exposure crises), M4 (Act 3 + endings), M5 (polish/ship). The **economy workbook** `design/economy_model.xlsx` (game-director-designer) is due **before M3**.
+Pulled forward when M1.x passes its gate. See TDD §7: M2 (vertical slice: full day loop, recipe repair, first enemy, real art for one band), M3 (bands 1–3, currencies/tracks, exposure crises), M4 (Act 3 + endings), M5 (polish/ship). The **economy workbook** `design/economy_model.xlsx` (game-director-designer) is due **before M3**.
