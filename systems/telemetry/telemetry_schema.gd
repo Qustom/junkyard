@@ -32,6 +32,17 @@ const BAND_DEPTH_REACHED: String = "band_depth_reached"
 const CURRENCY_IN: String = "currency_in"    # currency-in tagged by source (sell/extract/pockets)
 const EXPOSURE_THRESHOLD: String = "exposure_threshold"
 
+# --- M1.1 opposition event types (TEL spec §3) -------------------------------
+# Additive `type` strings + `data` payloads only — NO envelope/schema bump. Each
+# maps 1:1 to a pre-declared EventBus signal (TEL spec §4); R1–R4 emit, TEL logs.
+const HAZARD_AWOKE: String = "hazard_awoke"                  # R1: dormant→awake
+const HAZARD_CAUGHT: String = "hazard_caught"                # R1: catch-radius reached
+const RETURN_COST_INCURRED: String = "return_cost_incurred"  # R2: retreat/egress cost applied
+const EXPOSURE_CROSSED: String = "exposure_crossed"          # R3: meter crosses a threshold level
+const EXPOSURE_PENALTY: String = "exposure_penalty"          # R3: penalty fires at a crossed level
+const NAV_BRANCH_TAKEN: String = "nav_branch_taken"          # R4: junction degree > 2 traversed
+const NAV_LOST_PROXY: String = "nav_lost_proxy"              # R4: lost-proxy metric crosses threshold
+
 ## Every event-type string, for tests/validators that want to assert a row's
 ## `type` is known.
 const ALL_TYPES: Array[String] = [
@@ -43,6 +54,14 @@ const ALL_TYPES: Array[String] = [
 	BAND_DEPTH_REACHED,
 	CURRENCY_IN,
 	EXPOSURE_THRESHOLD,
+	# M1.1 opposition rows
+	HAZARD_AWOKE,
+	HAZARD_CAUGHT,
+	RETURN_COST_INCURRED,
+	EXPOSURE_CROSSED,
+	EXPOSURE_PENALTY,
+	NAV_BRANCH_TAKEN,
+	NAV_LOST_PROXY,
 ]
 
 ## The envelope keys every row carries (used by tests to assert structure).
