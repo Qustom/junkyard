@@ -1,17 +1,34 @@
 class_name SocketSealer
 extends RefCounted
-## SocketSealer (BUG3) — the post-placement "seal unused sockets" pass.
+## SocketSealer (BUG3 → BUG4) — the post-placement "seal the band perimeter" pass.
 ##
 ## A generated band is a linear (M1) or branching (R4) spine of solid-walled
-## greybox pieces stitched at mated sockets. Every UNMATED socket left on the
-## frontier (`band.open_sockets`) is a 2-cell gap punched in a piece's perimeter
-## wall that mates with NOTHING — an opening straight onto off-map void the player
-## can walk through. This pass seals each one with a 2-cell WALL cap so the band is
-## a closed play space (BUG3 acceptance: "no open socket off-map").
+## greybox pieces stitched at mated sockets. Anywhere a FLOOR (walkable) cell sits
+## on the band perimeter with its outward neighbour landing on off-map void, the
+## player can walk straight off the map. This pass seals every such edge with a
+## WALL cap so the band is a closed play space.
+##
+## BUG4 — branch-rate-independent seal. BUG3 capped only `band.open_sockets` (the
+## unmated frontier the generator happened to retain). On a linear spine that set
+## IS the full leak set, but a branchy R4 layout (`r4_branch_per_depth ≳ 0.12`)
+## leaves floor-edge-facing-void cells OUTSIDE `open_sockets` — consumed sockets
+## whose mate only partially overlapped, and perimeter floor never enumerated as a
+## socket at all. So this pass is now GEOMETRY-KEYED, not frontier-keyed: it builds
+## the band-global FLOOR set across ALL pieces and caps every floor cell's outward
+## 4-neighbour that is not itself floor. This is the exact inverse of the test's
+## leak condition (`_count_floor_facing_void`), so "no floor cell faces void" holds
+## BY CONSTRUCTION on any seed at any branch rate — independent of the frontier.
+##
+## The doorway guard is exact (not a heuristic): a mated doorway's outward
+## neighbour is ANOTHER piece's floor cell, present in the band-global FLOOR set, so
+## the `floor_set.has(n)` skip protects it. Building ONE global set (vs per-piece)
+## is what makes that guard exact — it uses the identical FLOOR↔FLOOR 4-adjacency
+## the generator's connectivity flood-fill defines as a real walkable doorway.
 ##
 ## DETERMINISM IS SACRED (B2 fingerprint). This pass:
 ##   - runs at MATERIALISATION, after BandGenerator.generate() returns its Band;
-##   - reads the already-final, deterministic `band.open_sockets`;
+##   - reads the already-final, deterministic `PlacedPiece.floor_cells`
+##     (captured pre-seal, so caps it adds never pollute the floor truth);
 ##   - adds ONLY collision/visual geometry (WALL tiles in each owner's Geometry
 ##     TileMapLayer) — it adds/removes/reorders NO pieces and rolls ZERO RNG.
 ## Therefore band.fingerprint() is byte-identical with and without the seal pass
@@ -29,60 +46,50 @@ const GREYBOX_SOURCE_ID := 0
 const WALL_ATLAS := Vector2i(1, 0)
 
 
-## Seal every unmated socket opening in `band` with a 2-cell WALL cap, so no
-## opening leads off-map. Idempotent in effect (writing WALL over WALL is a no-op);
-## reads the final band, mutates only live Geometry tiles. cell_size_px is accepted
-## for the alternate collider-parenting seam and for API symmetry with the spec; the
-## tile-write seam (used here) works in pure cell space and does not need it.
+## Seal the band perimeter so no FLOOR cell faces off-map void. Geometry-keyed:
+## caps every floor cell's outward 4-neighbour that is not itself floor (so a mated
+## doorway — whose neighbour IS another piece's floor — is left walkable). Reads the
+## final band, mutates only live Geometry tiles. Idempotent (writing WALL over an
+## existing WALL is a no-op; the floor-set guard means a FLOOR cell is never
+## overwritten). cell_size_px is accepted for API symmetry with the spec; the
+## tile-write seam works in pure cell space and is scale-correct by construction
+## (relevant because I1 may scale pieces in parallel), so it is ignored here.
 func seal_unused_sockets(band: Band, _cell_size_px: int = 0) -> void:
 	if band == null:
 		return
-	for sock in band.open_sockets:
-		for cell in _opening_lane_cells(sock):
-			_place_wall_cap(sock.owner, cell)
 
+	# 1. Band-global FLOOR set across ALL pieces (the walkable truth). O(total
+	#    cells). floor_cells is captured pre-seal, so caps we add never appear here
+	#    as "floor". Maps each floor cell -> its owning piece (the cap target layer).
+	var floor_set := {}                                   # Vector2i -> PlacedPiece
+	for p in band.pieces:
+		for c in p.floor_cells:
+			floor_set[c] = p
 
-## The boundary lane an unmated socket opens through, in BAND-GLOBAL cells.
-##
-## B1 authoring convention (verified against every piece scene): the socket Marker2D
-## sits on the LAST INTERIOR FLOOR cell, INSET one cell from the piece edge. Stepping
-## one cell along the socket's facing direction lands on the boundary FLOOR cell of
-## the opening (`edge_cell`). The opening is `width_cells` wide, spanning along the
-## perpendicular axis — but the marker sits at ONE END of it, and which way the gap
-## extends (+perp vs -perp) differs per socket (e.g. +perp for N/W, -perp for E/S in
-## B1). Rather than hardcode that sign, we read the OWNER's floor cells: the gap is
-## the run of boundary cells that ARE floor in the owning piece. We grow from
-## edge_cell into whichever perpendicular direction is floor (the wall gap), covering
-## width_cells boundary cells. Pure integer-cell math, no RNG, no float; robust to
-## any future piece authoring.
-func _opening_lane_cells(sock: OpenSocket) -> Array[Vector2i]:
-	var facing := ZoneSocket.dir_to_cell(sock.dir)   # +1 along the wall-gap axis
-	var perp := Vector2i(facing.y, facing.x)         # opening's width axis
-	var edge_cell := sock.cell + facing              # marker is inset one cell; step to the wall gap
-
-	# The owning piece's band-global floor cells, as a set for O(1) lookup.
-	var floor_set := {}
-	if sock.owner != null:
-		for c in sock.owner.floor_cells:
-			floor_set[c] = true
-
-	# Pick the gap direction: the boundary partner that is floor in the owner piece.
-	# (edge_cell itself is floor; exactly one of edge±perp is the floor gap, the other
-	#  is the piece's perimeter wall.) Default to +perp if neither reads as floor
-	#  (degenerate/1-wide), so we always seal at least edge_cell.
-	var grow := perp
-	if floor_set.has(edge_cell - perp) and not floor_set.has(edge_cell + perp):
-		grow = -perp
-
-	var cells: Array[Vector2i] = []
-	for k in range(maxi(sock.width_cells, 1)):
-		cells.append(edge_cell + grow * k)
-	return cells
+	# 2. For every floor cell, inspect its 4 outward neighbours. A neighbour that is
+	#    NOT floor is either (a) this/another piece's perimeter WALL (already sealed
+	#    — writing WALL is a no-op) or (b) OFF-MAP VOID (the leak we must cap). We
+	#    cap by writing WALL at the neighbour cell, owned by the floor cell's piece.
+	#    We do NOT need to distinguish wall-vs-void: writing WALL onto either is
+	#    correct and idempotent — the ONLY cell we must never overwrite is a FLOOR
+	#    cell, and the floor_set.has(n) guard skips exactly those (mated doorways +
+	#    interior links).
+	var steps := [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
+	for cell in floor_set:
+		var owner: PlacedPiece = floor_set[cell]
+		for step in steps:
+			var n: Vector2i = cell + step
+			if floor_set.has(n):
+				continue                                  # mated doorway / interior — leave walkable
+			_place_wall_cap(owner, n)                     # seal: WALL over void OR over existing wall (no-op)
 
 
 ## Write a WALL cell at a band-global cell into the owner piece's Geometry layer.
 ## global_cell -> owner-local cell via `local_cell = global_cell - owner.offset_cell`
 ## (the piece materialises at offset_cell * cell_size, so global == local + offset).
+## A TileMapLayer is sparse/unbounded, so a cap written "outside" the owner's
+## authored rect still produces a valid collision cell at the right band-global
+## position (collision is per-cell — no clamping or owner-reassignment needed).
 ## Reuses the existing greybox WALL tile so collision + look match B1 exactly.
 func _place_wall_cap(owner: PlacedPiece, global_cell: Vector2i) -> void:
 	if owner == null or owner.instance == null:

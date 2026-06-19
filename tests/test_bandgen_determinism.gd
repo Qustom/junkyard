@@ -18,6 +18,16 @@ extends Node
 ##   7. no open socket off-map: after sealing, NO band-global floor cell faces an
 ##      empty off-map cell — every perimeter floor cell abuts another piece's floor
 ##      OR a wall cap (the band is a closed play space).
+##
+## BUG4 (M1.2) — the seal is now BRANCH-RATE-INDEPENDENT (geometry-keyed, not
+## frontier-keyed). Acceptance-tested here as a HIGH-BRANCH sweep:
+##   8. across r4_branch_per_depth in [0.12 .. 0.20] (past the W2-R4-1 failure
+##      point), after sealing _count_floor_facing_void == 0 on EVERY seed;
+##   9. that sweep is NON-VACUOUS: the same band UNSEALED leaks ≥1 void-facing cell
+##      on at least one seed (so a green sweep proves the band WAS leaking pre-seal
+##      and the generalised sealer is what closed it);
+##  10. fingerprint stays byte-identical pre/post seal at high branch rates too;
+##  11. high-branch bands stay connected (no doorway regression).
 
 const CATALOG_PATH := "res://data/piece_catalog.tres"
 const CONFIG_PATH := "res://data/bandgen_config.tres"
@@ -110,6 +120,9 @@ func _run() -> int:
 	# --- R4 (M1.1): (seed + config) determinism contract + branching takes effect ---
 	_run_r4_checks(gen, cfg, catalog, failures)
 
+	# --- BUG4 (M1.2): branch-rate-independent seal at HIGH branch rates ---
+	_run_bug4_high_branch_checks(gen, cfg, catalog, failures)
+
 	if failures.is_empty():
 		var sample := gen.generate(12345, cfg, catalog)
 		print("BANDGEN OK — determinism + connectivity verified across %d seeds (sample seed 12345 -> %d pieces, fp=%s)"
@@ -117,6 +130,7 @@ func _run() -> int:
 		_free_band(sample)
 		print("BUG3 SOCKET SEAL OK")
 		print("R4 NAV OK")
+		print("BUG4 BRANCH-RATE-INDEPENDENT SEAL OK")
 		return 0
 	for f in failures:
 		printerr("BANDGEN FAIL: ", f)
@@ -284,6 +298,97 @@ func _make_r4_on_config() -> RunConfig:
 	rc.r4_branch_chance_base = 0.0
 	rc.r4_branch_per_depth = 0.06        # S1 "Branchy" preset (R4 spec §7)
 	rc.r4_max_branch_depth = 8           # top of the M1 band; deepest pieces stay linear
+	return rc
+
+
+# --- BUG4 (M1.2): branch-rate-independent seal acceptance -------------------------
+
+## High branch rates the BUG3 frontier-keyed sealer could NOT close (W2-R4-1: at
+## r4_branch_per_depth ≳ 0.12 some seeds left 2–6 floor cells facing void). The
+## geometry-keyed BUG4 sealer must drive every one to 0, on every seed, at every
+## rate in this sweep — and must do so while keeping the fingerprint byte-identical
+## and the band connected.
+const BUG4_BRANCH_RATES := [0.12, 0.15, 0.18, 0.20]
+
+
+## BUG4 acceptance: the generalised (geometry-keyed) seal is branch-rate-independent.
+##   8.  Across BUG4_BRANCH_RATES × SEEDS: after sealing, _count_floor_facing_void == 0.
+##   9.  NON-VACUOUS: at branch_per_depth ≥ 0.12 at least one (rate, seed) band leaks
+##       BEFORE sealing — so a green sweep proves the band WAS leaking and the
+##       generalised sealer closed it (not that the seeds happened not to branch).
+##   10. Fingerprint byte-identical pre/post seal at every (rate, seed).
+##   11. The high-branch band stays connected (no doorway/route-home regression).
+func _run_bug4_high_branch_checks(gen: BandGenerator, cfg, catalog: Array[ZonePieceData],
+		failures: Array[String]) -> void:
+	var sealer := SocketSealer.new()
+	var any_leaked_before_seal := false       # proves the sweep is non-vacuous (#9)
+	var any_branched := false                 # at least one band actually forked
+
+	for rate in BUG4_BRANCH_RATES:
+		var rc := _make_high_branch_config(rate)
+		for seed in SEEDS:
+			# Determinism under the high-branch config (sanity for the sweep itself).
+			var on_a := gen.generate(seed, cfg, catalog, rc)
+			var on_b := gen.generate(seed, cfg, catalog, rc)
+			if on_a.fingerprint() != on_b.fingerprint():
+				failures.append("BUG4 rate=%.2f seed %d: high-branch config NOT deterministic (%s vs %s)"
+					% [rate, seed, on_a.fingerprint().substr(0, 12), on_b.fingerprint().substr(0, 12)])
+			_free_band(on_b)
+
+			if _count_intersection_pieces(on_a) > 0:
+				any_branched = true
+
+			# #9 NON-VACUOUS: the UNSEALED band must leak void on ≥1 (rate, seed) so a
+			# green sweep proves the generalised sealer is what closes it. We measure on
+			# a fresh, unsealed copy (on_a gets sealed below).
+			var unsealed := gen.generate(seed, cfg, catalog, rc)
+			if _count_floor_facing_void(unsealed) > 0:
+				any_leaked_before_seal = true
+			_free_band(unsealed)
+
+			# #11 connectivity (route home) holds before sealing (seal adds only walls).
+			if not gen.is_band_connected(on_a):
+				failures.append("BUG4 rate=%.2f seed %d: high-branch band is DISCONNECTED" % [rate, seed])
+
+			# #10 fingerprint byte-identical pre/post seal.
+			var fp_before := on_a.fingerprint()
+			sealer.seal_unused_sockets(on_a, 16)
+			var fp_after := on_a.fingerprint()
+			if fp_before != fp_after:
+				failures.append("BUG4 rate=%.2f seed %d: seal changed fingerprint (%s -> %s)"
+					% [rate, seed, fp_before, fp_after])
+
+			# #11 connectivity still holds after sealing (no doorway was walled off).
+			if not gen.is_band_connected(on_a):
+				failures.append("BUG4 rate=%.2f seed %d: seal DISCONNECTED the band (a doorway was capped)" % [rate, seed])
+
+			# #8 the load-bearing post-condition: 0 floor cells face off-map void.
+			var leaks := _count_floor_facing_void(on_a)
+			if leaks > 0:
+				failures.append("BUG4 rate=%.2f seed %d: %d floor cell(s) STILL face off-map void after sealing"
+					% [rate, seed, leaks])
+
+			_free_band(on_a)
+
+	# #9 — if NOTHING leaked across the whole high-branch sweep, the test is vacuous:
+	# either the sealer is a no-op clone of a non-branching baseline, or the chosen
+	# rates/seeds never branch. Fail loudly so a regression can't hide behind it.
+	if not any_branched:
+		failures.append("BUG4: high-branch sweep produced NO branching across all rates/seeds — config not taking effect")
+	if not any_leaked_before_seal:
+		failures.append("BUG4: high-branch sweep is VACUOUS — no UNSEALED band leaked void at branch_per_depth ≥ 0.12, so a green sweep does not prove the generalised seal closed anything")
+
+
+## Build a high-branch RunConfig at the given per-depth branch rate — deliberately
+## PAST the W2-R4-1 failure point (≥ 0.12), where the old frontier-keyed sealer left
+## void-facing cells. r4_max_branch_depth is set high so forks happen across the band
+## (not just shallow pieces), maximising the branchy perimeter the seal must close.
+func _make_high_branch_config(branch_per_depth: float) -> RunConfig:
+	var rc := RunConfig.new()
+	rc.r4_enabled = true
+	rc.r4_branch_chance_base = 0.0
+	rc.r4_branch_per_depth = branch_per_depth
+	rc.r4_max_branch_depth = 64          # branch at any depth the band reaches
 	return rc
 
 
