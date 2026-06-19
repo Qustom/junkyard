@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://br2testreturncost01"]
+[gd_scene format=3 uid="uid://dqkqu68na8oy"]
 
 [ext_resource type="Script" path="res://tests/test_return_cost.gd" id="1"]
 

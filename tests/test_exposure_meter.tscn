@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://b3exposuremeter01"]
+[gd_scene format=3 uid="uid://co5c1s0udmx33"]
 
 [ext_resource type="Script" path="res://tests/test_exposure_meter.gd" id="1"]
 

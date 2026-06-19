@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://ctelconfigmark001"]
+[gd_scene format=3 uid="uid://dvq6lg0dvjmu7"]
 
 [ext_resource type="Script" path="res://tests/test_telemetry_config_marking.gd" id="1"]
 
