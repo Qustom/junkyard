@@ -41,8 +41,9 @@ finding (R2 exposure-toll no-op) → **BUG5** filed below (Director: fix now, be
 
 ### Wave 3 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
 
-### RG1 — M1.2 playtest build + verify  *(IN PROGRESS)*
-- Milestone: M1.2 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: I1, BUG4, I5, I2, I4, I3, BUG5 (all done)
+**RG1 — ✓ DONE 2026-06-19** (merged `c7e130b`; archived → `TASKS_COMPLETED.md`). Assembled M1.2 build verified (14/20 rows headless, all-off fp unmoved); tester materials + verify matrix ready.
+
+> **⏸ HUMAN GATE — Director playtest required before RG2.** Sweep configs per `tools/playtest/tester_readme.md`; drop the `.jsonl` in `playtest_data/M1.2/`. See STATUS.md for the sweep order + `build_tag` convention.
 - Spec: template `design/M1_1_Tasks/RG1_playtest_build.md` (M1.2 doc authored when Wave 3 approaches)
 - Goal: assemble the runnable M1.2 loop, verify each fix individually + stacked, config-marked telemetry writes.
 - Done when: a fresh build runs the full loop with the fixes; per-run config works; telemetry logs clean; multiple runs/session.

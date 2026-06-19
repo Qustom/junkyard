@@ -286,3 +286,19 @@ through one `_mutate_meter(value)` helper (single source of truth: clamp `[0,MET
 `exposure_crossed`/`exposure_penalty`, `r3_max_forces_loss`, `exposure_meter_changed`). Run-state only; no new signal/knob/schema;
 `add()` inert when R3 off. Integration test: real `ReturnCost` + grouped `ExposureMeter`, taxed retreat 4→0 raises the meter by the
 toll amount (6.5) end-to-end. Determinism unmoved. Worklog `worklogs/2026-06-19-BUG5-general-purpose.md`.
+
+---
+
+## M1.2 — Legibility & Level Scale · Wave 3 (re-gate) · RG1 — done 2026-06-19
+
+### RG1 — M1.2 playtest build + verify — **Done** (merged `c7e130b`, impl `0669871`)
+Assembled + verified the runnable M1.2 playtest build (no `main_game.gd` edit needed — the loop already reaches every fix).
+Authored `design/M1_2_Tasks/RG1_playtest_build.md` (M1.2 verify matrix), `tests/test_rg1_m12_verify.{gd,tscn}` (headless driver),
+and updated `tools/playtest/{loop_smoke_checklist,tester_readme}.md` with the Director's config-sweep guidance + `m12-` `build_tag`
+convention. **`RG1 M1.2 VERIFY OK` — 14/20 rows headless-verified** (all-off fp=e943ac9c8bc1 unmoved; real build SHA; I1 scale; I2
+depth-scaled catch→death; I3/I4 cue+nav rows; BUG5 exposure toll moves R3; BUG4 high-branch seal; new `lvl_*`/`r1_catch_radius_per_depth`
+snapshot keys; real `duration_s`; carry-forward + no leak across loops; all 4 end-causes). 6 rendering/felt rows deferred to the human
+playtest. Worklog `worklogs/2026-06-19-RG1-qa-playtest-coordinator.md`.
+
+**RG2 + RG3 are HUMAN-GATED** — require the Director's dev-machine playtest (sweep configs, drop `.jsonl` in `playtest_data/M1.2/`).
+Claude then analyses (RG2) + recommends; the Director plays + decides go/iterate/pivot (RG3).

@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 (both built; M1.1 playtested → **ITERATE**) → **M1.2 (Legibility & Level Scale)** — **all build work DONE (Waves 1+2+BUG5); Wave 3 RG1 in progress, then HUMAN-GATED playtest.**
-**Last updated:** 2026-06-19 (BUG5 integrated `0196713`; all M1.2 fixes on `main`. Wave 3 RG1 dispatched (build+verify+tester materials). Next: RG1 lands → **Director playtest** → RG2 analysis → RG3 verdict. Breakdown: `design/M1_2_Tasks/M1.2_Breakdown.md`.)
+**Current milestone:** M1.0 → M1.1 (both built; M1.1 playtested → **ITERATE**) → **M1.2 (Legibility & Level Scale)** — **ALL build + verify work DONE (Waves 1+2+BUG5+RG1). ⏸ AT THE HUMAN GATE: awaiting the Director's playtest.**
+**Last updated:** 2026-06-19 (RG1 integrated `c7e130b` — assembled M1.2 build verified, 14/20 rows headless green, all-off fp unmoved. Next: **Director playtest** (sweep configs) → RG2 telemetry analysis → RG3 verdict. Breakdown: `design/M1_2_Tasks/M1.2_Breakdown.md`.)
 
 ---
 
@@ -22,13 +22,24 @@ Close-out: 0 formal deviations; 1 finding (W2.2-F1: R2 `exposure` toll fired its
 
 ---
 
-## In progress — Wave 3 RG1 (dispatched 2026-06-19, `isolation: worktree`)
+## ⏸ HUMAN GATE — Director playtest required (RG2/RG3 blocked on it)
 
-- **RG1** (qa-playtest-coordinator) — assemble + verify the M1.2 playtest build: author `design/M1_2_Tasks/RG1_playtest_build.md` (M1.2 verify matrix from the M1.1 template), a headless verify test, and updated `tools/playtest/{loop_smoke_checklist,tester_readme}.md` with the Director's config-sweep guidance. Verifies each fix individually + stacked, all-off=baseline, config-marked telemetry + real build SHA. Board = In Progress. **BlockedBy: I1/BUG4/I5/I2/I4/I3/BUG5 (all done).**
+All M1.2 build + verify work is on `main` (Waves 1+2+BUG5+RG1). RG1 assembled + headless-verified the build. **The next
+step is the Director's hands-on playtest** — Claude cannot do this part. Then Claude resumes for RG2.
 
-**BUG5 — ✓ DONE** (merged `0196713`): `exposure_meter.add()` routed through the shared crossing/penalty helper; R2 `exposure` toll now moves R3's meter end-to-end (integration test: taxed retreat raises meter by 6.5). All-off unchanged; determinism unmoved.
+**To run it (dev machine):** `godot project.godot` → play `scenes/game/main_game.tscn`; sweep configs from the pre-run CFG
+menu per `tools/playtest/tester_readme.md` + `tools/playtest/loop_smoke_checklist.md`. Telemetry → `user://telemetry/run_log.jsonl`
+(opt-in). Recommended sweep order (from RG1): **baseline control → size {1.0,1.5,2.0,3.0} w/ count at baseline → hazard on →
+R2 exposure toll + R3 → R4 vision → all-on.** Label each with `build_tag` (`m12-` prefix: `m12-size-2.0`, `m12-r1-catch`,
+`m12-all-on`) so RG2 can segment M1.2 from the M1.0/M1.1 logs. Drop the resulting `.jsonl` into `playtest_data/M1.2/`.
 
-> **After RG1 lands → HUMAN GATE.** RG2 (telemetry analysis vs M1.0/M1.1) needs a Director playtest first; RG3 (go/iterate/pivot verdict) is the Director's call, recorded in `design/M1_2_Tasks/G4_findings_M1.2.md`. Claude assembles + recommends; the human plays + decides.
+**6 human-deferred verify rows to eyeball during the playtest** (RG1 headless-verified the other 14): I1 "feels like a
+journey", I2 visible hazard close-in, I3 cue legibility, I4 occlusion look + lost cue, I5 returned-log build id, screen nav.
+
+**Then Claude resumes:**
+- **RG2** (qa-playtest-coordinator) — analyse the playtest `.jsonl`: end-cause / run-length / depth distributions per config,
+  side-by-side vs M1.0 (all-off) + M1.1; did legibility + level scale create a real, felt outcome spread? → analysis artifact.
+- **RG3** (Director decides) — record go/iterate/pivot in `design/M1_2_Tasks/G4_findings_M1.2.md`. go → M2; iterate → M1.3; pivot → rework.
 
 ---
 
