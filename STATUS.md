@@ -107,24 +107,30 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — M1.1 Wave 3: RG1 (playtest build) DISPATCHED 2026-06-19
-**Wave 2 COMPLETE + close-out done** (W2-R4-1 → Addressed → BUG4 filed). `main` at `f367a88`. Board: R1–R4 Done, BUG4 Todo.
+## ▶ HUMAN PLAYTEST GATE — M1.1 build complete; RG2/RG3 need the Director to play
+**M1.1 is BUILT.** Wave 1 (foundations) + Wave 2 (the four oppositions R1–R4) + RG1 (playtest build) are all on `main`
+(`c4c71b8`), verified green. The depth-scaled **cost axis is live, configurable, and config-marked in telemetry**;
+all-off reproduces the M1.0 baseline exactly (the permanent control). RG1's verify driver passed 16/18 matrix rows headless.
 
-**▶ DISPATCHED — RG1** (general-purpose): assemble the runnable M1.1 loop + verify. Most wiring already exists —
-**CFG already routes the menu config into `start_new_run` (shape a, carry-forward works); R1 + R4 already self-wired
-their spawns into `main_game.gd`.** RG1's real work:
-- **Wire R2 `ReturnCost` + R3 `ExposureMeter` as PERSISTENT children of `main_game`** (like `DiveClock` — they self-gate
-  per run via `active_run_config.rN_enabled` in `_on_run_started`, so no per-run spawn needed); **inject the `DiveClock`
-  node into `ReturnCost.dive_clock`**. R3's HUD readout already lives in `decision_hud.tscn`.
-- Add a **"Back to Config" button on the sell screen** (§8 Q2) to switch configs mid-session.
-- Run the **V1–V18 verification matrix** (objective; headless drives + telemetry JSONL inspection): each opposition
-  isolated (V1–V4), all-four stacked (V5), all-off = M1.0 (V6/V7), 4 end-causes reachable (V8–V11), loop+telemetry
-  integrity (V12–V18). Update `tools/playtest/{loop_smoke_checklist,tester_readme}.md`.
-- Spec: `design/M1_1_Tasks/RG1_playtest_build.md`.
+**▶ NEXT = the Director plays the build (Claude cannot self-run this).**
+Run it on the dev machine: `godot project.godot` → play `scenes/game/main_game.tscn` (it's `run/main_scene`).
+- The **Config menu** (side rail on the main menu) toggles R1–R4 + every knob; "reset to baseline (all off)" = M1.0 control.
+- Set a `build_tag` label per sweep; **enable telemetry** at the first-run consent prompt so runs are captured.
+- Sweep configs (the R-specs' suggested presets are starting points): R1-only, R2-only (egress_toll/clock S1–S3),
+  R3-only (soft A / hard B), R4-only (S1 branchy / S2 foggy / S3 maze), then stacked. Use "Back to Config" on the sell
+  screen to switch configs mid-session; Continue to quick-re-run the same config.
+- Telemetry JSONL lands at `user://telemetry/run_log.jsonl`. Full how-to: `tools/playtest/tester_readme.md`;
+  manual matrix + subjective checklist: `tools/playtest/loop_smoke_checklist.md`.
 
-**After RG1 lands → HUMAN PLAYTEST GATE.** RG2 (telemetry analysis vs M1.0 baseline) + RG3 (go/iterate/pivot verdict,
-Director decides) require a human to play the build (`godot project.godot` → `main_game.tscn`, set configs, sweep runs).
-Claude cannot self-run RG2/RG3. RG1 is the last autonomously-dispatchable M1.1 task.
+**Then Claude resumes (RG2 → RG3):**
+- **RG2** — analyze the playtest JSONL: end-cause / run-length / max-depth distributions **per config**, per-opposition
+  event frequencies, side-by-side vs the all-off M1.0 baseline; does the cost axis create a real outcome spread?
+- **RG3** — assemble RG2's evidence + a **recommendation** into `G4_findings_M1.1.md`; the **Director records the
+  go/iterate/pivot verdict** (go→M2; iterate→M1.2 via this template; pivot→design rework).
+
+**Open (independent, Todo):** BUG4 (SocketSealer branch-rate-independent seal — non-blocking, before any high-branch
+sweep) · FU1 `test_jsonl_writer` · FU2 `EconomyMath`. **Wave 3 close-out** (disposition W3-RG1-1/2 + any RG2/RG3 findings)
+runs after the re-gate.
 
 **Shared as-built contract briefed to all four** (specs predate BUG2 merge — these are the real names):
 live depth = `GameState.current_depth_index`; max = `GameState.max_depth_reached`; dist home = `GameState.current_dist_to_gate`
@@ -160,6 +166,7 @@ go/iterate/pivot verdict; the Director decides.
 ## Done (M1.1 — Greybox Cost Axis)
 | Task | Proof |
 |---|---|
+| RG1 — Playtest build (risk active) | merged `c4c71b8`; `tests/test_rg1_loop_verify.tscn` → **RG1 BUILD VERIFY OK** (16/18 matrix rows headless: V1–V4 isolation, V5 stacked, V6/V7 all-off=M1.0, V8–V11 four end-causes, V12–V16/V18 loop+telemetry integrity; 6 deferred to human checklist); R2 `ReturnCost` + R3 `ExposureMeter` wired as persistent self-gating nodes (DiveClock injected); "Back to Config" sell-screen button; `tools/playtest/{loop_smoke_checklist,tester_readme}.md` updated; worklog `worklogs/2026-06-19-RG1-general-purpose.md` (impl `6013c07`) |
 | R1 — Pursuing/awakening hazard | merged `0c80622`; `tests/test_pursuing_hazard.tscn` → **PURSUING HAZARD OK** (`scenes/hazards/hazard_entity.{tscn,gd}` `CharacterBody2D` on `hazard` layer; DORMANT→AWAKE latch on depth/linger, no re-sleep; toward-player `move_and_slide` chase; distance catch → `fail_run(&"death")` or non-fatal cost; emits `hazard_awoke`/`hazard_caught`); additive spawn seam in `main_game.gd:start_new_run` gated by `r1_enabled` (left R4/BUG2/BUG3 intact); worklog `worklogs/2026-06-19-R1-general-purpose.md` (impl `023c346`) |
 | R2 — Costlier return trip | merged `b0566c2`; `tests/test_return_cost.tscn` → **RETURN COST OK** (`systems/oppositions/return_cost.gd` run-state node; marginal-per-hop egress toll off live `current_dist_to_gate`; clock/exposure/meter resources via existing public surfaces; decay_behind behind reachability guard + linear self-downgrade; all-off free); RG1 wires the node; worklog `worklogs/2026-06-19-R2-general-purpose.md` (impl `5c1f2a9`) |
 | R3 — Exposure meter | merged `b0566c2`; `tests/test_exposure_meter.tscn` → **EXPOSURE METER OK** + **EXPOSURE HUD OK** (`systems/oppositions/exposure_meter.gd`; depth-weighted climb, retreat decay, one-shot crossings, max→`fail_run(&"timeout")`; penalty seams via pre-declared signals: `player.gd` speed-mult + `dive_clock.gd` clock-tax + R4-fog vision-mult; greybox HUD bar in `decision_hud.tscn`); RG1 wires the meter node; worklog `worklogs/2026-06-19-R3-general-purpose.md` (impl `87d2628`) |

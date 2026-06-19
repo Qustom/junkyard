@@ -15,9 +15,29 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-## ⏳ Pending Director evaluation
+## ⏳ Pending Director evaluation — M1.1 Wave 3 (RG1; close-out after the re-gate)
 
-*None. **M1.1 Wave 2 close-out complete (2026-06-19):** 1 deviation — **W2-R4-1** (residual BUG3 seal gap at aggressive
+`[date] <id/area> — what changed vs. the doc · why · Claude's recommendation`
+
+- **[2026-06-19] W3-RG1-1 / `ReturnCost.dive_clock` injected in `_ready()`, not via a scene NodePath export.** RG1 wires
+  R2's `DiveClock` reference in `main_game.gd:_ready()` (`_return_cost.dive_clock = _dive_clock`) because the typed
+  `@export var dive_clock: DiveClock` set via a `.tscn` NodePath resolved to `null`. · *Why:* a known Godot quirk with
+  typed-node exports across instanced sub-scenes; the code-assign is behaviour-identical and is the spec's allowed
+  alternative seam. · **Claude's recommendation: Reviewed** — behaviour-identical, idiomatic; no design change.
+- **[2026-06-19] W3-RG1-2 / `RunConfig.to_flat_dict()` returns 30 keys, not the "32" stated in spec prose.** The CFG
+  coverage assertion counts 32 *exported fields*, but `to_flat_dict()` flattens 30 (2 fields — the `Meta` `seed_override`
+  + `build_tag`, or equivalent — ride other telemetry slots, not the opposition-knob snapshot). RG1's verify driver
+  asserts the full key *set* generically (not a magic count), so it stays correct. · **Claude's recommendation:
+  Reviewed (doc-only)** — correct the "32" prose in `RG1`/`CFG`/`TEL` specs to match `to_flat_dict()`'s actual key set;
+  no code change (the snapshot is complete for what it's meant to carry).
+
+*(Both minor; disposition at the Wave 3 close-out alongside any RG2/RG3 findings, after the human playtest + re-gate.)*
+
+---
+
+## (archived earlier) M1.1 Wave 2 close-out
+
+*Done. **M1.1 Wave 2 close-out complete (2026-06-19):** 1 deviation — **W2-R4-1** (residual BUG3 seal gap at aggressive
 R4 branch rates) → **Addressed**: filed **BUG4** (`TASKS.md` + board), reapplied a safe-envelope note to
 `R4_maze_navigation.md` §6, archived to `DESIGN_DEVIATIONS_HISTORY.md`. R1/R2/R3 reported "none." (M1.1 Wave 1 close-out
 — W1.1-1 Reviewed, W1.1-2 Addressed — was completed + archived earlier.) This file is empty between waves.*

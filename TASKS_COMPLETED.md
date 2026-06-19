@@ -200,3 +200,12 @@ New `systems/bandgen/socket_sealer.gd` (RefCounted, zero RNG); 1-line call in `m
 Depth-scaled integer branch roll in `band_generator.gd` (contract `fingerprint(seed+config)`, all-off byte-matches M1.0 `e943ac9c8bc1`); `entities/dive/{vision_fog,lost_proxy}.gd` run-state; `nav_branch_taken`/`nav_lost_proxy`. Flagged **W2-R4-1** (BUG3 seal gap at high branch rates). `tests/test_bandgen_determinism.tscn` → R4 NAV OK.
 
 **Wave 2 close-out:** pending Director disposition of W2-R4-1 (R1/R2/R3 = none). Next: Wave 3 re-gate (RG1→playtest→RG2→RG3).
+
+---
+
+## M1.1 — Greybox Cost Axis · Wave 3 (re-gate) · RG1 — done 2026-06-19
+
+### RG1 — Playtest build (risk active) — **Done** (merged `c4c71b8`, impl `6013c07`)
+Assembled the runnable M1.1 loop. Wired R2 `ReturnCost` + R3 `ExposureMeter` as persistent self-gating children of `main_game` (DiveClock injected into ReturnCost in `_ready`); added a "Back to Config" button on the sell screen; CFG config-rebind + R1/R4 spawns inherited (already wired). `tests/test_rg1_loop_verify.tscn` → **RG1 BUILD VERIFY OK** (16/18 matrix rows headless-verified: V1–V4 isolation, V5 stacked, V6/V7 all-off=M1.0, V8–V11 four end-causes, V12–V16/V18 loop+telemetry integrity; 6 rows + subjective deferred to the human checklist). Updated `tools/playtest/{loop_smoke_checklist,tester_readme}.md`. Flagged W3-RG1-1/2 (minor as-built notes).
+
+**RG2 + RG3 are HUMAN-GATED** — require a dev-machine playtest (`godot project.godot` → `main_game.tscn`, sweep configs). Claude assembles + analyzes + recommends; the Director plays + decides go/iterate/pivot.
