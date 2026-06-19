@@ -21,7 +21,22 @@ class_name Player
 ## visuals. Defaults to DOWN so a freshly-spawned player has a defined facing.
 var facing: Vector2 = Vector2.DOWN
 
+## R3 (M1.1) exposure speed penalty seam. The ExposureMeter emits
+## EventBus.exposure_speed_mult_changed(mult) when its thresholds inflict a `speed`
+## penalty; we cache it and scale max_speed by it in step_velocity. Defaults to 1.0
+## (no penalty) so the player is unaffected with R3 off — M1.0 movement exactly.
+## The meter re-emits 1.0 on every run boundary so a penalty never leaks across runs.
+var _exposure_speed_mult: float = 1.0
+
 @onready var _nose: Node2D = get_node_or_null("Nose")
+
+
+func _ready() -> void:
+	EventBus.exposure_speed_mult_changed.connect(_on_exposure_speed_mult_changed)
+
+
+func _on_exposure_speed_mult_changed(mult: float) -> void:
+	_exposure_speed_mult = mult
 
 
 func _physics_process(delta: float) -> void:
@@ -46,7 +61,9 @@ func _physics_process(delta: float) -> void:
 ## unit-testable headlessly without a physics space — see tests/.
 func step_velocity(current: Vector2, input_dir: Vector2, delta: float) -> Vector2:
 	if input_dir != Vector2.ZERO:
-		var target: Vector2 = input_dir * stats.max_speed
+		# R3 seam: scale top speed by the cached exposure penalty mult (1.0 = no
+		# penalty). Acceleration is left untouched; only the speed cap changes.
+		var target: Vector2 = input_dir * (stats.max_speed * _exposure_speed_mult)
 		return current.move_toward(target, stats.acceleration * delta)
 	return current.move_toward(Vector2.ZERO, stats.friction * delta)
 

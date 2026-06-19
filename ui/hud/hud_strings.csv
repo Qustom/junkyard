@@ -4,3 +4,4 @@ HUD_DEPTH,Depth {depth}
 HUD_CLOCK_TIME,{seconds}s
 HUD_EXTRACT_PROMPT,Press {key} to Extract with {value}
 HUD_PUSH_HINT,...or push deeper for more
+HUD_EXPOSURE_FMT,Exposure: {value} / {max}
