@@ -37,16 +37,12 @@ I2 (merged `1966145`) · I3 (merged `9b5d75d`) · I4 (merged `d56674d`) — all 
 (fp=e943ac9c8bc1). None touched `main_game.gd` (the single-writer concern was moot). Close-out: 0 formal deviations; 1
 finding (R2 exposure-toll no-op) → **BUG5** filed below (Director: fix now, before the re-gate).
 
-### BUG5 — R2 `exposure` toll doesn't charge R3's meter (missing `add()` mutator)  *(Wave 2 close-out; IN PROGRESS)*
-- Milestone: M1.2 (Wave 2 close-out)   Assignee: general-purpose   BlockedBy: I2/I3/I4 (done)
-- Spec: `design/M1_2_Tasks/BUG5_exposure_toll_mutator.md`
-- Goal: `return_cost.gd`'s `TOLL_EXPOSURE` calls `meter.add(cost)` but `exposure_meter.gd` has no `add()` → the exposure toll fires its cue+telemetry but never moves the meter. Add a public `add(amount)` that routes through the same threshold-crossing/penalty logic as time-accrual; run-state only, no new signal/knob/schema, all-off unchanged.
-- Done when: R2 on + `r2_toll_resource=exposure` + R3 on → a toll raises the meter + fires the matching crossing/penalty; R3/R2 off → no-op (all-off = M1.0); regression test + smoke + determinism/HUD suites green.
+**BUG5 — ✓ DONE 2026-06-19** (merged `0196713`; archived → `TASKS_COMPLETED.md`). `exposure_meter.add()` added; R2 exposure toll now charges R3 end-to-end.
 
 ### Wave 3 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
 
-### RG1 — M1.2 playtest build + verify
-- Milestone: M1.2 (Wave 3)   Assignee: general-purpose + qa-playtest-coordinator   BlockedBy: I1, BUG4, I5, I2, I4, I3, BUG5
+### RG1 — M1.2 playtest build + verify  *(IN PROGRESS)*
+- Milestone: M1.2 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: I1, BUG4, I5, I2, I4, I3, BUG5 (all done)
 - Spec: template `design/M1_1_Tasks/RG1_playtest_build.md` (M1.2 doc authored when Wave 3 approaches)
 - Goal: assemble the runnable M1.2 loop, verify each fix individually + stacked, config-marked telemetry writes.
 - Done when: a fresh build runs the full loop with the fixes; per-run config works; telemetry logs clean; multiple runs/session.

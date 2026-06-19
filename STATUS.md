@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 (both built; M1.1 playtested → **ITERATE**) → **M1.2 (Legibility & Level Scale)** — **Waves 1 & 2 DONE + closed out; BUG5 in progress, then Wave 3 re-gate.**
-**Last updated:** 2026-06-19 (M1.2 Wave 2 integrated + closed out: I2/I3/I4 all Done/pushed/board-Done; 0 deviations, 1 finding → BUG5 (Director: fix now, dispatched). Next after BUG5: Wave 3 re-gate. Breakdown: `design/M1_2_Tasks/M1.2_Breakdown.md`.)
+**Current milestone:** M1.0 → M1.1 (both built; M1.1 playtested → **ITERATE**) → **M1.2 (Legibility & Level Scale)** — **all build work DONE (Waves 1+2+BUG5); Wave 3 RG1 in progress, then HUMAN-GATED playtest.**
+**Last updated:** 2026-06-19 (BUG5 integrated `0196713`; all M1.2 fixes on `main`. Wave 3 RG1 dispatched (build+verify+tester materials). Next: RG1 lands → **Director playtest** → RG2 analysis → RG3 verdict. Breakdown: `design/M1_2_Tasks/M1.2_Breakdown.md`.)
 
 ---
 
@@ -22,9 +22,13 @@ Close-out: 0 formal deviations; 1 finding (W2.2-F1: R2 `exposure` toll fired its
 
 ---
 
-## In progress — BUG5 (Wave 2 close-out fix; dispatched 2026-06-19, `isolation: worktree`)
+## In progress — Wave 3 RG1 (dispatched 2026-06-19, `isolation: worktree`)
 
-- **BUG5** (general-purpose) — add public `exposure_meter.add(amount)` routed through the same threshold-crossing/penalty logic as time-accrual, so R2's `TOLL_EXPOSURE` charge actually moves R3's meter. Run-state only; no new signal/knob/schema; all-off unchanged. Spec: `design/M1_2_Tasks/BUG5_exposure_toll_mutator.md`. **[touch: `exposure_meter.gd` + a regression test]** Blocks RG1 (the re-gate build should include it).
+- **RG1** (qa-playtest-coordinator) — assemble + verify the M1.2 playtest build: author `design/M1_2_Tasks/RG1_playtest_build.md` (M1.2 verify matrix from the M1.1 template), a headless verify test, and updated `tools/playtest/{loop_smoke_checklist,tester_readme}.md` with the Director's config-sweep guidance. Verifies each fix individually + stacked, all-off=baseline, config-marked telemetry + real build SHA. Board = In Progress. **BlockedBy: I1/BUG4/I5/I2/I4/I3/BUG5 (all done).**
+
+**BUG5 — ✓ DONE** (merged `0196713`): `exposure_meter.add()` routed through the shared crossing/penalty helper; R2 `exposure` toll now moves R3's meter end-to-end (integration test: taxed retreat raises meter by 6.5). All-off unchanged; determinism unmoved.
+
+> **After RG1 lands → HUMAN GATE.** RG2 (telemetry analysis vs M1.0/M1.1) needs a Director playtest first; RG3 (go/iterate/pivot verdict) is the Director's call, recorded in `design/M1_2_Tasks/G4_findings_M1.2.md`. Claude assembles + recommends; the human plays + decides.
 
 ---
 

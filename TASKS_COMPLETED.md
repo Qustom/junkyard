@@ -278,3 +278,11 @@ Rework is internal to `entities/dive/vision_fog.gd` (no `main_game.gd` edit need
 floored at `MIN_RADIUS`. Three-state fog (never-seen / cool flat-static remembered ghost / live hole) separated on a non-hue axis.
 Lost cue = screen-edge pulse on 1st `nav_lost_proxy`, persistent `"DISORIENTED"` HUD word on escalation, in I4's own CanvasLayer
 (not DecisionHUD); no audio. R4-off = byte-identical M1.0. Fingerprint unmoved. Worklog `worklogs/2026-06-19-I4-general-purpose.md`.
+
+### BUG5 — R2 exposure toll now charges R3's meter — **Done** (merged `0196713`, impl `ba9d58c`)
+Wave 2 close-out fix (Director: fix now). `ReturnCost`'s `TOLL_EXPOSURE` already called `meter.add(cost)` but `ExposureMeter`
+had only read-only getters → silent no-op. Added public `add(amount)` and refactored so `_process()` accrual + `add()` funnel
+through one `_mutate_meter(value)` helper (single source of truth: clamp `[0,METER_MAX]`, edge-triggered one-shot
+`exposure_crossed`/`exposure_penalty`, `r3_max_forces_loss`, `exposure_meter_changed`). Run-state only; no new signal/knob/schema;
+`add()` inert when R3 off. Integration test: real `ReturnCost` + grouped `ExposureMeter`, taxed retreat 4→0 raises the meter by the
+toll amount (6.5) end-to-end. Determinism unmoved. Worklog `worklogs/2026-06-19-BUG5-general-purpose.md`.
