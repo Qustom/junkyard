@@ -97,7 +97,18 @@ func _generate_once(seed: int, cfg: BandGenConfig, catalog: Array[ZonePieceData]
 	# 2. Frontier = entry's open sockets (band-global cells, depth-tagged).
 	var frontier: Array[OpenSocket] = entry.open_sockets.duplicate()
 
-	while band.pieces.size() < cfg.target_piece_count and not frontier.is_empty():
+	# I1 (M1.2): resolve the effective grow-loop target ONCE, before the loop, so the
+	# determinism surface is a single value (not a per-iteration read). With lvl off
+	# (rc null / lvl_enabled false / count -1) this is cfg.target_piece_count exactly,
+	# so the loop bound — and the RNG draw count/order — is byte-identical to M1.0/M1.1.
+	# When lvl is on with a count override the loop simply terminates later/earlier:
+	# more/fewer placement draws on the SAME stream in the SAME order (a longer/shorter
+	# prefix of one deterministic sequence). _soft_floor still rescales off cfg.target.
+	var target_count := cfg.target_piece_count
+	if rc != null:
+		target_count = rc.effective_room_count(cfg.target_piece_count)
+
+	while band.pieces.size() < target_count and not frontier.is_empty():
 		_sort_frontier(frontier)  # stable order before any RNG indexing
 
 		var grow_idx := _select_frontier_index(frontier, cfg, rc)

@@ -81,6 +81,8 @@ func _ready() -> void:
 		"r3_penalty_kind", "r3_penalty_magnitude", "r3_max_forces_loss", "r3_decay_on_retreat",
 		"r4_enabled", "r4_branch_chance_base", "r4_branch_per_depth", "r4_max_branch_depth",
 		"r4_vision_radius", "r4_vision_tighten_per_depth", "r4_fog_enabled", "r4_lost_proxy_threshold",
+		# I1 (M1.2) — level-scale knobs (additive payload).
+		"lvl_enabled", "lvl_room_count", "lvl_size_mult",
 	]
 	for k in expected_keys:
 		if not flat.has(k):

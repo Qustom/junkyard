@@ -1,0 +1,78 @@
+[gd_resource type="Resource" script_class="PieceCatalog" load_steps=22 format=3]
+
+[ext_resource type="Script" path="res://data/piece_catalog.gd" id="0"]
+[ext_resource type="Script" uid="uid://fcvnwoxq0xul" path="res://data/zone_piece_data.gd" id="1"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_corridor_h.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_corridor_v.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_corridor_l.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_box_small.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_box_large.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_room_hub.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_room_xl.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_corridor_long_h.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_hall_v.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_chamber.tscn" id="11"]
+
+[sub_resource type="Resource" id="zpd_corridor_h"]
+script = ExtResource("1")
+scene = ExtResource("2")
+piece_id = &"piece_corridor_h"
+weight = 5.0
+
+[sub_resource type="Resource" id="zpd_corridor_v"]
+script = ExtResource("1")
+scene = ExtResource("3")
+piece_id = &"piece_corridor_v"
+weight = 4.0
+
+[sub_resource type="Resource" id="zpd_corridor_l"]
+script = ExtResource("1")
+scene = ExtResource("4")
+piece_id = &"piece_corridor_l"
+weight = 3.0
+
+[sub_resource type="Resource" id="zpd_box_small"]
+script = ExtResource("1")
+scene = ExtResource("5")
+piece_id = &"piece_box_small"
+weight = 2.0
+
+[sub_resource type="Resource" id="zpd_box_large"]
+script = ExtResource("1")
+scene = ExtResource("6")
+piece_id = &"piece_box_large"
+weight = 1.5
+
+[sub_resource type="Resource" id="zpd_room_hub"]
+script = ExtResource("1")
+scene = ExtResource("7")
+piece_id = &"piece_room_hub"
+weight = 1.0
+
+[sub_resource type="Resource" id="zpd_room_xl"]
+script = ExtResource("1")
+scene = ExtResource("8")
+piece_id = &"piece_room_xl"
+weight = 2.5
+
+[sub_resource type="Resource" id="zpd_corridor_long_h"]
+script = ExtResource("1")
+scene = ExtResource("9")
+piece_id = &"piece_corridor_long_h"
+weight = 3.5
+
+[sub_resource type="Resource" id="zpd_hall_v"]
+script = ExtResource("1")
+scene = ExtResource("10")
+piece_id = &"piece_hall_v"
+weight = 2.5
+
+[sub_resource type="Resource" id="zpd_chamber"]
+script = ExtResource("1")
+scene = ExtResource("11")
+piece_id = &"piece_chamber"
+weight = 2.0
+
+[resource]
+script = ExtResource("0")
+pieces = Array[ExtResource("1")]([SubResource("zpd_corridor_h"), SubResource("zpd_corridor_v"), SubResource("zpd_corridor_l"), SubResource("zpd_box_small"), SubResource("zpd_box_large"), SubResource("zpd_room_hub"), SubResource("zpd_room_xl"), SubResource("zpd_corridor_long_h"), SubResource("zpd_hall_v"), SubResource("zpd_chamber")])
