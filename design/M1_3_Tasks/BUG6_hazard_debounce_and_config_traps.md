@@ -482,3 +482,12 @@ flagged** and must be dispositioned before the warn-line's blocking-or-not behav
 warn-only. No change to the no-schema-bump / no-`run_ended`-arity-change / no-new-EventBus-signal / fp `e943ac9c8bc1`
 constraints; all confirmed compatible.
 ```
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+- **Config-trap policy (the load-bearing call): Director chose WARN-ONLY, do NOT block Start** — CFG warn-line + an additive `run_started.data.inert_enabled_oppositions` telemetry flag; RG2 filters on it. Preserves legitimate single-axis experiment cells.
+- **Debounce:** `_caught_latched` rising/falling-edge latch in `hazard_entity.gd` — emit `hazard_caught` exactly once per catch, **re-arm only on leaving the radius** (a sustained pin = one catch). Must not move the fatal-catch frame (fp/`duration_s` byte-identical).
+- **Trap set = FIVE:** `r3_no_thresholds` (empty `r3_threshold_levels`), `r4_no_lost_proxy` (`r4_lost_proxy_threshold<=0.0`), `r4_no_vision` (**`r4_enabled and r4_vision_radius<=0.0`** — corrected; NOT gated on `r4_fog_enabled`), `r1_no_spawn` (`r1_spawn_count<=0`), `r1_catch_radius_too_small` (`r1_catch_radius<24.0`, gated on `spawn_count>0`). Hard-coded constants, **no new `@export` knob** (CFG 36-knob count pinned).
+- **Wave-1 ownership:** BUG6 owns the latch (`hazard_entity.gd`), `inert_enabled_oppositions()` (`run_config.gd`), and the telemetry flag (`telemetry.gd`); **lands its `run_config.gd` method first**, J1 folds the CFG warn-line into `config_menu.gd` + rebases its preset on top.
+
+**Design LOCKED.**

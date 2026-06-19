@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 → **M1.2 (Legibility & Level Scale) — DONE, re-gated → verdict ITERATE** → **M1.3 (Legibility & Density) — AUTHORING (Phase 1 breakdown done; Phase 2 design fan-out next).**
-**Last updated:** 2026-06-19 (M1.2 fully closed: Director playtested → RG2 analysis (`9ba083c`) → RG3 **ITERATE**. M1.3 opened: Phase-1 breakdown authored `design/M1_3_Tasks/M1.3_Breakdown.md`. Next: Director scope-check → Phase 2 per-task design fan-out.)
+**Current milestone:** M1.0 → M1.1 → M1.2 (DONE → ITERATE) → **M1.3 (Legibility & Density) — design LOCKED (four-phase complete + Director-dispositioned); Wave 1 ready to dispatch.**
+**Last updated:** 2026-06-19 (M1.3 four-phase authoring complete: Phase 1 breakdown · Phase 2 (8 task docs incl. new DLV2) · Phase 3 fresh-eyes · Director dispositioned all 4 load-bearing calls → design LOCKED + board wired. Next: Wave 1 build. Breakdown: `design/M1_3_Tasks/M1.3_Breakdown.md`.)
 
 ---
 
@@ -28,22 +28,21 @@ Director playtested the RG1 build (33 runs, `ba745e1`). RG2 (`design/M1_2_Tasks/
 M1.1 (26.4s median), depth to 17, three-way end-causes (real hazard deaths), `duration_s` clean (I5 works). RG3 verdict:
 **ITERATE → M1.3.** Director decisions + new issues (BUG6 hazard-spam, R3/R4 config traps) recorded in §5 of that doc.
 
-## ▶ Next action (start here on a cold restart) — **M1.3 Phase 2 (per-task design fan-out)**
+## ▶ Next action (start here on a cold restart) — **M1.3 Wave 1: BUG6 → J1, ∥ J5 ∥ DLV1 ∥ DLV2**
 
-M1.3 (Legibility & Density) is the iteration on M1.2's ITERATE. **Phase 1 breakdown is authored:**
-`design/M1_3_Tasks/M1.3_Breakdown.md` (8 build tasks + re-gate; waves + dependency map + contracts). **Awaiting a Director
-scope-check, then Phase 2** = dispatch one design-doc subagent per task (J1, J2, J3, J4, J5, BUG6, DLV1) — each writes its
-own `design/M1_3_Tasks/<id>_*.md` (research + pseudocode + open questions), file-disjoint, in parallel. Then Phase 3
-fresh-eyes resolution (Director-review items surfaced) → Phase 4 wire-up (TASKS/board/STATUS) → build waves.
+M1.3 design is LOCKED (every task doc ends with a "Director Disposition (FINAL)"; board items created, Todo). Dispatch **Wave 1**:
 
-**M1.3 scope (from RG3 §5):** J1 default play-preset + size slider [4.0,40.0] (R1+R4 on, R2/R3 OFF) · J2 enemy spread across
-depths · J3 per-room density · J4 hallway-length knob + corridor telemetry · J5 depth-counter HUD fix · BUG6 hazard
-debounce + config-trap guards · DLV1 itch HTML5 delivery via butler. **Contract:** all-off default stays the permanent
-baseline (fp=e943ac9c8bc1); the fun config ships as a separate boot preset.
+- **BUG6** (general-purpose) — one-shot `hazard_caught` latch + `inert_enabled_oppositions()` 5-trap **warn-only** guard. **Lands its `run_config.gd` method first.** Spec `BUG6_*.md`. **[touch: `hazard_entity.gd`, `run_config.gd` (method), `telemetry.gd` (flag)]**
+- **J1** (game-director-designer + general-purpose) — `make_default_play_preset()` (19 rooms, size 4.0, R1+R4 on, `r4_lost_proxy_threshold≈0.5`, R2/R3 off) + `RANGE_MULT=[4.0,40.0]`; all-off stays baseline. **After BUG6** (rebases preset; folds BUG6's CFG warn-line; pre-declares J2/J3 `r1_*` knobs). Spec `J1_*.md`. **[touch: `run_config.gd`, `config_menu.gd`, `config_strings.csv`, `main_game.gd:178`, tests]**
+- **J5** (ui-ux-designer) — depth counter → `Depth {depth_index} / {max}` via `depth_changed`. Parallel (HUD-disjoint). Spec `J5_*.md`. **[touch: `decision_hud.gd`, `hud_strings.csv`, `test_decision_hud.gd`]**
+- **DLV1** (producer + general-purpose) — butler + 4.6.3 web templates + Web preset + `tools/push_itch.sh` → `qusto/the-far-yard:html5`. Parallel (infra). **Needs network for installs; human prereqs flagged.** Spec `DLV1_*.md`.
+- **DLV2** (ui-ux-designer + general-purpose) — in-game JavaScriptBridge "Export telemetry" download (web-guarded). Parallel. Spec `DLV2_*.md`. ⚠ if it edits the same HUD scene as J5, coordinate/sequence.
 
-> **F5/DLV1 environment note:** butler + Godot 4.6.3 **web export templates are NOT installed**; only a Windows preset
-> exists. DLV1 must install them + add a web preset + a push task to `qusto/the-far-yard` (web channel); BUTLER key is in
-> APIKEYS.md (never commit it).
+**Wave 2** (after W1 on `main`): **J2 → J3** (one shared spawn seam, J2 owns + lands first, J3 additive) then **J4** (generator down-weight + corridor telemetry; pre-declare `corridor_time_summary` on `main`). **Wave 3:** re-gate (RG1 → Director playtest → RG2 → RG3 `G4_findings_M1.3.md`).
+
+> **Contracts:** all-off default = permanent baseline (fp=e943ac9c8bc1); fun config = `make_default_play_preset()` boot preset; warn-only config traps; cell-area density; J4 = generator down-weight (not re-pack); web carries data (DLV2). Parallel agents `isolation: worktree`; **verify branch topology before every merge** (qa-agent `git switch` leak — see memory); single-writer-per-`.gd`; push `main` after every merge; board mirror; wave close-out deviation sweep.
+
+> **DLV1/DLV2 env note:** butler + 4.6.3 web templates NOT installed (network needed); itch is **Chromium-only** (Firefox lacks credentialless COEP); human prereqs = itch project/password page + SAB toggle + GH `BUTLER_API_KEY` secret. Never commit APIKEYS.md.
 
 ---
 

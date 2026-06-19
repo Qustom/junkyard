@@ -277,3 +277,11 @@ Fresh-eyes reviewer (not the author). I read the target doc, then verified **eve
 ### Verdict on the J2+J3-as-one-task question (brief's direct ask)
 
 **Confirmed: build J2 + J3 as ONE merged hazard-spawn-seam rewrite, single owner, single shared Wave-2 branch.** J3's recommendation is correct and J2's §A.4 "sequence on `main`" framing should be superseded by it (recorded above, Q6). They are one population system on two axes (J3 budget → J2 distribution); sequencing them as two edits of the same two functions re-creates the multi-writer collision the Breakdown forbids. J1 pre-declares both tasks' `r1_*` knobs in Wave 1 so the merged Wave-2 branch writes only `main_game.gd` (+ an optional disjoint `junk_placer.gd` for J3's loot sub-knob). The two docs are otherwise fully consistent (RNG-free determinism, reuse of existing signals, all-off byte-identical, hazards never in `fingerprint()`).
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+- **Distribution:** `even_spread` default; **`curve` mode built but preset-OFF**; deterministic, no jitter (Phase-3 Q1/Q4). Starting sweep points (Director-accepted): count ≈ **4–6**, min-depth ≈ **1–2** (a sweep, not a fix). N reuses `r1_spawn_count` + new `r1_spawn_distribution` / `r1_spread_min_depth` (folded into J1's Wave-1 `run_config.gd` pass).
+- **Telemetry:** reuse `hazard_awoke`/`hazard_caught` (carry depth) — **no `hazard_spawned` signal** (Phase-3 Q5).
+- **Build structure (J2+J3):** built as **one population system on the shared spawn seam**, single owner — **J2 lands first on `main`, J3 additive/sequential** reusing J2's per-depth helper (`_hazard_spawn_position(band, depth, index)`); J1 pre-declares both tasks' knobs in Wave 1. (Reconciled at Phase 4: the two resolvers' ownership sketches → this single sequence; helper names unified at the Wave-2 brief.)
+
+**Design LOCKED.**

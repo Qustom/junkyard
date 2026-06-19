@@ -293,3 +293,10 @@ Two small UX calls need a verdict; everything else is resolved on merit:
 2. **Q3 — wording noun.** Recommendation: **keep "Depth"** (matches the design's vocabulary, which is F4's whole intent). Only a flag if the Director wants a thematic word; not blocking.
 
 Q2/Q4/Q5 resolved on merit (current-room if forced to one number; drop the band counter from the HUD but keep the field; "Depth 0" at run start, last-value-on-end-screen). Scope confirmed HUD-only, no new signal, determinism untouched, test-assertion fix correctly identified. **Design LOCKED pending the two Director UX verdicts above.**
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+- **Readout format: `Depth {depth} / {max}`** (live room `depth_index` / deepest-reached gate metric) — Director-accepted. **Wording: keep "Depth"** (matches the GDD/config vocabulary).
+- HUD-only: repoint `_refresh_depth()` to `current_depth_index`, subscribe to `EventBus.depth_changed`, fix the stale comment, paint "Depth 0 / 0" on the `run_started` boundary (required — `set_current_depth(0,…)` early-returns at entry), update `hud_strings.csv` (`HUD_DEPTH`) + the `tests/test_decision_hud.gd` assertion (3 spots). No game-state change, no new signal, determinism untouched. Drop the band counter from the HUD (keep the `current_depth` field for end-path prints).
+
+**Design LOCKED.**

@@ -344,3 +344,12 @@ Independent programmer-lens pass by a reviewer who did **not** author §1–§3.
 **Changelog**
 
 - **2026-06-19 — Phase-2 spec authored.** Goal + premise research (G4 §3/§5 F3a: "extra time = corridor traversal," junctions flat while duration grows; real corridor-vs-room piece table from the `.tscn`s + `piece_catalog_ext.tres`; how `lvl_size_mult` couples corridor length to room size at materialise; the existing `_player_piece_index` / `_cell_to_junction` per-piece tracking as the telemetry seam). Two-part design: (A) `lvl_corridor_len_mult` length-axis-only compression with a post-generation world re-pack (recommended over weight/catalog levers; layout-invariant, no `fingerprint()` move), (B) a per-frame corridor/room time accumulator emitted via a pre-declared `corridor_time_summary` signal into a new additive `corridor_summary` JSONL row (no schema-version bump, no `run_ended` arity change). 8 Open Questions (A–H) with Director-review flags on A/F (and the cross-task junk-seam/ownership flags on G/H).
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+- **Mechanism (the load-bearing call): Director chose GENERATOR DOWN-WEIGHT/DROP (Option b/c)** — NOT the materialise re-pack. Long corridors become rarer/shorter via the generator's weighted piece-pick / catalog. Works R4-on (the default preset), yields *physically* fewer corridors, and **shrinks J4's `main_game.gd` footprint to telemetry-only**. The change is **config-keyed**, so it legitimately moves `fingerprint()` for the non-default config while the **all-off default stays byte-identical** (fp `e943ac9c8bc1`).
+- **Corridor-time telemetry:** per-frame piece-keyed accumulator; **hoist `_player_piece_index` out of the R4-gated branch** so corridor-time works R4-off; emit `corridor_time_summary(corridor_s, room_s)` on run end (**pre-declared on `main`** before Wave 2) → additive `corridor_summary` JSONL row (no schema bump, no `run_ended` arity change). Corridor classification = **hardcoded corridor piece-id set** (drop the aspect-ratio fallback; L-bend excluded from length scaling).
+- **Q-F (preset value):** code default = baseline corridor rarity (neutral); the **preset biases toward fewer/shorter corridors** (the Director's swept value, wired into J1's preset).
+- **Wave-2:** J4 sequences after the J2→J3 spawn-seam work; with the telemetry-only footprint the `main_game.gd` collision is minimal (single Wave-2 owner integrates).
+
+**Design LOCKED.**

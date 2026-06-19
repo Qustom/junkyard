@@ -302,3 +302,11 @@ A fresh-eyes reviewer (not the author) verified every cited file/fact against re
 2. **Confirm Chromium-only play is acceptable** for the threaded web build (Q4) — i.e. the Director will use Chrome/Edge.
 
 Until the Director rules, the **safe default baked into the plan is (c)**: desktop remains the telemetry vehicle, web is feel-only, DLV1 is infra-only.
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+- **Telemetry-vehicle (the load-bearing call): Director chose "WEB MUST CARRY DATA"** — so DLV1 ships the web delivery infra **AND a sibling task DLV2** (in-game `JavaScriptBridge` "Export telemetry" download button, web-platform-guarded) is added to M1.3 so a browser playtest returns its `run_log.jsonl`. DLV1 itself stays infra (butler + 4.6.3 web templates + Web preset + `tools/push_itch.sh` + RG1/nightly wiring); DLV2 owns the in-game retrieval path. A web-only re-gate `blockedBy` DLV2.
+- **Slug:** `qusto/the-far-yard:html5`. **Ship both** web + Windows (the `.tpz` carries both templates). SAB/COI: itch SAB toggle + COI service worker + single-threaded fallback; **Chromium-only on itch** (Firefox lacks `credentialless` COEP) — documented in `tester_readme.md` + the human checklist.
+- **Human-only prerequisites** (butler pushes builds, not page settings): the itch project + password/HTML page mode + SAB toggle + the GH `BUTLER_API_KEY` secret. Install steps → `SETUP.md`; CI stays self-contained. Never commit `APIKEYS.md`.
+
+**Design LOCKED.**

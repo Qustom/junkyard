@@ -19,46 +19,92 @@ Format:
 
 ---
 
-## M1.2 — Legibility & Level Scale (ACTIVE — iterating on the M1.1 playtest ITERATE verdict)
+## M1.2 — Legibility & Level Scale — ✓ **DONE 2026-06-19** (re-gated → ITERATE → M1.3)
 
-Make the M1.1 cost axis **legible + fair**, then re-gate. Full breakdown, dependency map, wave order, and
-cross-cutting contracts: `design/M1_2_Tasks/M1.2_Breakdown.md`. Provenance: `design/M1_Tasks/G4_findings_M1.1.md`.
-**Design is LOCKED** — every task's design doc ends with a "Director Disposition (FINAL)". Greybox; all-off `RunConfig`
-still reproduces the M1.1 baseline (permanent control); config-marked telemetry; `run_ended` arity stays locked.
+All built + re-gated: Waves 1/2 + BUG5 + RG1 → Director playtest → RG2 → **RG3 verdict ITERATE**. Findings + Director
+decisions: `design/M1_2_Tasks/G4_findings_M1.2.md`. All tasks archived → `TASKS_COMPLETED.md`.
 
-### Wave 1 — Spatial & data foundation — ✓ **DONE 2026-06-19** (archived → `TASKS_COMPLETED.md`)
+---
 
-I1 (merged `e67532c`) · BUG4 (merged `eee4418`) · I5 (merged `1fd657e`) — all on `main`, board = Done, close-out swept
-(4 deviations, all Director-Reviewed). All-off default still byte-matches the M1.1 baseline (fp=e943ac9c8bc1).
+## M1.3 — Legibility & Density (ACTIVE — iterating on the M1.2 ITERATE verdict)
 
-### Wave 2 — Oppositions retuned to the new canvas — ✓ **DONE 2026-06-19** (archived → `TASKS_COMPLETED.md`)
+Make the fun config the default, fill the big rooms with distributed danger, fix the depth readout, and guarantee every
+enabled opposition actually fires — then re-gate for a possible "go." Breakdown + dependency map + wave order + locked
+decisions: `design/M1_3_Tasks/M1.3_Breakdown.md` (§"Phase 4 — Locked Decisions"). Provenance: `G4_findings_M1.2.md` §5.
+**Design is LOCKED** — every task doc ends with a "Director Disposition (FINAL)". Greybox; all-off `RunConfig` stays the
+permanent baseline (fp=e943ac9c8bc1); the fun config ships as the `make_default_play_preset()` boot preset.
 
-I2 (merged `1966145`) · I3 (merged `9b5d75d`) · I4 (merged `d56674d`) — all on `main`, board = Done. Determinism unmoved
-(fp=e943ac9c8bc1). None touched `main_game.gd` (the single-writer concern was moot). Close-out: 0 formal deviations; 1
-finding (R2 exposure-toll no-op) → **BUG5** filed below (Director: fix now, before the re-gate).
+### Wave 1 — Foundation & correctness  *(BUG6→J1 sequential on shared files; J5 ∥ DLV1 ∥ DLV2 parallel)*
 
-**BUG5 — ✓ DONE 2026-06-19** (merged `0196713`; archived → `TASKS_COMPLETED.md`). `exposure_meter.add()` added; R2 exposure toll now charges R3 end-to-end.
+### BUG6 — hazard_caught debounce + config-trap guards
+- Milestone: M1.3 (Wave 1)   Assignee: general-purpose   BlockedBy: none   (lands its `run_config.gd` method before J1)
+- Spec: `design/M1_3_Tasks/BUG6_hazard_debounce_and_config_traps.md`
+- Goal: one-shot `hazard_caught` latch (≤1/catch); `inert_enabled_oppositions()` + 5-trap **warn-only** guard (CFG line + `run_started` telemetry flag). No new knob/signal/schema; all-off byte-identical.
+- Done when: a sustained catch emits one `hazard_caught`; the 5 traps surface a warning + telemetry flag without blocking Start; smoke + determinism green.
+
+### J1 — Default play-preset + size-slider re-range
+- Milestone: M1.3 (Wave 1)   Assignee: game-director-designer + general-purpose   BlockedBy: BUG6 (rebases preset on its trap method)
+- Spec: `design/M1_3_Tasks/J1_default_preset_and_size_range.md`
+- Goal: `RunConfig.make_default_play_preset()` (lvl on, 19 rooms, size 4.0, R1+R4 on incl. `r4_lost_proxy_threshold≈0.5`, R2/R3 off) the game boots into; `RANGE_MULT=[4.0,40.0]`; all-off default stays the permanent baseline (Reset=all-off); pre-declares J2/J3's `r1_*` knobs.
+- Done when: game boots into the preset; size 4–40 settable (manual mult-40 smoke); all-off fp byte-identical; CFG coverage + `to_flat_dict` green.
+
+### J5 — Depth-counter HUD fix
+- Milestone: M1.3 (Wave 1)   Assignee: ui-ux-designer   BlockedBy: none (HUD-disjoint)
+- Spec: `design/M1_3_Tasks/J5_depth_counter_fix.md`
+- Goal: HUD shows `Depth {depth_index} / {max}` via `depth_changed` (not the band counter); fix stale comment + test assertion. HUD-only, determinism untouched.
+- Done when: the counter tracks the room depth_index live; `Depth N / max` reads correctly; smoke + decision-HUD test green.
+
+### DLV1 — itch.io HTML5 delivery via butler
+- Milestone: M1.3 (Wave 1/infra)   Assignee: producer + general-purpose   BlockedBy: none
+- Spec: `design/M1_3_Tasks/DLV1_itch_html5_delivery.md`
+- Goal: install butler + 4.6.3 web templates; add a Web export preset; `tools/push_itch.sh` → `qusto/the-far-yard:html5` (ship web+Windows); wire into RG1 + nightly; SETUP.md. Human prereqs (itch project, SAB toggle, GH secret) flagged. Never commit APIKEYS.md.
+- Done when: a web build exports + pushes to itch (Chromium-verified); Windows channel too; CI self-contained; install documented.
+
+### DLV2 — In-game telemetry export for web (JavaScriptBridge)
+- Milestone: M1.3 (Wave 1/infra)   Assignee: ui-ux-designer + general-purpose   BlockedBy: none (pairs with DLV1; blocks a web-only re-gate)
+- Spec: `design/M1_3_Tasks/DLV2_web_telemetry_export.md`
+- Goal: an in-game "Export telemetry" control (web-guarded) that downloads `user://telemetry/run_log.jsonl` from browser IndexedDB via JavaScriptBridge, so a browser playtest returns its log. No schema/arity change; inert on desktop.
+- Done when: a web build downloads a valid `run_log*.jsonl` matching the in-VFS log; desktop unaffected; tester_readme documents it.
+
+### Wave 2 — Density & spatial  *(J2→J3 shared spawn seam; J4 telemetry-only, sequenced)*
+
+### J2 — Enemy spread across depths
+- Milestone: M1.3 (Wave 2)   Assignee: general-purpose (+ character-animator if a tell needs it)   BlockedBy: J1
+- Spec: `design/M1_3_Tasks/J2_enemy_spread.md`
+- Goal: `even_spread` distribution of N hazards across depth_index (curve mode built, preset-off); reuse `hazard_awoke/caught`. **Owns the spawn seam; lands before J3.** Determinism untouched (run-state).
+- Done when: hazards spread across depths (not one gate); off=M1.0; `even_spread` preset (count 4–6, min-depth 1–2) works.
+
+### J3 — Per-room density (cell-area)
+- Milestone: M1.3 (Wave 2)   Assignee: general-purpose   BlockedBy: J2 (additive on J2's spawn seam)
+- Spec: `design/M1_3_Tasks/J3_per_room_density.md`
+- Goal: **cell-area** hazard budget (`r1_per_room_density`, size-invariant; px-area swept option; per-room cap); hazards primary, loot-per-area off-by-default. Fills huge rooms. Determinism untouched.
+- Done when: big rooms get proportional hazards; off=M1.0; cap holds; all-off byte-identical.
+
+### J4 — Hallway-length (generator down-weight) + corridor telemetry
+- Milestone: M1.3 (Wave 2)   Assignee: general-purpose   BlockedBy: J1 (sequence after J2/J3 on `main_game.gd`)
+- Spec: `design/M1_3_Tasks/J4_hallway_length.md`
+- Goal: make long corridors rarer/shorter via the **generator weighted-pick** (Option b/c; config-keyed fp move, all-off byte-identical); corridor-time telemetry via a per-frame piece-keyed accumulator + pre-declared `corridor_time_summary`.
+- Done when: the preset yields fewer/shorter corridors; corridor_summary row logs (R4 on/off); all-off fp unmoved.
 
 ### Wave 3 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
 
-**RG1 — ✓ DONE 2026-06-19** (merged `c7e130b`; archived → `TASKS_COMPLETED.md`). Assembled M1.2 build verified (14/20 rows headless, all-off fp unmoved); tester materials + verify matrix ready.
+### RG1 — M1.3 playtest build + verify
+- Milestone: M1.3 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: J1,J2,J3,J4,J5,BUG6,DLV1,DLV2
+- Spec: author from `design/M1_1_Tasks/RG1_playtest_build.md` + the M1.2 `RG1_playtest_build.md` template
+- Goal: assemble + verify the M1.3 loop (preset boots, every knob fires, traps warn, corridor telemetry, config-marked logs); auto-push via DLV1; DLV2 export available.
+- Done when: a fresh build runs the full loop with the fixes; per-run config works; telemetry clean; multiple runs/session.
 
-> **⏸ HUMAN GATE — Director playtest required before RG2.** Sweep configs per `tools/playtest/tester_readme.md`; drop the `.jsonl` in `playtest_data/M1.2/`. See STATUS.md for the sweep order + `build_tag` convention.
-- Spec: template `design/M1_1_Tasks/RG1_playtest_build.md` (M1.2 doc authored when Wave 3 approaches)
-- Goal: assemble the runnable M1.2 loop, verify each fix individually + stacked, config-marked telemetry writes.
-- Done when: a fresh build runs the full loop with the fixes; per-run config works; telemetry logs clean; multiple runs/session.
-
-### RG2 — Telemetry analysis vs M1.0/M1.1 baselines
-- Milestone: M1.2 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data
+### RG2 — M1.3 telemetry analysis vs M1.0/M1.1/M1.2
+- Milestone: M1.3 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data
 - Spec: template `design/M1_1_Tasks/RG2_telemetry_analysis.md`
-- Goal: end-cause / run-length / depth distributions per config, side-by-side vs M1.0 (all-off) and M1.1; did legibility + level scale create a real, felt outcome spread?
-- Done when: an analysis artifact comparing distributions across configs + the two baselines, with a clear read.
+- Goal: end-cause / run-length / depth / corridor-fraction distributions per config, side-by-side vs M1.0/M1.1/M1.2; did density + defaults + the fixes land?
+- Done when: an analysis artifact comparing distributions across configs + all three baselines, with a clear read.
 
-### RG3 — Re-gate verdict (Director decides)
-- Milestone: M1.2 (Wave 3)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
+### RG3 — M1.3 re-gate verdict (Director decides)
+- Milestone: M1.3 (Wave 3)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
 - Spec: template `design/M1_1_Tasks/RG3_regate_verdict.md`
-- Goal: record go/iterate/pivot in `design/M1_2_Tasks/G4_findings_M1.2.md` (mirrors M1.1). go → M2; iterate → M1.3 (this template); pivot → design rework.
-- Done when: a recorded go/iterate/pivot verdict backed by config-marked telemetry, comparable to the M1.0/M1.1 findings.
+- Goal: record go/iterate/pivot in `design/M1_3_Tasks/G4_findings_M1.3.md`. go → M2; iterate → M1.4; pivot → design rework.
+- Done when: a recorded go/iterate/pivot verdict backed by config-marked telemetry, comparable to the M1.0/M1.1/M1.2 findings.
 
 ---
 
