@@ -31,6 +31,12 @@ extends CanvasLayer
 ## that): it only announces intent. The demo scene wires this to a minimal restart.
 signal continue_pressed
 
+## RG1 (M1.1, §8 Q2): emitted when the Director presses "Back to Config". Like
+## continue_pressed it only announces intent — MainGame subscribes and re-shows the
+## menu/ConfigMenu instead of looping straight into a fresh dive, so the Director can
+## switch configs mid-session without quitting. Continue remains the quick re-run path.
+signal back_to_config_pressed
+
 ## Full count-up duration. Kept short (spec Open-question #2: ~0.6–0.8s) so repeat-run
 ## testers are never gated by animation; ANY input snaps it to completion immediately.
 @export var tally_duration: float = 0.7
@@ -41,6 +47,7 @@ signal continue_pressed
 @onready var _subtotal_label: Label = %SubtotalLabel
 @onready var _money_total_label: Label = %MoneyTotalLabel
 @onready var _continue_button: Button = %ContinueButton
+@onready var _back_to_config_button: Button = %BackToConfigButton
 
 # Count-up animation state. We drive the roll-up manually from _process rather than
 # a Tween: the screen runs while the tree is paused, and Godot 4 has a standing
@@ -62,6 +69,7 @@ func _ready() -> void:
 	set_process(false)  # only tick during a tally
 	hide()
 	_continue_button.pressed.connect(_on_continue_pressed)
+	_back_to_config_button.pressed.connect(_on_back_to_config_pressed)
 	EventBus.run_ended.connect(_on_run_ended)
 
 
@@ -89,8 +97,10 @@ func _present(reason: StringName, source: StringName) -> void:
 	_render_rows(breakdown)
 	_render_title(reason, breakdown.size())
 
-	# Continue is locked until the tally completes/skips so the reward beat lands.
+	# Continue (and Back to Config) are locked until the tally completes/skips so the
+	# reward beat lands.
 	_continue_button.disabled = true
+	_back_to_config_button.disabled = true
 	_animate_tally(subtotal, money_before, money_after)
 
 
@@ -172,6 +182,7 @@ func _finish_tally() -> void:
 	# Always paint the final live value — never trust the last interpolated frame.
 	_set_money_label(GameState.money)
 	_continue_button.disabled = false
+	_back_to_config_button.disabled = false
 	_continue_button.grab_focus()
 
 
@@ -200,3 +211,13 @@ func _on_continue_pressed() -> void:
 	get_tree().paused = false
 	hide()
 	continue_pressed.emit()
+
+
+## RG1 (§8 Q2): the switch-config path. Unpauses + hides like Continue, but announces
+## back_to_config_pressed so MainGame re-shows the menu instead of looping into a fresh
+## dive. The next Start (door 1) re-reads the menu's config; Continue (door 2) is unused
+## on this path. Decoupled identically to Continue — the SellScreen owns no navigation.
+func _on_back_to_config_pressed() -> void:
+	get_tree().paused = false
+	hide()
+	back_to_config_pressed.emit()
