@@ -66,6 +66,9 @@ jobs:
       - name: Save-migration test
         run: ~/godot-bin/godot --headless res://tests/test_save_migration.tscn
 
+      - name: Duration loop-reentry regression-lock (I5)
+        run: ~/godot-bin/godot --headless res://tests/test_duration_loop_reentry.tscn
+
       - name: Loop-drive verification (G3 full-loop gate)
         run: ~/godot-bin/godot --headless res://tests/test_loop_drive.tscn
 
@@ -136,9 +139,12 @@ jobs:
           SHA=$(git rev-parse --short HEAD)
           echo "BUILD_SHA=$SHA" >> "$GITHUB_ENV"
           echo "USER_VERSION=m1-$(date -u +%Y%m%d)-$SHA" >> "$GITHUB_ENV"
-          # Bake the SHA into project.godot so BuildVersion.id() / telemetry stamp the
-          # real build (overwrites the committed dev fallback in [application]).
-          sed -i "s|config/build_sha=\"[^\"]*\"|config/build_sha=\"$SHA\"|" project.godot
+          # I5 (M1.2): write the git-ignored generated artifact (systems/build_info_gen.gd)
+          # that BuildVersion reads at runtime. This MUST run BEFORE --import so the
+          # generated script is compiled into the project and ships inside the export
+          # pack (no git at runtime in an exported build). Replaces the old
+          # sed-into-project.godot bake, which BuildVersion no longer reads.
+          bash tools/stamp_build.sh
 
       - name: Import project (build .godot)
         run: ~/godot-bin/godot --headless --import

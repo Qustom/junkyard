@@ -15,7 +15,6 @@ config/description="Roguelite extraction + life-sim overworld. Design docs in de
 run/main_scene="res://scenes/game/main_game.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
-config/build_sha="852b6e2"
 
 [autoload]
 
