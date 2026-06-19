@@ -194,6 +194,11 @@ func _materialise_band(band: Band) -> int:
 			cell_size = p.instance.cell_size_px
 		p.instance.position = Vector2(p.offset_cell * cell_size)
 		_band_container.add_child(p.instance)
+	# BUG3: seal every unmated socket so the band is a closed play space (the player
+	# can't walk through an uncapped opening into off-map void). Runs AFTER pieces are
+	# parented, reading the already-final deterministic band — adds only WALL collision
+	# geometry, no pieces, no RNG, so band.fingerprint() is untouched.
+	SocketSealer.new().seal_unused_sockets(band, cell_size)
 	return cell_size
 
 
