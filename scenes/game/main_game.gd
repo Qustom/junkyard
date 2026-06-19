@@ -20,6 +20,12 @@ extends Node2D
 ## the main menu is a minimal default-theme Control. No art is authored here.
 
 const PIECE_CATALOG_PATH := "res://data/piece_catalog.tres"
+## I1 (M1.2): the EXTENDED piece catalog (baseline pieces + the new larger greybox
+## pieces). Used ONLY when lvl_enabled — a config-dependent catalog swap (Resolved G)
+## so adding pieces never moves the all-off baseline fingerprint(): with lvl off the
+## baseline catalog is used and the band byte-matches M1.0/M1.1. Each catalog is
+## fingerprint-tested independently in test_level_scale_determinism.gd.
+const PIECE_CATALOG_EXT_PATH := "res://data/piece_catalog_ext.tres"
 const BANDGEN_CONFIG_PATH := "res://data/bandgen_config.tres"
 const JUNK_CATALOG_PATH := "res://data/junk/junk_catalog.tres"
 const DEPTH_CURVE_PATH := "res://systems/depth/depth_curve.tres"
@@ -62,7 +68,8 @@ const DEFAULT_CELL_SIZE_PX := 16
 @onready var _config_menu: ConfigMenu = %ConfigMenu
 
 # Loaded fixtures (loaded once; pure data, never mutated here).
-var _piece_catalog: Array[ZonePieceData] = []
+var _piece_catalog: Array[ZonePieceData] = []          # baseline catalog (lvl OFF)
+var _piece_catalog_ext: Array[ZonePieceData] = []      # extended catalog (lvl ON) — I1
 var _cfg: BandGenConfig
 var _junk_catalog: JunkCatalog
 var _depth_curve: DepthCurve
@@ -135,6 +142,12 @@ func _load_fixtures() -> void:
 	var pc = load(PIECE_CATALOG_PATH)
 	if pc != null:
 		_piece_catalog = pc.pieces
+	# I1: the extended catalog is OPTIONAL — if it's missing we silently fall back to
+	# the baseline catalog even when lvl is on (so a broken/absent ext catalog never
+	# breaks the loop; it just means "no bigger pieces this run").
+	var pce = load(PIECE_CATALOG_EXT_PATH)
+	if pce != null:
+		_piece_catalog_ext = pce.pieces
 	_cfg = load(BANDGEN_CONFIG_PATH) as BandGenConfig
 	_junk_catalog = load(JUNK_CATALOG_PATH) as JunkCatalog
 	_depth_curve = load(DEPTH_CURVE_PATH) as DepthCurve
@@ -165,8 +178,15 @@ func start_new_run() -> void:
 	var run_cfg: RunConfig = _config_menu.apply_and_get_config() if _config_menu != null else (load(RUN_CONFIG_PATH) as RunConfig)
 
 	# 1. Generate + grade + plan (B2 → B3) — pure functions of (seed + config).
+	#    I1 (M1.2): pick the catalog by lvl_enabled (Resolved G — config-dependent
+	#    catalog so the all-off baseline fingerprint never moves). lvl off → baseline
+	#    catalog (byte-matches M1.0/M1.1); lvl on → extended catalog (the new larger
+	#    greybox pieces). Falls back to baseline if the ext catalog is absent.
+	var catalog := _piece_catalog
+	if run_cfg != null and run_cfg.lvl_enabled and not _piece_catalog_ext.is_empty():
+		catalog = _piece_catalog_ext
 	var generator := BandGenerator.new()
-	var band := generator.generate(seed, _cfg, _piece_catalog, run_cfg)
+	var band := generator.generate(seed, _cfg, catalog, run_cfg)
 	if band == null or band.pieces.is_empty():
 		push_error("MainGame: band generation produced no pieces (seed %d)." % seed)
 		return
@@ -175,11 +195,26 @@ func start_new_run() -> void:
 	grader.compute_return_distance(band)
 	# BUG2: capture the depth model before `band` (a throwaway local) is discarded.
 	_build_cell_depth_map(band)
-	var placer := JunkPlacer.new()
-	var plan := placer.plan(band, _depth_curve, _junk_catalog)
 
-	# 2. Materialise the band geometry into the world (instances at cell offsets).
-	_band_cell_size_px = _materialise_band(band)
+	# I1 (M1.2): the single effective px-per-cell for THIS run, derived once from the
+	# size multiplier and shared by EVERY pixel-space consumer — materialise, the junk
+	# planner, and (via _band_cell_size_px) spawn/gate/hazard/depth/vision. Deriving it
+	# once is what guarantees abutting pieces never gap and loot lands inside scaled
+	# rooms (Resolved F + the Phase-3 junk-seam fix). lvl off / mult 1.0 → DEFAULT (16).
+	var cell_size_px := DEFAULT_CELL_SIZE_PX
+	if run_cfg != null:
+		cell_size_px = run_cfg.effective_cell_size_px(DEFAULT_CELL_SIZE_PX)
+
+	# Plan loot AGAINST the same effective cell size (the Phase-3 build-breaking fix):
+	# JunkPlacer computes world coords from the piece export (16) unless overridden, and
+	# pickups are NOT children of the scaled piece nodes, so without this they cluster at
+	# 1x coords and land outside/atop scaled rooms.
+	var placer := JunkPlacer.new()
+	var plan := placer.plan(band, _depth_curve, _junk_catalog, false, cell_size_px)
+
+	# 2. Materialise the band geometry into the world (instances at cell offsets),
+	#    scaling each piece + its spacing by the effective cell size.
+	_band_cell_size_px = _materialise_band(band, cell_size_px)
 
 	# 3. Spawn the interactive junk pickups from the plan (C2).
 	_spawner = JunkSpawner.new()
@@ -294,19 +329,32 @@ func _on_run_ended(_reason: StringName, _duration_s: float, _depth_reached: int)
 ## Add each placed piece's instance to the world at its integer cell offset (pixels
 ## only here, at instance time — the layout itself stayed in integer-cell space).
 ## Returns the band cell size for world-space math.
-func _materialise_band(band: Band) -> int:
-	var cell_size := DEFAULT_CELL_SIZE_PX
+##
+## I1 (M1.2): `cell_size` is the EFFECTIVE px-per-cell (= round(16 * lvl_size_mult),
+## resolved by the caller from the run config). It does TWO things at once: re-spaces
+## pieces at offset_cell * cell_size AND scales each piece's visuals/collision to match
+## (p.instance.scale = mult) so a piece authored at 16 px/cell fills its scaled lane.
+## The cell-space `band` and band.fingerprint() are untouched — this is pure pixel
+## projection. The SocketSealer needs NOTHING extra: it seals in cell space inside each
+## piece's own Geometry layer, so its WALL caps inherit p.instance.scale for free
+## (Resolved "moot"). With lvl off / mult 1.0, cell_size == DEFAULT and scale == 1.
+func _materialise_band(band: Band, cell_size: int = DEFAULT_CELL_SIZE_PX) -> int:
+	# The per-piece authored base cell size (16 in B1). The scale factor is the ratio of
+	# the effective cell size to the authored one, so collision + visuals match the lane.
 	for p in band.pieces:
 		if p.instance == null:
 			continue
-		if p.instance.cell_size_px > 0:
-			cell_size = p.instance.cell_size_px
+		var base_cell := p.instance.cell_size_px if p.instance.cell_size_px > 0 else DEFAULT_CELL_SIZE_PX
+		var mult := float(cell_size) / float(base_cell)
 		p.instance.position = Vector2(p.offset_cell * cell_size)
+		p.instance.scale = Vector2.ONE * mult
 		_band_container.add_child(p.instance)
 	# BUG3: seal every unmated socket so the band is a closed play space (the player
 	# can't walk through an uncapped opening into off-map void). Runs AFTER pieces are
 	# parented, reading the already-final deterministic band — adds only WALL collision
-	# geometry, no pieces, no RNG, so band.fingerprint() is untouched.
+	# geometry, no pieces, no RNG, so band.fingerprint() is untouched. The seal is in
+	# cell space inside each owner piece, so the cap inherits the piece's scale; the
+	# px arg is informational only (the sealer ignores it).
 	SocketSealer.new().seal_unused_sockets(band, cell_size)
 	return cell_size
 

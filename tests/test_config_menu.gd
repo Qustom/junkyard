@@ -4,7 +4,7 @@ extends Node
 ## Proves the menu is a faithful, complete surface over the R0 RunConfig schema:
 ##   1. COVERAGE — every one of RunConfig's exported @export fields has a bound
 ##      control (the §3.2/§3.6 "no opposition knob is unreachable" net), and the
-##      count matches the schema (32 knobs).
+##      count matches the schema (35 knobs: 32 R0 + 3 I1 lvl_).
 ##   2. EDIT — toggling a master + setting a knob via its control is reflected in
 ##      apply_and_get_config() (the working config the run will stage).
 ##   3. RESET — "Reset to baseline" returns an all-off config equal to the on-disk
@@ -39,9 +39,9 @@ func _run() -> int:
 
 	var default_cfg := load(DEFAULT_CFG_PATH) as RunConfig
 	var exported := _exported_fields(default_cfg)
-	# Sanity vs. the schema's own count (R0: 32 knobs).
-	if exported.size() != 32:
-		failures.append("expected 32 exported RunConfig fields, schema has %d" % exported.size())
+	# Sanity vs. the schema's own count (R0: 32 knobs + I1's 3 lvl_ knobs = 35).
+	if exported.size() != 35:
+		failures.append("expected 35 exported RunConfig fields, schema has %d" % exported.size())
 
 	var bound := menu._rows.keys()   # bound controls; masters are included as CheckButtons
 	for f in exported:

@@ -50,3 +50,9 @@ CFG_FIELD_R4_VISION_RADIUS,vision_radius
 CFG_FIELD_R4_VISION_TIGHTEN_PER_DEPTH,vision_tighten_per_depth
 CFG_FIELD_R4_FOG_ENABLED,fog_enabled
 CFG_FIELD_R4_LOST_PROXY_THRESHOLD,lost_proxy_threshold
+CFG_SEC_LVL,LVL · Level Scale
+CFG_GLOSS_LVL,how many rooms + how big each room is (bigger = longer to cross). ON also adds larger room pieces
+CFG_CHIP_LVL_SUMMARY,count {count}, size x{mult}
+CFG_LVL_COUNT_BASE,base
+CFG_FIELD_LVL_ROOM_COUNT,room_count
+CFG_FIELD_LVL_SIZE_MULT,size_mult

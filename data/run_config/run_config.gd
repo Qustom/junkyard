@@ -117,10 +117,61 @@ extends Resource
 @export var r4_lost_proxy_threshold: float = 0.0
 
 
+# =============================================================================
+# LVL — Level scale (M1.2 I1): room COUNT override + room SIZE multiplier
+# =============================================================================
+## Two orthogonal spatial levers the Director sweeps independently (I1). NOT an
+## opposition — level scale is a presentation/spatial axis, so it is deliberately
+## OUTSIDE all_oppositions_disabled() (Resolved E): a bigger-room run with no
+## R-toggles is still a meaningful "baseline + scale" cell RG2 segments on.
+##
+## ALL-OFF DEFAULT == M1.1 BASELINE: lvl_enabled=false, count=-1 (use the
+## BandGenConfig target = 12), mult=1.0 (16 px cells, 128x64 px rooms). With the
+## defaults the generator grows the unchanged loop bound (fingerprint byte-matches
+## M1.1) and materialisation returns 16 px/cell (pixel-identical to today).
+@export_group("Level Scale", "lvl_")
+## Master toggle. OFF = baseline count + size + the baseline piece catalog
+## (M1.1 spine, 16 px cells). ON unlocks the count/size knobs AND swaps in the
+## extended piece catalog (the new larger greybox pieces). Out of
+## all_oppositions_disabled() on purpose (orthogonal axis, Resolved E).
+@export var lvl_enabled: bool = false
+## Room-count override. -1 = "use BandGenConfig.target_piece_count" (baseline 12).
+## When >= 1 AND lvl_enabled, this REPLACES the generator's grow-loop target.
+@export var lvl_room_count: int = -1
+## Room-size multiplier applied at MATERIALISATION (px per cell = round(16 * mult)).
+## 1.0 = baseline 16 px cells. > 1.0 = bigger rooms + proportionally bigger spacing
+## (so the player crosses a 2x band in ~2x the time — player speed is unscaled).
+## Snapped to 0.25 steps in CFG so round(16*mult) is always an exact integer, and
+## the SAME effective cell size feeds materialise AND JunkPlacer (no doorway seam,
+## no loot mis-placement). Layout-invariant: it does NOT change fingerprint().
+@export var lvl_size_mult: float = 1.0
+
+
 ## True iff every opposition master toggle is OFF — i.e. this config reproduces
 ## the M1.0 baseline. Convenience for callers/tests/telemetry labelling.
+## NOTE (I1, Resolved E): lvl_* are deliberately NOT included — level scale is an
+## opposition-orthogonal spatial axis. RG2 segments on lvl_size_mult/lvl_room_count
+## separately; a "baseline + bigger rooms" run keeps this true.
 func all_oppositions_disabled() -> bool:
 	return not (r1_enabled or r2_enabled or r3_enabled or r4_enabled)
+
+
+## The effective px-per-cell for materialisation, snapped to an exact integer.
+## ONE place computes it so materialise AND JunkPlacer share the same value (no
+## abutting-piece seam / loot mis-placement). With lvl off or mult 1.0 this is the
+## baseline px/cell unchanged.
+func effective_cell_size_px(base_cell_px: int) -> int:
+	if not lvl_enabled:
+		return base_cell_px
+	return int(round(float(base_cell_px) * lvl_size_mult))
+
+
+## The effective grow-loop target for the generator: the count override when set,
+## else the BandGenConfig baseline (caller passes its cfg.target_piece_count).
+func effective_room_count(baseline_count: int) -> int:
+	if lvl_enabled and lvl_room_count >= 1:
+		return lvl_room_count
+	return baseline_count
 
 
 ## Serialize every knob to a flat, JSON-safe Dictionary for TEL to snapshot onto
@@ -166,6 +217,10 @@ func to_flat_dict() -> Dictionary:
 		"r4_vision_tighten_per_depth": r4_vision_tighten_per_depth,
 		"r4_fog_enabled": r4_fog_enabled,
 		"r4_lost_proxy_threshold": r4_lost_proxy_threshold,
+		# LVL (M1.2 I1) — level scale (additive payload; RG2 segments on these)
+		"lvl_enabled": lvl_enabled,
+		"lvl_room_count": lvl_room_count,
+		"lvl_size_mult": lvl_size_mult,
 	}
 
 

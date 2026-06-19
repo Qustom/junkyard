@@ -36,6 +36,9 @@ const RANGE_SECONDS := Vector2(0, 30)
 const RANGE_PROB := Vector2(0, 1)
 const RANGE_RADIUS := Vector2(0, 64)
 const RANGE_MAGNITUDE := Vector2(0, 100)
+## I1 (M1.2) level-scale ranges (greybox scrub conveniences; SpinBox types past these).
+const RANGE_COUNT := Vector2(1, 30)   # lvl_room_count slider span (override is >=1)
+const RANGE_MULT := Vector2(0.5, 4)   # lvl_size_mult slider span (0.25 steps -> integer px/cell)
 
 ## Per-section descriptor: prefix (Meta = ""), the CSV title/gloss keys, the master
 ## field name ("" = none, Meta), whether the section is collapsible.
@@ -45,6 +48,7 @@ const SECTIONS := [
 	{"prefix": "r2_", "title_key": "CFG_SEC_R2", "gloss_key": "CFG_GLOSS_R2", "master": "r2_enabled", "collapsible": true},
 	{"prefix": "r3_", "title_key": "CFG_SEC_R3", "gloss_key": "CFG_GLOSS_R3", "master": "r3_enabled", "collapsible": true},
 	{"prefix": "r4_", "title_key": "CFG_SEC_R4", "gloss_key": "CFG_GLOSS_R4", "master": "r4_enabled", "collapsible": true},
+	{"prefix": "lvl_", "title_key": "CFG_SEC_LVL", "gloss_key": "CFG_GLOSS_LVL", "master": "lvl_enabled", "collapsible": true},
 ]
 
 ## HAND-AUTHORED field manifest (§3.6 — NOT reflection). Each section's ordered field
@@ -68,6 +72,9 @@ const MANIFEST := {
 	"r4_": [
 		"r4_enabled", "r4_branch_chance_base", "r4_branch_per_depth", "r4_max_branch_depth",
 		"r4_vision_radius", "r4_vision_tighten_per_depth", "r4_fog_enabled", "r4_lost_proxy_threshold",
+	],
+	"lvl_": [
+		"lvl_enabled", "lvl_room_count", "lvl_size_mult",
 	],
 }
 
@@ -93,6 +100,16 @@ const FIELD_RANGE := {
 	"r4_vision_radius": RANGE_RADIUS,
 	"r4_vision_tighten_per_depth": RANGE_MAGNITUDE,
 	"r4_lost_proxy_threshold": RANGE_PROB,
+	# I1 (M1.2) level scale.
+	"lvl_room_count": RANGE_COUNT,
+	"lvl_size_mult": RANGE_MULT,
+}
+
+## I1 (M1.2): per-field SpinBox/slider STEP override. lvl_size_mult is snapped to 0.25
+## (16-base -> 4-px increments, every value an exact integer px/cell) so abutting scaled
+## pieces never gap and materialise/JunkPlacer share one integer cell size (Resolved F).
+const FIELD_STEP := {
+	"lvl_size_mult": 0.25,
 }
 
 # Dimming alpha for a section body whose master is OFF (redundant "inert" cue).
@@ -364,6 +381,9 @@ func _build_numeric(row: Control, field: String, is_int: bool) -> void:
 	# A probability range gets a finer step regardless of int-ness.
 	if rng == RANGE_PROB:
 		step = 0.01
+	# I1: per-field step override (lvl_size_mult -> 0.25 so px/cell stays integer).
+	if FIELD_STEP.has(field):
+		step = FIELD_STEP[field]
 
 	var slider := HSlider.new()
 	slider.name = "Slider"
@@ -377,7 +397,9 @@ func _build_numeric(row: Control, field: String, is_int: bool) -> void:
 	var spin := SpinBox.new()
 	spin.name = "Spin"
 	spin.step = step
-	spin.min_value = rng.x
+	# I1: lvl_room_count carries a -1 sentinel ("use baseline") below its slider min of
+	# 1, so the SpinBox must allow -1 even though the scrub slider starts at 1.
+	spin.min_value = -1.0 if field == "lvl_room_count" else rng.x
 	# Type-exact escape hatch: allow values beyond the slider cap (and below 0 never,
 	# these knobs are all >= 0). Use a generous SpinBox max so typing isn't clamped.
 	spin.max_value = max(rng.y * 100.0, 100000.0)
@@ -601,6 +623,12 @@ func _section_summary(prefix: String) -> String:
 				"chance": _num(_cfg.get("r4_branch_chance_base")),
 				"vision": _num(_cfg.get("r4_vision_radius")),
 			})
+		"lvl_":
+			var c := int(_cfg.get("lvl_room_count"))
+			return tr("CFG_CHIP_LVL_SUMMARY").format({
+				"count": (tr("CFG_LVL_COUNT_BASE") if c < 1 else str(c)),
+				"mult": _num(_cfg.get("lvl_size_mult")),
+			})
 	return ""
 
 
@@ -638,7 +666,7 @@ func _num(v) -> String:
 
 
 func _prefix_of(field: String) -> String:
-	for p in ["r1_", "r2_", "r3_", "r4_"]:
+	for p in ["r1_", "r2_", "r3_", "r4_", "lvl_"]:
 		if field.begins_with(p):
 			return p
 	return ""

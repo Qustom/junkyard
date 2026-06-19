@@ -32,8 +32,15 @@ const _JUNK_SALT := 0x4A554E4B  # "JUNK"
 ##
 ## If `emit_events` is true, emits EventBus.junk_spawned(item_id, depth) per
 ## planned item (placement/telemetry hook; NOT junk_picked_up — that's C2's).
+## I1 (M1.2): `cell_size_override` lets MainGame plan loot world-coords against the
+## SAME effective px-per-cell that materialisation scales the band to (= round(16 *
+## lvl_size_mult)). Pickups are parented to the band container at raw world coords —
+## NOT as children of the scaled piece nodes — so without this they would cluster at
+## the 1x (16-px) coords and land outside/atop scaled rooms at any mult != 1.0. Default
+## -1 = "use each piece's authored cell_size_px" (the baseline path, byte-for-byte the
+## old behaviour: at mult 1.0 the override is 16, identical to the piece export).
 func plan(band: Band, curve: DepthCurve, catalog: JunkCatalog,
-		emit_events: bool = false) -> Array:
+		emit_events: bool = false, cell_size_override: int = -1) -> Array:
 	var out: Array = []
 	if band == null or curve == null or catalog == null:
 		return out
@@ -69,7 +76,10 @@ func plan(band: Band, curve: DepthCurve, catalog: JunkCatalog,
 		var cells := _sorted_floor_cells(p)
 		if cells.is_empty():
 			continue
-		var cell_size_px := _cell_size_px(p)
+		# I1: use the caller's effective px-per-cell when provided (size-mult runs), else
+		# the piece's authored cell_size_px (baseline). Shared with materialise so loot
+		# lands inside the scaled rooms (no mis-placement at mult != 1.0).
+		var cell_size_px := cell_size_override if cell_size_override > 0 else _cell_size_px(p)
 
 		var value_mult := curve.value_mult(d)
 		for _i in count:
