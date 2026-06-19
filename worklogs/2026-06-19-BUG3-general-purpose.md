@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.1 (wave 1)
 - **Branch:** general-purpose/BUG3
-- **Commit:** e9bc21f33618256c2e549a93f7a4a4a3003abea1
+- **Commit:** f0baeae7877da6bc30a2ad3f54dcdf1b8c853205 (implementation); worklog SHA finalised in the follow-up commit on this branch
 
 ## What changed
 Implemented Option (a) from the ratified BUG3 spec: a deterministic post-placement
