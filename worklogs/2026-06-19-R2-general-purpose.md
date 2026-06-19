@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.1 (Wave 2)
 - **Branch:** general-purpose/R2
-- **Commit:** 5e597bd72f082029c7d5b18ff1bdde6d7810c1ba   ← required
+- **Commit:** 5c1f2a92d64dc91f20804f9408c5aca10ea9b1e9   ← required
 
 ## What changed
 Built `ReturnCost` (R2 — costlier return trip), a run-state opposition node that
