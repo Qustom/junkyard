@@ -250,3 +250,31 @@ each (telemetry off); wired into `ci.yml` + `nightly.yml` as a merge gate. (b) `
 git-ignored baked `const .gd` artifact (`tools/stamp_build.sh`) → editor-live git → neutral `0000000` sentinel; dropped the
 stale `project.godot config/build_sha`; `+dirty` suffix on an uncommitted tree. No `run_ended` arity / schema change. Worklog
 `worklogs/2026-06-19-I5-qa-playtest-coordinator.md`.
+
+---
+
+## M1.2 — Legibility & Level Scale · Wave 2 (Oppositions retuned to the new canvas) — done 2026-06-19
+
+All three integrated on `main`, verified (SMOKE + determinism + HUD + suite green), pushed, board = Done. Determinism unmoved
+(fp=e943ac9c8bc1); none touched `main_game.gd` (the single-writer concern was moot). Close-out: 0 formal deviations; 1 finding
+(R2 exposure-toll no-op) → BUG5 (Director: fix now). Dispatched ownership-split in parallel worktrees.
+
+### I2 — Hazard refuge fix (size, navigation, catch) — **Done** (merged `1966145`, impl `4a02687`)
+REFUGE (Director): hazard keeps wall collision; body shrunk r16→r10, anti-wall-stick next-frame tangent steering (`STALL_FRACTION`),
+depth-scaled catch `effective = r1_catch_radius + r1_catch_radius_per_depth*depth`. New `r1_catch_radius_per_depth` RunConfig knob
+(CFG now 36/36, in `to_flat_dict()`). Catch reachability proven headless (`hazard_caught` → `fail_run(death)`; M1.1 logged 0).
+No `main_game.gd`/`event_bus`/`run_ended` change; all-off (r1 off) = M1.0. Worklog `worklogs/2026-06-19-I2-general-purpose.md`.
+
+### I3 — R2/R3 visual cues — **Done** (merged `9b5d75d`, impl `c7a67f1`)
+HUD-only projection (no new EventBus signal). R3 = colour-ramped exposure bar + read-only threshold ticks (thin→thick "spent")
++ white cross-flash + penalty banner keyed on `penalty_kind` (`Slowed`/`Sight narrows`/`Light drains`, `none`=nothing, with xN
+stacking) + optional small HUD-space shake. R2 = clock-bar hot-amber punch + floating "−N {unit}" on `return_cost_incurred`.
+Every cue has a non-colour channel (E2). All-off = M1.0 HUD (ExposureReadout hidden). Surfaced the R2-exposure-toll no-op finding
+→ BUG5. Worklog `worklogs/2026-06-19-I3-ui-ux-designer.md`.
+
+### I4 — Vision/fog rework (real occlusion + legible fog/lost) — **Done** (merged `d56674d`, impl `dc4d40d`)
+Rework is internal to `entities/dive/vision_fog.gd` (no `main_game.gd` edit needed). Radial-dark world-space sprite (`OCCLUDE_ALPHA=0.94`,
+~6% anti-blindness floor) genuinely HIDES geometry beyond the rim (was: dimmed); hole tightens with depth + R3 vision penalty,
+floored at `MIN_RADIUS`. Three-state fog (never-seen / cool flat-static remembered ghost / live hole) separated on a non-hue axis.
+Lost cue = screen-edge pulse on 1st `nav_lost_proxy`, persistent `"DISORIENTED"` HUD word on escalation, in I4's own CanvasLayer
+(not DecisionHUD); no audio. R4-off = byte-identical M1.0. Fingerprint unmoved. Worklog `worklogs/2026-06-19-I4-general-purpose.md`.

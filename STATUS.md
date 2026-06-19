@@ -6,20 +6,25 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 (both built; M1.1 playtested → **ITERATE**) → **M1.2 (Legibility & Level Scale)** — **Wave 1 DONE; Wave 2 DISPATCHED (in progress).**
-**Last updated:** 2026-06-19 (M1.2 Wave 2 dispatched: I2 ∥ I4 ∥ I3 in parallel worktrees, ownership-split so `main_game.gd` has a single writer. Board items created + In Progress. Breakdown: `design/M1_2_Tasks/M1.2_Breakdown.md`.)
+**Current milestone:** M1.0 → M1.1 (both built; M1.1 playtested → **ITERATE**) → **M1.2 (Legibility & Level Scale)** — **Waves 1 & 2 DONE + closed out; BUG5 in progress, then Wave 3 re-gate.**
+**Last updated:** 2026-06-19 (M1.2 Wave 2 integrated + closed out: I2/I3/I4 all Done/pushed/board-Done; 0 deviations, 1 finding → BUG5 (Director: fix now, dispatched). Next after BUG5: Wave 3 re-gate. Breakdown: `design/M1_2_Tasks/M1.2_Breakdown.md`.)
 
 ---
 
-## In progress — M1.2 Wave 2 (dispatched 2026-06-19; parallel `isolation: worktree`, ownership-split)
+## ✓ Wave 2 (Oppositions retuned to the new canvas) — DONE (2026-06-19)
 
-| Task | Agent(s) | Owns (sole writer this wave) | Board |
-|---|---|---|---|
-| **I2** Hazard refuge fix | general-purpose (+ character-animator: greybox tell) | `scenes/hazards/hazard_entity.gd/.tscn`, `run_config.gd`, `config_menu.gd`, `config_strings.csv` (+ `test_run_config.gd`/`test_config_menu.gd` knob counts). **Must NOT touch `main_game.gd`** | In Progress |
-| **I4** Vision/fog rework | general-purpose (+ environment-artist: greybox look) | `vision_fog.gd/.tscn`, **`scenes/game/main_game.gd` (sole writer)**, its own lost-cue overlay. **Must NOT touch `decision_hud.gd`** | In Progress |
-| **I3** R2/R3 cues | ui-ux-designer | `decision_hud.gd/.tscn`, `exposure_readout.gd`, `hud_strings.csv` | In Progress |
+All three integrated on `main`, verified, pushed, board = Done. Determinism unmoved (fp=e943ac9c8bc1); none touched `main_game.gd`.
+- **I2** hazard refuge fix (shrink body r10 + anti-wall-stick + depth-scaled catch + `r1_catch_radius_per_depth` knob, CFG 36/36) — merge `1966145`.
+- **I3** R2/R3 cues (exposure ramp+ticks+penalty banner; return-cost pulse+floating −N; optional shake; all-off=M1.0 HUD) — merge `9b5d75d`.
+- **I4** vision/fog rework (radial-dark occlusion ~0.94 + 3-state fog + lost edge-pulse/"DISORIENTED"; R4-off=M1.0) — merge `d56674d`.
 
-**Collision plan:** `main_game.gd` → I4 only (I2's spawn seam already works; if I2 finds it truly needs a `main_game.gd` tweak it flags it for the orchestrator to apply post-merge). HUD: `decision_hud.gd` → I3 only (I4 keeps its lost-cue word in its own overlay). `run_config.gd`+CFG → I2 only. No `event_bus.gd` signal needed by any task (all three subscribe to already-declared, already-emitted signals).
+Close-out: 0 formal deviations; 1 finding (W2.2-F1: R2 `exposure` toll fired its cue but didn't charge R3's meter — no `add()` on `exposure_meter.gd`) → Director: **fix now** → **BUG5** filed + dispatched.
+
+---
+
+## In progress — BUG5 (Wave 2 close-out fix; dispatched 2026-06-19, `isolation: worktree`)
+
+- **BUG5** (general-purpose) — add public `exposure_meter.add(amount)` routed through the same threshold-crossing/penalty logic as time-accrual, so R2's `TOLL_EXPOSURE` charge actually moves R3's meter. Run-state only; no new signal/knob/schema; all-off unchanged. Spec: `design/M1_2_Tasks/BUG5_exposure_toll_mutator.md`. **[touch: `exposure_meter.gd` + a regression test]** Blocks RG1 (the re-gate build should include it).
 
 ---
 
@@ -34,20 +39,21 @@ Close-out: 4 deviations (I1-1, I1-2, + 2 lingering M1.1 RG1 entries), **all Dire
 
 ---
 
-## ▶ Next action (start here on a cold restart) — **M1.2 Wave 2: I2 ∥ I4 ∥ I3**
+## ▶ Next action (start here on a cold restart) — **finish BUG5, then dispatch Wave 3 (RG1)**
 
-Wave 1 is on `main` (the new spatial canvas + clean telemetry). **Wave 2 retunes the oppositions to that canvas.** Author the
-build briefs from the locked specs (each ends with a "Director Disposition (FINAL)") and dispatch in parallel worktrees, but
-**⚠ sequence I2 and I4 if they both edit `scenes/game/main_game.gd`** (the dive-scene wiring) — single-writer-per-`.gd`-file
-(the W1.1-2 lesson). I3 is HUD-disjoint and can run fully parallel.
+Waves 1 & 2 are on `main` (new spatial canvas + clean telemetry + retuned/legible oppositions). **BUG5 is in flight** (the
+last build fix before the re-gate — makes R2's `exposure` toll actually charge R3). When BUG5 returns:
+1. **Verify + integrate BUG5** (verify topology first — the Wave-1 stray-`git switch` lesson), push, board=Done, run its mini close-out.
+2. **Dispatch Wave 3 — RG1** (`general-purpose` + `qa-playtest-coordinator`): author the M1.2 RG1 build+verify doc from the
+   `design/M1_1_Tasks/RG1_playtest_build.md` template; assemble the runnable M1.2 loop; verify each fix individually + stacked;
+   confirm config-marked telemetry writes; multiple runs/session. **BlockedBy: I1, BUG4, I5, I2, I4, I3 (all done) + BUG5.**
+3. **RG2/RG3 are HUMAN-GATED** — RG1 hands off to a **Director playtest** (sweep configs on a dev machine), then `qa` analyses
+   the telemetry vs the M1.0 (all-off) + M1.1 baselines (RG2), and the Director records the go/iterate/pivot verdict in
+   `design/M1_2_Tasks/G4_findings_M1.2.md` (RG3). Claude assembles + recommends; the human plays + decides.
 
-- **I2** (general-purpose + character-animator: greybox tell) — hazard **refuge** fix: keep wall collision, shrink body (~r10) + anti-wall-stick steering, raise catch radius above combined contact, depth-scaled `r1_catch_radius_per_depth`, retune awaken to I1's depths; kill via `fail_run(&"death")`. **Tune to I1's new room scale.** Spec: `design/M1_2_Tasks/I2_hazard_fix.md`. **BlockedBy: I1 (done).** **[touch: `main_game.gd` + hazard scene/script]**
-- **I4** (general-purpose + environment-artist: greybox look) — vision/fog rework: node-based **radial-dark world mask** (occlude beyond radius, ~0.94 darkness, anti-blindness floor, no shader), three-state fog (never-seen / cool-ghost / live), legible "lost" cue (edge-pulse + HUD word) on `lost_proxy_threshold`; radius tuned to I1. Spec: `design/M1_2_Tasks/I4_vision_rework.md`. **BlockedBy: I1 (done).** **[touch: `main_game.gd` + vision/fog nodes]** ⚠ shares `main_game.gd` with I2.
-- **I3** (ui-ux-designer) — R2/R3 visual cues: R3 colour-ramped exposure bar + threshold ticks + penalty banner on `exposure_crossed`/`exposure_penalty` (keys `penalty_kind` `speed`/`vision`/`clock`/`none`); R2 clock-bar pulse + floating "−N {unit}" on `return_cost_incurred`; optional penalty shake. Pure HUD projection, no new EventBus signal. Spec: `design/M1_2_Tasks/I3_r2_r3_cues.md`. **BlockedBy: none.** **[touch: HUD scenes/scripts only]**
-
-> **Collision plan for Wave 2:** read I2's and I4's specs' "Files to touch" first. If both edit `main_game.gd`, dispatch I3 (HUD-disjoint) + one of I2/I4 in parallel worktrees, then the other after the first merges (or have one stub the shared seam). Pre-declare any new `event_bus.gd` signal on `main` before dispatch (I3 needs none; confirm for I2/I4).
-
-**Wave 3** re-gate: RG1 build + verify → **human playtest** → RG2 analysis vs M1.0/M1.1 baselines → RG3 verdict (`G4_findings_M1.2.md`).
+> **Collision note for Wave 3:** RG1 is largely additive scene-assembly + a verify test; it touches `main_game.gd` (loop
+> wiring) + a new RG1 verify test. It's sequential (single task), so no parallel-collision management needed. Confirm no new
+> `event_bus.gd` signal is required (the M1.1 RG1 needed none).
 
 > **Standing process (locked):** parallel agents in `isolation: worktree`; pre-declare any new `event_bus.gd` signal on `main` before a parallel wave; single-writer-per-`.gd`-file; push `main` after every merge; mirror task status to the board; run the **wave close-out deviation sweep** after each wave (Director dispositions). See `CLAUDE.md` orchestrator loop.
 

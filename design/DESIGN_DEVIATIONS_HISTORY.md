@@ -206,3 +206,23 @@ size mult + new larger greybox pieces behind a config-dependent catalog), branch
 telemetry hygiene (real `duration_s` regression-lock + real build SHA) are on `main`; all-off default still byte-matches the
 M1.1 baseline (fp=e943ac9c8bc1). **Next: Wave 2 — oppositions retuned to the new canvas** (I2 hazard ∥ I4 vision ∥ I3
 cues; watch the I2/I4 `main_game.gd` single-writer collision).
+
+---
+
+## M1.2 Wave 2 (Oppositions retuned to the new canvas) — Director-evaluated 2026-06-19
+
+I2, I3, I4 all reported **"none"** against their locked specs (built to spec + Director disposition). **0 formal deviations.**
+The wave produced **one substantive finding** (not a spec deviation) — assembled by Claude, dispositioned by the Director:
+
+| # | Finding | Verdict | Action |
+|---|---|---|---|
+| W2.2-F1 | I3's cue work made a latent **R2↔R3 integration gap** visible: `return_cost.gd`'s `TOLL_EXPOSURE` branch calls `meter.call(&"add", cost)`, but `exposure_meter.gd` has only read-only getters (no `add()`), so the `exposure` toll resource fires its cue + `return_cost_incurred` telemetry but **never moves the meter** — a player sees a toll that does nothing. Latent since M1.1 (R2/R3 built in parallel); not a deviation from any M1.2 task's spec. | **Fix now** | New task **BUG5** filed (`TASKS.md` + board, In Progress): add a public `exposure_meter.add(amount)` that routes through the same threshold-crossing/penalty logic as accrual. Spec: `design/M1_2_Tasks/BUG5_exposure_toll_mutator.md`. Land before the Wave 3 re-gate so the exposure-toll sweep is functional. |
+
+**Non-deviation forward notes (recorded, no action):** I2 — a labelled sweep-default `.tres` for first-sweep values is a
+later game-director-designer content task (knobs are live + swept from CFG today). I4 — if an *active* hazard telegraph
+should read at full contrast at the bubble rim, it sorts `z_index > 100` on the hazard side (no I4 change).
+
+**M1.2 Wave 2 close-out complete (2026-06-19).** 0 deviations; 1 finding → **BUG5** (Director: fix now). `DESIGN_DEVIATIONS.md`
+stays empty (the finding is tracked as a task, not a pending deviation). **M1.2 Wave 2 (hazard refuge + vision/fog occlusion +
+R2/R3 cues) is complete** on `main`; all-off baseline byte-unchanged (fp=e943ac9c8bc1). **Next: BUG5, then Wave 3 — the
+re-gate** (RG1 build + verify → human playtest → RG2 analysis vs M1.0/M1.1 → RG3 verdict).

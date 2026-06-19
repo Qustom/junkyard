@@ -31,30 +31,22 @@ still reproduces the M1.1 baseline (permanent control); config-marked telemetry;
 I1 (merged `e67532c`) · BUG4 (merged `eee4418`) · I5 (merged `1fd657e`) — all on `main`, board = Done, close-out swept
 (4 deviations, all Director-Reviewed). All-off default still byte-matches the M1.1 baseline (fp=e943ac9c8bc1).
 
-### Wave 2 — Oppositions retuned to the new canvas  *(NEXT — parallel; ⚠ watch the I2/I4 `main_game.gd` collision)*
+### Wave 2 — Oppositions retuned to the new canvas — ✓ **DONE 2026-06-19** (archived → `TASKS_COMPLETED.md`)
 
-### I2 — Hazard fix (size, navigation, catch)
-- Milestone: M1.2 (Wave 2)   Assignee: general-purpose (+ character-animator: greybox tell)   BlockedBy: I1 (tune to new room scale)
-- Spec: `design/M1_2_Tasks/I2_hazard_fix.md`
-- Goal: M1.1 `hazard_caught=0` (body 32px == 32px hall → wall-stick; catch radius 24 < 30px contact → impossible). **Refuge** (Director): keep wall collision, shrink the body (~r10), raise catch radius above combined contact, add anti-wall-stick steering (next-frame tangent), add depth-scaled `r1_catch_radius_per_depth`, retune awaken to I1's depths. Kill via existing `fail_run(&"death")`.
-- Done when: with R1 on the hazard visibly closes + **catches → `death`** at a fair rate; off = M1.0; knobs take effect; `hazard_caught` rows appear.
+I2 (merged `1966145`) · I3 (merged `9b5d75d`) · I4 (merged `d56674d`) — all on `main`, board = Done. Determinism unmoved
+(fp=e943ac9c8bc1). None touched `main_game.gd` (the single-writer concern was moot). Close-out: 0 formal deviations; 1
+finding (R2 exposure-toll no-op) → **BUG5** filed below (Director: fix now, before the re-gate).
 
-### I4 — Vision/fog rework (real occlusion + legible fog/lost)
-- Milestone: M1.2 (Wave 2)   Assignee: general-purpose (+ environment-artist: greybox look)   BlockedBy: I1 (radius vs scale)
-- Spec: `design/M1_2_Tasks/I4_vision_rework.md`
-- Goal: M1.1 vision only *dims*. Make it **occlude** (hide beyond the radius) via a node-based **radial-dark world mask** (darkness ~0.94, anti-blindness floor; no shader); three-state fog (never-seen / cool-ghost remembered / live); a legible **"lost" cue** (screen-edge pulse + HUD word) tied to `lost_proxy_threshold`. Cosmetic-only; radius tuned to I1.
-- Done when: beyond the radius geometry is hidden (not faintly visible); fog + lost cue legible; off = full M1.0 vision; determinism/seal intact; knobs take effect.
-
-### I3 — R2/R3 visual cues
-- Milestone: M1.2 (Wave 2)   Assignee: ui-ux-designer   BlockedBy: none (R2/R3 already emit)
-- Spec: `design/M1_2_Tasks/I3_r2_r3_cues.md`
-- Goal: R2/R3 fire invisibly. R3 = colour-ramped exposure bar + threshold ticks + penalty banner on `exposure_crossed`/`exposure_penalty` (keyed on the confirmed `penalty_kind` StringNames `speed`/`vision`/`clock`/`none`); R2 = clock-bar pulse + floating "−N {unit}" on `return_cost_incurred`; optional small penalty screen-shake. Pure HUD projection, non-colour channel, no new EventBus signal; invisible when the opposition is off.
-- Done when: the player sees exposure climbing + each penalty + each retreat toll; off = M1.0 HUD; honors E2 readability rules.
+### BUG5 — R2 `exposure` toll doesn't charge R3's meter (missing `add()` mutator)  *(Wave 2 close-out; IN PROGRESS)*
+- Milestone: M1.2 (Wave 2 close-out)   Assignee: general-purpose   BlockedBy: I2/I3/I4 (done)
+- Spec: `design/M1_2_Tasks/BUG5_exposure_toll_mutator.md`
+- Goal: `return_cost.gd`'s `TOLL_EXPOSURE` calls `meter.add(cost)` but `exposure_meter.gd` has no `add()` → the exposure toll fires its cue+telemetry but never moves the meter. Add a public `add(amount)` that routes through the same threshold-crossing/penalty logic as time-accrual; run-state only, no new signal/knob/schema, all-off unchanged.
+- Done when: R2 on + `r2_toll_resource=exposure` + R3 on → a toll raises the meter + fires the matching crossing/penalty; R3/R2 off → no-op (all-off = M1.0); regression test + smoke + determinism/HUD suites green.
 
 ### Wave 3 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
 
 ### RG1 — M1.2 playtest build + verify
-- Milestone: M1.2 (Wave 3)   Assignee: general-purpose + qa-playtest-coordinator   BlockedBy: I1, BUG4, I5, I2, I4, I3
+- Milestone: M1.2 (Wave 3)   Assignee: general-purpose + qa-playtest-coordinator   BlockedBy: I1, BUG4, I5, I2, I4, I3, BUG5
 - Spec: template `design/M1_1_Tasks/RG1_playtest_build.md` (M1.2 doc authored when Wave 3 approaches)
 - Goal: assemble the runnable M1.2 loop, verify each fix individually + stacked, config-marked telemetry writes.
 - Done when: a fresh build runs the full loop with the fixes; per-run config works; telemetry logs clean; multiple runs/session.
