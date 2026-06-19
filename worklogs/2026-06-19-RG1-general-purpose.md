@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer + build-verifier)
 - **Milestone:** M1.1 (Greybox Cost Axis), Wave 3
 - **Branch:** general-purpose/RG1
-- **Commit:** 4794798c1834ed9ae18c17bb3640d2f91b984db0   ← integration commit
+- **Commit:** 6013c072c6c3d223fa6154c87cc46f1055ca8a7e   ← integration commit (worklog SHA finalized in the immediate follow-up)
 
 ## What changed
 
