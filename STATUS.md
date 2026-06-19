@@ -107,20 +107,24 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — M1.1 Wave 2: batch A (R2/R3/R4) DONE+merged; ▶ batch B = R1 dispatched
-**Batch A merged `b0566c2`** + verified green (SMOKE OK · RETURN COST OK · EXPOSURE METER OK · EXPOSURE HUD OK ·
-R4 NAV OK · BANDGEN OK · BUG3 SOCKET SEAL OK · DECISION HUD OK · MAIN GAME OK · GdUnit 30/30; all-off fingerprint
-`e943ac9c8bc1` unchanged → M1.0 control preserved). Board: R2/R3/R4 → Done.
+## ▶ Next action — M1.1 Wave 2 close-out (Director dispositions W2-R4-1), then Wave 3 re-gate
+**Wave 2 COMPLETE** — all four oppositions merged + verified green on `main` (`0c80622`): SMOKE OK · PURSUING HAZARD OK ·
+RETURN COST OK · EXPOSURE METER OK · EXPOSURE HUD OK · R4 NAV OK · BANDGEN OK · BUG3 SOCKET SEAL OK · DECISION HUD OK ·
+MAIN GAME OK · GdUnit 30/30; all-off fingerprint `e943ac9c8bc1` unchanged → M1.0 control preserved. Board: R1–R4 → Done.
 
-**▶ DISPATCHED — R1** (general-purpose + character-animator greybox tell): `scenes/hazards/hazard_entity.{tscn,gd}` +
-the spawn seam in `main_game.gd:start_new_run` (gated by `r1_enabled`). Dormant→awaken(depth/linger)→chase→catch→
-`fail_run(&"death")`; emits `hazard_awoke`/`hazard_caught`. Sequenced after R4 (shares `main_game.gd`) — R1's worktree
-is off the post-R4 `main`, so it integrates around R4's `# R4 (M1.1)` blocks cleanly. Board: R1 → In Progress.
+**▶ Wave 2 close-out deviation sweep (Director dispositions, then Claude reapplies + archives):** 1 entry —
+**W2-R4-1** (residual BUG3 seal gap at aggressive R4 branch rates; recommended presets seal cleanly). Claude recommends
+**Addressed** = file a small BUG3 follow-up task (cap all outward perimeter floor edges, branch-rate-independent).
+R1/R2/R3 reported "none." See `DESIGN_DEVIATIONS.md`.
 
-**⚠ Wave 2 deviation surfaced (queued for close-out):** R4 found a **residual BUG3 seal gap at aggressive branch
-rates** (`r4_branch_per_depth ≳ 0.12` → 2–6 void-facing cells on some seeds; recommended presets S1/S3 seal cleanly,
-0 leaks). Recorded as **W2-R4-1** in `DESIGN_DEVIATIONS.md` (recommend: Addressed — small BUG3 follow-up to cap all
-outward perimeter floor edges). Director dispositions at the Wave 2 close-out.
+**Then Wave 3 — re-gate (sequential):**
+- **RG1** (general-purpose + qa) — assemble the runnable M1.1 loop: Config menu → dive with risk → push/extract/die/
+  timeout/lost → bank/lose → sell → repeat. **RG1 wires R2's `ReturnCost` + R3's `ExposureMeter` run-state nodes into
+  the dive scene** (both built standalone in wave 2, awaiting wiring) + injects `DiveClock` into `ReturnCost`. Verify each
+  opposition individually + all stacked; config-marked telemetry writes. Spec: `design/M1_1_Tasks/RG1_playtest_build.md`.
+- **RG2** (qa) — telemetry analysis vs the M1.0 all-off baseline (after the *human* playtest).
+- **RG3** (qa assembles → Director decides) — go/iterate/pivot verdict in `G4_findings_M1.1.md`.
+RG2/RG3 need a **human playtest** (dev-machine: `godot project.godot` → play `main_game.tscn`) — Claude can't self-run them.
 
 **Shared as-built contract briefed to all four** (specs predate BUG2 merge — these are the real names):
 live depth = `GameState.current_depth_index`; max = `GameState.max_depth_reached`; dist home = `GameState.current_dist_to_gate`
@@ -156,6 +160,7 @@ go/iterate/pivot verdict; the Director decides.
 ## Done (M1.1 — Greybox Cost Axis)
 | Task | Proof |
 |---|---|
+| R1 — Pursuing/awakening hazard | merged `0c80622`; `tests/test_pursuing_hazard.tscn` → **PURSUING HAZARD OK** (`scenes/hazards/hazard_entity.{tscn,gd}` `CharacterBody2D` on `hazard` layer; DORMANT→AWAKE latch on depth/linger, no re-sleep; toward-player `move_and_slide` chase; distance catch → `fail_run(&"death")` or non-fatal cost; emits `hazard_awoke`/`hazard_caught`); additive spawn seam in `main_game.gd:start_new_run` gated by `r1_enabled` (left R4/BUG2/BUG3 intact); worklog `worklogs/2026-06-19-R1-general-purpose.md` (impl `023c346`) |
 | R2 — Costlier return trip | merged `b0566c2`; `tests/test_return_cost.tscn` → **RETURN COST OK** (`systems/oppositions/return_cost.gd` run-state node; marginal-per-hop egress toll off live `current_dist_to_gate`; clock/exposure/meter resources via existing public surfaces; decay_behind behind reachability guard + linear self-downgrade; all-off free); RG1 wires the node; worklog `worklogs/2026-06-19-R2-general-purpose.md` (impl `5c1f2a9`) |
 | R3 — Exposure meter | merged `b0566c2`; `tests/test_exposure_meter.tscn` → **EXPOSURE METER OK** + **EXPOSURE HUD OK** (`systems/oppositions/exposure_meter.gd`; depth-weighted climb, retreat decay, one-shot crossings, max→`fail_run(&"timeout")`; penalty seams via pre-declared signals: `player.gd` speed-mult + `dive_clock.gd` clock-tax + R4-fog vision-mult; greybox HUD bar in `decision_hud.tscn`); RG1 wires the meter node; worklog `worklogs/2026-06-19-R3-general-purpose.md` (impl `87d2628`) |
 | R4 — Maze/navigation risk | merged `b0566c2`; `tests/test_bandgen_determinism.tscn` → **R4 NAV OK** + BANDGEN/SEAL OK (depth-scaled integer branch roll in `band_generator.gd`, contract `fingerprint(seed+config)`, all-off byte-matches M1.0 `e943ac9c8bc1`; `entities/dive/{vision_fog,lost_proxy}.gd` run-state; `nav_branch_taken`/`nav_lost_proxy`); **flagged W2-R4-1** BUG3 seal gap at high branch rates; worklog `worklogs/2026-06-19-R4-general-purpose.md` (impl `b810aa0`) |

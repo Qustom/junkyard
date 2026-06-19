@@ -182,3 +182,21 @@ New `systems/bandgen/socket_sealer.gd` (RefCounted, zero RNG); 1-line call in `m
 `ui/config/config_menu.{tscn,gd}` + `config_strings.csv`, side rail in `main_game.tscn`'s MainMenu; surfaces 100% of `RunConfig`'s 32 knobs + master toggles + "reset to baseline (all off)"; stages working config via `MainGame.start_new_run` (shape a). `tests/test_config_menu.tscn` → CONFIG MENU OK (32/32 knobs reachable).
 
 **Wave 1 close-out (2026-06-19):** 2 orchestrator deviations dispositioned (W1.1-1 Reviewed, W1.1-2 Addressed); archived. Next: Wave 2 (R1–R4).
+
+---
+
+## M1.1 — Greybox Cost Axis · Wave 2 (the four oppositions) — all done 2026-06-19
+
+### R1 — Pursuing / awakening hazard — **Done** (merged `0c80622`, impl `023c346`)
+`scenes/hazards/hazard_entity.{tscn,gd}` (CharacterBody2D, `hazard` layer); awaken on depth/linger (no re-sleep), toward-player `move_and_slide` chase, distance catch → `fail_run(&"death")` or non-fatal cost; additive spawn seam in `main_game.gd`. `tests/test_pursuing_hazard.tscn` → PURSUING HAZARD OK.
+
+### R2 — Costlier return trip — **Done** (merged `b0566c2`, impl `5c1f2a9`)
+`systems/oppositions/return_cost.gd` run-state node; marginal-per-hop egress toll off live `current_dist_to_gate`; clock/exposure/meter via existing public surfaces; decay_behind behind reachability guard. RG1 wires it. `tests/test_return_cost.tscn` → RETURN COST OK.
+
+### R3 — Rising instability / exposure meter — **Done** (merged `b0566c2`, impl `87d2628`)
+`systems/oppositions/exposure_meter.gd`; depth-weighted climb, retreat decay, one-shot crossings, max→`fail_run(&"timeout")`; penalty seams via pre-declared signals (`player.gd` speed-mult, `dive_clock.gd` clock-tax, R4-fog vision-mult); greybox HUD bar in `decision_hud.tscn`. RG1 wires the meter node. `tests/test_exposure_meter.tscn` → EXPOSURE METER OK + EXPOSURE HUD OK.
+
+### R4 — Maze / navigation risk — **Done** (merged `b0566c2`, impl `b810aa0`)
+Depth-scaled integer branch roll in `band_generator.gd` (contract `fingerprint(seed+config)`, all-off byte-matches M1.0 `e943ac9c8bc1`); `entities/dive/{vision_fog,lost_proxy}.gd` run-state; `nav_branch_taken`/`nav_lost_proxy`. Flagged **W2-R4-1** (BUG3 seal gap at high branch rates). `tests/test_bandgen_determinism.tscn` → R4 NAV OK.
+
+**Wave 2 close-out:** pending Director disposition of W2-R4-1 (R1/R2/R3 = none). Next: Wave 3 re-gate (RG1→playtest→RG2→RG3).

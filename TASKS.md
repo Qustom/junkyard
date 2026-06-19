@@ -29,31 +29,8 @@ config-marked in telemetry; the all-off `RunConfig` reproduces the M1.0 baseline
 ### Wave 1 — Foundations — ✅ **COMPLETE (2026-06-19)**
 R0 · BUG1 · BUG2 · TEL · BUG3 · CFG all done + merged (R0 `30e41b9`; BUG1+BUG2 `33eb786`; TEL+BUG3 `c940ae4`; CFG `62e16b9`) and verified green (SMOKE OK · RUN DURATION OK · WITHIN BAND DEPTH OK · TEL CONFIG MARKING OK · BUG3 SOCKET SEAL OK · CONFIG MENU OK · MAIN GAME OK · GdUnit4 30/30). Close-out deviation sweep done (W1.1-1 Reviewed, W1.1-2 Addressed). Specs + proof archived to `TASKS_COMPLETED.md`. `depth_changed` + 11 opposition/penalty signals are on `main`; the band is sealed; telemetry config-marks every run.
 
-### Wave 2 — The four oppositions  *(four parallel worktrees; each reads `active_run_config` + live depth, emits TEL's pre-declared signals; none edit `event_bus.gd`/`game_state.gd`. Each opposition's first sub-step is its `game-director-designer` spec at `design/M1_1_Tasks/R<n>_*.md`.)*
-
-### R1 — Pursuing / awakening hazard
-- Milestone: M1.1 (Wave 2)   Assignee: general-purpose + game-director-designer (spec) + character-animator (greybox tell)   BlockedBy: R0, BUG2
-- Spec: `design/M1_1_Tasks/R1_pursuing_hazard.md` (expanded spec + pseudocode + ratified decisions)
-- Goal: a greybox entity that awakens past a depth/linger threshold and chases the player; catching → existing `fail_run(&"death")`. Crude steering, no combat. Fully configurable; emits `hazard_awoke`/`hazard_caught`.
-- Done when: with R1 on it awakens per threshold, chases, can end a run as death; off = M1.0; knobs take effect from the menu; events log.
-
-### R2 — Costlier return trip
-- Milestone: M1.1 (Wave 2)   Assignee: general-purpose + game-director-designer (spec proposes the mechanism — Director reviews)   BlockedBy: R0, BUG2
-- Spec: `design/M1_1_Tasks/R2_costlier_return.md` (expanded spec + pseudocode + ratified decisions — `egress_toll`+`clock` ratified as the primary mechanism)
-- Goal: make the way back scale with how deep you pushed (mechanism — lengthen / decay-behind / egress-toll — proposed by the R2 spec, Director-approved; reads B3 `dist_to_gate`). Configurable; emits `return_cost_incurred`.
-- Done when: retreating from depth d costs measurably more than from depth 1 per the configured curve; off = free walk-back (M1.0); knobs take effect.
-
-### R3 — Rising instability / exposure meter
-- Milestone: M1.1 (Wave 2)   Assignee: general-purpose + game-director-designer (spec) + ui-ux-designer (HUD readout)   BlockedBy: R0, BUG2
-- Spec: `design/M1_1_Tasks/R3_exposure_meter.md` (expanded spec + pseudocode + ratified decisions — penalties applied via TEL-declared `exposure_*` signals)
-- Goal: a run-state meter that climbs faster at depth and punishes lingering; thresholds inflict penalties; max → `run_ended.reason = timeout`. Disposable prototype of the M3 exposure system (NOT wired to meta `exposure`). Configurable; emits `exposure_crossed`/`exposure_penalty`.
-- Done when: meter rises faster at depth, crossings fire penalties, (if configured) max ends run as timeout; greybox readout shows it; off = M1.0; knobs take effect.
-
-### R4 — Maze / navigation risk
-- Milestone: M1.1 (Wave 2)   Assignee: general-purpose + environment-artist (branching/fog) + game-director-designer (spec)   BlockedBy: R0, BUG2, BUG3
-- Spec: `design/M1_1_Tasks/R4_maze_navigation.md` (expanded spec + pseudocode + ratified decisions — determinism contract is now `fingerprint(seed + config)`)
-- Goal: deeper = harder to navigate — raise B2 `branch_chance` with depth (dead-ends) and/or limited vision/fog; needs BUG3 (sealed map). Emit a lost-proxy (backtracking/no-progress). Configurable; emits `nav_branch_taken`/`nav_lost_proxy`.
-- Done when: deep areas branch and/or vision is limited per config; band stays sealed + deterministic per seed+config; off = linear M1.0 spine, full vision; knobs take effect.
+### Wave 2 — The four oppositions — ✅ **COMPLETE (2026-06-19)**
+R1 · R2 · R3 · R4 all done + merged (`b0566c2` R2/R3/R4; `0c80622` R1) and verified green (PURSUING HAZARD OK · RETURN COST OK · EXPOSURE METER OK · EXPOSURE HUD OK · R4 NAV OK · BANDGEN/SEAL OK · MAIN GAME OK · GdUnit 30/30; all-off fingerprint `e943ac9c8bc1` = M1.0 control). Each reads `active_run_config` + live within-band depth, emits TEL's pre-declared signals, edits neither `event_bus.gd` nor `game_state.gd`. **R2's `ReturnCost` + R3's `ExposureMeter` are built standalone and await RG1 dive-scene wiring.** Specs + proof archived to `TASKS_COMPLETED.md`. **Wave 2 close-out pending:** Director dispositions W2-R4-1 (BUG3 seal gap at high branch rates); R1/R2/R3 = none.
 
 ### Wave 3 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
 
