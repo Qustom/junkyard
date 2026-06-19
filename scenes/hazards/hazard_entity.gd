@@ -40,6 +40,22 @@ const NONFATAL_KNOCKBACK_SPEED := 220.0   # px/s impulse pushed onto the player 
 const NONFATAL_STUN_SECONDS := 0.35       # hazard freezes (doesn't chase) briefly after a hit
 const NONFATAL_COOLDOWN_SECONDS := 1.0    # min seconds between catches (also stops per-frame re-fire)
 
+# --- Anti-wall-stick closing (I2, §2.2 option (a) — REFUGE, Director FINAL) ----
+# The hazard KEEPS wall collision (collision_mask `world`): walls are a deliberate
+# partial hiding place — the player can break line-of-sight to escape. The fix for
+# the M1.1 "wall-grind forever" bug (catch never fired) is a cheap de-pin: when the
+# body barely moves while touching a wall, it is grinding it, so the NEXT frame we
+# steer along the wall toward the player's side (walk to the opening) instead of
+# grinding into it. NO pathfinding/navmesh — pure local move_and_slide collision math.
+# Coupled with the r10 body shrink (.tscn), plain slide already mostly closes; this
+# only handles the corner/perpendicular-grind residual.
+#
+# Greybox-internal feel knob (NOT a RunConfig field — like the non-fatal constants
+# above; the Director edits it here). Below this fraction of the intended frame
+# displacement WHILE touching a wall == "grinding" → trigger a de-pin. Too high →
+# false de-pins in open rooms; too low → never de-pins (§2.2, Phase-3 correction 2).
+const STALL_FRACTION := 0.35
+
 var _cfg: RunConfig                  # snapshot of GameState.active_run_config at setup
 var _state: int = State.DORMANT
 var _time_in_band: float = 0.0       # seconds since setup (≈ band entry ≈ run start in M1)
@@ -47,6 +63,9 @@ var _player: Node2D                  # resolved at setup via the "player" group
 var _pending_trigger: StringName = &"depth"   # which condition fired the awaken (telemetry)
 var _catch_cooldown: float = 0.0     # >0 → can't catch again yet (non-fatal path)
 var _stun: float = 0.0               # >0 → frozen, doesn't chase (non-fatal path)
+var _depin_dir: Vector2 = Vector2.ZERO   # I2: if non-zero, NEXT AWAKE frame steers along this
+                                          # wall-tangent (toward the player) instead of straight
+                                          # at the player — the anti-wall-stick de-pin (§2.2 (a)).
 
 @onready var _tell: Polygon2D = $Tell
 
@@ -59,6 +78,7 @@ func setup(cfg: RunConfig, player: Node2D) -> void:
 	_player = player
 	_state = State.DORMANT
 	_time_in_band = 0.0
+	_depin_dir = Vector2.ZERO
 	if _tell != null:
 		_set_tell_dormant()
 
@@ -87,13 +107,37 @@ func _physics_process(delta: float) -> void:
 	var speed: float = _cfg.r1_chase_speed + _cfg.r1_speed_per_depth * float(depth)
 
 	var to_player: Vector2 = _player.global_position - global_position
-	var dir: Vector2 = to_player.normalized() if to_player.length() > 0.001 else Vector2.ZERO
+	var chase_dir: Vector2 = to_player.normalized() if to_player.length() > 0.001 else Vector2.ZERO
+
+	# Anti-wall-stick (§2.2 (a)): if last frame we were grinding a wall, steer along the
+	# wall-tangent toward the player THIS frame (walk to the opening, not into the wall);
+	# else chase straight. One-shot — consumed each frame, re-armed below if still stuck.
+	var dir: Vector2 = _depin_dir if _depin_dir != Vector2.ZERO else chase_dir
+	_depin_dir = Vector2.ZERO
+
 	velocity = dir * speed
-	move_and_slide()   # walls (layer `world`) stop it; sliding/refuge is fine (no pathfinding)
+	move_and_slide()   # walls (layer `world`) stop it; REFUGE intact — wall-collision kept.
+
+	# Grind detection: barely moved this frame WHILE touching a wall → we're pinned.
+	# Arm a de-pin for next frame: tangent along the contacted wall, oriented toward the
+	# player. NO pathfinding — uses only move_and_slide's own collision results (§2.2).
+	if get_slide_collision_count() > 0 \
+			and get_real_velocity().length() < speed * STALL_FRACTION:
+		var col := get_last_slide_collision()
+		if col != null:
+			var n: Vector2 = col.get_normal()
+			var tangent: Vector2 = Vector2(-n.y, n.x)          # wall tangent
+			if tangent.dot(to_player) < 0.0:
+				tangent = -tangent                              # orient toward the player
+			if tangent.length() > 0.001:
+				_depin_dir = tangent.normalized()
 
 	# Catch test: distance-based, deterministic, no physics overlap needed (§2.4).
+	# Effective radius = flat r1_catch_radius + optional depth-scaled lunge (Q3 accepted,
+	# Director FINAL). r1_catch_radius_per_depth defaults 0.0 → flat (all-off baseline).
+	var catch_r: float = _cfg.r1_catch_radius + _cfg.r1_catch_radius_per_depth * float(depth)
 	if _catch_cooldown <= 0.0 \
-			and global_position.distance_to(_player.global_position) <= _cfg.r1_catch_radius:
+			and global_position.distance_to(_player.global_position) <= catch_r:
 		_on_catch(depth)
 
 
