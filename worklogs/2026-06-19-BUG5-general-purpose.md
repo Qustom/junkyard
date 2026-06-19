@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.2 (Wave 2 close-out)
 - **Branch:** gp/BUG5
-- **Commit:** dfe68c25d0dead9e987095167299265085a51a00
+- **Commit:** ba9d58c9ee252374f3d4337731c84a686fd0d7cb
 
 ## What changed
 R2's `ReturnCost._charge()` TOLL_EXPOSURE branch already calls `meter.call(&"add", cost)`
