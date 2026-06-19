@@ -242,6 +242,8 @@ R4 **cannot ship fair without BUG3** (sealed map). Both levers assume a bounded 
 
 BUG3's acceptance ("no open socket leads off-map; the player cannot walk into void on any seed; B2 `fingerprint()` preserved") is therefore a **precondition** for R4's acceptance. R4 must land on a `main` that already has BUG3 (Breakdown §5 dependency map: `R4 ◄── (R0, BUG2, BUG3)`). Additionally, R4's branching exercises the *deep* parts of the map far harder than M1.0's spine ever did, so R4 is the system that will surface any *remaining* BUG3 gap — flag any unsealed dead-end found during R4 work back to the BUG3 owner.
 
+> **As-built (2026-06-19, deviation W2-R4-1, Director: Addressed).** R4's deep branching surfaced exactly such a residual gap: at **`r4_branch_per_depth ≳ 0.12`** some seeds leave **2–6 floor cells facing void** even after `SocketSealer`, because the wave-1 sealer caps only `band.open_sockets` (the unmated frontier) and misses branchy socket-opening edges not in that set. **Safe envelope:** the Director's recommended presets — **S1 (`branch_per_depth=0.06`, cap 8)** and **S3 (`0.05`, cap 8)** — seal cleanly (0 leaks across all 9 sweep seeds), so R4's realistic playtest range is sealed; the gap only appears past ~2× the recommended rate. **Tracked fix: `BUG4`** (`TASKS.md` / board) — make `SocketSealer` cap *all* outward-facing perimeter floor edges so the seal is branch-rate-independent. Keep high-branch-rate sweeps (`branch_per_depth > ~0.08`) gated until BUG4 lands.
+
 ---
 
 ## 7. Config defaults recommendation

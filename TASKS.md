@@ -52,6 +52,15 @@ R1 · R2 · R3 · R4 all done + merged (`b0566c2` R2/R3/R4; `0c80622` R1) and ve
 - Goal: re-run G4's question against M1.1; record a go/iterate/pivot verdict in `design/M1_1_Tasks/G4_findings_M1.1.md` (mirrors M1.0's). go → M2; iterate → M1.2 (this template); pivot → Director design rework.
 - Done when: a recorded go/iterate/pivot verdict backed by config-marked telemetry, comparable to the M1.0 G4 finding.
 
+## M1.1 follow-ups (from wave close-outs)
+
+### BUG4 — SocketSealer misses branchy perimeter edges at high R4 branch rates
+- Milestone: M1.1 (follow-up)   Assignee: general-purpose   BlockedBy: none (R4 + BUG3 on `main`)
+- Spec: `systems/bandgen/socket_sealer.gd` + `design/M1_1_Tasks/R4_maze_navigation.md` §6; origin = Wave-2 close-out **W2-R4-1** (Director: Addressed, 2026-06-19)
+- Goal: at `r4_branch_per_depth ≳ 0.12` some seeds leave 2–6 floor cells facing off-map void after `SocketSealer`, because the sealer caps only `band.open_sockets` (unmated frontier) and misses branchy socket-opening edges not in that set. Cap **all** outward-facing perimeter floor edges (any floor cell whose outward neighbour is neither floor nor a mated doorway) so the seal is **branch-rate-independent**. Also add a CFG soft-cap note on `r4_branch_per_depth`.
+- Done when: a determinism+seal sweep at high branch rates (e.g. `branch_per_depth` 0.12–0.20) shows **0 void-facing cells** on every seed; `band.fingerprint()` unchanged (geometry-only pass, no RNG/piece changes); existing seal + determinism tests stay green.
+- Note: **non-blocking** for Wave 3 — the recommended playtest presets (S1=0.06, S3=0.05) already seal cleanly (0 leaks/9 seeds). Needed before any high-branch-rate sweep.
+
 ## M1 follow-ups (deferred tech-debt — non-blocking; from the wave-5 close-out)
 
 Small, optional cleanups surfaced as `Reviewed` deviations at the M1 wave-5 close-out (2026-06-18) and

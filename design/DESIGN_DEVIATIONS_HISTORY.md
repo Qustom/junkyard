@@ -167,3 +167,19 @@ fix), **1 Reviewed** (W1.1-1). Both reapplied as noted. `DESIGN_DEVIATIONS.md` i
 **M1.1 Wave 1 (Foundations) is complete** — R0 + BUG1 + BUG2 + TEL + BUG3 + CFG on `main`; the `RunConfig` model,
 pre-run Config menu, config-marked telemetry + 11 pre-declared opposition signals, real `duration_s` + within-band
 depth, and a sealed band are all in place. **Next: Wave 2 — the four oppositions (R1–R4) in parallel worktrees.**
+
+---
+
+## M1.1 (Greybox Cost Axis) Wave 2 — Director-evaluated 2026-06-19
+
+R1, R2, R3 reported **"none"** against their specs. R4 surfaced one residual-gap finding (exactly as R4 §6 predicted),
+dispositioned by the Director.
+
+| # | Deviation | Verdict | Reapplied to |
+|---|---|---|---|
+| W2-R4-1 | R4's deep branching surfaced a residual BUG3 seal gap: at `r4_branch_per_depth ≳ 0.12` some seeds leave 2–6 floor cells facing off-map void after `SocketSealer` (which caps only `band.open_sockets`, missing branchy socket-opening edges). Recommended presets S1/S3 seal cleanly (0 leaks/9 seeds), so the realistic envelope is fine; gap appears past ~2× the recommended branch rate. | **Addressed** | Filed **BUG4** (`TASKS.md` M1.1 follow-ups + board, Todo): cap all outward-facing perimeter floor edges, branch-rate-independent. As-built safe-envelope note + BUG4 ref added to `R4_maze_navigation.md` §6. Non-blocking for Wave 3 (recommended presets clean). |
+
+**Wave 2 close-out complete (2026-06-19).** 1 deviation dispositioned: **1 Addressed** (W2-R4-1 → BUG4 follow-up).
+Reapplied to `R4_maze_navigation.md` §6; BUG4 tracked. `DESIGN_DEVIATIONS.md` is now empty (between waves).
+**M1.1 Wave 2 (the four oppositions R1–R4) is complete** — the depth-scaled cost axis is built, configurable, and
+telemetried. **Next: Wave 3 — re-gate** (RG1 build + wire R2/R3 nodes → human playtest → RG2 analysis → RG3 verdict).
