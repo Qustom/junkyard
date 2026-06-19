@@ -47,6 +47,15 @@ const DEFAULT_CELL_SIZE_PX := 16
 @onready var _start_button: Button = %StartButton
 @onready var _version_label: Label = %VersionLabel
 @onready var _sell_screen: SellScreen = $SellScreen
+@onready var _dive_clock: DiveClock = $DiveClock
+## M1.1 R2/R3: the two cost-axis oppositions live as PERSISTENT children of the dive
+## scene (like DiveClock) — they self-gate per run (their _on_run_started reads
+## GameState.active_run_config.rN_enabled and go inert when their opposition is off) and
+## reset per run, so a single persistent instance is correct (no per-run spawn/free).
+## They connect to EventBus.run_started/run_ended in their OWN _ready(), so once parented
+## they react to the run lifecycle automatically. RG1 only injects R2's DiveClock ref.
+@onready var _return_cost: ReturnCost = $ReturnCost   # R2 (Costlier Return)
+@onready var _exposure_meter: ExposureMeter = $ExposureMeter   # R3 (Exposure Meter)
 ## M1.1 CFG: the pre-run config rail on the main menu. start_new_run() stages its
 ## working config (ratified shape (a)); if the node is absent we fall back to the
 ## all-off default at RUN_CONFIG_PATH so the loop still reaches the M1.0 baseline.
@@ -97,11 +106,21 @@ var _consent_pending: bool = false
 
 func _ready() -> void:
 	_load_fixtures()
+	# R2 (ReturnCost) charges its `clock` toll through DiveClock.modify_light(); inject the
+	# persistent DiveClock node so the export is bound (the .tscn NodePath form proved
+	# unreliable for the typed export, so we assign it here per the RG1 spec §1). Null-safe:
+	# a config that never selects the clock toll simply skips the charge.
+	if _return_cost != null:
+		_return_cost.dive_clock = _dive_clock
 	_version_label.text = "build %s" % BuildVersion.id()
 	_start_button.pressed.connect(_on_start_pressed)
 	# W4-11: the production SellScreen only announces intent; G3 owns the restart.
-	# Continue from the reward beat loops straight back into a fresh dive.
+	# Continue from the reward beat loops straight back into a fresh dive (door 2 —
+	# reuses the menu's config, no menu shown: the config carry-forward of §2.3).
 	_sell_screen.continue_pressed.connect(start_new_run)
+	# RG1 (§8 Q2): "Back to Config" re-opens the menu so the Director can switch configs
+	# mid-session. The next Start (door 1) re-reads ConfigMenu.apply_and_get_config().
+	_sell_screen.back_to_config_pressed.connect(_on_back_to_config)
 	# A finished run (extract OR fail) hands the player back to a safe state; the
 	# SellScreen presents over the paused tree, so we don't need to act here beyond
 	# parking the player. The sell screen + continue drive the loop forward.
@@ -452,6 +471,14 @@ func _on_start_pressed() -> void:
 	if _consent_pending:
 		return
 	start_new_run()
+
+
+## RG1 (§8 Q2): the SellScreen's "Back to Config" path. The sell screen already
+## unpaused + hid itself before emitting, so we only re-show the menu (which carries the
+## ConfigMenu rail). The Director edits knobs, then Start → start_new_run() rebinds the
+## config (door 1). Quick re-run (Continue) and switch-config (this) are the two doors.
+func _on_back_to_config() -> void:
+	_show_menu()
 
 
 # --- G6: first-run telemetry consent ----------------------------------------
