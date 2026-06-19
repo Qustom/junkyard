@@ -239,6 +239,67 @@ EOF
 
 ---
 
+## Resolved Decisions (Phase 3 — fresh-eyes, 2026-06-19)
+
+*Resolver: independent programmer/build-lens reviewer (did NOT author §1–§5). I re-ran the data and read the live code (`game_state.gd`, `telemetry.gd`, `version.gd`, `project.godot`, `export_presets.cfg`, `nightly.yml`) before resolving. Every Open Question below is **CLOSED** with a decision + rationale.*
+
+### Root-cause verdict (the load-bearing claim): **CONFIRMED — stale-binary, not a live regression.**
+
+The author's central claim holds under independent re-analysis. The evidence is not merely suggestive; it is dispositive:
+
+- **The session/config-marking correlation is exact and 100% clustered.** Per-session re-count: `s_33c0a1` (9/9 zero, 0/10 cfg-marked), `s_34e69b` (10/10, 0/11), `s_34e929` (13/13, 0/13) — all-zero **and** all-unmarked. Every cfg-marked session (`s_3577d3`, `s_357a2d`, `s_357d71`, `s_357e2c`, `s_357f72`) is **0/N zero**. No session is mixed. Zero-duration ⇔ no `run_config` snapshot is a perfect partition (32 zeros = 9+10+13, all in the three unmarked sessions).
+- **The "missed stamp, not a floor" proof is airtight.** Spot-checked `r_7bce28` (a zero-duration extract): its telemetry **envelope `t_ms` runs from 1 ms (run_started) to 53,716 ms (run_ended) — a real 53.7 s run** — yet `duration_s = 0.0`. The envelope `t_ms` is driven by `telemetry.gd`'s own `_run_t0_ms` (stamped at line 120, always present), while `duration_s` is driven by `game_state.gd`'s `_run_start_ms`. The two clocks disagree by 53.7 s on the same run. That can only happen if `_run_start_ms` was *not* freshly stamped at `start_run` — i.e. a binary predating the BUG1 fix. A genuine same-frame extract would show **both** clocks near zero; here only one is. This is a definitive missed-stamp signature, not a correct floor.
+- **The frozen-SHA mechanism is confirmed at the source.** `project.godot:18` literally holds `config/build_sha="852b6e2"`; `version.gd:39` `has_setting()` is therefore always true and returns it; the `_date_stamp()` resolves the day at boot. `852b6e2` is dated 2026-06-18 (`git show`), HEAD is now `b038999` — the SHA is a dead M1.0-era commit, and the *only* thing that moved between `m1-20260618-...` and `m1-20260619-...` is the boot-day date segment. So the pre-fix and post-fix sessions are **indistinguishable by SHA**, which is exactly *why* the analyst couldn't partition them and why defect (b) must be fixed for the cohort to be cleanly separable. The audit's conclusion that the live `start_run`/`_elapsed_s`/`end_run` loop already re-stamps correctly on every re-entry (Continue, Back-to-Config→Start) matches my read of `game_state.gd:86-106` / `217-218` / `235-244`. **No live missed-stamp path found.** I5 on (a) is correctly scoped as a regression-lock, not a code change.
+
+**Net:** the claim that re-frames I5 from a code-fix to a regression-lock-plus-SHA-fix is correct. Proceed on that basis.
+
+---
+
+**Q1 — Is `duration_s = 0` ever a *correct* same-frame fast-extract, or always a missed stamp? Should there be a source-side floor?**
+**DECISION (CLOSED): No source-side floor. Keep raw float seconds at the source; RG2 buckets at analysis.** Confirms the author's recommendation. Rationale: (1) Every zero in the data is a missed stamp (proven above), so no floor is needed to "fix" them — the SHA fix makes pre-fix zeros identifiable instead. (2) A floor would *destroy* signal: a genuine instant extract (player spawns on the gate, plausible once I1 reshapes levels) is real data RG2 should see as ~0, not as an invented `1/60 s`. (3) BUG1 §8 Decision 2 already locked "raw float at source." (4) Critically, a future regression that *reintroduces* a missed stamp would log `0.0` — and a source-side floor would **mask that regression** by turning the tell-tale `0.0` into a plausible small value. Keeping raw `0.0` preserves the regression-lock's diagnostic value. The §3a test's `dur > 0.0` assertion is the correct guard; it works *because* the source emits raw seconds.
+
+**Q2 — How does an exported Windows build learn its SHA with no git at runtime? `.tres` vs generated `const .gd`?**
+**DECISION (CLOSED): Bake-at-build into a git-ignored generated artifact, read at runtime. Use a generated `const` `.gd` (`build_info.gd` with `const SHORT_SHA := "..."`), NOT the `.tres` — revising the author's `.tres` recommendation.** The bake-at-build-time mechanism is confirmed correct and is the only approach that satisfies all three contexts (editor / local-headless / exported, where `git` and `.git` are absent at runtime). On the artifact *form*, I overturn the author's `.tres` pick on build-mechanics grounds:
+  - **A generated `.tres` introduces an import dependency the bake can't satisfy cleanly.** A `script_class="BuildInfo"` resource only loads if Godot has already imported `build_info.gd` *and* generated a `.godot/global_script_class_cache`. If `version.gen.tres` is written *after* the last `--import` (the natural ordering: stamp, then import, then export — or worse, stamp with no re-import), `ResourceLoader.exists()`/`load()` can fail or return a resource whose script binding is stale. The export's `application/modify_resources=true` + `export_filter="all_resources"` further complicate which form of the `.tres` ships. A generated `const .gd` has **no import step and no resource-cache dependency** — it is compiled like any script when the project imports, and `BuildInfo.SHORT_SHA` is a direct constant read with zero `load()` at boot.
+  - **This avoids the author's stated downside of the `const` ("a regenerated source file in the diff") for free**, because the file is git-ignored (see Q4) — it never enters a diff regardless of form. The author's reason to prefer `.tres` ("keeps `version.gd` free of a regenerated source file in the diff") evaporates once the artifact is git-ignored, which both options require anyway.
+  - **Concrete shape:**
+    ```gdscript
+    # systems/version.gd  (autoload-free static; unchanged contract)
+    const GEN_PATH := "res://systems/build_info_gen.gd"   # git-ignored, baked at build
+    const FALLBACK_SHA := "0000000"                        # neutral sentinel (see Q4)
+    static func short_sha() -> String:
+        if ResourceLoader.exists(GEN_PATH):                # cheap existence check
+            var bi = load(GEN_PATH)                         # the generated const-holder script
+            var sha: String = bi.SHORT_SHA if bi != null else ""
+            if sha != "": return sha
+        if OS.has_feature("editor"):                       # dev: read HEAD live
+            var out := []
+            if OS.execute("git", ["rev-parse","--short","HEAD"], out) == 0 and not out.is_empty():
+                var s := String(out[0]).strip_edges()
+                if s != "": return s
+        return FALLBACK_SHA
+    ```
+    *(`build_info_gen.gd` is `class_name BuildInfoGen` + `const SHORT_SHA := "<sha>"`, written by `tools/stamp_build.sh`. If the builder finds the `load()`-a-script-for-a-const pattern awkward under export, the equivalent is a tiny committed `build_info.gd` shim that `@warning_ignore`-loads the gen file; either way no `.tres` import dependency.)* ⚠ This `.tres`-vs-`const` choice is a **builder implementation call, not a Director call** — both meet the contract; I record the `const` as the recommended default for the import-safety reason above, and the builder may keep the `.tres` if they verify the import ordering holds under `--export-release`. **This is NOT flagged for Director.**
+
+**Q3 — Should the build id include dirty/uncommitted state?** ⚠ **NEEDS DIRECTOR REVIEW** (author flagged; I **confirm** it is a genuine human call, and I revise the recommendation).
+**RECOMMENDATION (revised): Append `+dirty` to the human-facing `id()` string when `git status --porcelain` is non-empty — do NOT bury it in a separate `data.build_dirty` bool.** The author left this between the two; I come down on the visible-marker side, and add a reason the author didn't: the entire I5 lesson is that *a quiet, plausible-looking build id masked a stale binary for an entire playtest*. A separate bool repeats that mistake at a smaller scale — anyone eyeballing the log sees a clean `691d9da` and trusts it, while the bool sits unread two fields away. `691d9da+dirty` is **impossible to mis-trust**: it screams "this build is not reproducible from any commit." The clutter cost is one suffix on a string that already carries a date and a milestone. **Director call:** approve `+dirty` in the visible `id()` (recommended), or require the quieter separate `data.build_dirty` bool. *(Note: only relevant to local/dev stamps — a CI export from a clean checkout is never dirty.)*
+
+**Q4 — Drop the `ProjectSettings("application/config/build_sha")` indirection, or repair it?** ⚠ **NEEDS DIRECTOR REVIEW** (author flagged; I **confirm** and strengthen the recommendation).
+**RECOMMENDATION: Drop it.** Replace the ProjectSettings read with the git-ignored generated-artifact chain, change `FALLBACK_SHA` to the neutral `"0000000"` sentinel, and **remove the `config/build_sha` line from `project.godot:18` entirely.** Two reinforcing reasons beyond the author's:
+  1. **The committed stale value IS the root cause of defect (b).** Repairing-in-place (blank the value, make the bake run locally) leaves a live footgun: the moment *anyone* re-commits a non-empty `config/build_sha` (an editor "Save Project Settings" round-trip can silently re-add settings), the SHA re-freezes and the bug returns invisibly. A git-ignored artifact **cannot** go stale in source by construction — that property is the whole point.
+  2. **The neutral `0000000` sentinel is a feature, not a fallback.** Today's `FALLBACK_SHA = "852b6e2"` actively *lies* — an unstamped build masquerades as a real commit. `0000000` makes "this binary was built without the stamp step" immediately legible in the log, which is precisely the failure mode I5 exists to prevent. **Director call:** approve the drop (recommended), or mandate keeping the ProjectSettings key for compatibility (the smaller diff, but it preserves the footgun). I recommend drop. *(Also requires the `nightly.yml` §134-141 `sed`-into-`project.godot` step be swapped for a `tools/stamp_build.sh` call that writes the generated artifact — otherwise the export bakes into a key the new `version.gd` no longer reads. The builder must update both halves together or the export SHA silently reverts to the sentinel.)*
+
+**Q5 — Is there a re-entry path the audit missed?**
+**DECISION (CLOSED): No live missed-stamp path exists. The two flagged seams are safe; the demo seam is a defensive non-issue the test should cover.** I independently confirm the audit:
+  - **Seam (i) — rapid Continue→immediate-fail (timeout/death while a prior SellScreen is up).** Safe by construction. `start_run` (`game_state.gd:88-89`) sets `_run_ended = false` **and** re-stamps `_run_start_ms` together, atomically, before `run_started` emits. Any subsequent end path (`extract_and_end_run:180`, `fail_run:324`) checks `_run_ended` *first* and computes `_elapsed_s()` *after* setting the guard. So a fail firing immediately after a re-entered `start_run` measures against the fresh stamp; a fail firing against a *prior, already-ended* run early-returns on the guard. There is no ordering where an end path reads a stale `_run_start_ms` belonging to a different run. **No fix needed.**
+  - **Seam (ii) — demo scenes (`dive_clock_demo.gd`, `sell_screen_demo.gd`, `decision_hud_demo.gd`) calling an end path without a preceding `start_run`.** This *could* compute `_elapsed_s()` against a stale-or-zero `_run_start_ms`, but **demos are excluded from the playtest build** (`export_presets.cfg:24` `exclude_filter` ships no `tests/*`; demos likewise never reach a tester binary). Low severity, confirmed. The §3a headless test **should** include an optional "end without start" assertion documenting that a defensive `0.0` (or guarded no-op) is acceptable there — as a contract note, not a shipped-path fix.
+  - **Conclusion:** I5's (a) deliverable stays a **regression-lock** (the §3a 3-re-entry headless assertion). No `game_state.gd` change is warranted by Phase 3.
+
+**Q6 — The 4 `run_started` with no `run_ended` — in scope for I5?**
+**DECISION (CLOSED): Out of scope for I5. Hand to RG2's abandonment analysis. Confirmed.** Re-count confirms the 4 unmatched `run_started` all fall in the three pre-fix unmarked sessions (e.g. `s_33c0a1`: 10 started / 9 ended; `s_34e69b`: 11/10; `s_357d71`: 2/1; `s_357e2c`: 1/0). These are abandoned-mid-run sessions (alt-F4 / session end), an **abandonment-funnel** signal — orthogonal to telemetry-hygiene. They are not a missed-stamp defect and need no code in I5. Note for RG2: because they cluster in pre-fix sessions, RG2 should partition abandonment by build SHA too (now possible once defect (b) is fixed) before reading anything into the rate.
+
+---
+
 ## 6. Acceptance criteria
 
 1. **Every completed run logs a real `duration_s`** — the §3a headless test drives **three sequential `start_run` loop re-entries** (extract → timeout → death) and asserts each end emits a **nonzero, independent** `duration_s` within a frame-tolerance band, with telemetry OFF. Red blocks merge.

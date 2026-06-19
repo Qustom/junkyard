@@ -272,3 +272,65 @@ This is **file-disjoint** from the rest of Wave 1 (I1 → `band_generator.gd`/`r
    *Resolved by BUG3 §7.1 (ratified):* visible greybox WALL tile, reusing atlas `(1,0)` — the
    player reads "wall, turn around," no new asset. BUG4 inherits this unchanged. *(Listed only
    to record that BUG4 does not reopen it.)*
+
+---
+
+## Resolved Decisions (Phase 3 — fresh-eyes, 2026-06-19)
+
+> Independent programmer/correctness review by a non-author. Verified the design against the
+> real source (`systems/bandgen/socket_sealer.gd`, `band.gd`, `placed_piece.gd`,
+> `band_generator.gd`, `tests/test_bandgen_determinism.gd`) and the breakdown §BUG4. **The
+> "geometry-keyed global floor set, cap every outward non-floor neighbour" approach is correct,
+> determinism-safe, and the mated-doorway guard is exact** — confirmed below. The author's claim
+> that **no Director call is required** is **confirmed**: W2-R4-1 (*Addressed*) ratifies the
+> approach, and every Open Question is an implementation/QA call with a clear technical answer.
+> **All 6 Open Questions resolved/closed; 0 flagged for Director.**
+
+**Correctness verification (the load-bearing checks I re-derived independently):**
+
+- **The pass is the exact inverse of the test's leak condition.** `_count_floor_facing_void`
+  (`test_bandgen_determinism.gd:189–196`) flags a floor cell when a 4-neighbour is *neither
+  floor nor wall* (void). BUG4 walks the same global floor set and writes WALL at every
+  neighbour *not in floor_set*. Post-pass, every non-floor neighbour of a floor cell is wall →
+  the leak count is 0 **by construction**, for any seed and any branch rate. The post-condition
+  is structural, not empirical. ✓
+- **Determinism is preserved exactly.** `fingerprint()` (`band.gd:58–62`) hashes only
+  `piece_id@offset#mated_socket_index` over `band.pieces`. BUG4 mutates **only** Geometry
+  `set_cell` calls and touches neither `RNG` nor `band.pieces` membership/order → fingerprint is
+  byte-identical pre/post. The pass also runs at materialisation *after* `generate()` returns,
+  same as BUG3. ✓
+- **The doorway guard is exact (not heuristic).** A mated doorway is, by the generator's own
+  connectivity definition (`band_generator.gd:441–445`), a floor cell 4-adjacent to **another
+  piece's** floor cell. Because `floor_set` is built across **all** pieces (`for p in band.pieces`),
+  that neighbour is in `floor_set`, the `floor_set.has(n)` guard fires, and the doorway is never
+  capped. The sealer's doorway-survival uses the *identical* set membership the connectivity
+  check uses → no doorway can regress. ✓
+- **`floor_cells` is the correct (pristine, pre-seal) source.** It is captured at read time from
+  atlas `(0,0)` cells (`band_generator.gd:338–340`) and never mutated by the seal, so caps never
+  pollute the floor truth. The §1.4 "local-vs-global trap" note is accurate. ✓
+
+**Open Question resolutions:**
+
+| # | Question | Decision | Rationale (one line) |
+|---|---|---|---|
+| 1 | Replace vs augment the `open_sockets` pass? | **REPLACE** (confirm author's rec). | The global-floor perimeter pass is a strict superset of every `open_sockets` opening lane (§2.5); keeping both is dead work + a second path to keep correct. Builder deletes `_opening_lane_cells` and proves the high-branch sweep stays green. |
+| 2 | Distinguish mated doorway from wall-gap? | **CLOSED — exact set membership, no heuristic.** | A doorway's outward neighbour is another piece's floor cell, present in the global `floor_set`; `floor_set.has(n)` skips it. Identical to the generator's own connectivity rule, so it cannot disagree. |
+| 3 | One global floor set vs per-piece? | **ONE GLOBAL SET** (confirm author's rec). | Per-piece would have to consult every other piece's floor to avoid walling real doorways — i.e. reconstruct the global set with more code. Global is O(total cells), simpler, and is what makes Q2 exact. |
+| 4 | Perf at large room counts (I1)? | **ACCEPT AS-IS.** | O(total floor cells × 4) with O(1) dict lookups, once per materialisation (not per-frame). Stays linear at any I1 ceiling. Brief BUG4 *after* I1's room-count ceiling is fixed so the sweep covers it (they're parallel — confirm at integration). Optional one-line timing assertion only if a band turns out very large; **no algorithmic change.** |
+| 5 | `socket_sealer.gd` or a new pass? | **STAYS IN `socket_sealer.gd`.** | Same responsibility (the seal), same call site (`main_game.gd:310`), same `_place_wall_cap` primitive. A new file splits one concept. Update the class doc comment to the generalised perimeter-floor (not frontier-only) contract. |
+| 6 | Visible greybox WALL vs invisible collider? | **CLOSED — visible greybox WALL** (inherited from BUG3 §7.1, ratified). | Player reads "wall, turn around," no new asset; BUG4 does not reopen it. |
+
+**Two implementation notes for the builder (not new questions — guardrails):**
+
+1. **Cap-into-owner-layer is safe even when the void cell is outside the owner's local rect.**
+   `_place_wall_cap` writes at `n - owner.offset_cell` into the owner piece's Geometry
+   `TileMapLayer`. A `TileMapLayer` is sparse/unbounded, so a cap written "outside" the owner's
+   authored rect still produces a valid collision cell at the right band-global position
+   (collision is per-cell). No clamping or owner-reassignment is needed. (This is the same write
+   primitive BUG3 already uses verbatim — keep it unchanged.)
+2. **Make the test sweep non-vacuous at high branch rate.** Keep the existing "expected unsealed
+   band to leak" guard (`test_bandgen_determinism.gd:162–164`) but assert it at
+   `branch_per_depth ≥ 0.12` so the new high-branch sweep proves it *was* leaking pre-seal and
+   the generalised sealer is what closes it — otherwise a green sweep could be vacuously green if
+   the chosen seeds happen not to branch. (`_count_floor_facing_void` reads the **live** Geometry
+   layer, so it already sees the caps; no test-infra change needed.)

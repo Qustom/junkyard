@@ -1,7 +1,7 @@
 # I3 — R2/R3 Visual Cues (expanded design spec)
 
 **Milestone:** M1.2 — Greybox: Legibility & Level Scale · **Workstream:** (b) Wave 2 — oppositions retuned to the new canvas
-**Task id:** I3 · **Design author:** ui-ux-designer · **Builder:** ui-ux-designer · **Status:** spec (Phase 2; Phase 3 fresh-eyes open-question pass follows)
+**Task id:** I3 · **Design author:** ui-ux-designer · **Fresh-eyes resolver (Phase 3):** game-director-designer (independent design lens) · **Builder:** ui-ux-designer · **Status:** READY (Phase 3 complete 2026-06-19 — §3 resolved in "Resolved Decisions"; 5 CLOSED, 2 flagged for Director: Q3 salience, Q5 shake)
 **dependsOn:** none — R2/R3 already emit every signal this task projects (`M1.2_Breakdown.md` §I3). Builds on the M1.1 HUD on `main`.
 **Companions:** `M1.2_Breakdown.md` (§I3, §3 Wave 2, §6 wave order) · `design/M1_1_Tasks/G4_findings_M1.1.md` (§2 I3 triage — the premise) · `design/M1_1_Tasks/R3_exposure_meter.md` §4 (the R3 HUD pattern) · `design/M1_1_Tasks/R2_costlier_return.md` §4 (the R2 signal) · `M1_As_Built.md` (canonical APIs — wins on any conflict) · `ui/hud/decision_hud.gd`/`.tscn`, `ui/hud/exposure_readout.gd`, `ui/hud/hud_strings.csv` (the surfaces this task edits)
 
@@ -224,6 +224,57 @@ The **legibility layer holds in every band**: these cues are HUD-space (CanvasLa
 **Q6 — Threshold ticks: live `_draw()` overlay vs. pre-placed `ColorRect` children?** A greybox-implementation choice (both are signal-free read-only projections of `r3_threshold_levels`). *Recommendation:* whichever the builder finds cheaper; `_draw()` scales cleaner if the bar resizes, `ColorRect` children are simpler to style later. **Builder's call, not the Director's** — noted for completeness.
 
 **Q7 — Penalty banner persistence when penalties stack fast (B-sweep "hard ratchet").** In R3's `r3_threshold_levels = [50, 85]` biting sweep, two crossings can land seconds apart; a banner per crossing could thrash. *Recommendation:* fade-and-replace (latest wins) with a minimum on-screen time, or a tiny stack count. **Director/legibility call**, tied to Q3's salience budget. *(Leans: latest-wins with a floor duration.)*
+
+---
+
+## Resolved Decisions (Phase 3 — fresh-eyes, 2026-06-19)
+
+**Reviewer:** game-director-designer (independent design/feel lens; did NOT author §0–§3). **Method:** read the doc, `M1.2_Breakdown.md` §I3, `G4_findings_M1.1.md` §2, and the *as-built source* — `event_bus.gd` (signal signatures), `exposure_meter.gd` + `return_cost.gd` (what's actually emitted), and the three HUD surfaces (`decision_hud.gd`, `exposure_readout.gd`, `hud_strings.csv`). The author's APIs are correct; the resolutions below close every question against the as-built reality, with three genuine feel/legibility calls escalated.
+
+### Confirmed against source (the builder must key off these exact values)
+
+**The author's `exposure_penalty` arity note is CORRECT and verified.** `event_bus.gd:98` declares `signal exposure_penalty(level: int, penalty_kind: StringName)` — 2nd arg is `StringName`, not `int`. `exposure_meter.gd:112` emits `EventBus.exposure_penalty.emit(idx, _penalty_kind_name())`.
+
+**`penalty_kind` StringName values actually emitted** (`exposure_meter.gd` `_penalty_kind_name()`, lines 142–151): **`&"speed"`, `&"vision"`, `&"clock"`, `&"none"`** — exactly the four in the doc. Banner key map: `&"speed"`→`HUD_PENALTY_SPEED`, `&"vision"`→`HUD_PENALTY_VISION`, `&"clock"`→`HUD_PENALTY_CLOCK`, `&"none"`→no banner (`tr()` key resolves to `&""` → early-return).
+
+**`cost_kind` StringName values actually emitted by R2** (`return_cost.gd` `_charge()` + `_maybe_decay_links_behind()`, lines 144/154/157/190): **`&"clock"`, `&"exposure"`, `&"meter"`, `&"decay"`** — exactly the four in the doc. The doc's unit-key map is correct.
+
+**TWO load-bearing facts the source revealed that reshape the open questions** (the builder must honor these; they are not optional):
+
+- **F1 — `penalty_kind` is run-CONSTANT, not per-crossing.** `_apply_penalty()`/`_penalty_kind_name()` both read the single `_cfg.r3_penalty_kind` enum, so *every* `exposure_penalty` in a given run carries the **same** kind string. The banner text never *changes* within a run — only the *number* of crossings does. This collapses Q7: there is no "different message thrash," only "the same penalty bit again, harder." (Drives Q7's resolution.)
+- **F2 — `exposure_crossed` and `exposure_penalty` fire same-frame, paired, in lockstep** (`exposure_meter.gd:108` then `:112`), once per threshold, never re-armed (`_levels_crossed` one-shot). On `&"none"`, `exposure_crossed` *still* fires (so tick-spend + flash play) while `exposure_penalty` carries `&"none"` (no banner). The telegraph survives the telemetry-only control. **Builder rule: drive flash + tick-spend off `exposure_crossed`; drive the banner off `exposure_penalty`** — do not double-flash by reacting to both.
+
+---
+
+### Q1 — Where do the cues live? → **RESOLVED: extend in place. CLOSED.**
+**Decision:** Extend `exposure_readout.gd`/`ExposureReadout` (R3) and `decision_hud.gd` + its `Root` (R2). No new overlay scene. The author's lean is right and I'm closing it, not escalating — this is a design-merit call, not a taste call. The R2 toll *is* a `DiveClock.modify_light(-cost)` drain (`return_cost.gd:143`), so flashing the clock bar the player already watches is the **causally truthful** cue; a separate overlay would invent a second "what is the clock doing" surface and duplicate the run-boundary visibility bookkeeping both HUDs already do correctly. **Rationale:** legibility of a gamble comes from *fewer, co-located* surfaces, not more; the "pressure overlay when oppositions stack" worry is really a salience-budget question, which is Q3's job, not a reason to split scenes.
+
+### Q2 — Floating cost text: world-space vs HUD-anchored vs log? → **RESOLVED: HUD-anchored transient. CLOSED.**
+**Decision:** A short-lived HUD-anchored indicator that rises+fades, spawned under `Root` near the clock bar (the surface the toll actually drained). Not world-space, not a log. **Rationale:** (1) world-space pixel-art floating text is a later art concern and fights the greybox norm; (2) a scrolling log buries *the moment* — the whole G4 complaint is that the toll is invisible *as it bites*, which is a moment-cue need, not a history need; (3) anchoring it next to the clock bar makes the cause ("the clock just dropped because of *this*") spatially legible. I'm closing this on design merit — "diegetic origin at the player" is an art-polish nicety the greybox gate does not need, and the human owns the later polish pass anyway. The transient near-clock "-N light" reads as the toll precisely *because* it's adjacent to the drain.
+
+### Q3 — Salience budget (how prominent is too prominent)? → **⚠ NEEDS DIRECTOR REVIEW** (with a concrete recommendation to build against now).
+**Recommendation to build against (so the wave is not blocked):**
+- **One left-column "pressure stack."** Co-locate the exposure bar (made taller/higher per the G4 gap), its ticks, its flash, and its penalty banner in one vertical region; keep the E2 clock/Holding/Depth in their existing top-right cluster. The R2 cost indicator spawns near the clock (its causal home). This gives the eye **two** pressure zones (continuous = left, event = top-right), not seven scattered flashes.
+- **One flash at a time.** A single shared "flash budget": when a new crossing/toll flash starts, it *replaces* (re-triggers) rather than stacks — `Tween.kill()` the prior then re-punch. No additive alpha pile-up.
+- **Banner: latest-wins, single instance,** with a floor on-screen time (see Q7).
+**Why this is the Director's call, not mine:** "how busy is too busy" with all oppositions on is exactly a *felt-legibility* judgment that only reads true in a live playtest on the new I1 level scale — the same class of call as the M1 "is it fun?" gate. I can make it *not-cluttered-by-construction*; whether it's *legible enough* is the gate's verdict. **Recommendation: ship the two-zone + single-flash-budget layout above; let RG1/the playtest confirm or dial it.** *(Leans: two-zone, single flash budget.)*
+
+### Q4 — Shared vs separate R2/R3 readout? → **RESOLVED: separate cues, co-located. CLOSED.**
+**Decision:** Keep them separate — they are different mental models (R3 = a continuous climbing meter you watch; R2 = a discrete event charge that *happens* to you) — but co-locate within the pressure-zone scheme of Q3. **Rationale, sharpened by source:** the `exposure` toll path (`return_cost.gd:145–154`) routes R2's charge *into R3's meter*, so when `cost_kind == &"exposure"` the **exposure bar will already move** (via `exposure_meter_changed`) *and* the cost indicator fires. Two cues for one event is fine and correct here — the bar shows the *new steady-state*, the indicator shows the *discrete bite that caused it* — but the builder must NOT additionally pulse the exposure bar for `&"exposure"` tolls (the bar's own `_on_meter_changed` ramp already reflects it; adding a pulse would double-cue). This is a design-merit close, not a Director call: the two pressures genuinely are different objects and forcing them into one unified readout would muddy the gamble.
+
+### Q5 — Screen-shake on penalty in scope? → **⚠ NEEDS DIRECTOR REVIEW** (recommend: defer).
+**Recommendation: out of scope by default for the M1.2 gate.** Flash + tick-spend + banner already give the penalty three redundant channels (motion + shape-state + text); shake adds *visceral feel* but (a) M5 owns the global screen-shake toggle + accessibility telemetry per the playbook, so shipping it here means shipping it *without* its accessibility control, and (b) un-tuned greybox shake reads as jank and can contaminate the "is the bite legible" read with "is the HUD broken." **Why the Director and not me:** whether the bite needs to be *visceral* (not just legible) to make the gamble *fun* is a feel call the playtest answers — and it's cheap to add post-gate if RG3 says "the penalties don't *land* emotionally." **Recommendation: defer; build the flash+banner; revisit only if the gate reports the penalty feels weightless.** Never make shake the *only* channel if it is ever added. *(Leans: defer.)*
+
+### Q6 — Tick rendering: `_draw()` vs `ColorRect` children? → **RESOLVED: builder's call. CLOSED (not a design question).**
+**Decision:** Builder chooses; both are signal-free read-only projections of `r3_threshold_levels`. Note for the builder: `r3_threshold_levels` is read once per run on the `run_started` boundary (rebuild ticks then), positioned at `level / METER_MAX` (METER_MAX = 100.0, a fixed const in `exposure_meter.gd:25`, NOT a config field — hardcode 100.0 or read the bar's `max_value`). No Director input needed.
+
+### Q7 — Banner persistence when penalties stack fast? → **RESOLVED: latest-wins, single instance, floor duration. CLOSED** (collapsed by F1).
+**Decision:** One banner instance, **latest-wins with a minimum on-screen time** (~0.8–1.0 s floor; builder tunes). **Rationale — F1 makes this trivial:** because `penalty_kind` is run-constant, "latest-wins" never swaps to a *different* message — it always re-asserts the *same* string ("Slowed" / "Sight narrows" / "Light drains"). So a fast `[50, 85]` double-crossing should NOT thrash text; it should **re-pulse the one banner** (re-trigger its fade with a fresh floor duration) so the player reads "it bit again." Optionally append a stack count ("Slowed ×2") to convey the *escalation* (each crossing stacks the speed mult per `exposure_meter.gd:157`), but a count is a nice-to-have, not required for the gate. The flash + the spent-tick advancing already carry "another one landed," so even a static banner is acceptable. This is design-merit closed (tied to Q3's single-flash-budget rule); no Director input needed beyond Q3's overall salience verdict.
+
+---
+
+### Out-of-scope note for the builder (NOT an I3 concern, do not fix here)
+`return_cost.gd:152` calls `meter.call(&"add", cost)` for the `exposure` toll, but `exposure_meter.gd` exposes **no `add()` method** — the `has_method(&"add")` guard means the exposure toll currently charges *nothing* into R3's meter. That is an R2/R3 *integration* gap (owned by those systems, surfaces only when a run enables R2 with `toll_resource = exposure` AND R3), **not** an I3 cue concern: I3 only renders the `return_cost_incurred(&"exposure")` *indicator* and whatever the exposure bar shows. Flagging it so the builder does not mistake "the exposure bar didn't move on an `exposure` toll" for an I3 bug — and so RG1/QA can route it to the right owner.
 
 ---
 
