@@ -37,3 +37,6 @@ Thumbs.db
 # generated on import and never committed.
 /systems/build_info_gen.gd
 /systems/build_info_gen.gd.uid
+
+# Agent worktrees (ephemeral; never commit)
+.claude/worktrees/
