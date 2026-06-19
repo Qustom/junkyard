@@ -24,6 +24,10 @@ const BANDGEN_CONFIG_PATH := "res://data/bandgen_config.tres"
 const JUNK_CATALOG_PATH := "res://data/junk/junk_catalog.tres"
 const DEPTH_CURVE_PATH := "res://systems/depth/depth_curve.tres"
 const GATE_SCENE_PATH := "res://entities/gate/extract_gate.tscn"
+## M1.1 R0: the default (all-off) run config. CFG will later swap this for the
+## menu-built config; for now we stage the all-off default so the wiring is
+## exercised and the loop stays at the M1.0 baseline.
+const RUN_CONFIG_PATH := "res://data/run_config/run_config.tres"
 
 ## G6: first-run telemetry consent prompt (Director-ratified G3 #1 → Addressed). Shown
 ## once over the menu before gameplay so the G4 cohort actually opts in; telemetry stays
@@ -138,6 +142,12 @@ func start_new_run() -> void:
 	#    via run_started, depth 0, _run_ended guard cleared) and emits run_started,
 	#    which the DiveClock / HUD / Telemetry all react to. enter_band advances to
 	#    depth 1 so the player reads "in the band" rather than depth 0 at the gate.
+	# M1.1 R0: stage the run config BEFORE start_run so GameState binds it as the
+	# active config for this run. CFG will later hand a menu-built config here; for
+	# now we stage the all-off default, which keeps the loop at the M1.0 baseline.
+	# Backward-compatible: if staging fails to load, start_run falls back to its own
+	# all-off default, so behaviour is identical either way.
+	GameState.stage_run_config(load(RUN_CONFIG_PATH) as RunConfig)
 	GameState.start_run(BAND_ID, seed)
 	GameState.enter_band(BAND_ID)
 
