@@ -15,6 +15,9 @@ const RUN_RULES_PATH := "res://data/economy/run_rules.tres"  # E3: pockets-drop 
 # RNG autoload mid-run — that would perturb layout/placement determinism.
 const POCKETS_RNG_SALT := 0x50434B54  # "PCKT"
 const JUNK_CATALOG_PATH := "res://data/junk/junk_catalog.tres"  # E1: rehydrate banked_junk ids on load
+# M1.1 R0: the all-off default run config. Used when a run starts without an
+# explicit config so an unconfigured run reproduces the M1.0 baseline exactly.
+const DEFAULT_RUN_CONFIG_PATH := "res://data/run_config/run_config.tres"
 # E1 #8: one gate per band at a fixed hand-authored offset from spawn, kept as a
 # single tunable constant (no seeded placement in M1). A band/test scene reads
 # this so the extract-vs-push distance is identical every run.
@@ -39,6 +42,16 @@ var current_band: StringName = &""
 var current_depth: int = 0
 var unbanked_value: int = 0    # value carried but not yet banked at a gate
 var run_inventory: RunInventory      # D1: the carried-junk slot bag; fresh each run, never banked
+# M1.1 R0: the active run's opposition/cost-axis configuration. Run-scoped (NOT
+# meta — never persisted). Populated at start_run (from a config the caller staged
+# via stage_run_config(), else the all-off default that reproduces M1.0 exactly).
+# Read-only to other systems: they read GameState.active_run_config, never mutate it.
+# Reset to null on run end (cleared with the rest of run-state).
+var active_run_config: RunConfig
+# M1.1 R0: a config staged by MainGame/CFG BEFORE start_run; consumed (and cleared)
+# at start_run. Lets the run-start API stay locked (start_run(band_id, seed)) while
+# still letting the Config menu feed the run. null → start_run uses the all-off default.
+var _staged_run_config: RunConfig
 # E3 #122: single "run is ending" idempotency guard. extract_and_end_run() and
 # fail_run() are the two outcomes of one event; the first to resolve sets this and
 # any later caller early-returns, so a same-frame extract+timeout tie can't double-
@@ -69,8 +82,30 @@ func start_run(band_id: StringName, seed: int) -> void:
 	current_depth = 0
 	unbanked_value = 0
 	run_inventory = _make_run_inventory()   # D1: fresh, empty bag sized from config
+	# M1.1 R0: bind the active run config. Prefer a config staged by MainGame/CFG;
+	# otherwise fall back to the all-off default so an unconfigured run (existing
+	# tests, the M1.0 flow) reproduces the M1.0 baseline EXACTLY. Consume the staging
+	# slot so it can't leak into a later run.
+	active_run_config = _staged_run_config if _staged_run_config != null else _default_run_config()
+	_staged_run_config = null
 	RNG.seed_from(seed)
 	EventBus.run_started.emit(band_id, seed)
+
+## M1.1 R0: the CFG/MainGame seam. Stage the config the NEXT start_run() will adopt.
+## Keeps the locked start_run(band_id, seed) signature intact. A null arg (or never
+## calling this) means the next run uses the all-off default = M1.0 baseline.
+func stage_run_config(config: RunConfig) -> void:
+	_staged_run_config = config
+
+## M1.1 R0: load the all-off default config (M1.0 control). Falls back to a fresh
+## all-off RunConfig.new() if the .tres is missing, so a run is never left without
+## a config — and that fallback is, by definition, all-off too.
+func _default_run_config() -> RunConfig:
+	var cfg: RunConfig = load(DEFAULT_RUN_CONFIG_PATH) as RunConfig
+	if cfg == null:
+		push_warning("RunConfig missing at %s; using all-off RunConfig.new()." % DEFAULT_RUN_CONFIG_PATH)
+		cfg = RunConfig.new()
+	return cfg
 
 ## D1: construct a fresh run-state bag, reading max_slots once from the authored
 ## InventoryConfig. The capacity *value* is config-derived; the live bag stays
@@ -164,6 +199,9 @@ func end_run(reason: StringName, duration_s: float) -> void:
 	run_active = false
 	if run_inventory != null:        # D1: wipe the bag so it never survives into the next run
 		run_inventory.clear_run()
+	# M1.1 R0: the active config is run-state — clear it on run end. The next run
+	# re-binds it in start_run (staged config, else the all-off default).
+	active_run_config = null
 	EventBus.run_ended.emit(reason, duration_s, current_depth)
 
 # --- Ledger ------------------------------------------------------------------
