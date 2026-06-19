@@ -147,3 +147,23 @@ the in-build consent prompt), **15 Reviewed**. All reapplied to `M1_As_Built.md`
 scope line bumped to wave 5) and **Playbook 07** (`events.jsonl`→`run_log.jsonl`, GdUnit4 runner note). Two
 optional backlog follow-ups noted (GdUnit4 `test_jsonl_writer`; static `EconomyMath` helper). `DESIGN_DEVIATIONS.md`
 is now empty. **All M1 build work is complete (A–G + G6); only G4 — the human fun-gate playtest — remains.**
+
+---
+
+## M1.1 (Greybox Cost Axis) Wave 1 — Director-evaluated 2026-06-19
+
+All six wave-1 task agents (R0, BUG1, BUG2, TEL, BUG3, CFG) reported **"none"** against their ratified specs —
+the implementations matched the designs. The two entries below are **orchestrator-level departures from the M1.1
+plan docs** (the breakdown's wave structure and TEL's signal-ownership decision), assembled by Claude and
+dispositioned by the Director.
+
+| # | Deviation | Verdict | Reapplied to |
+|---|---|---|---|
+| W1.1-1 | Orchestrator pre-declared `depth_changed` on `main` (`2450cde`) before TEL ran, instead of TEL declaring it (TEL spec §8 Decision 3) — BUG1+BUG2 emit it and landed first, so it had to exist to compile. One declaration, one `event_bus.gd` author, no collision; TEL skipped re-declaring (verified `grep -c` == 1). | **Reviewed** | `TEL_telemetry_config_marking.md` §4 "Ownership of `depth_changed`" — added an as-built note + the standing convention: the orchestrator owns pre-declaring shared *foundation* signals when an emitter must land before the nominal declaring task. |
+| W1.1-2 | `M1.1_Breakdown.md` §6 claimed CFG/TEL/BUG3 were file-disjoint (3 parallel worktrees), but CFG and BUG3 both edit `scenes/game/main_game.gd` (CFG's `start_new_run` stage seam; BUG3's `_materialise_band` seal call). Orchestrator ran **TEL ∥ BUG3, then CFG** sequentially — all green. | **Addressed** (doc-only) | `M1.1_Breakdown.md` §6 wave-1 bullet corrected: CFG also edits `main_game.gd:start_new_run`; the single-writer-per-`.gd`-file rule (already enforced for `event_bus.gd`) extends to `main_game.gd`. No code change — execution was correct. |
+
+**Wave 1 close-out complete (2026-06-19).** 2 deviations dispositioned: **1 Addressed** (W1.1-2, breakdown §6 doc
+fix), **1 Reviewed** (W1.1-1). Both reapplied as noted. `DESIGN_DEVIATIONS.md` is now empty (between waves).
+**M1.1 Wave 1 (Foundations) is complete** — R0 + BUG1 + BUG2 + TEL + BUG3 + CFG on `main`; the `RunConfig` model,
+pre-run Config menu, config-marked telemetry + 11 pre-declared opposition signals, real `duration_s` + within-band
+depth, and a sealed band are all in place. **Next: Wave 2 — the four oppositions (R1–R4) in parallel worktrees.**

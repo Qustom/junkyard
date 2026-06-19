@@ -123,6 +123,8 @@ signal exposure_meter_changed(value: float, maximum: float)  # greybox HUD expos
 ```
 
 ### Ownership of `depth_changed` — RATIFIED: TEL declares, BUG2 emits
+> **As-built correction (2026-06-19, deviation W1.1-1 Reviewed):** in execution the **orchestrator** pre-declared `depth_changed` on `main` (commit `2450cde`) **before** TEL ran, because the combined BUG1+BUG2 `game_state.gd` pass (which emits it) was sequenced ahead of TEL and needed the signal to compile (BUG2 §3: "the declaration must exist on `main` before any emitter ships"). The decision's *intent* is preserved exactly — one declaration of the line, one author of `event_bus.gd`'s `depth_changed`, zero parallel collision; TEL added only the other 11 opposition/penalty signals and did **not** re-declare it. **Convention going forward:** the orchestrator owns pre-declaring shared *foundation* signals on `main` when an emitter must land before the nominal declaring task; the declaring task then skips that one line. (Functionally identical to the decision below; only the declaring actor moved.)
+
 **Decision (Director-ratified 2026-06-19):** `depth_changed(depth_index, max_depth)` is **declared by TEL** in its single wave-1 `event_bus.gd` pass and **emitted by BUG2** from `game_state.gd`. This makes `event_bus.gd` have **exactly one author** across all of M1.1 — no sequencing constraint between the BUG1+BUG2 `game_state.gd` pass and TEL's `event_bus.gd` pass, and zero collision with the wave-2 fan-out. BUG1/BUG2 still own their `game_state.gd` changes; they only *emit* the already-declared signal. (Confirms BUG2 spec §3 / Open question #3 and R3 spec's subscribe contract.)
 
 ### Pre-declared-signal table — exact signatures + which task emits each
