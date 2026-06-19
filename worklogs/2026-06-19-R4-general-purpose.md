@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.1 (Wave 2 — the four oppositions)
 - **Branch:** general-purpose/R4
-- **Commit:** 9f99ac66ac9b6bcc7da836aadd2f770e73b6683a
+- **Commit:** b810aa08c858bd20f9ae9036547a2ddb56f7c24e (all R4 code + this worklog)
 
 ## What changed
 
