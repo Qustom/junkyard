@@ -237,3 +237,59 @@ This is a **small UX call**, so it is **flagged for the Director** (Q1 below) wi
 - `tests/test_decision_hud.gd`: depth assertion rewritten to drive `set_current_depth()` / `depth_changed` and assert the readout tracks room depth (with a band-entry regression guard); docstring + success print updated.
 - Smoke test green; `godot --headless --script res://tests/test_decision_hud.gd` passes; the all-off control run is byte-identical behaviourally (the readout is display-only, emits nothing — determinism fp untouched).
 - One worklog per the work-product contract, naming the commit SHA, with a Design deviations section (record any Q resolved differently from the recommendation here).
+
+---
+
+## Resolved Decisions (Phase 3 — fresh-eyes, 2026-06-19)
+
+Fresh-eyes reviewer (NOT the Phase-2 author). Every cited file/API was re-read against `main`. **The doc is technically accurate and build-ready.** Corrections are minor (line-number drift only); the design holds.
+
+### Verification — corrections to the doc's citations
+
+All claims confirmed against source; a few cited line numbers drifted (the *facts* are correct, only the `:NN` anchors moved). Builder should grep by symbol, not line number.
+
+| Doc citation | Reality on `main` | Verdict |
+|---|---|---|
+| `_refresh_depth()` "(`decision_hud.gd:150-151`)" reads `GameState.current_depth` | **Confirmed** — `decision_hud.gd:150-151`, exactly as quoted: `_depth_label.text = tr("HUD_DEPTH").format({"depth": GameState.current_depth})` | ✅ exact |
+| Stale header comment "(no depth_changed signal exists in M1)" at `:12-13` | **Confirmed** at `:12-13` (`## - Depth ← GameState.current_depth, refreshed on run_inventory_changed / band_entered (no depth_changed signal exists in M1).`) | ✅ exact |
+| Inline stale comment at `:120-121` | **Confirmed** — `:120-121` inside `_on_run_inventory_changed`, "…stays in sync without a dedicated depth_changed signal." Both stale comments exist as described. | ✅ exact |
+| Depth subscriptions: `run_inventory_changed` `:122-123`, `band_entered` `:134-135`, run boundaries `:138-141` | **Confirmed** — `_on_run_inventory_changed` calls `_refresh_depth()` at `:123`; `_on_band_entered` at `:135`; `_on_run_boundary` at `:141`. `depth_changed` is **not** connected (verified `_ready()` `:88-102` — only `run_inventory_changed`, `dive_clock_changed`, `band_entered`, `run_started`, `run_ended`, `return_cost_incurred`, `exposure_penalty`). | ✅ exact |
+| `current_depth` (`game_state.gd:42`), band counter, `enter_band` `current_depth += 1`, reset in `start_run`, set 0 on extract | **Confirmed** — field `:42`; `enter_band()` at `:145-148`, `current_depth += 1` at `:147`; `start_run` resets `:92`; extract sets `current_depth = 0` at `:210`. | ✅ exact |
+| `current_depth_index` (`:50`), `max_depth_reached` (`:51`), `set_current_depth(idx, dist_home)` (`:225`), `maxi` (`:230`), emits `depth_changed` (`:233`), edge-trigger early-return (`:227-228`) | **Confirmed** — fields `:50`/`:51`; `set_current_depth` `:225-233`; `current_dist_to_gate = dist_home` always (`:226`); `if idx == current_depth_index: return` (`:227-228`); `max_depth_reached = maxi(...)` (`:230`); `EventBus.depth_changed.emit(current_depth_index, max_depth_reached)` (`:233`). | ✅ exact |
+| `event_bus.gd` `signal depth_changed(depth_index: int, max_depth: int)` "(`:81`)" | **Confirmed** — `event_bus.gd:81`, signature exact. Pre-declared by orchestrator, emitted only by `set_current_depth`. | ✅ exact |
+| `hud_strings.csv:3` `HUD_DEPTH,Depth {depth}` | **Confirmed** — `:3`, single `{depth}` placeholder. | ✅ exact |
+| Test assertion `:97-101` hard-codes `gs.current_depth` after `enter_band` | **Confirmed** — `:98` `gs.enter_band(&"near")`, `:100-101` asserts `depth_label.text == tr("HUD_DEPTH").format({"depth": gs.current_depth})`. Docstring `:9` says "DepthLabel tracks GameState.current_depth"; success print `:140-142` says "depth tracks current_depth". All three need updating, exactly as the doc states. | ✅ exact |
+
+**Two small build notes (not corrections — just sharpen the pseudocode):**
+
+1. **The test fetches `depth_label` via `hud.get_node("Root/DepthLabel")` (`:50`), not `%DepthLabel`.** The §2.3 rewrite uses the existing `depth_label` variable, so this is fine — just don't introduce a `%`-unique-name lookup in the test.
+2. **`max_depth_reached` and `current_depth_index` are equal at run start (both 0) and `set_current_depth(0, …)` early-returns** (same-depth no-op), so **no `depth_changed` fires at entry**. The initial `_refresh_depth()` in `_ready()` plus the `run_started` boundary paint are what produce the "Depth 0 / 0" at entry — this is exactly why §2.1(d)'s "keep `run_started`/`run_ended`" recommendation is *required*, not optional. Confirmed correct.
+
+### Scope confirmation (the guardrail header holds)
+
+**HUD-only, confirmed.** The fix touches only: `decision_hud.gd` (repoint + subscribe + comment cleanup), `hud_strings.csv` (one row, iff two-number format), `tests/test_decision_hud.gd` (assertion + docstring + print). **No game-state change, no new EventBus signal, no `.tscn` change.** `depth_changed` already exists and is already emitted on `main` — J5 only *subscribes*. The readout is display-only and emits nothing → **determinism untouched** (fp `e943ac9c8bc1` unaffected). The all-off control is behaviourally byte-identical. `dependsOn: none` is correct — the signal it needs is already live.
+
+### Open Questions — resolutions
+
+- **Q1 — Readout format (one number vs two vs deepest-only): RESOLVED-ON-MERIT for the *technical* contract; the *which-format* pick is a small Director UX call (flagged).**
+  - *Technical resolution:* all three forms (a/b/c) are equally correct and cheap. The pseudocode already provides all three paths and the test snippet flips trivially. The two-number form is the only one that needs a CSV edit (`Depth {depth} / {max}`); single-number forms reuse the existing key. There is **no technical reason to prefer one** — they are all pure projections of already-live fields. So the engineering is settled; only the UX preference remains.
+  - *Recommendation to Director:* **(b) `Depth {depth} / {max}`** (the author's recommendation, and I concur). Rationale that survives fresh-eyes scrutiny: the second number is the **gate metric** (`max_depth_reached` == `run_ended.depth_reached`), so the player sees their actual run "score" live, and it pairs with "Holding: N" as the two-axis push-vs-extract signal the DecisionHUD exists for. The "redundant in M1 because descent is monotonic" objection is real but harmless — both numbers are correct, and R4 branching (already in-build) makes them diverge. **One caveat I'd raise:** if the Director leans minimal, **(a) `current_depth_index` only** is genuinely cleaner *for M1.3 specifically* (the divergence (b) hedges against isn't reachable in the all-off control and most M1.3 configs), and avoids a player wondering "why two numbers that are always equal?" So: **(b) recommended, (a) is the strong minimal fallback.** **→ needs Director review (UX call).**
+
+- **Q2 — Deepest-reached vs current room (the substantive sub-question of Q1): RESOLVED-ON-MERIT, contingent.** If Q1 = (b) two numbers, this is moot (both shown). If the Director collapses to one number, the merit answer is **current room (`current_depth_index`)** — it is the live navigational cue the player acts on, and the end-of-run screen already reports `max` (`run_ended.depth_reached`), so the HUD doesn't need to duplicate the score mid-run. Concur with the author. No separate Director call beyond Q1.
+
+- **Q3 — Wording noun ("Depth" vs "Floor"/"Level"/unit-suffix): RESOLVED-ON-MERIT to "Depth"; a thematic re-word is a small Director call (flagged, low priority).**
+  - *Resolution:* **Keep "Depth."** It is the word the entire design language uses — `depth_index`, `max_depth_reached`, `r1_depth_threshold`, `r3_rate_per_depth`, `run_ended.depth_reached`. Aligning the only in-dive number the player sees with the design's own vocabulary is the whole point of F4. Changing the noun would *re-introduce* a vocabulary split (a different one). So Phase 3 closes this as **"keep Depth"** on merit.
+  - *Director flag (optional, low priority):* if the Director wants a more thematic/diegetic word ("the player doesn't read the GDD"), that's a pure tone call — but it is **not blocking** and the recommendation is to keep "Depth." **→ Director review only if a thematic word is desired; otherwise closed.**
+
+- **Q4 — Keep the band counter shown anywhere: RESOLVED-ON-MERIT — drop it from the HUD (option (a)).** In M1 the band counter is pinned at 1 and carries zero player-facing information; it is the *source* of the bug. The `GameState.current_depth` **field stays** (still used in end-path prints `:349`/`:206` and is the future multi-band counter) — only the HUD stops *displaying* it. A "Band N · Depth M" readout is an M2+ multi-band task, not J5. Concur with the author. No Director call.
+
+- **Q5 — Pre/post-run paint: RESOLVED-ON-MERIT.** Show **"Depth 0" (or "Depth 0 / 0") at run start** — entry is genuinely depth 0, and the `run_started` boundary paint covers it since `depth_changed` won't fire at entry (verified: `set_current_depth(0,…)` early-returns). **Leave the last value on the end screen** until the next `start_run` resets it. Hide-on-no-run is a polish call deferred to the human visual pass. Concur with the author. No Director call. *(Edge note: before the very first run, `current_depth_index`/`max_depth_reached` default to 0, so the `_ready()` initial paint shows "Depth 0 / 0" — acceptable; the human visual pass may choose to hide the label pre-run.)*
+
+### Summary for the Director
+
+Two small UX calls need a verdict; everything else is resolved on merit:
+
+1. **Q1 — readout format.** Recommendation: **(b) `Depth {depth} / {max}`** (live room depth / deepest reached = the gate metric). Strong minimal fallback: **(a) current depth only** (no CSV change, avoids "two equal numbers" in M1). Both are pure projections; flip is one CSV row + one test line.
+2. **Q3 — wording noun.** Recommendation: **keep "Depth"** (matches the design's vocabulary, which is F4's whole intent). Only a flag if the Director wants a thematic word; not blocking.
+
+Q2/Q4/Q5 resolved on merit (current-room if forced to one number; drop the band counter from the HUD but keep the field; "Depth 0" at run start, last-value-on-end-screen). Scope confirmed HUD-only, no new signal, determinism untouched, test-assertion fix correctly identified. **Design LOCKED pending the two Director UX verdicts above.**

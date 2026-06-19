@@ -249,3 +249,56 @@ DLV1 is **Done** when:
 - The single highest-value thing a fresh-eyes reviewer can do is **pressure-test Q3** — confirm (or refute) that Godot 4.6 web `user://` is IndexedDB-only and that there is no simpler retrieval than a `JavaScriptBridge` download button or the desktop fallback. If a fresh build agent finds a clean export path, it changes the recommendation.
 - Everything in §2 is **described, not done**. No file in the repo was modified by this design doc. The build phase (post-lock) installs butler/templates, adds the `Web` preset, writes `tools/push_itch.sh`, and edits `nightly.yml`/`SETUP.md`.
 - The **secret discipline** is non-negotiable: `APIKEYS.md` stays gitignored, the push script never echoes the key, CI uses the repo secret. The itch key value was **not** read or printed in authoring this doc (only the section's existence was confirmed).
+
+---
+
+## Resolved Decisions (Phase 3 — fresh-eyes, 2026-06-19)
+
+A fresh-eyes reviewer (not the author) verified every cited file/fact against real source and sanity-checked the web-export claims against current docs. **No godot/git/butler/install ran**; `APIKEYS.md`'s value was never read or printed.
+
+### Verification — citations confirmed accurate
+
+- **`nightly.yml`** — confirmed: a two-job pipeline; the `export-and-publish` job installs templates from the `Godot_v${GODOT_VERSION}_export_templates.tpz` and normalizes the dir via `${GODOT_VERSION//-/.}` → `4.6.3.stable` (lines 130–135 — the doc's "line 132" is one line off but the mechanism is exactly as described); stamps via `bash tools/stamp_build.sh` (line 147); exports `--export-release "Win64" build/win/TheFarYard.exe` (lines 155–159); installs butler from `https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default` to `/tmp/butler` (lines 164–167); pushes `butler push build/win "${ITCH_TARGET}" --userversion "${USER_VERSION}"` with `USER_VERSION=m1-$(date -u +%Y%m%d)-$SHA` (lines 174–175); is human-gated by a `BUTLER_API_KEY`-present guard (lines 100–109); the placeholder slug is `studio/the-far-yard:win-nightly` (line 28) and the header (lines 10–18) demands a human provision the secret + project + one manual push. All accurate.
+- **`export_presets.cfg`** — confirmed: one preset `Win64`, `platform="Windows Desktop"`, `export_path="build/win/TheFarYard.exe"`, `script_export_mode=2`, `exclude_filter="design/*, worklogs/*, tools/playtest/*, tests/*, *.md"`. Its header note (lines 6–7) says add a Linux/HTML5 preset later only if remote/external testers enter the picture. Accurate.
+- **`tools/stamp_build.sh`** — confirmed: resolves repo root from `$BASH_SOURCE`, marks an uncommitted tree `+dirty`, writes the git-ignored `systems/build_info_gen.gd`. Reusable verbatim. Accurate.
+- **`tools/playtest/tester_readme.md`** — confirmed the desktop telemetry-return flow: §"Where the files live" → Windows `%APPDATA%\Godot\app_userdata\THE FAR YARD\`; §"How to send your results back" → zip `telemetry/run_log.jsonl` + `logs/`. Accurate.
+- **`systems/telemetry/telemetry_schema.gd:21`** — confirmed `const LOG_PATH: String = "user://telemetry/run_log.jsonl"`. Accurate.
+- **butler + templates absent** — confirmed: `which butler` → not found; `~/.local/share/godot/export_templates/` exists but is **empty** (no version subdir, no Windows or web templates). The "local export fails fast today" claim holds.
+- **`.gitignore`** — confirmed excludes `APIKEYS.md` (line 2) and `/build/` (line 11).
+- **Web-export facts (web-checked)** — confirmed: the `.tpz` bundles all platform templates (web included); a Godot 4 *threaded* web build needs `SharedArrayBuffer` → cross-origin isolation (COOP `same-origin` + COEP `require-corp`); itch has an experimental "SharedArrayBuffer support" embed toggle; `user://` on web maps to **IndexedDB** (per-origin, broken by incognito / cleared cookies / no-cookies). `OS.is_userfs_persistent()` exists but can false-positive. All accurate.
+
+**One correction folded in (see Q4):** the doc under-states a browser-compat limitation — itch's SAB toggle serves COEP via Chrome's **`credentialless`** scheme, which **Firefox (and Firefox-for-Android) does not implement**. Consequence: a *threaded* web build on itch runs reliably **only in Chromium browsers (Chrome/Edge)**. This is now part of Q4's resolution.
+
+### Resolved on merit
+
+- **Q1 (web only vs web + Windows) — RESOLVED: ship both (option b), entangled with Q3 below.** The author's recommendation is sound and the marginal cost is genuinely small (the same `.tpz` installs both templates; CI just adds one extra export+push step). Keeping the Windows build preserves the byte-for-byte-proven M1.0–M1.2 telemetry flow while web gives the Director the browser feel-read. **This resolution is contingent on Q3**: if the Director rules "web = feel only, desktop = data" (the recommended Q3 verdict), Q1 *must* be (b) — there is no other coherent way to keep the re-gate's data flowing. So Q1 is locked to (b) **pending** the Q3 disposition; only a Director decision to make web carry telemetry (Q3 option a) could change it, and even then (b) remains the safe transition shape.
+
+- **Q2 (channel slug `:html5` vs `:web`) — RESOLVED: `:html5`.** Both are accepted by itch and only set the platform tag on the first push. `:html5` is the conventional itch web-channel name and is unambiguous. **Lock `qusto/the-far-yard:html5`** everywhere (push script, RG1, `nightly.yml`). This supersedes the breakdown §7's tentative `qusto/the-far-yard:web?`.
+
+- **Q4 (SAB / header config) — RESOLVED on merit, with one manual page-action carve-out.** Decision: ship the **threaded** build (`thread_support=true`) **+** Godot's COI service worker (`ensure_cross_origin_isolation_headers=true`) **+** enable itch's "SharedArrayBuffer support" toggle on the page. Document the **thread-support-off single-threaded** export as the fallback if the toggle proves fiddly (no SAB, no headers, a perf hit that is acceptable for a greybox). **New, load-bearing caveat (from web verification):** the threaded itch path is **Chromium-only** (Firefox lacks `credentialless` COEP). Therefore the DLV1 human-checklist (Q6/Q7) and `tester_readme.md`'s web section MUST instruct the Director to **play the web build in Chrome or Edge, not Firefox**. If cross-browser play ever matters, the single-threaded fallback is the only portable option. The itch toggle itself is a manual page action (folds into Q6/Q7).
+
+- **Q5 (SETUP.md + CI reproducibility) — RESOLVED: yes.** Add the butler install + web-template install to `SETUP.md` §1 as copy-pasteable steps; keep CI self-contained (it fetches both per-run from the same URLs, so it does not depend on a developer's local install). The CI install path is already proven by `nightly.yml`. No risk.
+
+- **Q6 / Q7 (GH secret, itch project/channel creation, SAB toggle, password/HTML page mode) — RESOLVED: these stay human/Director actions; butler pushes builds, not page settings.** The producer surfaces a single human-checklist (provision `BUTLER_API_KEY` repo secret from itch Account→Settings→API Keys; create `qusto/the-far-yard` set to Restricted/Draft + project password; set Kind = HTML / playable-in-browser; enable the "SharedArrayBuffer support" toggle; confirm one manual `butler push`). Claude must not invent a key or self-create the project. These are hard prerequisites for any real publish but are assignments, not design calls. **Add to the checklist: "play in Chrome/Edge" (per Q4).**
+
+### Q3 — Director decision required (the load-bearing call) — telemetry retrieval from a browser build
+
+**Verified premise:** a web build's `user://telemetry/run_log.jsonl` lives in the **browser's IndexedDB** for the itch origin — there is no `%APPDATA%` file to zip. IndexedDB persistence is per-origin and fragile (wiped by clearing site data, incognito, or storage-pressure eviction; needs cookies/IndexedDB allowed). The proven desktop "zip these two folders" flow in `tester_readme.md` **does not apply to web**, and **RG2 is 100% dependent on getting the `.jsonl` back**. Fresh-eyes found **no simpler retrieval** than the three options below — the IndexedDB-only mapping is a confirmed Godot-web platform fact, not an oversight.
+
+**Options & trade-offs:**
+
+| option | what it is | cost | risk to RG2 data |
+|---|---|---|---|
+| **(a) in-game "Export telemetry" download button** | web-only UI that reads the JSONL and triggers a browser download via `JavaScriptBridge` (Blob + anchor click) | **new game code** — outside DLV1's infra scope → a **sibling task** (UI + JS bridge + a web-platform guard); needs its own test/verify | low once built, but adds scope + a dependency in front of RG1 |
+| **(b) manual IndexedDB devtools extraction** | Director opens devtools → Application → IndexedDB → the Godot store, exports by hand | zero code | **high** — brittle, error-prone, unreasonable to ask run-to-run; easy to lose data |
+| **(c) desktop = data, web = feel** | Director plays the **web** build for the legibility/density fun-read; runs the **Windows** build for the data RG2 quantifies | **zero new code**; keeps the proven JSONL flow byte-for-byte | **lowest** — telemetry pipeline unchanged from M1.0–M1.2 |
+
+**Fresh-eyes recommendation: (c) for M1.3, with (a) as a documented fast-follow.** Rationale: M1.3's re-gate must not gain a new, untested data-retrieval dependency in the same iteration it is trying to *measure* legibility/density. (c) ships web purely as the Director's convenient browser feel-channel while the data keeps flowing through the desktop build exactly as it has for three iterations — **lowest risk to the gate, zero new code, no new failure mode in front of RG1.** Option (a) is the *right* long-term answer (it makes web self-sufficient and is the only path to a true web-only re-gate), but it is genuinely **new game code = a sibling task** (`ui-ux-designer` + `general-purpose`, web-platform-guarded, with its own verify) and should be queued as a fast-follow *after* M1.3's gate, not blocking it.
+
+**What the Director must rule (this determines DLV1's true scope):**
+1. **Does web carry the re-gate's telemetry, or only the feel-read?**
+   - **"feel only" (recommended)** → DLV1 stays **infra-only**; Q1 = ship both (b); `tester_readme.md` gets a web section that says *"play web for feel in Chrome/Edge; run the Windows build for the data we analyze."* **No sibling task this milestone.**
+   - **"web must carry data"** → DLV1 grows a **sibling task**: the in-game Export-telemetry download button (option a), which becomes a `blockedBy` for any web-only re-gate. RG1 cannot rely on web data until that ships and is verified.
+2. **Confirm Chromium-only play is acceptable** for the threaded web build (Q4) — i.e. the Director will use Chrome/Edge.
+
+Until the Director rules, the **safe default baked into the plan is (c)**: desktop remains the telemetry vehicle, web is feel-only, DLV1 is infra-only.

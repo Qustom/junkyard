@@ -330,4 +330,155 @@ the M1.1 way (owner declares, others subscribe). Flag for Phase 3; the recommend
 - No `run_ended` arity change, no telemetry schema bump, no new EventBus signal (unless Phase 3 chooses the runtime
   path, then pre-declared on `main` first). All-off determinism fingerprint `e943ac9c8bc1` unchanged.
 - Single worklog at `worklogs/<date>-BUG6-*.md` naming the commit(s), tests run, and any deviation.
+
+---
+
+## Resolved Decisions (Phase 3 — fresh-eyes, 2026-06-19)
+
+Reviewer: a fresh-eyes agent (NOT the Phase-2 author). Every cited file/API was re-read against the real source on
+`main`. The verification is **green with two precision corrections** (the `r4_no_vision` trap condition and the
+non-CFG launch fallback). All five Open Questions are resolved on merit; **one item (Q2 trap policy) is flagged for
+Director review** with a recommendation. The Wave-1 J1/BUG6 ownership split is resolved.
+
+### Verification — what was confirmed against source
+
+| Claim (doc) | Source checked | Verdict |
+|---|---|---|
+| `hazard_caught` emits **per physics frame**, one line **before** `fail_run(&"death")` | `hazard_entity.gd:171` (emit) → `:172-173` (fatal branch) | ✅ exact. Emit is unconditional at the top of `_on_catch()`; `fail_run` is one line below. |
+| Fatal path **never sets** `_catch_cooldown`, so the catch test re-passes every frame | `_apply_nonfatal_catch():192` is the **only** writer of `_catch_cooldown`; the fatal branch (`:172-173`) does not touch it | ✅ exact. The `_catch_cooldown <= 0.0` guard at `:139` is always true on the fatal path. |
+| No `_caught_latched` exists today | full read of `hazard_entity.gd` | ✅ confirmed — the latch is net-new. |
+| GameState `_run_ended` guard covers **run-end**, not the emit | `game_state.gd:323-326` (`fail_run` early-returns on `_run_ended`); the guard lives in GameState, unreachable from `HazardEntity` | ✅ exact. Confirms §3.2's rejection of "lean on the run-end guard." |
+| Telemetry logs one row per signal, **per-event `_writer.flush()`** | `telemetry.gd:191-196` | ✅ exact. The storm is 2,199 fsync-class writes/run — fixing at the emit is the only place that removes the I/O cost. |
+| **Trap R3** — `r3_threshold_levels=[]` → `while`-loop 0 iterations | `exposure_meter.gd:131-136` (`while _levels_crossed < levels.size() …`) | ✅ exact. Empty `PackedFloat32Array` default at `run_config.gd:96`. |
+| **Trap R4-lost** — `r4_lost_proxy_threshold=0.0` → `set_process(false)` | `lost_proxy.gd:40` (`_active = … and _rc.r4_lost_proxy_threshold > 0.0`) → `set_process(_active):41` | ✅ exact. Default `0.0` at `run_config.gd:125`. |
+| **Trap R4-fog** (the third, author-found) — `r4_vision_radius=0.0` → self-disable | `vision_fog.gd:138` (`_active = … and _rc.r4_vision_radius > 0.0`) → `visible/set_process(_active):139-140` | ✅ self-disable confirmed — **but see Correction 1: the gate keys off `r4_vision_radius` alone, NOT `r4_fog_enabled`.** |
+| `r1_catch_radius` floor = player_r 14 + hazard_r 10 = **24 px** | `run_config.gd:51-54` comment, verbatim: "FLOOR: must be >= player_r + hazard_r (= 14 + 10 = 24 px …) or the bodies physically collide before the script distance test can ever trip (re-creates M1.1's caught=0)" | ✅ exact — the 24 px claim and the "re-creates the caught=0 bug" mechanism are both in-source. |
+| `inert_enabled_oppositions()` does not exist; `to_flat_dict()` + `_active_run_config_dict()` do | `run_config.gd:189` (`to_flat_dict`); `telemetry.gd:287-290` (`_active_run_config_dict` → `to_flat_dict`); `run_started` data carries `run_config` at `:130-135` | ✅ exact — the additive flag rides the existing snapshot call site. |
+| All four cited test files exist | `tests/test_pursuing_hazard.gd`, `test_run_config.gd`, `test_config_menu.gd`, `test_telemetry_config_marking.gd` | ✅ all present. |
+| All-off fingerprint `e943ac9c8bc1` | `STATUS.md:16,42,52`, `TASKS.md:32,37` | ✅ confirmed as the live baseline control. |
+
+**Correction 1 (trap R4-fog condition — must be loosened).** The doc's `r4_no_vision` trap condition (§4.1 table) is
+`r4_enabled and r4_fog_enabled and r4_vision_radius <= 0.0`. The **real** self-disable gate at `vision_fog.gd:138` is
+`r4_enabled and r4_vision_radius > 0.0` — **`r4_fog_enabled` is NOT part of it.** `r4_fog_enabled` is a *separate*
+knob that gates only the fog-memory/occlusion behaviour (`vision_fog.gd:216`, inside the already-active overlay). So a
+run with `r4_enabled=true, r4_vision_radius=0.0` has the **entire vision overlay inert** regardless of `r4_fog_enabled`
+— which is exactly the M1.2 symptom ("fog on only 3/30; the rest had `r4_vision_radius=0.0` and were inert").
+**Resolution: the trap key is `r4_enabled and r4_vision_radius <= 0.0`** (drop the `r4_fog_enabled` conjunct).
+Including `r4_fog_enabled` would *miss* the trap on a run that has `r4_enabled=true, r4_vision_radius=0.0,
+r4_fog_enabled=false` — i.e. it would fail to warn on the most common M1.2 dead-R4-vision case. The builder must use
+the looser condition. (Rename for clarity is optional: `r4_no_vision` still reads fine.)
+
+**Correction 2 (launch path is CFG-mediated but has a `.tres` fallback — affects Q3).** `main_game.gd:178` is
+`var run_cfg: RunConfig = _config_menu.apply_and_get_config() if _config_menu != null else (load(RUN_CONFIG_PATH) as
+RunConfig)`. So the run reads the CFG rail **when present**, else loads `run_config.tres` directly. The CFG warning
+(a) only fires on the CFG path; the non-CFG fallback would *not* show it. This does **not** change the recommendation
+(the telemetry flag (b) reads the active config regardless of source, so the fallback is still self-identifying in the
+log), but it means **(a) alone is not a complete backstop — (b) is load-bearing for the fallback path.** Confirms the
+doc's "ship both (a)+(b)" call for a reason the doc didn't state. (In practice `_config_menu` is always wired, so the
+fallback is a safety branch, not the live playtest path — Q3's "always CFG-mediated" is *operationally* true.)
+
+Everything else in the doc verified clean — no other corrections.
+
+### Resolved Open Questions
+
+**Q1 — Debounce mechanism (latch vs cooldown-unification vs lean-on-run-end-guard). RESOLVED: the rising/falling-edge
+`_caught_latched` latch (§3.1), re-armed on leaving radius.** Verified on merit:
+- *Lean-on-run-end-guard is correctly rejected.* The guard is in `GameState.fail_run` (`:323-326`), invisible to
+  `HazardEntity`, and only fires on the **fatal** path — the **non-fatal** path never ends the run, so its storm would
+  survive entirely. The author's three rejection reasons (§3.2) all check out against source.
+- *Cooldown-unification (reuse `_catch_cooldown` for the emit) is inferior.* The fatal path never sets the cooldown, so
+  unifying would require the fatal branch to also set it — a behaviour change to the kill path, and it would still
+  re-emit once per cooldown window during a long overlap (≈1/sec, not 1). The latch is the only mechanism that yields
+  **exactly one** emit per episode on both paths with no kill-path change.
+- The latch is hazard-local, touches no contract, no schema, no EventBus — the minimal correct fix. **Adopt §3.1
+  verbatim**, including the `setup()` reset (`_caught_latched = false` alongside the existing `:81` resets).
+
+**Q1/Q3 (re-arm semantics) — RESOLVED: re-arm on "player left radius" (falling edge), NOT "cooldown expired."** A
+sustained pin against a wall is **one** catch for the analyst, not many — that is the whole point of killing the storm,
+and "left radius" is the canonical "distinct catch" boundary. The rising-edge condition is the conjunction the doc
+specifies: `in_range and not _caught_latched and _catch_cooldown <= 0.0`. Keep `_catch_cooldown` for the
+knockback/stun *gameplay* timing on the non-fatal path; the latch governs the *emit*. This is a technical call (the
+only soft edge — "is a sustained pin one catch or many?" — is resolved here as **one**, with a deliberate, defensible
+rationale; no Director review needed).
+
+**Q2 — Config-trap POLICY (warn-only vs block Start). FLAGGED FOR DIRECTOR. Recommendation: warn-only (a)+(b), do NOT
+block Start.** This is a genuine UX/scope call (it changes what experiment cells the Director can run), so per the
+orchestrator loop it is the human's, not the resolver's. The evidence and recommendation:
+- **For warn-only:** a "climb-only R3 cell" (`r3_enabled=true, r3_threshold_levels=[]`) or a "branching-only R4 cell"
+  (`r4_enabled=true, r4_lost_proxy_threshold=0.0`) is a *legitimate single-axis experiment* — the Director may want the
+  meter to climb without crossings, or branching without the lost cue, to isolate one sub-mechanism. **Blocking Start
+  would forbid these valid cells.** The telemetry flag (b) means a *genuinely* dead run is still caught after the fact
+  by the RG2 filter, so warn-only loses no analytical safety.
+- **Against warn-only (for block):** the M1.2 re-gate was invalidated *precisely because* two enabled oppositions ran
+  dead unnoticed — a hard block guarantees that can never recur. But this trades the gate-safety for sweep freedom, and
+  the warn-line + telemetry flag already make a dead run impossible to miss *and* impossible to mis-analyse.
+- **Resolver's recommendation: warn-only.** Preserve the single-axis experiment cells; the warn-line catches it live
+  and the telemetry flag catches it in analysis. If the Director values gate-safety over sweep freedom, a middle path
+  exists: **warn-only by default + an optional "block on trap" Director toggle** in CFG (off by default) — but that is
+  extra scope; recommend deferring it unless the Director asks. **Surface to Director; do not self-disposition.**
+
+**Q3 — Where the warning lives (CFG vs runtime vs telemetry-only). RESOLVED: CFG (a) + telemetry (b), no runtime
+signal.** The launch path is CFG-mediated in practice (`config_menu.apply_and_get_config()` → `main_game.start_new_run`,
+`main_game.gd:178`), with a `.tres` fallback (Correction 2) that the telemetry flag (b) covers. A runtime warning would
+need a pre-declared EventBus signal (§4.2c) for no operational gain — the playtest always launches via the CFG rail.
+**No new EventBus signal.** (Note for the builder: the breakdown §6 also asks whether J4's corridor telemetry wants a
+signal — that is J4's call, unrelated to BUG6; BUG6 declares none.)
+
+**Q4 — Trap scope (three known, or generalise to R1). RESOLVED: add the two R1 traps. Final trap set = FIVE.** The
+author's recommendation is correct and the 24 px claim is verified in-source (`run_config.gd:51-54`). The
+`r1_catch_radius` floor is the *most* dangerous trap because it silently re-creates the original M1.1 "never catches"
+defect — the bodies physically collide before the script distance test can trip. Final `inert_enabled_oppositions()`
+trap set (with the Correction-1 fix applied to R4-fog):
+
+| id | condition | source of the gate |
+|---|---|---|
+| `r3_no_thresholds` | `r3_enabled and r3_threshold_levels.is_empty()` | `exposure_meter.gd:131-136` |
+| `r4_no_lost_proxy` | `r4_enabled and r4_lost_proxy_threshold <= 0.0` | `lost_proxy.gd:40` |
+| `r4_no_vision` | `r4_enabled and r4_vision_radius <= 0.0` | `vision_fog.gd:138` (**no `r4_fog_enabled` conjunct** — Correction 1) |
+| `r1_no_spawn` | `r1_enabled and r1_spawn_count <= 0` | hazard never instantiated; spec note `run_config.gd:64` |
+| `r1_catch_radius_too_small` | `r1_enabled and r1_spawn_count > 0 and r1_catch_radius < 24.0` | `run_config.gd:51-54` floor (player_r 14 + hazard_r 10) |
+
+Notes for the builder: (i) gate `r1_catch_radius_too_small` on `r1_spawn_count > 0` so it does not double-warn with
+`r1_no_spawn` on a 0-spawn R1 config (one trap per root cause is cleaner for the warn-line and the analyst). (ii) The
+24 px floor is a **constant** mirrored from the I2 body radii; hard-code `24.0` with a comment citing
+`run_config.gd:51-54` rather than introducing a new knob (BUG6 adds **no** `@export` field, so the CFG 36-knob count and
+`has_full_coverage()` are untouched — keep it that way, per J1's `test_config_menu.gd:42` / `test_run_config.gd:105`
+count pins). (iii) `r1_catch_radius_per_depth` is additive and does not lower the *base* floor, so the floor check is on
+`r1_catch_radius` alone — correct as written.
+
+**Q5 — Wave-1 J1/BUG6 ownership split (cross-task). RESOLVED: option (iii) — the file-split.** Verified against J1's
+spec and the breakdown:
+- J1 (`J1_default_preset_and_size_range.md:5,7`) **owns** `run_config.gd`, `config_menu.gd`, and `main_game.gd` this
+  wave (preset factory + CFG size re-range + boot wiring). The breakdown §5 (`M1.3_Breakdown.md:55`) makes this an
+  explicit **single-writer** rule: "J1 owns `run_config.gd`/`config_menu.gd`/CFG this wave … do NOT let two tasks write
+  `run_config.gd` in one wave (the W1.1-2 lesson)." J1:100 already notes the preset "pairs with BUG6's config-trap
+  guard."
+- **Ownership split (final):**
+  - **BUG6 owns** (file-disjoint from J1): the `_caught_latched` latch in **`hazard_entity.gd`** (BUG6-only file), the
+    `RunConfig.inert_enabled_oppositions()` **method** (a pure additive method on `run_config.gd`), and the additive
+    `run_started.data.inert_enabled_oppositions` field in **`telemetry.gd`** (BUG6-only file, riding the existing
+    `_active_run_config_dict()` call site). Plus the latch + trap-method + telemetry unit tests.
+  - **J1 folds in** the CFG warn-line (the `_refresh_summary()` / per-section "INERT" chip in `config_menu.gd`) and the
+    `CFG_TRAP_*` `config_strings.csv` keys, **as part of its CFG edit** — J1 is already the single writer of
+    `config_menu.gd` this wave.
+- **The one residual two-writer point is `run_config.gd`** (J1 adds the preset factory; BUG6 adds
+  `inert_enabled_oppositions()`). These are **two disjoint additive methods, no shared lines** — but the breakdown's
+  single-writer rule still applies. **Resolution: sequence the `run_config.gd` method-add — BUG6 lands
+  `inert_enabled_oppositions()` first (it is tiny and gate-critical), J1 rebases its preset factory on top**; OR co-own
+  `run_config.gd` under a shared brief if the orchestrator dispatches them on one branch. Either is safe because the two
+  additions don't touch the same lines; the orchestrator picks at brief time. **Recommended: BUG6's method first, J1
+  rebases** (BUG6 is correctness, smaller, and J1's preset must *consult* the trap list per J1:100 — so BUG6's method
+  existing first lets J1 reference it).
+- **Net:** `config_menu.gd` has exactly **one** writer (J1, who folds in BUG6's warn-line). `hazard_entity.gd` and
+  `telemetry.gd` have exactly one writer (BUG6). `run_config.gd` has two disjoint additive methods, sequenced
+  BUG6-then-J1. No two-writer collision on any shared lines.
+
+### Net effect on the Definition of Done
+
+The §6 DoD stands, with these Phase-3 amendments: (1) the trap set is **five** ids, not three — add `r1_no_spawn` and
+`r1_catch_radius_too_small`; (2) the `r4_no_vision` condition drops the `r4_fog_enabled` conjunct (Correction 1); (3)
+the CFG warn-line is **J1's edit** (BUG6 owns the method + telemetry flag); (4) Q2 (warn-only vs block) is **Director-
+flagged** and must be dispositioned before the warn-line's blocking-or-not behaviour is final — the recommendation is
+warn-only. No change to the no-schema-bump / no-`run_ended`-arity-change / no-new-EventBus-signal / fp `e943ac9c8bc1`
+constraints; all confirmed compatible.
 ```
