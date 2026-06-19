@@ -1,6 +1,10 @@
-; THE FAR YARD — Godot project file.
-; M0 architecture spike (TDD §2): autoload singletons + EventBus + Resource data
-; + seeded RNG + save stub. Engine pinned to 4.6.x (see .godot-version).
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -8,20 +12,13 @@ config_version=5
 
 config/name="THE FAR YARD"
 config/description="Roguelite extraction + life-sim overworld. Design docs in design/."
-; G3: the assembled playable loop is the boot scene (spawn → dive → extract/fail →
-; sell → repeat). Before G3 the project had NO main scene — every system ran via its
-; own demo/test scene.
 run/main_scene="res://scenes/game/main_game.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
-; G3: build identity. The CI/export step overwrites this with the real
-; `git rev-parse --short HEAD`; the committed value is the dev/editor fallback.
-; BuildVersion (systems/version.gd) reads it for the m1-<date>-<sha> stamp.
 config/build_sha="852b6e2"
 
 [autoload]
 
-; Order matters: dependency-free services first, then state, then consumers.
 EventBus="*res://systems/event_bus.gd"
 RNG="*res://systems/rng.gd"
 GameState="*res://systems/game_state.gd"
@@ -31,18 +28,15 @@ Telemetry="*res://systems/telemetry/telemetry.gd"
 
 [debug]
 
-gdscript/warnings/untyped_declaration=1
-; G3 crash-capture (spec recommendation): write the engine log to user://logs so a
-; tester can send a stack trace from a real crash alongside their telemetry JSONL.
-; Default rotation; lives next to user://telemetry/run_log.jsonl. See tester_readme.
 file_logging/enable_file_logging=true
-file_logging/log_path="user://logs/godot.log"
+gdscript/warnings/untyped_declaration=1
+
+[global_group]
+
+socket=""
 
 [input]
 
-; A1 movement actions — names are locked and referenced project-wide.
-; Each action binds keyboard + controller so Input.get_vector() yields identical
-; results for both. Stick axes carry deadzone=0.2; D-pad/keys are digital.
 move_up={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":87,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
@@ -94,42 +88,26 @@ pause={
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":6,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
-; E3 debug-only failure trigger (key K). With no enemies in M1 "death" needs a
-; stand-in: this exercises fail_run(&"death") + the pockets math in tests/demos.
-; Timeout is the only PLAYER-FACING failure; debug_kill is for testing, not ship.
 debug_kill={
 "deadzone": 0.5,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":75,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 ]
 }
 
-[global_group]
+[internationalization]
 
-; B1 zone-piece sockets — tagged connection points queried by B2.
-socket=""
+locale/translations=PackedStringArray("res://ui/inventory/inventory_strings.en.translation", "res://ui/hud/hud_strings.en.translation", "res://ui/sell/sell_strings.en.translation")
 
 [layer_names]
 
-; Locked A1 collision layer map (layer = "who I am", mask = "who I detect").
-; Reference these names in every task, never raw bit numbers.
 2d_physics/layer_1="player"
 2d_physics/layer_2="world"
 2d_physics/layer_3="interactable"
 2d_physics/layer_4="enemy"
 2d_physics/layer_5="hazard"
-; B1 debug pawn — own layer so it never clashes with the locked 1-5 map.
 2d_physics/layer_6="pawn"
-
-[internationalization]
-
-; D2: inventory UI strings are externalized (playbook: "externalize all strings
-; for localization"). tr() keys resolve against this CSV-derived translation.
-; E2: decision-HUD strings live in ui/hud/hud_strings.csv (same CSV→.translation pipeline).
-; F2: sell-screen strings live in ui/sell/sell_strings.csv (same CSV→.translation pipeline).
-locale/translations=PackedStringArray("res://ui/inventory/inventory_strings.en.translation", "res://ui/hud/hud_strings.en.translation", "res://ui/sell/sell_strings.en.translation")
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
-; Pixel-art commitment (TDD §4/§5): nearest-neighbour, filtering OFF.
 textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method="gl_compatibility"

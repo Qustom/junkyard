@@ -19,179 +19,89 @@ Format:
 
 ---
 
-## M1 — Greybox Core Loop (first "is it fun?" gate)
+## M1.1 — Greybox Cost Axis (ACTIVE — iterating on the G4 ITERATE verdict)
 
-Prove the push/cash-out tension in 30 seconds of decision-making. Greybox only — placeholders, no
-real art. Full milestone breakdown, dependency map, and build order: `design/M1_Tasks/Junkyard_M1_Breakdown.md`.
+Add a depth-scaled **cost/risk axis** so push-vs-extract becomes a real gamble, then re-run the gate.
+Full breakdown, dependency map, wave order, and the configurable-knob + telemetry contracts:
+`design/M1_1_Tasks/M1.1_Breakdown.md`. All greybox; every opposition is configurable via a pre-run menu and
+config-marked in telemetry; the all-off `RunConfig` reproduces the M1.0 baseline (the permanent in-build control).
 
-### Workstream A — Player & movement
+### Wave 1 — Foundations  *(R0 first & solo → BUG1 then BUG2 sequential [both touch `game_state.gd`] → CFG / TEL / BUG3 in parallel)*
 
-### A1 — Player scene with top-down movement
-- Milestone: M1   Assignee: general-purpose (+ character-animator: greybox placeholder)   BlockedBy: none
-- Spec: design/M1_Tasks/A1_player_movement.md
-- Goal: `Player` as a `CharacterBody2D` with smooth 8-direction movement (accel/friction), a greybox sprite, driven entirely by named Input Map actions; keyboard + controller.
-- Done when: player moves smoothly in all directions on a test scene; movement reads from named input actions; controller and keyboard both work.
+### R0 — Run-config data model
+- Milestone: M1.1   Assignee: game-director-designer (schema) + general-purpose (run-start wiring)   BlockedBy: none
+- Spec: `design/M1_1_Tasks/M1.1_Breakdown.md` §R0
+- Goal: one `RunConfig` Resource holding every opposition's knobs (per-opposition `enabled` master + seed override); `GameState` holds the active config per run and exposes it read-only; all-off default reproduces M1.0 exactly.
+- Done when: a `RunConfig.tres` loads; `GameState.active_run_config` is populated at run start; all-off = M1.0 behavior; the config serializes to a flat dict for telemetry.
 
-### A2 — Interaction component
-- Milestone: M1   Assignee: general-purpose   BlockedBy: A1
-- Spec: design/M1_Tasks/A2_interaction_component.md
-- Goal: reusable area-based `Interactable` detection so the player can "use" the nearest interactable (junk, gate), surfacing a prompt; composition so it serves both pickup and the gate.
-- Done when: walking near an interactable shows a prompt; pressing `interact` fires a signal on `EventBus` naming the target.
-
-### A3 — In-dive clock (light/stamina, minimal)
-- Milestone: M1   Assignee: general-purpose (+ ui-ux-designer: meter readout)   BlockedBy: A1
-- Spec: design/M1_Tasks/A3_in_dive_clock.md
-- Goal: a single depleting in-dive resource that creates time pressure; reaching zero forces a timeout (handled in E3). Minimal — it exists only to give the push/cash-out decision a clock.
-- Done when: a visible meter depletes over a run; hitting zero raises a `timeout` event on `EventBus`.
-
-### Workstream B — Greybox band & procedural assembly
-
-### B1 — Zone-piece authoring format
-- Milestone: M1   Assignee: general-purpose (+ environment-artist: greybox tiles/pieces)   BlockedBy: none
-- Spec: design/M1_Tasks/B1_zone_piece_format.md
-- Goal: define the atomic zone-piece as a hand-authored `PackedScene` on `TileMapLayer` with tagged entry/exit sockets; author 4–6 greybox pieces with the built-in TileSet (blockout collision only).
-- Done when: 4–6 zone-piece scenes exist with consistently tagged entry/exit sockets; each loads standalone and is walkable.
-
-### B2 — Modular room-graph generator (M1 prototype)
-- Milestone: M1   Assignee: general-purpose   BlockedBy: B1
-- Spec: design/M1_Tasks/B2_room_graph_generator.md
-- Goal: instance zone-piece `PackedScene`s and stitch them via socket-adjacency matching, driven by the seeded `RNG` autoload so layouts are reproducible. Cyclic backbone / WFC seam-matching may be stubbed for M1.
-- Done when: given a seed, the generator produces a connected, walkable band; same seed → identical layout (determinism verified by test).
-
-### B3 — Band depth / "push deeper" structure
-- Milestone: M1   Assignee: general-purpose (+ game-director-designer: depth value curve)   BlockedBy: B2, C1
-- Spec: design/M1_Tasks/B3_band_depth_structure.md
-- Goal: make the band express depth so "push deeper" is a real choice — junk value/density rises with depth and distance back to the gate grows. No instability math yet (that's M3).
-- Done when: moving deeper into the band visibly increases junk reward and distance back to the gate.
-
-### Workstream C — Junk as data + pickup
-
-### C1 — Junk as Resource
-- Milestone: M1   Assignee: game-director-designer   BlockedBy: none
-- Spec: design/M1_Tasks/C1_junk_resource.md
-- Goal: define `JunkItem` as a custom `.tres` `Resource` (id, display name, slot size/containment, base sell value, greybox color/shape); author ~6–10 items spanning a value range.
-- Done when: junk items are authorable as `.tres` with no code change; a value range exists to make "what's worth carrying" a decision.
-
-### C2 — Junk pickup in the band
-- Milestone: M1   Assignee: general-purpose   BlockedBy: A2, B2, C1, D1
-- Spec: design/M1_Tasks/C2_junk_pickup.md
-- Goal: place junk pickups in the generated band (B2/B3, seeded RNG); picking up (via A2) adds to run inventory and fires a telemetry-able `EventBus` event.
-- Done when: junk visibly spawns; interacting picks it up, removes it from the world, adds it to run inventory; a pickup event fires on `EventBus`.
-
-### Workstream D — Slot inventory
-
-### D1 — Slot inventory data model
-- Milestone: M1   Assignee: general-purpose   BlockedBy: C1
-- Spec: design/M1_Tasks/D1_slot_inventory_model.md
-- Goal: data-driven slot inventory in `GameState` run-state; items occupy slots by size/containment flags; enforce capacity so the player must choose what to carry.
-- Done when: inventory accepts/rejects items by size and capacity; full inventory blocks further pickup; state lives in run-state, not meta.
-
-### D2 — Inventory UI (greybox)
-- Milestone: M1   Assignee: ui-ux-designer   BlockedBy: D1
-- Spec: design/M1_Tasks/D2_inventory_ui.md
-- Goal: a `Control`-based grid showing carried junk and remaining capacity; greybox styling, but readability matters because the player makes the keep/drop decision here.
-- Done when: the grid reflects current inventory in real time; capacity/fullness is legible at a glance.
-
-### D3 — Activate drop-to-swap re-spawn (emit `junk_dropped`)
-- Milestone: M1   Assignee: ui-ux-designer   BlockedBy: D2, C2
-- Spec: design/M1_Tasks/D2_inventory_ui.md (drop affordance) + `M1_As_Built.md` §B3↔C2 seam
-- Goal: close the wave-3 `C2/dropwiring` deviation (Director: **Addressed**) — D2's drop gesture must `EventBus.junk_dropped.emit(removed_item, drop_world_pos)` after `RunInventory.remove_at()`, so C2's already-wired `JunkSpawner` (`spawn_one` + `junk_dropped` listener) re-spawns the dropped junk in the world. A one-line emit + the world position to drop at.
-- Done when: right-clicking a cell drops that item from the bag AND a re-grabbable `JunkPickup` appears in the world at the player; verified headless (emit fires, spawner re-instantiates).
-
-### Workstream E — The gate: extraction, banking & death-drop
-
-### E1 — Gate node + extract-and-bank
-- Milestone: M1   Assignee: general-purpose   BlockedBy: A2, D1
-- Spec: design/M1_Tasks/E1_gate_extract_bank.md
-- Goal: a single gate node; interacting ends the run successfully and **banks** the run inventory (commit haul from run-state to meta-save). The "cash out" half of the core tension.
-- Done when: using the gate ends the run and transfers carried junk to the banked/meta total; a `run_end{cause: extract}` event fires.
-
-### E2 — Push/cash-out decision surface
-- Milestone: M1   Assignee: ui-ux-designer (+ general-purpose: wiring)   BlockedBy: E1, B3, D2, A3
-- Spec: design/M1_Tasks/E2_push_cashout_decision.md
-- Goal: make the push-vs-extract choice explicit and felt — show held value and the cost of pushing deeper (clock from A3, distance from B3). This is the literal thing the feedback gate measures.
-- Done when: at/near the gate the player can clearly weigh "extract now with X" vs. "push for more"; the tension is presented within a ~30-second window.
-
-### E3 — Death / timeout drops haul
-- Milestone: M1   Assignee: general-purpose   BlockedBy: E1, A3
-- Spec: design/M1_Tasks/E3_death_timeout_drop.md
-- Goal: on death or clock timeout (A3), drop the unbanked haul minus a "pockets" fraction; the player keeps a small portion, loses the rest. The downside that gives "push deeper" its weight.
-- Done when: dying or timing out ends the run, retains only the pockets fraction, discards the rest; a `run_end{cause: death|timeout}` event fires with the amount lost.
-
-### Workstream F — Placeholder sell screen (junk → Money)
-
-### F1 — Single placeholder currency: Money
-- Milestone: M1   Assignee: general-purpose (+ game-director-designer: values)   BlockedBy: E1
-- Spec: design/M1_Tasks/F1_money_ledger.md
-- Goal: add a `Money` ledger to meta-state in `GameState`; banked junk converts to Money at each item's base sell value (full three-currency system is M3).
-- Done when: banked junk increases a persistent Money total by the sum of item values.
-
-### F2 — Placeholder sell screen
-- Milestone: M1   Assignee: ui-ux-designer   BlockedBy: F1, D2
-- Spec: design/M1_Tasks/F2_sell_screen.md
-- Goal: a minimal post-extraction screen listing banked junk and converting it to Money; greybox UI; shows the payoff so the push/cash-out loop closes with a visible reward.
-- Done when: after a successful extract, the player sees their junk tallied into Money; the running total persists across runs.
-
-### Workstream G — Telemetry, playtest build & the feedback gate
-
-### G1 — Wire M1 telemetry events
-- Milestone: M1   Assignee: qa-playtest-coordinator   BlockedBy: E1, E3, C2
-- Spec: design/M1_Tasks/G1_telemetry_events.md
-- Goal: hook the `Telemetry` autoload to log M1 `EventBus` events to local JSONL — run start/end + duration + cause, junk picked up, junk banked vs. lost, band depth reached.
-- Done when: a completed run produces a structured JSONL log with run duration, end cause, depth, and haul banked/lost; the opt-in toggle is respected.
-
-### G2 — Determinism & logic tests (GdUnit4)
-- Milestone: M1   Assignee: qa-playtest-coordinator   BlockedBy: B2, D1, E1, E3, F1
-- Spec: design/M1_Tasks/G2_tests_gdunit4.md
-- Goal: GdUnit4 tests for the pure-logic pieces — proc-gen determinism, inventory capacity rules, banking math, death-drop pockets math — wired into the headless CI smoke test.
-- Done when: tests pass in CI headless; determinism and economy/inventory math are covered.
-
-### G5 — Meta save-migration fixture (v1→v2)
-- Milestone: M1   Assignee: qa-playtest-coordinator   BlockedBy: E1
-- Spec: `M1_As_Built.md` §Save schema (E1) + Technical Design save rules
-- Goal: close the wave-3 `E1/schema` deviation (Director: **Addressed**) — the meta `schema_version` bump 1→2 (added `banked_junk`) needs a QA migration fixture, per the TDD rule "a QA fixture on every schema change". Add a v1 `meta.sav` fixture and a test that loads it, runs `_migrate_meta`, and asserts `banked_junk` defaults to `[]` and existing fields survive intact (atomic write + `.bak` preserved).
-- Done when: a headless test loads a v1 meta fixture, migrates to v2, and asserts the migrated state; runs green in CI. (Can fold into G2's GdUnit4 suite once the addon is vendored.)
-
-### G3 — Greybox playtest build
-- Milestone: M1   Assignee: qa-playtest-coordinator (+ producer: build/distribution)   BlockedBy: A1, A2, A3, B1, B2, B3, C1, C2, D1, D2, E1, E2, E3, F1, F2, G1
-- Spec: design/M1_Tasks/G3_playtest_build.md
-- Goal: a runnable build (itch.io/Butler nightly) of the full loop — spawn → dive → pick up junk → decide push/extract → bank/lose → sell → repeat.
-- Done when: a fresh build runs the complete loop without blockers; multiple runs are possible in one session.
-
-### G6 — In-build telemetry consent prompt
-- Milestone: M1   Assignee: ui-ux-designer   BlockedBy: G3
-- Spec: `M1_As_Built.md` §Telemetry seam + `systems/settings/` (G1 infra) — wave-5 close-out deviation G3 #1 (Director: **Addressed** 2026-06-18)
-- Goal: close the G3 #1 deviation — the G3 build shipped no in-build consent prompt, risking empty G4 telemetry. Add a first-run modal (Enable / Not now) shown once before the player reaches gameplay in `scenes/game/main_game.tscn`, stating plainly what is logged, that there is no PII, and that it stays local until sent back (reuse `TelemetrySettingsPanel.CONSENT_COPY`). Default OFF; only write telemetry after an affirmative Enable. Persist an "asked" flag so it never re-prompts (add a `telemetry.asked` key to `settings.cfg` via `Settings`); wire the choice through `Telemetry.set_enabled()` / `Settings.set_telemetry_enabled()`. The existing settings toggle (G1) remains the way to change the choice later.
-- Done when: a fresh profile (no `settings.cfg`) shows the prompt once at launch; choosing Enable makes a subsequent run write `user://telemetry/run_log.jsonl`, choosing Not now writes nothing; the prompt does not reappear after a choice; verified headless (the asked-flag gate + that Enable→writes / Not-now→no-write); existing suite stays green (SMOKE OK, GdUnit4 30/30, telemetry-jsonl check).
-
-### G4 — Run the M1 feedback gate (internal playtest)
-- Milestone: M1   Assignee: producer (+ qa-playtest-coordinator: telemetry analysis)   BlockedBy: G3, G6
-- Spec: design/M1_Tasks/G4_feedback_gate.md
-- Goal: run the internal playtest — *is the push/cash-out tension fun in 30 seconds?* Combine direct feedback with telemetry (run-length histograms, mid-run abandonment, runs/session > 1.5). Record a go/iterate/pivot decision.
-- Done when: playtest run with ≥ a few testers; a written verdict backed by telemetry; an explicit go/iterate/pivot call recorded. **Human-run** (dev-machine internal playtest); Claude prepares the loop-smoke checklist + analyzes telemetry and recommends, the Director decides.
-
----
-
-## M1 bugs (surfaced by the G4 playtest, 2026-06-19)
-
-Defects found during the G4 internal playtest (34 runs). The first two limit G4's telemetry validity;
-the third is a build-quality geometry bug. Provenance: `design/M1_Tasks/G4_findings.md`.
+The three G4 bug-fixes below are **M1.1 Wave-1 foundations** (the cost axis is depth-scaled, so depth + duration must be real; R4 needs a sealed map). Provenance: `design/M1_Tasks/G4_findings.md`.
 
 ### BUG1 — `run_ended.duration_s` always 0
-- Milestone: M1   Assignee: general-purpose   BlockedBy: none
+- Milestone: M1.1 (Wave 1)   Assignee: general-purpose   BlockedBy: R0 (sequential, shares `game_state.gd`)
 - Goal: `run_ended(reason, duration_s, depth_reached)` emits `duration_s = 0.0` on every run (confirmed across 32 completed runs; real lengths were only recoverable from Telemetry's `t_ms`). Compute/pass the actual elapsed run time so the gate's core run-length metric is real. Likely `GameState.end_run`/`extract_and_end_run`/`fail_run` passing 0 instead of the elapsed time since `start_run`.
 - Done when: a completed run emits a nonzero `duration_s` matching wall-clock (±tolerance) in `run_log.jsonl`; a headless check asserts it; suite stays green.
 
 ### BUG2 — within-band depth not tracked (telemetry depth stuck at 1)
-- Milestone: M1   Assignee: general-purpose   BlockedBy: none
+- Milestone: M1.1 (Wave 1)   Assignee: general-purpose   BlockedBy: BUG1 (sequential, shares `game_state.gd`)
 - Goal: `band_depth_reached`/`current_depth` only ever report 1 because `current_depth` is a band-entry counter, not within-band progress. The B3 depth axis (`depth_index`/`dist_to_gate` per `PlacedPiece`) exists but the player's position is never mapped to a "depth reached." Track how deep within the band the player travels (e.g. max `depth_index` of the piece they occupy) and feed it to telemetry so "how far did they push" is measurable. (NOTE: even fixed, the G4 finding stands — depth carries no *risk*; see G4_findings.md.)
 - Done when: moving deeper in the band raises a tracked depth value and `band_depth_reached` fires for new maxima > 1; headless check; suite green.
 
 ### BUG3 — zone pieces have open sockets/exits into off-map void
-- Milestone: M1   Assignee: general-purpose (+ environment-artist: piece geometry)   BlockedBy: none
+- Milestone: M1.1 (Wave 1)   Assignee: general-purpose (+ environment-artist: piece geometry)   BlockedBy: R0 (parallel-safe; disjoint files)
 - Spec: `B1_zone_piece_format.md` / `B2_room_graph_generator.md` + `M1_As_Built.md` §Procedural geometry
 - Goal: rooms have openings leading into areas outside the playable map (unused sockets left as gaps). After stitching, every socket that wasn't mated to a neighbor must be wall-capped (closed collision + floor edge) so the band is sealed.
 - Done when: a generated band has no open sockets to the void (all unmated sockets capped); the player cannot walk off-map; headless/visual check; determinism preserved.
+
+### CFG — Pre-run Config menu
+- Milestone: M1.1 (Wave 1)   Assignee: ui-ux-designer (layout) + general-purpose (binding)   BlockedBy: R0
+- Spec: `design/M1_1_Tasks/M1.1_Breakdown.md` §CFG
+- Goal: a `Control` menu next to the Start Run menu in `scenes/game/main_game.tscn` exposing 100% of `RunConfig`'s knobs (per-opposition section w/ on/off + sliders/fields), writing them into the active config on Start; "reset to M1.0 baseline (all off)" action.
+- Done when: the Director can toggle each opposition + set every knob before Start; the run reflects them; reset returns all-off; no knob is unreachable.
+
+### TEL — Telemetry config-marking + opposition events
+- Milestone: M1.1 (Wave 1)   Assignee: qa-playtest-coordinator   BlockedBy: R0  · **[edits `event_bus.gd` — sole editor; pre-declares ALL opposition signals up front]**
+- Spec: `design/M1_1_Tasks/M1.1_Breakdown.md` §TEL
+- Goal: snapshot the active `RunConfig` flat dict onto the `run_started` row (additive `data` field, not a schema bump) so runs are comparable; pre-declare + log the per-opposition events (hazard_awoke/caught, return_cost_incurred, exposure_crossed/penalty, nav_branch_taken/lost_proxy) + `depth_changed`. Do NOT widen the locked `run_ended` arity.
+- Done when: `run_started` carries the config snapshot; enabled oppositions' rows appear (disabled → absent); `run_ended` arity unchanged; schema handled.
+
+### Wave 2 — The four oppositions  *(four parallel worktrees; each reads `active_run_config` + live depth, emits TEL's pre-declared signals; none edit `event_bus.gd`/`game_state.gd`. Each opposition's first sub-step is its `game-director-designer` spec at `design/M1_1_Tasks/R<n>_*.md`.)*
+
+### R1 — Pursuing / awakening hazard
+- Milestone: M1.1 (Wave 2)   Assignee: general-purpose + game-director-designer (spec) + character-animator (greybox tell)   BlockedBy: R0, BUG2
+- Goal: a greybox entity that awakens past a depth/linger threshold and chases the player; catching → existing `fail_run(&"death")`. Crude steering, no combat. Fully configurable; emits `hazard_awoke`/`hazard_caught`.
+- Done when: with R1 on it awakens per threshold, chases, can end a run as death; off = M1.0; knobs take effect from the menu; events log.
+
+### R2 — Costlier return trip
+- Milestone: M1.1 (Wave 2)   Assignee: general-purpose + game-director-designer (spec proposes the mechanism — Director reviews)   BlockedBy: R0, BUG2
+- Goal: make the way back scale with how deep you pushed (mechanism — lengthen / decay-behind / egress-toll — proposed by the R2 spec, Director-approved; reads B3 `dist_to_gate`). Configurable; emits `return_cost_incurred`.
+- Done when: retreating from depth d costs measurably more than from depth 1 per the configured curve; off = free walk-back (M1.0); knobs take effect.
+
+### R3 — Rising instability / exposure meter
+- Milestone: M1.1 (Wave 2)   Assignee: general-purpose + game-director-designer (spec) + ui-ux-designer (HUD readout)   BlockedBy: R0, BUG2
+- Goal: a run-state meter that climbs faster at depth and punishes lingering; thresholds inflict penalties; max → `run_ended.reason = timeout`. Disposable prototype of the M3 exposure system (NOT wired to meta `exposure`). Configurable; emits `exposure_crossed`/`exposure_penalty`.
+- Done when: meter rises faster at depth, crossings fire penalties, (if configured) max ends run as timeout; greybox readout shows it; off = M1.0; knobs take effect.
+
+### R4 — Maze / navigation risk
+- Milestone: M1.1 (Wave 2)   Assignee: general-purpose + environment-artist (branching/fog) + game-director-designer (spec)   BlockedBy: R0, BUG2, BUG3
+- Goal: deeper = harder to navigate — raise B2 `branch_chance` with depth (dead-ends) and/or limited vision/fog; needs BUG3 (sealed map). Emit a lost-proxy (backtracking/no-progress). Configurable; emits `nav_branch_taken`/`nav_lost_proxy`.
+- Done when: deep areas branch and/or vision is limited per config; band stays sealed + deterministic per seed+config; off = linear M1.0 spine, full vision; knobs take effect.
+
+### Wave 3 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
+
+### RG1 — Playtest build (risk active)
+- Milestone: M1.1 (Wave 3)   Assignee: general-purpose + qa-playtest-coordinator (verification)   BlockedBy: R1, R2, R3, R4, TEL
+- Goal: assemble the runnable M1.1 loop (Config menu → dive with risk → push/extract/die/timeout/lost → bank/lose → sell → repeat); verify each opposition individually + all stacked; config-marked telemetry writes.
+- Done when: a fresh build runs the full loop with oppositions on; per-run menu toggling works; telemetry logs config + opposition events; multiple runs/session.
+
+### RG2 — Telemetry analysis + M1.0 comparison
+- Milestone: M1.1 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + playtest data
+- Goal: analyze end-cause / run-length / max-depth distributions per config, per-opposition event frequencies, side-by-side vs the all-off M1.0 baseline; surface which oppositions broke the dominant strategy.
+- Done when: an analysis artifact comparing distributions across configs and against M1.0, with a clear read on whether the cost axis created a real outcome spread.
+
+### RG3 — Re-gate verdict (Director decides)
+- Milestone: M1.1 (Wave 3)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
+- Goal: re-run G4's question against M1.1; record a go/iterate/pivot verdict in `design/M1_1_Tasks/G4_findings_M1.1.md` (mirrors M1.0's). go → M2; iterate → M1.2 (this template); pivot → Director design rework.
+- Done when: a recorded go/iterate/pivot verdict backed by config-marked telemetry, comparable to the M1.0 G4 finding.
 
 ## M1 follow-ups (deferred tech-debt — non-blocking; from the wave-5 close-out)
 

@@ -73,7 +73,24 @@
       "Bash(git check-ignore *)",
       "Bash(xargs cat)",
       "Bash(grep -nA4 \"internationalization\" project.godot)",
-      "Bash(grep -iE \"\\\\.translation$\")"
+      "Bash(grep -iE \"\\\\.translation$\")",
+      "Bash(grep -rn \"groups\" entities/player/player.tscn)",
+      "Bash(head -20 entities/player/player.tscn)",
+      "WebSearch",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(i['id'], '|', i.get\\('content',{}\\).get\\('title','?'\\)\\) for i in d['items'] if i.get\\('content',{}\\).get\\('title',''\\).startswith\\(\\('G1','G2'\\)\\)]\")",
+      "Bash(curl -sL -o gdunit4.tar.gz \"https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.tar.gz\")",
+      "Bash(tar tzf *)",
+      "Bash(awk -F/ '{print $1}')",
+      "Bash(tar xzf *)",
+      "Bash(grep -iE \"\\\\.cs$|\\\\.csproj$|\\\\.sln$|/cs/|GdUnit4Net\")",
+      "Bash(grep -nA12 \"^\\\\[autoload\\\\]\" project.godot)",
+      "Bash(grep -nA5 \"editor_plugins\\\\|gdunit\\\\|GdUnit\" project.godot)",
+      "Bash(xargs -I{} git check-attr filter -- {})",
+      "Bash(pkill -f \"godot --headless res://tests/test_player_movement\")",
+      "Bash(pkill -f \"test_player_movement test_interaction\")",
+      "Bash(pkill -9 -f \"tests/test_player_movement\")",
+      "Bash(git -C /mnt/c/source/junkyard/.claude/worktrees/agent-a288be13d00282a6b rev-parse --show-toplevel)",
+      "Bash(python3 -)"
     ]
   }
 }

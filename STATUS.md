@@ -6,12 +6,30 @@ what's blocked, and the immediate next action. The full task queue lives in `TAS
 mirror lives in GitHub Projects. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)** — all build tasks done; **G4 gate run 2026-06-19 → verdict ITERATE.**
-**Last updated:** 2026-06-19 (G4 internal playtest done — 34 runs; verdict **ITERATE**: loop is engaging + mechanically sound but the push/cash-out *tension* is absent — no risk opposes pushing deeper. See `design/M1_Tasks/G4_findings.md`. Awaiting Director's iterate-path call: A = focused M1.5 risk iteration + re-gate / B = proceed to M2.)
+**Current milestone:** M1.0 ✅ built (G4 verdict = ITERATE) → **M1.1 (Greybox Cost Axis)** — plan approved, **Wave 1 starting.**
+**Last updated:** 2026-06-19 (M1.0→M1.1 iterate: plan approved + repo cleaned up — breakdown moved to `design/M1_1_Tasks/`, completed tasks archived to `TASKS_COMPLETED.md`, `CLAUDE.md` updated with the build→gate→iterate loop. M1.1 board items created. Wave 1 dispatching: **R0 first & solo.**)
 
 ---
 
-## ▶ Next action (start here on a cold restart) — **Director decides the M1 iterate path (G4 verdict = ITERATE)**
+## ▶ Next action (start here on a cold restart) — **M1.1 Wave 1: R0 first, then BUG1→BUG2, then CFG/TEL/BUG3**
+**M1.1 (Greybox Cost Axis)** is the approved iteration on M1.0's G4 ITERATE verdict. Plan + wave order + the
+configurable-knob & telemetry contracts: `design/M1_1_Tasks/M1.1_Breakdown.md`. Goal: add a depth-scaled
+**cost/risk axis** (4 configurable oppositions) so push-vs-extract is a real gamble, then re-run the gate.
+
+**Wave 1 — Foundations (in order):**
+1. **R0** (run-config data model) — **first & solo** ([GS], defines the `RunConfig` schema everyone reads; all-off = M1.0 baseline). Merge to `main` before opening the rest.
+2. **BUG1** (`duration_s` real) → **BUG2** (within-band depth) — **sequential** (both touch `game_state.gd`).
+3. **Before the parallel fan-out:** pre-declare on `main` (via TEL) the new `event_bus.gd` signals — `depth_changed` + all 7 opposition signals (hazard_awoke/caught, return_cost_incurred, exposure_crossed/penalty, nav_branch_taken/lost_proxy) — so wave-2 agents never touch `event_bus.gd`.
+4. **CFG / TEL / BUG3** — parallel worktrees (disjoint files).
+
+**Wave 2:** R1/R2/R3/R4 in 4 parallel worktrees (each reads `active_run_config` + live depth, emits pre-declared signals; none edit `event_bus.gd`/`game_state.gd`). Each opposition's first sub-step = its `game-director-designer` spec (`design/M1_1_Tasks/R<n>_*.md`). **R2's mechanism (lengthen/decay-behind/egress-toll): the R2 spec proposes, Director reviews before build.**
+
+**Wave 3:** RG1 build → *(human playtest)* → RG2 analysis vs M1.0 baseline → RG3 verdict.
+
+Run the **wave close-out deviation sweep** after Wave 1 and after Wave 2 (Director dispositions each).
+**Also open (independent, Todo):** FU1 `test_jsonl_writer` · FU2 `EconomyMath`.
+
+## (archived) ▶ prior next-action — Director chose path A (iterate); M1.1 planned + approved 2026-06-19
 The **M1 feedback gate (G4) has run** (2026-06-19, 34 runs over 3 sessions). **Verdict: ITERATE.** Full
 evidence + recommendation: `design/M1_Tasks/G4_findings.md`. Headline: the greybox loop is engaging
 (11 runs/session, run length median ~18s right in the target window) and the carry/capacity decision works, **but
@@ -89,10 +107,12 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — nothing dispatched (G4 gate run → ITERATE; awaiting Director's A/B iterate-path call)
-No subagent running. G1 + G2 + G3 + G6 merged into `main` and re-verified green (main scene set · import clean ·
-SMOKE OK · CONSENT OK · TELEMETRY OK · LOOP OK · MAIN GAME OK · GdUnit4 30/30 · 18 legacy checks OK). Board:
-G1 + G2 + G3 set **Done**; G6 set **Done**.
+## In progress — M1.1 Wave 1: R0 dispatched (worktree)
+**R0** (run-config data model) dispatched 2026-06-19 — game-director-designer schema + general-purpose run-start
+wiring, briefed from `M1.1_Breakdown.md` §R0. It lands first & solo (defines the `RunConfig` everyone reads).
+On return: verify (all-off = M1.0 baseline; suite green), merge to `main`, push, then run BUG1→BUG2 (sequential),
+pre-declare the new EventBus signals, and fan out CFG/TEL/BUG3. Board: R0 → In Progress.
+(M1.0 is all Done + archived to `TASKS_COMPLETED.md`; G4 verdict ITERATE recorded.)
 
 **Wave-5 close-out — COMPLETE (2026-06-18).** All 16 wave-5 deviations (G1×5, G2×5, G3×5, G6×1) dispositioned by
 the Director: **1 Addressed** (G3 #1 → built G6, the in-build consent prompt) / **15 Reviewed**. Reapplied to

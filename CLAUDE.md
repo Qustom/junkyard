@@ -25,7 +25,7 @@ M0 (pre-production & tech foundations) is **done**: repo + Git LFS, project skel
 
 For each task you pick up, run these steps. The four hard requirements — **consume a task, dispatch a subagent, set status in `STATUS.md`, capture a worklog+commit and any design deviation** — are non-negotiable.
 
-1. **Select.** Take the top *unblocked* task from `TASKS.md` (mirror of GitHub Projects). Respect `blockedBy`. For M1, the per-task specs live in `design/M1_Tasks/` (e.g. `A1_player_movement.md`) and `design/M1_Tasks/Junkyard_M1_Breakdown.md` holds the high-level sequence, dependency map, and build order — read the breakdown to pick the right next task.
+1. **Select.** Take the top *unblocked* task from `TASKS.md` (mirror of GitHub Projects). Respect `blockedBy`. **Completed tasks are archived to `TASKS_COMPLETED.md`** — `TASKS.md` holds only active + backlog. Per-task specs + the milestone breakdown live in **per-milestone folders `design/M<n>_Tasks/`** (e.g. `design/M1_Tasks/A1_player_movement.md`); an **iteration sub-version** gets its own folder `design/M<n>_<k>_Tasks/` (e.g. `design/M1_1_Tasks/`). The breakdown (`*_Breakdown.md` — e.g. `Junkyard_M1_Breakdown.md`, `M1.1_Breakdown.md`) holds the sequence, dependency map, and wave/build order — read it to pick the right next task. See "Milestone iteration loop" below.
 2. **Claim.** In `STATUS.md`, move it to **In progress** with the date, the assigned subagent(s), and its milestone. **Also set the task to `In Progress` on GitHub Projects** (see "Remote & board sync" below) — the board must reflect the claim, not just `STATUS.md`.
 3. **Brief.** Read the task spec (`design/M1_Tasks/<id>_*.md`), the matching `design/Role_Playbooks/NN_*.md`, and the relevant GDD/TDD sections. Capture the *design intent* in one line so deviations are detectable.
 4. **Dispatch — possibly more than one agent per task.** Spin up the matching subagent(s) (Agent tool, `subagent_type` = role name from the table below). Hand each: the task spec, its playbook path, the **definition of done**, and the **work-product contract** (next section).
@@ -50,7 +50,7 @@ For each task you pick up, run these steps. The four hard requirements — **con
   gh project item-edit --id <ITEM_ID> --project-id PVT_kwHOAAXnOs4BasyM \
     --field-id PVTSSF_lAHOAAXnOs4BasyMzhVic7M --single-select-option-id <STATUS_OPTION_ID>
   ```
-  Each of the 19 M1 board items (`A1`…`G4`) already exists; you only change its Status.
+  The M1.0 board items (`A1`…`G6`, `G4`) already exist (now `Done`). For **new** tasks (M1.1's `R0`…`RG3`, bugs, follow-ups, and future milestones) **create the board item** with `gh project item-create 1 --owner Qustom --title "<id> — <title>" --body "<...>"`, then set its Status. Mirror every status change here the moment it happens.
 
 ### Wave close-out — deviation assessment (run after EVERY wave, before dispatching the next)
 
@@ -68,6 +68,20 @@ A "wave" is a batch of tasks integrated together. After a wave lands on `main` a
 Claude must not skip, batch-approve on the Director's behalf, or treat silence as consent — every deviation needs an explicit Director verdict.
 
 The canonical as-built reality of the M1 build lives in `design/M1_Tasks/M1_As_Built.md` (corrected APIs/contracts) and `design/M1_Tasks/M1_Design_Decisions.md` (human-ratified design calls) — those are the usual reapply targets.
+
+### Milestone iteration loop (build → playtest gate → iterate)
+
+Each milestone runs as a **build phase** (waves of tasks) followed by a **playtest feedback gate** that records an explicit **go / iterate / pivot** verdict. The verdict is the human Director's call — Claude assembles the evidence (telemetry + analysis) and **recommends**; it never decides (the canonical example is M1.0's G4 gate, `design/M1_Tasks/G4_findings.md`). The verdict drives what happens next:
+
+- **go** → advance to the next milestone.
+- **iterate** → **bump a sub-version** (`Mx.0 → Mx.1 → Mx.2 …`) and run another build-phase + re-gate. Each sub-version gets its **own breakdown**, authored from the previous one as a **template** — the first such iteration is `design/M1_1_Tasks/M1.1_Breakdown.md`, spawned by M1.0's ITERATE verdict.
+- **pivot** → a Director-level design rework.
+
+**This loop applies to every milestone** — M2 and beyond iterate the same way after their initial tasks land. Standing conventions for it:
+
+- **Per-milestone task-spec folders.** Specs + the breakdown live in `design/M<n>_Tasks/`; an iteration sub-version gets `design/M<n>_<k>_Tasks/` (e.g. `design/M1_1_Tasks/`).
+- **Comparable experiments.** Make each iteration measurable against its predecessor: a **data-driven config** (e.g. M1.1's `RunConfig`) whose **all-off default reproduces the prior baseline** as a permanent in-build control, plus **config-marked telemetry** so the gate compares versions on the same metrics. Record each version's verdict in a `G4_findings*.md`-style doc.
+- **Completed-task archive.** `TASKS.md` holds only **active + backlog**; finished tasks move to `TASKS_COMPLETED.md` (completion proof stays in `STATUS.md` §Done + the worklogs) to keep the active queue readable.
 
 ### Work-product contract (every dispatched subagent MUST)
 
