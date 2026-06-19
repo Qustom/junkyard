@@ -172,5 +172,23 @@ real art. Full milestone breakdown, dependency map, and build order: `design/M1_
 
 ---
 
+## M1 follow-ups (deferred tech-debt — non-blocking; from the wave-5 close-out)
+
+Small, optional cleanups surfaced as `Reviewed` deviations at the M1 wave-5 close-out (2026-06-18) and
+ratified for tracking by the Director (2026-06-19). Neither blocks G4 or M1 sign-off; pick up opportunistically.
+Provenance: `DESIGN_DEVIATIONS_HISTORY.md` §"M1 wave 5" (W5-G2-3, W5-G2-5).
+
+### FU1 — GdUnit4 `test_jsonl_writer`
+- Milestone: M1 (follow-up)   Assignee: qa-playtest-coordinator   BlockedBy: none (G1+G2 on `main`)
+- Spec: `M1_As_Built.md` §Telemetry + `systems/telemetry/jsonl_writer.gd`; origin = close-out W5-G2-3
+- Goal: add the GdUnit4 `test_jsonl_writer` suite that G2 deferred (G1's `JsonlWriter` was on a parallel branch at the time; both are now on `main`). Exercise the writer seam directly — write rows, read back, assert parseable JSON + required envelope fields (`v, ts, t_ms, run_id, session_id, type, data`).
+- Done when: a GdUnit4 suite under `tests/telemetry/` covers `JsonlWriter` round-trip + envelope field presence; green in headless (`tools/run_gdunit.sh`); test count rises from 30.
+
+### FU2 — Static `EconomyMath` helper
+- Milestone: M1 (follow-up)   Assignee: general-purpose   BlockedBy: none
+- Spec: `systems/game_state.gd` (`_resolve_pockets`/`_sum_values`/`run_haul_value`); origin = close-out W5-G2-5
+- Goal: lift the pure economy math out of `GameState` into a static `EconomyMath` helper so it's testable without snapshotting global meta (G2's economy suites currently save/restore `money`/`banked_junk`/`run_rules` around each test). `GameState` then calls the helper; no behavior change.
+- Done when: a static `EconomyMath` (or similar) owns the pockets/sum/haul math; `GameState` delegates to it; the G2 economy suites are refactored to call the helper directly (no global-meta snapshot/restore); full suite stays green (GdUnit4 + legacy + SMOKE).
+
 ## Backlog (M2+)
 Pulled forward when M1 passes its gate. See TDD §7 for M2 (vertical slice: full day loop, recipe repair, first enemy, real art for one band), M3 (bands 1–3, currencies/tracks, exposure crises), M4 (Act 3 + endings), M5 (polish/ship). The **economy workbook** `design/economy_model.xlsx` (game-director-designer) is due **before M3**.

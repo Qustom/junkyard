@@ -75,8 +75,9 @@ G1 + G2 + G3 set **Done**; G6 set **Done**.
 the Director: **1 Addressed** (G3 #1 → built G6, the in-build consent prompt) / **15 Reviewed**. Reapplied to
 `M1_As_Built.md` (new **§Telemetry (G1/G6)** + scope bumped to wave 5) and **Playbook 07** (`events.jsonl`→
 `run_log.jsonl`, GdUnit4 runner note); all 16 archived to `DESIGN_DEVIATIONS_HISTORY.md`. `DESIGN_DEVIATIONS.md`
-is empty (between-waves). Two optional backlog follow-ups noted (GdUnit4 `test_jsonl_writer`; static `EconomyMath`
-helper).
+is empty (between-waves). Two optional follow-ups now tracked as **FU1** (GdUnit4 `test_jsonl_writer`) + **FU2** (static `EconomyMath`
+helper) in `TASKS.md` §M1 follow-ups + board (Todo). (The Butler/itch publish pipeline stays a human-provisioning
+note in the archive, not a tracked task — Director's call 2026-06-19.)
 
 **Then G4** = the human fun-gate (internal playtest on the dev machine: `godot project.godot` → play
 `main_game.tscn`). Claude preps `tools/playtest/loop_smoke_checklist.md` + analyzes telemetry after, recommends a
