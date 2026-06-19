@@ -83,6 +83,9 @@ var _cell_to_junction: Dictionary = {}
 var _player_piece_index: int = -1
 ## R4 vision/fog node packed scene (Lever 2). Spawned per dive; inert when R4 off.
 const VISION_FOG_SCENE_PATH := "res://entities/dive/vision_fog.tscn"
+## R1 (M1.1): the pursuing-hazard greybox scene. Instantiated per dive ONLY when
+## r1_enabled && r1_spawn_count > 0; otherwise never loaded (all-off = M1.0).
+const HAZARD_SCENE_PATH := "res://scenes/hazards/hazard_entity.tscn"
 ## BUG2: throttle for the live-depth resolution (~every 9 physics frames). Pure
 ## perf/responsiveness knob — correctness is throttle-independent (we emit on change,
 ## not on tick), so it is safe to tune (ratified Decision 2).
@@ -196,6 +199,65 @@ func start_new_run() -> void:
 	# false), so the all-off control path adds inert nodes only. Added under the band
 	# container so _clear_band() frees them with the band (run-state, never persisted).
 	_spawn_r4_nodes()
+
+	# R1 (M1.1): spawn the pursuing hazard(s). Self-contained, fully gated by the run
+	# config — r1_enabled == false (or r1_spawn_count == 0) skips the loop entirely so
+	# no hazard node is ever instantiated and the all-off control == M1.0 exactly. The
+	# config is readable here (staged + start_run bound it as active_run_config above);
+	# we read run_cfg, the same object. Hazards spawn dormant at/near the piece at
+	# r1_depth_threshold (§9 Q1; clamped to the deepest piece) and go into
+	# _band_container so _clear_band() disposes them with the band for free. setup()
+	# binds the config snapshot + the player so the hazard never re-reads active_run_config.
+	_spawn_r1_hazards(run_cfg, band)
+
+
+# --- R1 (M1.1): pursuing hazard spawn ----------------------------------------
+
+## Instantiate r1_spawn_count HazardEntity nodes when R1 is on. Fully gated: with
+## r1_enabled == false (or r1_spawn_count == 0) nothing is loaded/instantiated, so the
+## all-off control is byte-for-byte the M1.0 loop. Each hazard spawns dormant at/near
+## the piece at r1_depth_threshold (§9 Q1) into _band_container (so _clear_band() frees
+## it), then setup() binds the run config snapshot + the player (resolved via the
+## "player" group — the player is already grouped in player.tscn).
+func _spawn_r1_hazards(rc: RunConfig, band: Band) -> void:
+	if rc == null or not rc.r1_enabled or rc.r1_spawn_count <= 0:
+		return
+	var hazard_scene := load(HAZARD_SCENE_PATH) as PackedScene
+	if hazard_scene == null:
+		push_error("MainGame: R1 hazard scene missing at %s." % HAZARD_SCENE_PATH)
+		return
+	var player := get_tree().get_first_node_in_group(&"player") as Node2D
+	for i in rc.r1_spawn_count:
+		var hz := hazard_scene.instantiate() as HazardEntity
+		_band_container.add_child(hz)
+		hz.global_position = _hazard_spawn_position(band, rc.r1_depth_threshold, i)
+		hz.setup(rc, player)
+
+
+## World position to spawn hazard `i` at: a floor cell on the piece whose depth_index
+## == r1_depth_threshold (clamped to the deepest graded piece if the threshold exceeds
+## the band's max depth, §9 Q1). Band-global cell space shares the world origin (pieces
+## materialise at offset_cell * cell_size), so cell → world is a flat scale. Falls back
+## to the entry spawn if no graded floor cell is found.
+func _hazard_spawn_position(band: Band, depth_threshold: int, index: int) -> Vector2:
+	# Find the deepest graded depth so we can clamp an over-threshold request.
+	var max_depth := 0
+	for p in band.pieces:
+		if p.depth_index > max_depth:
+			max_depth = p.depth_index
+	var target_depth: int = clampi(depth_threshold, 0, max_depth)
+	# Collect floor cells of pieces at the target depth (in piece order for determinism).
+	var cells: Array[Vector2i] = []
+	for p in band.pieces:
+		if p.depth_index == target_depth:
+			for c in p.floor_cells:
+				cells.append(c)
+	if cells.is_empty():
+		return _entry_spawn_position(band)
+	# Spread multiple hazards across the available floor cells (wrap on overflow).
+	var cell: Vector2i = cells[index % cells.size()]
+	return Vector2(cell * _band_cell_size_px) \
+		+ Vector2(_band_cell_size_px, _band_cell_size_px) * 0.5
 
 
 # --- Run-end handling --------------------------------------------------------
