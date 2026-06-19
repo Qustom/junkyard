@@ -41,6 +41,15 @@ var run_seed: int = 0
 var current_band: StringName = &""
 var current_depth: int = 0
 var unbanked_value: int = 0    # value carried but not yet banked at a gate
+# BUG1 (M1.1): monotonic ms stamped at start_run; basis for run duration on every
+# end path. Run-state (disposable, never persisted). 0 until a run starts.
+var _run_start_ms: int = 0
+# BUG2 (M1.1): live within-band depth. Run-scoped (disposable, never persisted);
+# reset to 0 in start_run, fed into run_ended.depth_reached at end_run. The scene
+# driver (MainGame) resolves the player's piece → depth and calls set_current_depth().
+var current_depth_index: int = 0    # depth_index of the piece the player is in NOW (entry == 0)
+var max_depth_reached: int = 0      # the deepest depth_index reached this run (the gate metric)
+var current_dist_to_gate: int = 0   # dist_to_gate of the piece the player is in NOW ("how far home"); == depth on the linear spine, diverges once R4 branches
 var run_inventory: RunInventory      # D1: the carried-junk slot bag; fresh each run, never banked
 # M1.1 R0: the active run's opposition/cost-axis configuration. Run-scoped (NOT
 # meta — never persisted). Populated at start_run (from a config the caller staged
@@ -77,9 +86,14 @@ func _ready() -> void:
 func start_run(band_id: StringName, seed: int) -> void:
 	run_active = true
 	_run_ended = false   # E3: fresh run → run-end guard clear
+	_run_start_ms = Time.get_ticks_msec()   # BUG1: bracket the whole run (wall-clock ms)
 	run_seed = seed
 	current_band = band_id
 	current_depth = 0
+	# BUG2: reset live within-band depth (player starts at entry == 0).
+	current_depth_index = 0
+	max_depth_reached = 0
+	current_dist_to_gate = 0
 	unbanked_value = 0
 	run_inventory = _make_run_inventory()   # D1: fresh, empty bag sized from config
 	# M1.1 R0: bind the active run config. Prefer a config staged by MainGame/CFG;
@@ -167,7 +181,7 @@ func extract_and_end_run() -> void:
 		return
 	_run_ended = true
 
-	var duration_s: float = 0.0
+	var duration_s: float = _elapsed_s()   # BUG1: real elapsed run time (was hardcoded 0.0)
 	if run_inventory != null:
 		var moved: Array[JunkItem] = run_inventory.items.duplicate()  # snapshot before end_run clears it
 		for item in moved:
@@ -195,6 +209,29 @@ func extract_and_end_run() -> void:
 	unbanked_value = 0
 	current_depth = 0
 
+## BUG1 (M1.1): real elapsed seconds since start_run, via the monotonic engine
+## clock (Time.get_ticks_msec). Single source so extract/death/timeout agree.
+## Wall-clock (pause-inclusive) per BUG1 doc §8 Decision 1; run-end fires before the
+## sell screen pauses, so no pause window is inside this interval. Raw float seconds,
+## no rounding at the source (RG2 buckets at analysis time).
+func _elapsed_s() -> float:
+	return float(Time.get_ticks_msec() - _run_start_ms) / 1000.0
+
+## BUG2 (M1.1): the single mutator for live within-band depth. The scene-side driver
+## (MainGame) calls this when it resolves the player's piece, passing both metrics
+## (Decision 4). Edge-triggered on depth_index: only emits depth_changed when the
+## depth actually changes, so same-piece ticks produce no signal traffic. dist_home
+## ("how far home") is always refreshed so R2/R4 can read it live even mid-piece.
+func set_current_depth(idx: int, dist_home: int) -> void:
+	current_dist_to_gate = dist_home   # always refresh "how far home"
+	if idx == current_depth_index:
+		return                         # no-op on same-depth ticks → no signal spam
+	current_depth_index = idx
+	max_depth_reached = maxi(max_depth_reached, current_depth_index)
+	# depth_changed is pre-declared on EventBus (orchestrator, commit 2450cde); BUG2
+	# only EMITS it, never declares it.
+	EventBus.depth_changed.emit(current_depth_index, max_depth_reached)
+
 func end_run(reason: StringName, duration_s: float) -> void:
 	run_active = false
 	if run_inventory != null:        # D1: wipe the bag so it never survives into the next run
@@ -202,7 +239,9 @@ func end_run(reason: StringName, duration_s: float) -> void:
 	# M1.1 R0: the active config is run-state — clear it on run end. The next run
 	# re-binds it in start_run (staged config, else the all-off default).
 	active_run_config = null
-	EventBus.run_ended.emit(reason, duration_s, current_depth)
+	# BUG2: report the MAX within-band depth, not the stuck band-entry counter.
+	# extract/death/timeout all route through here, so this fixes all three at once.
+	EventBus.run_ended.emit(reason, duration_s, max_depth_reached)
 
 # --- Ledger ------------------------------------------------------------------
 func add_currency(kind: StringName, delta: int, source: StringName) -> void:
@@ -286,7 +325,7 @@ func fail_run(cause: StringName) -> void:
 		return
 	_run_ended = true
 
-	var duration_s: float = 0.0
+	var duration_s: float = _elapsed_s()   # BUG1: real elapsed run time (was hardcoded 0.0)
 	var pre_value: int = run_haul_value()
 	var kept: Array[JunkItem] = _resolve_pockets()
 	var kept_value: int = _sum_values(kept)
