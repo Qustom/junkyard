@@ -74,7 +74,7 @@ func _ready() -> void:
 	var expected_keys: Array[String] = [
 		"seed_override", "build_tag",
 		"r1_enabled", "r1_depth_threshold", "r1_linger_seconds", "r1_chase_speed",
-		"r1_speed_per_depth", "r1_catch_radius", "r1_catch_kills", "r1_spawn_count",
+		"r1_speed_per_depth", "r1_catch_radius", "r1_catch_radius_per_depth", "r1_catch_kills", "r1_spawn_count",
 		"r2_enabled", "r2_mechanism", "r2_cost_magnitude", "r2_cost_per_depth",
 		"r2_depth_threshold", "r2_toll_resource",
 		"r3_enabled", "r3_base_climb_rate", "r3_rate_per_depth", "r3_threshold_levels",

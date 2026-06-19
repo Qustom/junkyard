@@ -48,8 +48,16 @@ extends Resource
 @export var r1_chase_speed: float = 0.0
 ## Optional additive chase speed per unit of within-band depth.
 @export var r1_speed_per_depth: float = 0.0
-## Distance at which the hazard "catches" the player.
+## Distance at which the hazard "catches" the player. FLOOR: must be >= player_r +
+## hazard_r (= 14 + 10 = 24 px with the I2 bodies) or the bodies physically collide
+## before the script distance test can ever trip (re-creates M1.1's caught=0). Suggested
+## first-sweep value ~32 (I2 §2.3). Default 0.0 = all-off (no hazard spawned anyway).
 @export var r1_catch_radius: float = 0.0
+## I2 (M1.2, Q3 accepted): additive catch-radius lunge per unit of within-band depth —
+## effective = r1_catch_radius + r1_catch_radius_per_depth * depth. Reinforces
+## "deeper = more dangerous" on the CATCH axis (the speed axis already has
+## r1_speed_per_depth). Default 0.0 = flat radius = M1.0/M1.1 behaviour (all-off control).
+@export var r1_catch_radius_per_depth: float = 0.0
 ## Whether catching kills outright (death end-cause) vs. inflicting a cost.
 @export var r1_catch_kills: bool = false
 ## How many hazard entities spawn.
@@ -190,6 +198,7 @@ func to_flat_dict() -> Dictionary:
 		"r1_chase_speed": r1_chase_speed,
 		"r1_speed_per_depth": r1_speed_per_depth,
 		"r1_catch_radius": r1_catch_radius,
+		"r1_catch_radius_per_depth": r1_catch_radius_per_depth,
 		"r1_catch_kills": r1_catch_kills,
 		"r1_spawn_count": r1_spawn_count,
 		# R2

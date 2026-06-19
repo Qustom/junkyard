@@ -59,7 +59,8 @@ const MANIFEST := {
 	"": ["seed_override", "build_tag"],
 	"r1_": [
 		"r1_enabled", "r1_depth_threshold", "r1_linger_seconds", "r1_chase_speed",
-		"r1_speed_per_depth", "r1_catch_radius", "r1_catch_kills", "r1_spawn_count",
+		"r1_speed_per_depth", "r1_catch_radius", "r1_catch_radius_per_depth",
+		"r1_catch_kills", "r1_spawn_count",
 	],
 	"r2_": [
 		"r2_enabled", "r2_mechanism", "r2_cost_magnitude", "r2_cost_per_depth",
@@ -86,6 +87,7 @@ const FIELD_RANGE := {
 	"r1_chase_speed": RANGE_SPEED,
 	"r1_speed_per_depth": RANGE_MAGNITUDE,
 	"r1_catch_radius": RANGE_RADIUS,
+	"r1_catch_radius_per_depth": RANGE_MAGNITUDE,
 	"r1_spawn_count": RANGE_DEPTH,
 	"r2_cost_magnitude": RANGE_MAGNITUDE,
 	"r2_cost_per_depth": RANGE_MAGNITUDE,
