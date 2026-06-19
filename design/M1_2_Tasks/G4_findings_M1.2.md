@@ -206,3 +206,39 @@ same `RunConfig` + CFG + config-marked telemetry, all-off still = the permanent 
 way.
 
 *Director: record the verdict + the M1.3 scope/priority below.*
+
+---
+
+## 5. RG3 verdict — Director-recorded (2026-06-19): **ITERATE → M1.3**
+
+The Director playtested the RG1 build (33 runs, `ba745e1`) and returned a concrete improvement list; RG2 corroborates
+each item. **Verdict: ITERATE.** Bump to **M1.3 (Legibility & Density)**, authored via the four-phase process, then re-gate.
+
+**Director decisions folded in (drive the M1.3 task set):**
+
+- **F1 — defaults.** Ship a **default play-preset** (Director's choice: keep the code-level all-off `RunConfig` default as the
+  permanent telemetry+determinism control; the *game/CFG boots into* a separate named default preset). The preset = the
+  most-fun stack **but with R2 and R3 OFF by default** (R1 hazard + R4 vision/maze ON, level scale ON ~19–25 rooms).
+  *"Everything else is fine."*
+- **F1 — bigger size slider.** The room-size multiplier range is too small. **`lvl_size_mult` ≥ 4.0 is the new floor** (4.0 =
+  smallest), **max ≈ 40.0** (the Director found 40.0 good). Re-range the CFG slider (`RANGE_MULT`); the all-off control still
+  uses `lvl_enabled=false` (size inert) so the determinism baseline (fp=e943ac9c8bc1) is untouched.
+- **F2 — enemy spread.** Spawn multiple hazards distributed across depths, not one at a single `r1_depth_threshold`.
+- **F3a — hallway length.** Add a configurable corridor/hallway-length knob (data corroborates "extra time = corridor
+  traversal"); emit corridor-time telemetry to measure it.
+- **F3b — per-room density.** A hazard/density-per-room knob to fill the emptiness of huge rooms (pairs with F2).
+- **F4 — depth counter.** Fix the HUD to show the room `depth_index` (subscribe to `depth_changed`), not the band counter.
+- **F5 — delivery.** Push each playtest build to **itch.io via butler** as an **HTML5 web build** (Director's choice — the
+  itch page is browser/password-gated). Target `qusto/the-far-yard` (personal account). Needs butler + 4.6.3 web export
+  templates + a web preset (none exist yet) + a push task. Infra, not gameplay.
+
+**New issues RG2 surfaced (added to M1.3 scope):**
+- **BUG6 — `hazard_caught` per-frame logging storm** (up to 2,199 events/run): the catch emits every physics frame instead
+  of edge-triggered once. Telemetry-hygiene bug (pollutes the very logs the re-gate reads); fix to one-shot.
+- **Config-trap guards** — R3 (`r3_threshold_levels=[]`) and R4-lost (`r4_lost_proxy_threshold=0.0`) were silently inert
+  during the playtest, so BUG5/R3 and I4's lost-cue went **untested**. M1.3 must ship sane defaults in the play-preset AND/OR
+  warn when an enabled opposition is config-disabled, so the M1.3 re-gate actually exercises them.
+
+**M1.3 scope (ratified order):** defaults play-preset + bigger size slider (F1) · enemy spread (F2) · hallway-length knob +
+corridor telemetry (F3a) · per-room density (F3b) · depth-counter fix (F4) · BUG6 hazard debounce + config-trap guards ·
+itch/butler HTML5 delivery (F5). Authored via the four-phase process (`design/M1_3_Tasks/`), re-gated the same way.
