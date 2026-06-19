@@ -107,28 +107,19 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — M1.1 Wave 1: CFG / TEL / BUG3 parallel fan-out
-**R0 + BUG1 + BUG2 DONE + merged.** `depth_changed` pre-declared on `main` (`2450cde`).
+## In progress — M1.1 Wave 1c: CFG (last wave-1 task) — DISPATCHED 2026-06-19
+**R0 + BUG1 + BUG2 + TEL + BUG3 DONE + merged** (`c940ae4`). `depth_changed` + all 11 opposition/penalty signals on
+`main`; band is sealed (BUG3); telemetry config-marks every run (TEL). Only CFG remains in wave 1.
 
-**▶ NEXT ACTION — dispatch the wave-1 parallel batch (CFG / TEL / BUG3)** in three worktrees (disjoint files):
-- **CFG** (ui-ux-designer + general-purpose) — pre-run Config menu in `main_game.tscn` + new UI scene; binds 100% of
-  `RunConfig` knobs; "reset to baseline (all off)". Spec: `design/M1_1_Tasks/CFG_config_menu.md`.
-- **TEL** (qa-playtest-coordinator) — **sole `event_bus.gd` editor**: pre-declares ALL 7 opposition signals
-  (hazard_awoke/caught, return_cost_incurred, exposure_crossed/penalty, nav_branch_taken/lost_proxy) as the single
-  wave-1 `event_bus.gd` edit (`depth_changed` already on `main` — do NOT re-declare). Snapshots `RunConfig` flat dict
-  onto `run_started.data`; adds DEPTH_CHANGED row + migrates `_current_depth()`→`current_depth_index` (Decision 5);
-  `run_ended` arity unchanged. Touches `telemetry/` + `event_bus.gd`. Spec: `design/M1_1_Tasks/TEL_telemetry_config_marking.md`.
-- **BUG3** (general-purpose + environment-artist) — cap unmated sockets so the band is sealed (no walk-off-void);
-  determinism preserved. Generator/zone-piece geometry. Spec: `design/M1_1_Tasks/BUG3_open_sockets.md`.
+**▶ DISPATCHED — CFG** (ui-ux-designer): new `ui/config/config_menu.{tscn,gd}` + `config_strings.csv`, instanced into
+`main_game.tscn`'s MainMenu as a side rail; surfaces 100% of `RunConfig`'s 32 knobs (per-opposition section + master
+toggle + sliders/enum OptionButtons/array list-editor), "reset to baseline (all off)", stages the working config via
+`MainGame.start_new_run` (shape a — exposes `apply_and_get_config()`). Edits `main_game.gd` (the `stage_run_config`
+seam) — sequential after BUG3 (shared file). Touches NO `event_bus.gd` / `game_state.gd`. Spec: `design/M1_1_Tasks/CFG_config_menu.md`.
 
-**⚠ Sequencing fix (orchestrator, 2026-06-19):** CFG **and** BUG3 BOTH edit `scenes/game/main_game.gd` (CFG = the
-`stage_run_config` seam in `start_new_run`; BUG3 = `seal_unused_sockets` in `_materialise_band`). The breakdown's
-"disjoint" note missed this. So they CANNOT run parallel. Revised:
-- **Wave 1b (parallel now):** TEL (`telemetry/`+`event_bus.gd`) + BUG3 (`bandgen/`+`main_game.gd`) — genuinely disjoint.
-- **Wave 1c (after BUG3 merges):** CFG (also edits `main_game.gd`) — sequential after BUG3.
-- **TEL must NOT re-declare `depth_changed`** (already on `main` `2450cde`) — adds the other 11 signals only.
-**TEL's `event_bus.gd` declaration must land on `main` before Wave 2 (R1–R4).** After all three merge, run the
-**Wave 1 close-out deviation sweep** (Director dispositions). Then Wave 2 (R1–R4 parallel), Wave 3 (re-gate).
+**After CFG merges:** run the **Wave 1 close-out deviation sweep** (Director dispositions every `DESIGN_DEVIATIONS.md`
+entry). Then **Wave 2** — R1/R2/R3/R4 in 4 parallel worktrees (each reads `active_run_config` + live depth, emits the
+pre-declared signals; none edit `event_bus.gd`/`game_state.gd`). Then **Wave 3** re-gate (RG1→playtest→RG2→RG3).
 
 **Wave-5 close-out — COMPLETE (2026-06-18).** All 16 wave-5 deviations (G1×5, G2×5, G3×5, G6×1) dispositioned by
 the Director: **1 Addressed** (G3 #1 → built G6, the in-build consent prompt) / **15 Reviewed**. Reapplied to
@@ -158,6 +149,8 @@ go/iterate/pivot verdict; the Director decides.
 | R0 — Run-config data model | merged `30e41b9`; `RunConfig` Resource + `GameState.active_run_config`; all-off default = M1.0 baseline; worklog `worklogs/2026-06-19-R0-*.md` |
 | BUG1 — `run_ended.duration_s` real | merged `33eb786`; `tests/test_run_duration.tscn` → **RUN DURATION OK** (`_run_start_ms`+`_elapsed_s()`; >0 & within a frame of direct `Time.get_ticks_msec()` ref for extract/death/timeout, telemetry off); worklog `worklogs/2026-06-19-BUG1-BUG2-general-purpose.md` (impl `cf7e342`) |
 | BUG2 — within-band depth tracked | merged `33eb786`; `tests/test_within_band_depth.tscn` → **WITHIN BAND DEPTH OK** (`current_depth_index`/`max_depth_reached`/`current_dist_to_gate` run-state; `set_current_depth()` edge-triggered emit of `depth_changed`; `main_game.gd` cell→depth driver; `run_ended.depth_reached`=max for all 3 end-causes; ratchets on retreat); shared worklog w/ BUG1 (impl `cf7e342`) |
+| TEL — Telemetry config-marking + opposition signals | merged `c940ae4`; `tests/test_telemetry_config_marking.tscn` → **TEL CONFIG MARKING OK** (`run_started.data.run_config` snapshot; 7 opposition EventTypes logged, envelope `v=1` no bump, primitives-only; `run_ended` arity unchanged; TEL self-stamps `run_t_ms`); **sole `event_bus.gd` editor** — added the 11 opposition/penalty signals (not `depth_changed`, already on main); worklog `worklogs/2026-06-19-TEL-qa.md` (impl `66ec131`) |
+| BUG3 — sealed band (no walk-off-void) | merged `c940ae4`; `tests/test_bandgen_determinism.tscn` → **BUG3 SOCKET SEAL OK** + **BANDGEN OK** (fingerprint byte-identical with/without seal across 9 seeds; no floor cell faces void after seal; non-vacuity guard); new `systems/bandgen/socket_sealer.gd` (RefCounted, zero RNG); 1-line call in `main_game.gd:_materialise_band`; reuses existing WALL tile (no new asset); worklog `worklogs/2026-06-19-BUG3-general-purpose.md` (impl `f0baeae`) |
 
 ## Done (M1 — Greybox Core Loop)
 | Task | Proof |
