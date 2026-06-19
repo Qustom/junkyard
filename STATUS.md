@@ -121,7 +121,12 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 - **BUG3** (general-purpose + environment-artist) — cap unmated sockets so the band is sealed (no walk-off-void);
   determinism preserved. Generator/zone-piece geometry. Spec: `design/M1_1_Tasks/BUG3_open_sockets.md`.
 
-All three are file-disjoint (CFG = `main_game.tscn`/UI; TEL = `telemetry/`+`event_bus.gd`; BUG3 = generator/geometry).
+**⚠ Sequencing fix (orchestrator, 2026-06-19):** CFG **and** BUG3 BOTH edit `scenes/game/main_game.gd` (CFG = the
+`stage_run_config` seam in `start_new_run`; BUG3 = `seal_unused_sockets` in `_materialise_band`). The breakdown's
+"disjoint" note missed this. So they CANNOT run parallel. Revised:
+- **Wave 1b (parallel now):** TEL (`telemetry/`+`event_bus.gd`) + BUG3 (`bandgen/`+`main_game.gd`) — genuinely disjoint.
+- **Wave 1c (after BUG3 merges):** CFG (also edits `main_game.gd`) — sequential after BUG3.
+- **TEL must NOT re-declare `depth_changed`** (already on `main` `2450cde`) — adds the other 11 signals only.
 **TEL's `event_bus.gd` declaration must land on `main` before Wave 2 (R1–R4).** After all three merge, run the
 **Wave 1 close-out deviation sweep** (Director dispositions). Then Wave 2 (R1–R4 parallel), Wave 3 (re-gate).
 
