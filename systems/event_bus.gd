@@ -79,3 +79,32 @@ signal band_populated(count: int)
 # GameState.current_depth_index / .current_dist_to_gate directly; this signal is
 # the event-driven complement + Telemetry's depth row.
 signal depth_changed(depth_index: int, max_depth: int)
+
+# === M1.1 opposition signals (sole event_bus.gd edit, wave 1, owner = TEL) ====
+# Declared centrally so wave-2 R1–R4 only EMIT — they never edit this file.
+# `depth_changed` above is the BUG2 foundation signal (already on main); the
+# eleven signals below are TEL's wave-1 add. Telemetry-row payloads are
+# PRIMITIVES ONLY so Telemetry serializes straight to JSONL (TEL spec §3/§4).
+
+# --- R1 Pursuing / awakening hazard (telemetry rows) -------------------------
+signal hazard_awoke(depth: int, trigger: StringName)
+signal hazard_caught(depth: int, run_t_ms: int)
+
+# --- R2 Costlier return trip (telemetry row) ---------------------------------
+signal return_cost_incurred(depth: int, cost_kind: StringName, magnitude: float)
+
+# --- R3 Rising instability / exposure meter (telemetry rows) -----------------
+signal exposure_crossed(level: int, depth: int, run_t_ms: int)
+signal exposure_penalty(level: int, penalty_kind: StringName)
+
+# --- R4 Maze / navigation risk (telemetry rows) ------------------------------
+signal nav_branch_taken(depth: int, junction_degree: int)
+signal nav_lost_proxy(metric: StringName, value: float, depth: int)
+
+# --- R3 penalty / meter signals (R3 emits; TEL declares; not telemetry rows) --
+# These let R3 apply speed/vision/clock penalties + drive the HUD WITHOUT editing
+# game_state.gd. Signatures per R3 spec (R3_exposure_meter.md §3.3, §6).
+signal exposure_speed_mult_changed(mult: float)   # player multiplies into stats.max_speed
+signal exposure_vision_mult_changed(mult: float)  # R4 fog node multiplies into radius (no-op if R4 off)
+signal exposure_clock_tax(seconds: float)         # A3 dive-clock subtracts from remaining light
+signal exposure_meter_changed(value: float, maximum: float)  # greybox HUD exposure bar reads this

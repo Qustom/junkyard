@@ -64,6 +64,17 @@ func _ready() -> void:
 	EventBus.currency_changed.connect(_on_currency_changed)
 	EventBus.exposure_threshold_crossed.connect(_on_exposure_threshold)
 
+	# M1.1 opposition listeners (TEL spec §5b). Each opposition (R1–R4) emits its
+	# own EventBus signal only when its config is enabled, so a disabled opposition
+	# writes nothing — _emit_row already short-circuits when telemetry is OFF.
+	EventBus.hazard_awoke.connect(_on_hazard_awoke)
+	EventBus.hazard_caught.connect(_on_hazard_caught)
+	EventBus.return_cost_incurred.connect(_on_return_cost_incurred)
+	EventBus.exposure_crossed.connect(_on_exposure_crossed)
+	EventBus.exposure_penalty.connect(_on_exposure_penalty)
+	EventBus.nav_branch_taken.connect(_on_nav_branch_taken)
+	EventBus.nav_lost_proxy.connect(_on_nav_lost_proxy)
+
 
 ## Public toggle entry point for the settings UI. Persists the flag and applies it
 ## live. Disabling stops writing immediately but KEEPS rows already on disk
@@ -114,7 +125,14 @@ func _on_run_started(band_id: StringName, seed: int) -> void:
 	# G3: stamp the build id on the run_started row so a feedback report + its JSONL
 	# tie to one exact build. Extra `data` field only — the schema envelope + every
 	# other row are untouched (G2 tests assert envelope keys, not run_started payload).
-	_emit_row(Schema.RUN_STARTED, {"band_id": String(band_id), "seed": seed, "build": BuildVersionScript.id()})
+	# M1.1 (TEL): also snapshot the active RunConfig flat dict under `run_config` so
+	# every run is a labelled experiment (additive `data` field — NOT a schema bump).
+	_emit_row(Schema.RUN_STARTED, {
+		"band_id": String(band_id),
+		"seed": seed,
+		"build": BuildVersionScript.id(),
+		"run_config": _active_run_config_dict(),
+	})
 
 
 func _on_band_entered(band_id: StringName, depth: int) -> void:
@@ -158,6 +176,54 @@ func _on_currency_changed(kind: StringName, delta: int, source: StringName) -> v
 
 func _on_exposure_threshold(threshold: int) -> void:
 	_emit_row(Schema.EXPOSURE_THRESHOLD, {"threshold": threshold})
+
+
+# --- M1.1 opposition handlers (TEL spec §5b) ---------------------------------
+# Payloads are PRIMITIVES ONLY (JSONL-clean). TEL trusts the emitter's `depth`
+# (authoritative at the event moment) and stamps run-elapsed itself where the
+# spec calls for it. Opt-in is inherited from _emit_row's short-circuit.
+
+# --- R1 ----------------------------------------------------------------------
+func _on_hazard_awoke(depth: int, trigger: StringName) -> void:
+	_emit_row(Schema.HAZARD_AWOKE, {"depth": depth, "trigger": String(trigger)})
+
+
+func _on_hazard_caught(depth: int, _run_t_ms: int) -> void:
+	# TEL stamps run-elapsed itself for consistency with the envelope t_ms; the
+	# signal's run_t_ms arg is emitter-convenience only (R1 may pass 0).
+	_emit_row(Schema.HAZARD_CAUGHT, {"depth": depth, "run_t_ms": _elapsed_ms()})
+	if _writer != null:
+		_writer.flush()  # high-value: precedes a death run_ended
+
+
+# --- R2 ----------------------------------------------------------------------
+func _on_return_cost_incurred(depth: int, cost_kind: StringName, magnitude: float) -> void:
+	_emit_row(Schema.RETURN_COST_INCURRED, {
+		"depth": depth,
+		"cost_kind": String(cost_kind),
+		"magnitude": magnitude,
+	})
+
+
+# --- R3 ----------------------------------------------------------------------
+func _on_exposure_crossed(level: int, depth: int, _run_t_ms: int) -> void:
+	# TEL stamps run-elapsed itself (see _on_hazard_caught note).
+	_emit_row(Schema.EXPOSURE_CROSSED, {"level": level, "depth": depth, "run_t_ms": _elapsed_ms()})
+	if _writer != null:
+		_writer.flush()  # threshold crossing = funnel-defining
+
+
+func _on_exposure_penalty(level: int, penalty_kind: StringName) -> void:
+	_emit_row(Schema.EXPOSURE_PENALTY, {"level": level, "penalty_kind": String(penalty_kind)})
+
+
+# --- R4 ----------------------------------------------------------------------
+func _on_nav_branch_taken(depth: int, junction_degree: int) -> void:
+	_emit_row(Schema.NAV_BRANCH_TAKEN, {"depth": depth, "junction_degree": junction_degree})
+
+
+func _on_nav_lost_proxy(metric: StringName, value: float, depth: int) -> void:
+	_emit_row(Schema.NAV_LOST_PROXY, {"metric": String(metric), "value": value, "depth": depth})
 
 
 func _on_run_ended(reason: StringName, duration_s: float, depth_reached: int) -> void:
@@ -212,6 +278,24 @@ func _current_depth() -> int:
 	if gs != null:
 		return gs.current_depth
 	return 0
+
+
+## Resolve the active RunConfig's flat dict from GameState (R0's read surface) for
+## the run_started config snapshot. Same /root lookup as _current_depth so it stays
+## robust under headless scene runs; empty dict if absent/null so the row never
+## crashes and the analysis can detect "config unknown" (TEL spec §2).
+func _active_run_config_dict() -> Dictionary:
+	var gs := get_node_or_null("/root/GameState")
+	if gs != null and gs.active_run_config != null:
+		return gs.active_run_config.to_flat_dict()
+	return {}
+
+
+## Monotonic run-elapsed milliseconds (same basis as the envelope t_ms). TEL stamps
+## this onto hazard_caught / exposure_crossed so their times are authoritative and
+## consistent regardless of the emitter's own clock (TEL spec §3 / §5b).
+func _elapsed_ms() -> int:
+	return Time.get_ticks_msec() - _run_t0_ms
 
 
 ## Short stable hex id from an int (run/session id). Not cryptographic — just a
