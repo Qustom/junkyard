@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://br2returncost01"]
+
+[ext_resource type="Script" path="res://systems/oppositions/return_cost.gd" id="1"]
+
+[node name="ReturnCost" type="Node"]
+script = ExtResource("1")
