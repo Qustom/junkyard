@@ -107,16 +107,20 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — M1.1 Wave 2: R2 ∥ R3 ∥ R4 dispatched (batch A); R1 sequenced after (batch B)
-**Wave 1 COMPLETE + close-out done.** Foundations on `main`: `RunConfig` + Config menu (32 knobs), config-marked
-telemetry + 11 pre-declared opposition/penalty signals, real `duration_s`, live within-band depth, sealed band.
+## In progress — M1.1 Wave 2: batch A (R2/R3/R4) DONE+merged; ▶ batch B = R1 dispatched
+**Batch A merged `b0566c2`** + verified green (SMOKE OK · RETURN COST OK · EXPOSURE METER OK · EXPOSURE HUD OK ·
+R4 NAV OK · BANDGEN OK · BUG3 SOCKET SEAL OK · DECISION HUD OK · MAIN GAME OK · GdUnit 30/30; all-off fingerprint
+`e943ac9c8bc1` unchanged → M1.0 control preserved). Board: R2/R3/R4 → Done.
 
-**Collision map (resolved — the W1.1-2 lesson applied):** the only shared-file clash is **R1 and R4 both edit
-`scenes/game/main_game.gd`** (R1 = hazard spawn seam; R4 = vision/fog + lost-proxy instantiation + generator `RunConfig`
-threading). R2 (only `systems/oppositions/return_cost.gd`) and R3 (`exposure_meter.gd` + `player.gd` + `dive_clock.gd` +
-`ui/hud/`) are mutually disjoint and disjoint from R1/R4. So:
-- **▶ Batch A (3 parallel `isolation: worktree`, DISPATCHED):** **R2 ∥ R3 ∥ R4** — file-disjoint.
-- **Batch B (after R4's `main_game.gd` merges):** **R1** — sequential (shares `main_game.gd` with R4).
+**▶ DISPATCHED — R1** (general-purpose + character-animator greybox tell): `scenes/hazards/hazard_entity.{tscn,gd}` +
+the spawn seam in `main_game.gd:start_new_run` (gated by `r1_enabled`). Dormant→awaken(depth/linger)→chase→catch→
+`fail_run(&"death")`; emits `hazard_awoke`/`hazard_caught`. Sequenced after R4 (shares `main_game.gd`) — R1's worktree
+is off the post-R4 `main`, so it integrates around R4's `# R4 (M1.1)` blocks cleanly. Board: R1 → In Progress.
+
+**⚠ Wave 2 deviation surfaced (queued for close-out):** R4 found a **residual BUG3 seal gap at aggressive branch
+rates** (`r4_branch_per_depth ≳ 0.12` → 2–6 void-facing cells on some seeds; recommended presets S1/S3 seal cleanly,
+0 leaks). Recorded as **W2-R4-1** in `DESIGN_DEVIATIONS.md` (recommend: Addressed — small BUG3 follow-up to cap all
+outward perimeter floor edges). Director dispositions at the Wave 2 close-out.
 
 **Shared as-built contract briefed to all four** (specs predate BUG2 merge — these are the real names):
 live depth = `GameState.current_depth_index`; max = `GameState.max_depth_reached`; dist home = `GameState.current_dist_to_gate`
@@ -152,6 +156,9 @@ go/iterate/pivot verdict; the Director decides.
 ## Done (M1.1 — Greybox Cost Axis)
 | Task | Proof |
 |---|---|
+| R2 — Costlier return trip | merged `b0566c2`; `tests/test_return_cost.tscn` → **RETURN COST OK** (`systems/oppositions/return_cost.gd` run-state node; marginal-per-hop egress toll off live `current_dist_to_gate`; clock/exposure/meter resources via existing public surfaces; decay_behind behind reachability guard + linear self-downgrade; all-off free); RG1 wires the node; worklog `worklogs/2026-06-19-R2-general-purpose.md` (impl `5c1f2a9`) |
+| R3 — Exposure meter | merged `b0566c2`; `tests/test_exposure_meter.tscn` → **EXPOSURE METER OK** + **EXPOSURE HUD OK** (`systems/oppositions/exposure_meter.gd`; depth-weighted climb, retreat decay, one-shot crossings, max→`fail_run(&"timeout")`; penalty seams via pre-declared signals: `player.gd` speed-mult + `dive_clock.gd` clock-tax + R4-fog vision-mult; greybox HUD bar in `decision_hud.tscn`); RG1 wires the meter node; worklog `worklogs/2026-06-19-R3-general-purpose.md` (impl `87d2628`) |
+| R4 — Maze/navigation risk | merged `b0566c2`; `tests/test_bandgen_determinism.tscn` → **R4 NAV OK** + BANDGEN/SEAL OK (depth-scaled integer branch roll in `band_generator.gd`, contract `fingerprint(seed+config)`, all-off byte-matches M1.0 `e943ac9c8bc1`; `entities/dive/{vision_fog,lost_proxy}.gd` run-state; `nav_branch_taken`/`nav_lost_proxy`); **flagged W2-R4-1** BUG3 seal gap at high branch rates; worklog `worklogs/2026-06-19-R4-general-purpose.md` (impl `b810aa0`) |
 | (pre-decl) `depth_changed` on `main` | orchestrator pre-declaration `2450cde` (BUG2 §3 sequencing); EventBus `signal depth_changed(depth_index, max_depth)` — emitted by BUG2, declared once so wave-1/2 agents never edit `event_bus.gd` for it |
 | R0 — Run-config data model | merged `30e41b9`; `RunConfig` Resource + `GameState.active_run_config`; all-off default = M1.0 baseline; worklog `worklogs/2026-06-19-R0-*.md` |
 | BUG1 — `run_ended.duration_s` real | merged `33eb786`; `tests/test_run_duration.tscn` → **RUN DURATION OK** (`_run_start_ms`+`_elapsed_s()`; >0 & within a frame of direct `Time.get_ticks_msec()` ref for extract/death/timeout, telemetry off); worklog `worklogs/2026-06-19-BUG1-BUG2-general-purpose.md` (impl `cf7e342`) |
