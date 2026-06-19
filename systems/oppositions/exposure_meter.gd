@@ -92,11 +92,38 @@ func _process(delta: float) -> void:
 	# Stateless: reads the BUG2 surface directly. Standing still at max = climbing;
 	# standing still while already shallow (below max) = decaying.
 	var retreating: bool = _live_depth < _max_depth
+	var new_meter: float
 	if retreating and _cfg.r3_decay_on_retreat > 0.0:
-		_meter = maxf(0.0, _meter - _cfg.r3_decay_on_retreat * delta)
+		new_meter = _meter - _cfg.r3_decay_on_retreat * delta
 	else:
 		var climb: float = _cfg.r3_base_climb_rate + _cfg.r3_rate_per_depth * float(_live_depth)
-		_meter = minf(METER_MAX, _meter + climb * delta)
+		new_meter = _meter + climb * delta
+
+	# Both per-frame accrual and the R2 exposure toll (add()) funnel the meter
+	# mutation + crossing-detection + forced-loss through this single shared helper
+	# (BUG5: do NOT create a second divergent crossing path).
+	_mutate_meter(new_meter)
+
+
+## R2's exposure toll (return_cost.gd TOLL_EXPOSURE) injects `amount` into R3's
+## run-state meter via this public mutator (BUG5). It routes through the SAME
+## crossing/penalty/forced-loss logic as natural accrual, so a toll that pushes past
+## an r3_threshold_levels boundary fires the same exposure_crossed / exposure_penalty
+## / exposure_meter_changed. Run-state only: mutates the disposable meter, never
+## GameState meta. Inert unless R3 is active (R2 only calls it when r3_enabled, but
+## we guard defensively so a stray call while inactive is a no-op).
+func add(amount: float) -> void:
+	if not _active or _cfg == null:
+		return
+	_mutate_meter(_meter + amount)
+
+
+## Single source of truth for mutating the run-state meter: clamp to [0, METER_MAX],
+## fire edge-triggered one-shot threshold crossings + their penalties, honor the
+## max-meter forced loss, and emit the HUD projection. Both _process() accrual and
+## add() (R2 exposure toll) funnel through here (BUG5).
+func _mutate_meter(value: float) -> void:
+	_meter = clampf(value, 0.0, METER_MAX)
 
 	# --- edge-triggered, one-shot threshold crossings (§3.1, §9 D3 no re-arm) ---
 	# A crossed threshold stays crossed for the dive; decay below it never un-fires

@@ -174,7 +174,67 @@ func _ready() -> void:
 		failures.append("case5: crossings fired while disabled (%s)" % str(_crossed))
 	gs.end_run(&"abandon", 0.0)
 
+	# === Case 6: add() raises the meter by amount (clamped), emits changed (BUG5) ==
+	# add() is the R2 exposure-toll mutator: it injects into the SAME run-state meter
+	# the accrual path drives, routing through the shared crossing/penalty logic.
+	_reset_listeners()
+	gs.stage_run_config(_cfg({
+		"r3_enabled": true,
+		"r3_base_climb_rate": 0.0,   # no passive climb — isolate add()
+		"r3_threshold_levels": PackedFloat32Array([50.0]),
+		"r3_penalty_kind": 1,        # speed
+		"r3_penalty_magnitude": 0.2,
+	}))
+	gs.start_run(&"test_band", 888)
+	_meter_emits = 0
+	meter.add(30.0)
+	if not is_equal_approx(meter.get_meter(), 30.0):
+		failures.append("case6: add(30) did not raise meter to 30 (got %f)" % meter.get_meter())
+	if _meter_emits < 1 or not is_equal_approx(_last_meter_value, 30.0):
+		failures.append("case6: add() did not emit exposure_meter_changed(30) (emits=%d last=%f)"
+			% [_meter_emits, _last_meter_value])
+	# Adding past a threshold fires the same crossing + penalty as accrual.
+	meter.add(25.0)   # 30 -> 55, crosses level 0 (50)
+	if not is_equal_approx(meter.get_meter(), 55.0):
+		failures.append("case6: add(25) did not raise meter to 55 (got %f)" % meter.get_meter())
+	if _crossed != [Vector2i(0, 0)]:
+		failures.append("case6: add() across threshold did not fire exposure_crossed (got %s)"
+			% str(_crossed))
+	if _penalties.size() != 1 or _penalties[0]["level"] != 0 or _penalties[0]["kind"] != &"speed":
+		failures.append("case6: add() crossing penalty row wrong: %s" % str(_penalties))
+	# Speed mult must reflect the crossing exactly as accrual would (1 crossing → 0.8).
+	var add_mult: float = _speed_mults[_speed_mults.size() - 1]
+	if not is_equal_approx(add_mult, 0.8):
+		failures.append("case6: speed mult after add() crossing = %f (expected 0.8)" % add_mult)
+	# Clamp at METER_MAX.
+	meter.add(1000.0)
+	if not is_equal_approx(meter.get_meter(), 100.0):
+		failures.append("case6: add() did not clamp to METER_MAX (got %f)" % meter.get_meter())
+	# Clamp at 0 (negative add never goes below floor).
+	meter.add(-1000.0)
+	if not is_equal_approx(meter.get_meter(), 0.0):
+		failures.append("case6: add(negative) did not clamp to 0 (got %f)" % meter.get_meter())
+	gs.end_run(&"abandon", 0.0)
+
+	# === Case 7: add() inert when R3 disabled (defensive guard) ================
+	_reset_listeners()
+	gs.stage_run_config(_cfg({"r3_enabled": false}))
+	gs.start_run(&"test_band", 999)
+	_meter_emits = 0
+	meter.add(50.0)   # R3 off → _active false → no-op
+	if not is_equal_approx(meter.get_meter(), 0.0):
+		failures.append("case7: add() mutated meter while R3 disabled (%f)" % meter.get_meter())
+	if _meter_emits != 0:
+		failures.append("case7: add() emitted while R3 disabled (%d)" % _meter_emits)
+	gs.end_run(&"abandon", 0.0)
+
 	meter.queue_free()
+
+	# === Case 8: integration — R2's TOLL_EXPOSURE charge now moves the meter ====
+	# Drive a real ReturnCost (R2) with a live ExposureMeter (R3) present in the
+	# r3_exposure_meter group, exactly as RG1 assembly wires the dive scene. A
+	# taxed retreat must now raise R3's meter by the toll amount (was: no-op).
+	_check_r2_integration(gs, eb, failures)
 
 	if not failures.is_empty():
 		for f in failures:
@@ -184,7 +244,8 @@ func _ready() -> void:
 
 	print("EXPOSURE METER OK — climbs faster at depth, decays on retreat, edge-triggered "
 		+ "one-shot crossings emit crossed+penalty (no re-arm), max forces timeout loss, "
-		+ "speed mult emitted, all-off inert.")
+		+ "speed mult emitted, all-off inert, add() injects+crosses+clamps (BUG5), "
+		+ "R2 exposure toll moves R3's meter end-to-end.")
 
 	# === Optional: HUD projection check ======================================
 	_check_hud(gs, eb, failures)
@@ -226,6 +287,57 @@ func _check_hud(gs: Node, eb: Node, failures: Array[String]) -> void:
 		failures.append("HUD label '%s' != expected '%s'" % [label.text, want])
 	gs.end_run(&"abandon", 0.0)
 	hud.queue_free()
+
+
+## BUG5 integration: a live ExposureMeter (R3) + ReturnCost (R2, toll=exposure)
+## wired the way RG1 assembles the dive scene. A taxed retreat must now move R3's
+## run-state meter by the toll amount — the regression this bug fix targets.
+func _check_r2_integration(gs: Node, _eb: Node, failures: Array[String]) -> void:
+	const RETURN_COST_PATH := "res://systems/oppositions/return_cost.gd"
+	const MECH_EGRESS_TOLL := 2
+	const TOLL_EXPOSURE := 1
+
+	# Fresh meter in the r3_exposure_meter group (main_game.tscn puts it there;
+	# ExposureMeter._ready() does not self-join, so the test joins it like the scene).
+	var r3 := ExposureMeter.new()
+	r3.add_to_group(&"r3_exposure_meter")
+	add_child(r3)   # _ready() wires its EventBus subscriptions
+
+	var rc: Node = load(RETURN_COST_PATH).new()
+	add_child(rc)   # _ready() wires depth_changed/run_started/run_ended
+
+	# R2 on (exposure toll) + R3 on, no passive climb so the ONLY meter change is the
+	# toll. mag=2.0, per=1.5, threshold=1 → retreat 4→0 taxes hops from d=4..2 (>1):
+	# 3 taxed hops → toll = mag(once) + per*3 = 2.0 + 4.5 = 6.5.
+	var cfg := _cfg({
+		"r2_enabled": true,
+		"r2_mechanism": MECH_EGRESS_TOLL,
+		"r2_toll_resource": TOLL_EXPOSURE,
+		"r2_cost_magnitude": 2.0,
+		"r2_cost_per_depth": 1.5,
+		"r2_depth_threshold": 1,
+		"r3_enabled": true,
+		"r3_base_climb_rate": 0.0,
+		"r3_rate_per_depth": 0.0,
+	})
+	gs.stage_run_config(cfg)
+	gs.start_run(&"test_band", 1212)
+	var before: float = r3.get_meter()
+	if not is_equal_approx(before, 0.0):
+		failures.append("integration: R3 meter not 0 at run start (%f)" % before)
+	# Descend to d=4 then retreat to the gate (drives R2 via depth_changed).
+	for i in range(1, 5):
+		gs.set_current_depth(i, i)
+	for i in range(3, -1, -1):
+		gs.set_current_depth(i, i)
+	var after: float = r3.get_meter()
+	if not is_equal_approx(after, 6.5):
+		failures.append("integration: R2 exposure toll did not move R3 meter to 6.5 (got %f) "
+			% after + "— add() not wired / has_method(&\"add\") false?")
+	gs.end_run(&"abandon", 0.0)
+
+	rc.queue_free()
+	r3.queue_free()
 
 
 # --- Helpers -----------------------------------------------------------------
