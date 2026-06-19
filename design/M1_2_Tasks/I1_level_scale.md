@@ -297,3 +297,24 @@ Independent programmer-lens pass by a reviewer who did NOT author §1–§3. Ver
 
 - **2026-06-19 — Phase-2 spec authored.** Goal + premise research (G4 I1 finding; real generator/RunConfig/CFG/materialise APIs); two-lever design (count override + size multiplier) with Option (a)/(b)/(c) analysis and a recommended (a)+count path; determinism (count rides the piece list, size is layout-invariant presentation), CFG coverage, and TEL snapshot wiring; 8 Open Questions (A–H) with Director-review flags on A/B/E.
 - **2026-06-19 — Phase-3 fresh-eyes pass.** Independent programmer-lens verification of all cited code. Added `## Resolved Decisions (Phase 3)`: resolved D/E/F/G/H on merit, deferred C to RG, confirmed A/B as Director-review (revised E from Director/qa down to a settled technical call). **Caught a build-breaking blind spot** — `JunkPlacer.plan()` computes loot world coords off the unscaled piece export pre-materialise, so Option (a) must also thread `lvl_size_mult` into `junk_placer.gd` (added to Touch list) or loot mis-places at `mult != 1.0`. Confirmed the `SocketSealer` cell-size worry (Q F) is moot (cell-space seal inherits piece scale) and verified Q D (player speed is unscaled px/s) in code.
+
+---
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+The Director dispositioned the Phase-3 flagged items:
+
+- **A (more rooms vs bigger vs both) + B (size multiplier vs new authored pieces): Director chose "GO FURTHER".**
+  M1.2 ships **all three**: the **room-size multiplier** (Phase-3 Option (a), determinism-safe) **+** the **room-count
+  override** knob **+ newly authored larger / more-varied greybox room pieces** (the Phase-3 recommendation to defer new
+  pieces to M2 is **OVERRIDDEN** — they are in M1.2 scope). Rationale: the Director wants genuine spatial variety + scale,
+  not just a uniform zoom.
+- **Scope/build implication:** I1 now has a **second builder — `environment-artist`** authoring new larger greybox
+  pieces (proper B1 sockets so the generator can stitch them; greybox rects, no real art) alongside `general-purpose`
+  (count knob + size multiplier + generator/CFG/`junk_placer.gd` wiring — including the Phase-3 loot-mis-placement fix).
+  The new pieces must carry correctly-tagged sockets + floor/wall so BUG3/BUG4 seal them and B2/B3 grade them.
+- **C (per-piece-type size) + D/F (traversal/seal):** as resolved in Phase 3 (configurable; seal is cell-space, moot).
+- **E:** keep `lvl_` knobs out of `all_oppositions_disabled()` (settled, not a Director call).
+
+**Design LOCKED.** All-off / default still reproduces the M1.1 baseline (default count + mult 1.0 + the existing piece
+set); the new larger pieces only appear when the Director dials count/size or selects them.

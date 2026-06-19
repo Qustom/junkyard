@@ -107,7 +107,30 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## ▶ HUMAN PLAYTEST GATE — M1.1 build complete; RG2/RG3 need the Director to play
+## ▶ Next action — M1.2 design LOCKED; dispatch Wave 1 build (I1 / BUG4 / I5)
+**M1.2 (Legibility & Level Scale)** is the iteration on M1.1's playtest. The **three-phase authoring process** (CLAUDE.md)
+ran end-to-end: Phase 1 breakdown (`design/M1_2_Tasks/M1.2_Breakdown.md`), Phase 2 six per-task design docs
+(I1/BUG4/I5/I2/I4/I3 — research + pseudocode + open questions), Phase 3 fresh-eyes resolution (different role than each
+author; caught real blind spots: I1 loot mis-placement under scaling, I5 stale-binary root cause, I2 body==hall geometry,
+I4 non-compositing mechanism). **Director dispositioned all flagged items 2026-06-19 → design LOCKED.**
+
+**Key Director verdicts folded into the docs:** I1 = size multiplier **+** count knob **+ newly authored larger greybox
+pieces** (scope expanded; +environment-artist builder) · I2 hazard = **refuge** (walls block, shrink + better steering) ·
+all I3/I4/I5/I2-polish defaults accepted (sweepable). Each `design/M1_2_Tasks/<id>_*.md` ends with a "Director Disposition (FINAL)".
+
+**▶ Wave 1 — Spatial & data foundation (dispatch next, parallel worktrees, file-disjoint):**
+- **I1** (general-purpose + environment-artist) — `lvl_` RunConfig knobs (count + size mult) + generator threading +
+  `junk_placer.gd` loot-scale fix + CFG/TEL pickup **+ new larger greybox pieces** (B1 sockets). Spec: `I1_level_scale.md`.
+- **BUG4** (general-purpose) — geometry-keyed seal (cap every outward non-floor neighbour); fingerprint-safe. `BUG4_robust_seal.md`.
+- **I5** (qa) — CI regression-lock for `duration_s` + bake real HEAD SHA (drop stale `config/build_sha`). `I5_telemetry_hygiene.md`.
+Watch: I1 owns `run_config.gd` + `band_generator.gd` + `main_game.gd` (size-mult materialise) — confirm BUG4/I5 are disjoint (they are: `socket_sealer.gd` / `telemetry.gd`+`version.gd`).
+
+**Then Wave 2** (I2 hazard ∥ I4 vision ∥ I3 cues — watch the I2/I4 `main_game.gd` collision), **Wave 3** re-gate
+(RG1 build → playtest → RG2 → RG3). Run the wave close-out deviation sweep after each wave.
+
+---
+
+## (M1.1 done) HUMAN PLAYTEST GATE — M1.1 build complete; playtested → ITERATE → M1.2
 **M1.1 is BUILT.** Wave 1 (foundations) + Wave 2 (the four oppositions R1–R4) + RG1 (playtest build) are all on `main`
 (`c4c71b8`), verified green. The depth-scaled **cost axis is live, configurable, and config-marked in telemetry**;
 all-off reproduces the M1.0 baseline exactly (the permanent control). RG1's verify driver passed 16/18 matrix rows headless.

@@ -334,3 +334,10 @@ This is **file-disjoint** from the rest of Wave 1 (I1 → `band_generator.gd`/`r
    the generalised sealer is what closes it — otherwise a green sweep could be vacuously green if
    the chosen seeds happen not to branch. (`_count_floor_facing_void` reads the **live** Geometry
    layer, so it already sees the caps; no test-infra change needed.)
+
+---
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+No Director call required (W2-R4-1's *Addressed* disposition already ratified the approach; Phase-3 closed all 6 open
+questions on technical merit). **Design LOCKED.**

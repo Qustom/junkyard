@@ -295,3 +295,15 @@ The **legibility layer holds in every band**: these cues are HUD-space (CanvasLa
 ---
 
 *Living spec. Phase-3 fresh-eyes pass resolves §3 (Director-review items flagged); confirm at brief time the exact `penalty_kind` / `cost_kind` `StringName` values R3/R2 emit and any `M1_As_Built.md` HUD-API corrections (as-built wins). One I3 worklog covers the build wave.*
+
+---
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+Director **accepted all Phase-3 defaults**: extend the existing HUD surfaces in place; R3 = colour-ramped exposure bar +
+read-only threshold ticks + penalty banner on `exposure_crossed`/`exposure_penalty` (keyed on the confirmed
+`penalty_kind` StringNames **`speed`/`vision`/`clock`/`none`**); R2 = clock-bar pulse + floating "−N {unit}" on
+`return_cost_incurred`; every cue backed by a non-colour channel, invisible when its opposition is off (= M1.0 HUD).
+A small/optional **screen-shake on penalty is in scope** (Q5 accepted). No new EventBus signal.
+
+**Design LOCKED.**

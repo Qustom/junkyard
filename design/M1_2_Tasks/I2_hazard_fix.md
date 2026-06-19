@@ -322,3 +322,18 @@ Confirmed by reading the spawn seam: `_spawn_r1_hazards` and `_hazard_spawn_posi
 4. No `main_game.gd` change. No `event_bus.gd` / `game_state.gd` change. All-off (`r1_enabled = false`) still instantiates nothing.
 
 Open for Director before build-final: **Q2** (refuge vs always-catch), **Q3** (add depth-scaled-radius field?), **Q4** (re-sleep — confirm no). All default-resolved so the build can start on recommendations.
+
+---
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+- **Q2 (anti-wall-stick: refuge vs ghost-through-walls): Director chose REFUGE.** The hazard **keeps wall collision**;
+  the fix is to **shrink the body to fit the halls + add anti-wall-stick steering** (Phase-3 §3.2: next-frame tangent
+  velocity, named `STALL_FRACTION`). Walls are a deliberate partial hiding place — the player can break line-of-sight
+  to escape. (Ghost-through-walls is rejected for M1.2.)
+- **Q3 (depth-scaled `r1_catch_radius_per_depth` knob): accepted** — add the schema field.
+- **Q4 (no re-sleep): accepted** — keep M1.1's permanent-awake latch.
+- All other Phase-3 resolutions stand (body radius ~10, catch radius > combined-body contact ~32px, defaults coordinate
+  with I1's new room scale).
+
+**Design LOCKED.**

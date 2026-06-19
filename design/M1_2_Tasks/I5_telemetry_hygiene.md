@@ -307,3 +307,14 @@ The author's central claim holds under independent re-analysis. The evidence is 
 3. **No `run_ended` arity change, no telemetry schema bump, no new row** — only `duration_s`'s value and `build`'s value become correct; `ENVELOPE_KEYS` and `TELEMETRY_SCHEMA_VERSION` unchanged.
 4. **All-off control still == M1.0/M1.1 baseline** — I5 is pure hygiene; it changes no gameplay, so the all-off run is byte-identical save for a correct `build` value and a correct `duration_s`.
 5. A worklog at `worklogs/<date>-I5-qa-playtest-coordinator.md` names the real commit SHA, lists the touched files, and records the new test passing + the smoke gate green — per the work-product contract.
+
+---
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+Director **accepted all Phase-3 defaults**: `duration_s=0` confirmed a **stale pre-fix binary** (not a live bug) → I5(a)
+ships a **CI regression-lock** (headless loop-re-entry assertion), no code change to the duration path. (b) **bake the real
+HEAD SHA at build time** into a git-ignored generated artifact read at runtime (drop the stale `ProjectSettings
+config/build_sha` indirection); show a **`+dirty`** suffix when the tree is uncommitted.
+
+**Design LOCKED.**

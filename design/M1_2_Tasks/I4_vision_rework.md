@@ -345,3 +345,14 @@ So the load-bearing separators are **presence-of-shape** (never-seen vs the othe
 **Changelog**
 - **2026-06-19 — Phase-3 fresh-eyes (ui-ux-designer).** Independent UI/readability resolution of all 8 Open Questions (added §"Resolved Decisions (Phase 3)"). Occlusion approach APPROVED but with a **mechanism substitution (Q2)**: the §2.A "ColorRect-on-CanvasLayer cut by a PointLight2D light-mask" does not composite reliably in Godot 4; substitute a player-centred **radial-dark sprite / world-space mask** (still node-based, no shader, no geometry coupling) — flagged a viewport-coverage build corner case. Resolved Q1 (`OCCLUDE_ALPHA 0.94`, anti-blindness floor), Q3 (pulse **+** redundant HUD word — redundancy rule, not either/or; no audio), Q4 (pulse-on-1st / HUD-word-on-2nd emit; rejected telemetry-only), Q5 (cool desat ghost separated on a **non-hue** axis — flat/static vs lit/animated — for colourblind safety; one shared brightness-ladder source-of-truth with art), Q6 (hazard hidden-until-seen but player + active threat stay on the band-independent legibility layer; coordinate z-order with I2), Q7 (one listener owns the lost flag, HUD projects it, no polling), Q8 (`current_depth_index`). 4 confirmed ⚠ NEEDS DIRECTOR REVIEW feel calls (Q1/Q3/Q4/Q5), each shipping a default so build is unblocked.
 - **2026-06-19 — Phase-2 authored.** Premise research (root-caused the M1.1 dim-not-occlude defect to CanvasModulate-multiply + additive-soft-light; fog illegibility to same-overlay tint; lost-proxy invisibility to telemetry-only emit). Recommended occlusion approach: opaque dark-plate `CanvasLayer` + hard-edged player light-hole (node-based, no shader, no geometry coupling; `LightOccluder2D`/shader deferred to the real vision system). Three-state legible fog (never-seen/remembered/live, cool color-shift). Lost cue = screen-edge disoriented pulse listening to the existing `nav_lost_proxy` (no new signal/state; `lost_proxy.gd` unchanged). Radius re-tuned against I1 (expressed in cells). 8 Open Questions (4 Director feel/fun calls flagged).
+
+---
+
+## Director Disposition (2026-06-19, FINAL — design locked)
+
+Director **accepted all Phase-3 defaults**: occlusion darkness ~0.94 (near-black with an anti-blindness floor) via the
+Phase-3 **radial-dark world mask** (NOT the non-compositing CanvasLayer light-mask); three-state fog (never-seen /
+cool-desaturated remembered / live); "lost" cue = **screen-edge pulse + redundant HUD word** (no audio), pulsed on the
+first lost-event and a persistent HUD word on repeats; fog memory = cool desaturated ghost. All are greybox + sweepable.
+
+**Design LOCKED.**
