@@ -42,6 +42,7 @@ Real members (the specs' `banked_money`/`cash_out`/idealized `start_run()` excer
 
 ## Procedural geometry (B1 ↔ B2)
 - B1 greybox pieces are solid-walled rects; the **socket `Marker2D` is inset one floor cell** from the edge (on the last interior floor cell, centered on the 2-cell opening).
+- **Socket width must equal the perimeter opening width (M1.2 I1).** A piece's wall-gap opening spans exactly `width_cells` (= 2 in B1). If a piece is authored so its interior makes the perimeter opening *wider* than `width_cells` (e.g. a 6-wide vertical hall has a 4-cell interior → a 4-cell N/S opening against a `width_cells=2` socket), the seal leaves the extra floor cells facing void. **Author new pieces so the floor opening at each socket is exactly `width_cells` wide** — the M1.0 `piece_corridor_v` 4-wide (interior 2) convention is the reference. (Found authoring `piece_hall_v` in I1; the BUG4 geometry-keyed seal would also cap such leaks at materialisation, but pieces should be authored seal-clean.)
 - Because of that inset, B2 mates pieces by **flush-edge alignment** (candidate placed flush against the host footprint edge on the facing axis, socket lanes aligned on the perpendicular axis) — NOT the specs' raw `cand_cell == sock_cell + dir` formula (which double-counts the inset and overlaps by two columns).
 - "Connected AND walkable" = **floor-cell adjacency** (a shared perimeter wall is not a link).
 - All placement is integer `Vector2i` cells; pixels only at `cell * cell_size_px` (16). Default `branch_chance = 0.0` (strictly linear spine for M1).

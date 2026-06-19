@@ -143,7 +143,7 @@ The menu holds **one** `RunConfig` it mutates as the Director edits (the *workin
 | R4 | `r4_fog_enabled` | `bool` | `CheckButton` | |
 | R4 | `r4_lost_proxy_threshold` | `float` | `HSlider` + value label | telemetry proxy |
 
-That is all 32 fields the R0 test counts (`R0 OK — all 32 knobs`). The implementing agent should **assert at build time that the bound-field set equals `RunConfig`'s exported field set** (see §3.5 reflection) so a future R-task adding a knob can't silently leave it unreachable — that is the CFG acceptance "no opposition knob is unreachable."
+That is the full exported-field set the R0 test counts (32 at M1.1; 35 as of M1.2 I1's `lvl_` knobs — the count is not load-bearing). The implementing agent should **assert at build time that the bound-field set equals `RunConfig`'s exported field set** (see §3.5 reflection) so a future R-task adding a knob can't silently leave it unreachable — that is the CFG acceptance "no opposition knob is unreachable." (`has_full_coverage()` enforces this generically; do not hardcode the count.)
 
 ### 3.3 Enum-placeholder fields render as `OptionButton`
 
@@ -315,7 +315,7 @@ Key behaviours the pseudocode encodes: **one working config**, **duplicate-on-lo
 Restated from the Breakdown §4 CFG entry (and §7 DoD #2):
 
 1. From `main_game`, the Director can **toggle each opposition on/off** (R1–R4 masters) before pressing Start.
-2. The Director can **set every knob** of every opposition before Start (all 32 `RunConfig` fields are reachable and editable — **no opposition knob is unreachable from the menu**).
+2. The Director can **set every knob** of every opposition before Start (all `RunConfig` exported fields are reachable and editable — 32 at M1.1, 35 as of M1.2 I1; **no knob is unreachable from the menu**, asserted as a set not a count).
 3. The **started run reflects those values** — the config the menu built is the run's `active_run_config` (verifiable via `GameState.active_run_config` after Start, and downstream via TEL's `run_started` snapshot once TEL lands).
 4. **"Reset to baseline" returns all-off** — every master OFF and every magnitude neutral, reproducing the M1.0 baseline control.
 5. The menu **surfaces 100% of `RunConfig`'s knobs** with no hidden/hardcoded opposition values; it does **not** restart live dives (it only configures the next run launched from the existing Start Run flow).

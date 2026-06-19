@@ -183,3 +183,26 @@ dispositioned by the Director.
 Reapplied to `R4_maze_navigation.md` §6; BUG4 tracked. `DESIGN_DEVIATIONS.md` is now empty (between waves).
 **M1.1 Wave 2 (the four oppositions R1–R4) is complete** — the depth-scaled cost axis is built, configurable, and
 telemetried. **Next: Wave 3 — re-gate** (RG1 build + wire R2/R3 nodes → human playtest → RG2 analysis → RG3 verdict).
+
+---
+
+## M1.2 Wave 1 (Spatial & data foundation) — Director-evaluated 2026-06-19
+
+I1 surfaced 2 deviations (BUG4 and I5 reported **"none"**). Two M1.1 Wave-3/RG1 entries that had lingered un-dispositioned
+in the active file (the M1.1 re-gate went straight to ITERATE → M1.2) were also cleared in this sweep. All four assembled
+by Claude, dispositioned by the Director.
+
+| # | Deviation | Verdict | Reapplied to |
+|---|---|---|---|
+| I1-1 | New larger greybox pieces authored inside the I1 programmer task rather than a separate `environment-artist` dispatch — for worktree atomicity (the pieces feed a determinism-sensitive config-dependent catalog seam). Greybox geometry+sockets only, B1-compliant. | **Reviewed** | Process-only, no design change. One-worklog-per-task contract satisfied (process note in `worklogs/2026-06-19-I1-general-purpose.md`). |
+| I1-2 | `piece_hall_v` authored 4 cells wide (interior 2), not the spec's *illustrative* 6×16 — a 6-wide hall's 4-cell N/S perimeter opening exceeds the `width_cells=2` socket and leaks 2 floor cells past the seal (caught by `test_level_scale_determinism` seeds 7 & 1000003). 4-wide gives a true 2-cell opening that seals clean. | **Reviewed** (+ doc note) | Folded the rule **"socket width must equal the perimeter opening width"** into `M1_As_Built.md` §"Procedural geometry (B1 ↔ B2)". |
+| W3-RG1-1 | `ReturnCost.dive_clock` injected in `main_game.gd:_ready()` instead of a `.tscn` NodePath export (typed-node export across instanced sub-scenes resolved `null` — known Godot quirk; code-assign is behaviour-identical, the spec's allowed alternative seam). | **Reviewed** | Behaviour-identical idiom; no design change. |
+| W3-RG1-2 | `RunConfig.to_flat_dict()` / CFG coverage stated as a magic count ("32 keys") in `RG1`/`CFG` prose; the verify driver asserts the key *set* generically, and I1 raised the count to 35. | **Reviewed** (doc fix) | Corrected the magic-count prose in `RG1_playtest_build.md` (V13 + Decision rationale) and `CFG_config_menu.md` (×2) to set-based language (32→35, count not load-bearing). |
+
+**M1.2 Wave 1 close-out complete (2026-06-19).** 4 deviations dispositioned: **all 4 Reviewed**. 2 reapplied as doc edits
+(I1-2 → `M1_As_Built.md`; W3-RG1-2 → `RG1`/`CFG` prose); I1-1 and W3-RG1-1 are process/idiom-only. `DESIGN_DEVIATIONS.md`
+is now empty (between waves). **M1.2 Wave 1 (spatial & data foundation) is complete** — configurable level scale (count +
+size mult + new larger greybox pieces behind a config-dependent catalog), branch-rate-independent geometry-keyed seal, and
+telemetry hygiene (real `duration_s` regression-lock + real build SHA) are on `main`; all-off default still byte-matches the
+M1.1 baseline (fp=e943ac9c8bc1). **Next: Wave 2 — oppositions retuned to the new canvas** (I2 hazard ∥ I4 vision ∥ I3
+cues; watch the I2/I4 `main_game.gd` single-writer collision).

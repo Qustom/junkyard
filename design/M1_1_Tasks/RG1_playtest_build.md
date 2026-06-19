@@ -159,7 +159,7 @@ RG1 is **done** only when this matrix passes. It separates **objective build che
 | # | Check | Expected |
 |---|---|---|
 | V12 | **Multiple runs per session** | Start → end → sell → Continue → new dive, repeatable ≥ 3× with no degradation, no leaked nodes (old band/hazard/fog fully freed by `_clear_band`). |
-| V13 | **Config snapshot per run** | Every `run_started` JSONL row carries `data.run_config` = full flat dict (32 keys); empty `{}` only if config truly absent. |
+| V13 | **Config snapshot per run** | Every `run_started` JSONL row carries `data.run_config` = the full `to_flat_dict()` key set (asserted generically, NOT by a magic count — 35 keys as of M1.2 I1); empty `{}` only if config truly absent. |
 | V14 | **Opposition event gating** | With an opposition ON its event rows appear; with it OFF they do not (no stray hazard/exposure/nav rows in an all-off run). |
 | V15 | **`run_ended` arity intact** | `run_ended(reason, duration_s, depth_reached)` unchanged; `duration_s` real (BUG1), `depth_reached` = max within-band depth (BUG2), not 1. |
 | V16 | **Config carry-forward** | After Continue, the next run's `run_started.run_config` equals the prior run's (config persists across the loop, §2.3); a new seed differs. |
@@ -275,7 +275,7 @@ The Director ratified **every** recommendation below as a committed decision (ap
 **Decision: yes — Continue (door 2) is the quick re-run; add a "Back to Config" button on the sell screen as the switch-config path.** *Rationale:* the carry-forward already gives frictionless re-run; a sell-screen button (chosen over a hotkey for discoverability) lets the Director switch configs mid-session without restarting the app. (Propagated: §2.3, §3 table, §3.1 / pseudocode `_on_back_to_config_pressed`, §6.)
 
 **Q3 — How does a playtester record which config they ran?**
-**Decision: the `run_config` snapshot on every `run_started` row is ground truth; the Director-typed `RunConfig.build_tag` sweep label (e.g. `"R1-only-fast"`) is the human-readable handle. The playtester does NOT hand-transcribe knob values.** *Rationale:* the snapshot already carries all 32 keys authoritatively; `build_tag` rides telemetry alongside the auto build SHA for human-readable labelling; hand-transcription is error-prone. (Propagated: V13, V17, §6 tester_readme.)
+**Decision: the `run_config` snapshot on every `run_started` row is ground truth; the Director-typed `RunConfig.build_tag` sweep label (e.g. `"R1-only-fast"`) is the human-readable handle. The playtester does NOT hand-transcribe knob values.** *Rationale:* the snapshot already carries the full `to_flat_dict()` key set authoritatively (asserted as a set, not a count); `build_tag` rides telemetry alongside the auto build SHA for human-readable labelling; hand-transcription is error-prone. (Propagated: V13, V17, §6 tester_readme.)
 
 **Q4 — Seed policy for comparison: pin or vary?**
 **Decision: default to varying seed per loop (`seed_override == -1`); expose `seed_override` for the Director to pin one layout for controlled A/B comparison.** *Rationale:* varying seeds give distribution data at the M1.0 cadence, while pin-on-demand supports apples-to-apples opposition comparison on the same map. (Propagated: §5 `_resolve_seed` + seed-policy note.)

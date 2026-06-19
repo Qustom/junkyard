@@ -221,3 +221,32 @@ Director playtested the RG1 build (57 M1.1 runs, `playtest_data/M1.1/run_log_202
 Director's verdict on the M1.1 re-gate: ITERATE. Bumped to M1.2 (Legibility & Level Scale), authored via the four-phase process (`design/M1_2_Tasks/`). The cost-axis mechanics stay; M1.2 makes them legible + fair, then re-gates.
 
 **M1.1 fully complete** — Wave 1 (foundations) + Wave 2 (R1–R4 oppositions) + Wave 3 (RG1 build + RG2 analysis + RG3 verdict). All close-outs done (W1.1-1/2, W2-R4-1→BUG4, W3-RG1-1/2). Detailed Done tables + proof: `STATUS_ARCHIVE.md`.
+
+---
+
+## M1.2 — Legibility & Level Scale · Wave 1 (Spatial & data foundation) — done 2026-06-19
+
+All three integrated on `main`, verified (SMOKE + determinism + suite green), pushed, board = Done. All-off default
+byte-matches the M1.1 baseline (fp=e943ac9c8bc1). Close-out: 4 deviations, all Director-Reviewed, archived to
+`DESIGN_DEVIATIONS_HISTORY.md`.
+
+### I1 — Configurable level scale (room count + size + new larger pieces) — **Done** (merged `e67532c`, impl `e1e313c`)
+Shipped all three Director-LOCKED deliverables: `lvl_room_count` override (-1 sentinel = baseline 12) threaded into the
+generator grow-loop; `lvl_size_mult` applied at materialisation as one shared integer `cell_size` (layout-invariant — does
+not move `fingerprint()`), with the Phase-3 loot seam fixed (same `cell_size` into `JunkPlacer.plan`); 4 new B1-compliant
+greybox pieces (`piece_room_xl/chamber/corridor_long_h/hall_v`) behind a config-dependent ext catalog (`data/piece_catalog_ext.tres`)
+so the baseline catalog stays byte-identical. CFG 35/35 coverage + `to_flat_dict()` carries the knobs. `tests/test_level_scale_determinism.{gd,tscn}` green. Empirical: linear spine reached requested count up to 60 (no realistic ceiling). Worklog `worklogs/2026-06-19-I1-general-purpose.md`.
+
+### BUG4 — Branch-rate-independent socket seal — **Done** (merged `eee4418`, impl `187f63e`)
+Generalised `SocketSealer` from frontier-keyed (`open_sockets`) to geometry-keyed: build one band-global FLOOR set, cap every
+floor cell's outward 4-neighbour not in the set (the `floor_set.has(n)` guard protects mated doorways exactly). Deleted the
+dead `_opening_lane_cells` helper. High-branch sweep (`branch_per_depth` 0.12–0.20 × 9 seeds): 508 void cells pre-seal → 0
+post-seal on every band; `fingerprint()` byte-identical pre/post; connectivity preserved. Worklog `worklogs/2026-06-19-BUG4-general-purpose.md`.
+
+### I5 — Telemetry hygiene (duration regression-lock + real build SHA) — **Done** (merged `1fd657e`, impl `f2a62fb`)
+(a) Confirmed `duration_s=0` was a stale pre-fix binary (not a live bug) → added `tests/test_duration_loop_reentry.{gd,tscn}`
+that drives 3 sequential `start_run` re-entries (extract→timeout→death) and asserts a real, independent nonzero `duration_s`
+each (telemetry off); wired into `ci.yml` + `nightly.yml` as a merge gate. (b) `BuildVersion.short_sha()` now reads a
+git-ignored baked `const .gd` artifact (`tools/stamp_build.sh`) → editor-live git → neutral `0000000` sentinel; dropped the
+stale `project.godot config/build_sha`; `+dirty` suffix on an uncommitted tree. No `run_ended` arity / schema change. Worklog
+`worklogs/2026-06-19-I5-qa-playtest-coordinator.md`.

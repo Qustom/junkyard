@@ -26,27 +26,12 @@ cross-cutting contracts: `design/M1_2_Tasks/M1.2_Breakdown.md`. Provenance: `des
 **Design is LOCKED** — every task's design doc ends with a "Director Disposition (FINAL)". Greybox; all-off `RunConfig`
 still reproduces the M1.1 baseline (permanent control); config-marked telemetry; `run_ended` arity stays locked.
 
-### Wave 1 — Spatial & data foundation  *(parallel worktrees, file-disjoint)*
+### Wave 1 — Spatial & data foundation — ✓ **DONE 2026-06-19** (archived → `TASKS_COMPLETED.md`)
 
-### I1 — Configurable level scale (room count + size + new larger pieces)
-- Milestone: M1.2 (Wave 1)   Assignee: general-purpose + environment-artist (new larger greybox pieces)   BlockedBy: none
-- Spec: `design/M1_2_Tasks/I1_level_scale.md`
-- Goal: expose **room count** + **room-size multiplier** as `lvl_` `RunConfig` knobs (CFG-surfaced) **and author new larger/varied greybox pieces** (Director-confirmed scope); thread into the generator + `junk_placer.gd` (Phase-3 loot-scale fix); default = current M1.1 baseline; new knobs join `fingerprint(seed+config)` + CFG coverage + TEL snapshot.
-- Done when: room count + size settable from CFG visibly change the band; new pieces stitch/seal/grade; default = M1.1 baseline; determinism preserved; CFG/TEL pick up the new knobs.
+I1 (merged `e67532c`) · BUG4 (merged `eee4418`) · I5 (merged `1fd657e`) — all on `main`, board = Done, close-out swept
+(4 deviations, all Director-Reviewed). All-off default still byte-matches the M1.1 baseline (fp=e943ac9c8bc1).
 
-### BUG4 — Branch-rate-independent socket seal
-- Milestone: M1.2 (Wave 1)   Assignee: general-purpose   BlockedBy: none
-- Spec: `design/M1_2_Tasks/BUG4_robust_seal.md` (origin: M1.1 close-out W2-R4-1, Director Addressed)
-- Goal: generalize `SocketSealer` from frontier-keyed (`band.open_sockets` only) to **geometry-keyed** — cap every floor cell's outward non-floor, non-doorway neighbour — so the seal is branch-rate-independent. Geometry-only pass, no RNG/piece changes → `fingerprint()` byte-identical.
-- Done when: a determinism+seal sweep at high branch rates (`branch_per_depth` 0.12–0.20) shows 0 void-facing cells on every seed; fingerprint unchanged; existing seal/determinism tests green.
-
-### I5 — Telemetry hygiene (duration regression-lock + real build SHA)
-- Milestone: M1.2 (Wave 1)   Assignee: qa-playtest-coordinator   BlockedBy: none
-- Spec: `design/M1_2_Tasks/I5_telemetry_hygiene.md`
-- Goal: (a) `duration_s=0` was a **stale pre-fix binary** (confirmed) → add a CI regression-lock (headless loop-re-entry asserts nonzero duration), no duration-path code change; (b) bake the real HEAD SHA at build time into a git-ignored generated artifact read at runtime (drop the stale `project.godot config/build_sha`); show `+dirty` when uncommitted.
-- Done when: every completed run logs a real `duration_s` (asserted via the loop-re-entry test); `run_started.data.build` reflects the actual HEAD SHA; suite stays green.
-
-### Wave 2 — Oppositions retuned to the new canvas  *(parallel; watch the I2/I4 `main_game.gd` collision)*
+### Wave 2 — Oppositions retuned to the new canvas  *(NEXT — parallel; ⚠ watch the I2/I4 `main_game.gd` collision)*
 
 ### I2 — Hazard fix (size, navigation, catch)
 - Milestone: M1.2 (Wave 2)   Assignee: general-purpose (+ character-animator: greybox tell)   BlockedBy: I1 (tune to new room scale)
