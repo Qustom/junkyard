@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer; also owns the greybox HUD readout this wave)
 - **Milestone:** M1.1 (Wave 2 — the four oppositions)
 - **Branch:** general-purpose/R3
-- **Commit:** d6f4d1aff0bfa466cab10b6319a0a1b63dfc98c6
+- **Commit:** 87d2628aea6d3f45097ad9c9e33f832417f487a9
 
 ## What changed
 Built the R3 ExposureMeter: a run-state Node (NOT autoload) that climbs a 0–100 meter
