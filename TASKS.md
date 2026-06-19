@@ -172,6 +172,27 @@ real art. Full milestone breakdown, dependency map, and build order: `design/M1_
 
 ---
 
+## M1 bugs (surfaced by the G4 playtest, 2026-06-19)
+
+Defects found during the G4 internal playtest (34 runs). The first two limit G4's telemetry validity;
+the third is a build-quality geometry bug. Provenance: `design/M1_Tasks/G4_findings.md`.
+
+### BUG1 — `run_ended.duration_s` always 0
+- Milestone: M1   Assignee: general-purpose   BlockedBy: none
+- Goal: `run_ended(reason, duration_s, depth_reached)` emits `duration_s = 0.0` on every run (confirmed across 32 completed runs; real lengths were only recoverable from Telemetry's `t_ms`). Compute/pass the actual elapsed run time so the gate's core run-length metric is real. Likely `GameState.end_run`/`extract_and_end_run`/`fail_run` passing 0 instead of the elapsed time since `start_run`.
+- Done when: a completed run emits a nonzero `duration_s` matching wall-clock (±tolerance) in `run_log.jsonl`; a headless check asserts it; suite stays green.
+
+### BUG2 — within-band depth not tracked (telemetry depth stuck at 1)
+- Milestone: M1   Assignee: general-purpose   BlockedBy: none
+- Goal: `band_depth_reached`/`current_depth` only ever report 1 because `current_depth` is a band-entry counter, not within-band progress. The B3 depth axis (`depth_index`/`dist_to_gate` per `PlacedPiece`) exists but the player's position is never mapped to a "depth reached." Track how deep within the band the player travels (e.g. max `depth_index` of the piece they occupy) and feed it to telemetry so "how far did they push" is measurable. (NOTE: even fixed, the G4 finding stands — depth carries no *risk*; see G4_findings.md.)
+- Done when: moving deeper in the band raises a tracked depth value and `band_depth_reached` fires for new maxima > 1; headless check; suite green.
+
+### BUG3 — zone pieces have open sockets/exits into off-map void
+- Milestone: M1   Assignee: general-purpose (+ environment-artist: piece geometry)   BlockedBy: none
+- Spec: `B1_zone_piece_format.md` / `B2_room_graph_generator.md` + `M1_As_Built.md` §Procedural geometry
+- Goal: rooms have openings leading into areas outside the playable map (unused sockets left as gaps). After stitching, every socket that wasn't mated to a neighbor must be wall-capped (closed collision + floor edge) so the band is sealed.
+- Done when: a generated band has no open sockets to the void (all unmated sockets capped); the player cannot walk off-map; headless/visual check; determinism preserved.
+
 ## M1 follow-ups (deferred tech-debt — non-blocking; from the wave-5 close-out)
 
 Small, optional cleanups surfaced as `Reviewed` deviations at the M1 wave-5 close-out (2026-06-18) and

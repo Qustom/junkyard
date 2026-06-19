@@ -6,12 +6,35 @@ what's blocked, and the immediate next action. The full task queue lives in `TAS
 mirror lives in GitHub Projects. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)**, in progress.
-**Last updated:** 2026-06-18 (G1+G2+G3+G6 merged + verified green; full loop playable w/ first-run consent prompt — remaining: finish wave-5 close-out [13 deviations awaiting per-entry Director verdict] + G4 the human fun-gate)
+**Current milestone:** M0 ✅ complete → **M1 (Greybox Core Loop)** — all build tasks done; **G4 gate run 2026-06-19 → verdict ITERATE.**
+**Last updated:** 2026-06-19 (G4 internal playtest done — 34 runs; verdict **ITERATE**: loop is engaging + mechanically sound but the push/cash-out *tension* is absent — no risk opposes pushing deeper. See `design/M1_Tasks/G4_findings.md`. Awaiting Director's iterate-path call: A = focused M1.5 risk iteration + re-gate / B = proceed to M2.)
 
 ---
 
-## ▶ Next action (start here on a cold restart) — **TWO human-gated items: (a) wave-5 close-out, (b) G4 fun-gate**
+## ▶ Next action (start here on a cold restart) — **Director decides the M1 iterate path (G4 verdict = ITERATE)**
+The **M1 feedback gate (G4) has run** (2026-06-19, 34 runs over 3 sessions). **Verdict: ITERATE.** Full
+evidence + recommendation: `design/M1_Tasks/G4_findings.md`. Headline: the greybox loop is engaging
+(11 runs/session, run length median ~18s right in the target window) and the carry/capacity decision works, **but
+the core push-your-luck tension does not exist** — 30 extract / 2 death / **0 timeout**; the Director's read:
+"no risk … the optimal strategy is to go as far as possible, fill up, and run back … nothing prevents going
+deeper (no maze complexity, no hazards, no enemies)." M1 deferred every risk source to M2/M3, so the loop has a
+reward axis but no cost axis. The gate did its job — it caught this before M2 breadth.
+
+**Director's call needed — pick the iterate path:**
+- **A (recommended)** — a focused **M1.5 iteration**: add the minimum greybox risk that scales with depth
+  (a pursuing/awakening hazard; a costlier/longer return the deeper you go; a rising instability/exposure meter;
+  clock-that-bites + return cost — pick 1–2, greybox), then **re-run G4**. De-risk the core before breadth.
+- **B** — proceed to **M2** (vertical slice already includes the first enemy + real systems) and validate the
+  tension there; log M1's gate as "mechanically sound, tension unproven." Faster, but spends M2 effort on an
+  unproven core.
+
+Once the Director picks A or B, plan it (tasks + board) and dispatch.
+
+**Open bug backlog (filed from G4, Todo):** BUG1 `duration_s`=0 · BUG2 within-band depth untracked · BUG3
+open sockets to off-map void. **Tech-debt follow-ups (Todo):** FU1 `test_jsonl_writer` · FU2 `EconomyMath`.
+These are independent of the A/B call and can be picked up anytime (BUG1/BUG2 improve the next G4's telemetry).
+
+## (archived) ▶ prior next-action — wave-5 close-out + G4 (both now done)
 **G1 + G2 + G3 are merged + verified green** (2026-06-18). The **full M1 loop is playable** for the first time:
 `scenes/game/main_game.tscn` is `run/main_scene`; spawn → dive → pick up junk → decide push/extract →
 bank (extract) or lose-but-pockets (death/timeout) → sell screen tallies junk→Money → restart, repeatedly in one
@@ -66,7 +89,7 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — nothing dispatched (wave-5 close-out COMPLETE; only G4 the human fun-gate remains)
+## In progress — nothing dispatched (G4 gate run → ITERATE; awaiting Director's A/B iterate-path call)
 No subagent running. G1 + G2 + G3 + G6 merged into `main` and re-verified green (main scene set · import clean ·
 SMOKE OK · CONSENT OK · TELEMETRY OK · LOOP OK · MAIN GAME OK · GdUnit4 30/30 · 18 legacy checks OK). Board:
 G1 + G2 + G3 set **Done**; G6 set **Done**.
@@ -115,6 +138,7 @@ go/iterate/pivot verdict; the Director decides.
 | F2 — Placeholder sell screen | merged `ce9f51b`; `tests/test_sell_screen.gd` → **SELL SCREEN OK** (presents on `run_ended` extract/death/timeout, "EXTRACTED"/"RUN LOST — kept N", itemized rows, count-up to live `GameState.money`, zero-haul valid); Continue emits `continue_pressed` (G3 wires restart); worklog `worklogs/2026-06-17-F2-ui-ux.md` (impl `ce9f51b`) |
 | G1 — Wire M1 telemetry events | merged via `Merge G1`; `tests/test_telemetry_jsonl.tscn` → **TELEMETRY OK** (opt-in respected — no file when off; enabled run wrote 9 parseable JSONL rows w/ duration, end cause, depth, haul banked + dedicated amount-lost-on-fail row); `systems/telemetry/{telemetry,telemetry_schema,jsonl_writer}.gd` + opt-in `settings.cfg`; no `event_bus.gd`/`game_state.gd` edits; worklog `worklogs/2026-06-18-G1-qa.md` (impl `c0c2268`) |
 | G2 — Determinism & logic tests (GdUnit4) | merged via `Merge G2`; GdUnit4 v6.1.3 vendored at `addons/gdUnit4/`; `tools/run_gdunit.sh` → **30 test cases · 0 failures · PASSED** (proc-gen determinism, inventory capacity, banking math, death-drop pockets @ 0.20 highest_value); CI gate wired in `.github/workflows/ci.yml` (non-zero exit on failure verified); worklog `worklogs/2026-06-18-G2-qa.md` (impl `3f57f38`) |
+| G4 — M1 feedback gate (internal playtest) | **run 2026-06-19** — 34 runs / 3 sessions, build `852b6e2`; verdict **ITERATE** recorded in `design/M1_Tasks/G4_findings.md` (engaging + mechanically sound, but no risk opposes pushing deeper → degenerate dominant strategy; gate caught it pre-M2). Telemetry analyzed from `run_log.jsonl`; surfaced BUG1–3. DoD #6 (recorded go/iterate/pivot verdict) met. *Caveat: single tester — widen cohort if confirmation wanted before iterating.* |
 | G6 — In-build telemetry consent prompt (Addressed from G3 #1) | merged via `Merge G6`; `tests/test_telemetry_consent.tscn` → **CONSENT OK** (fresh profile prompts once; Enable→telemetry writes + asked set; Not now→OFF, no file; never re-shows); `systems/settings/telemetry_consent_prompt.gd` + `Settings.get/set_telemetry_asked()`; shown once at `main_game` launch before gameplay, default OFF; worklog `worklogs/2026-06-18-G6-ui-ux.md` (impl `835a97a`) |
 | G3 — Greybox playtest build | merged via `Merge G3`; `scenes/game/main_game.tscn` set as `run/main_scene` (first full-loop assembly); `tests/test_loop_drive.tscn` → **LOOP OK** (3 runs/session, run-state resets + meta persists, extract & death paths) + `tests/test_main_game_loop.tscn` → **MAIN GAME OK** (assembled scene: band+pickups+gate, group-based player, interaction pickup + gate extract → sell → clean restart); `start_new_run()` loop entry wires `SellScreen.continue_pressed` (W4-11); player `"player"` group + `get_first_node_in_group` (W4-6); build-id `systems/version.gd` on telemetry `run_started`; `tools/playtest/{loop_smoke_checklist,tester_readme}.md`; `export_presets.cfg` (Win64) + scaffolded `nightly.yml` (**publish human-gated: BUTLER_API_KEY + itch project + export templates**); worklog `worklogs/2026-06-18-G3-programmer.md` (impl `9107a2a`) |
 
