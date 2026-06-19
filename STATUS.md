@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 (both built; M1.1 playtested → **ITERATE**) → **M1.2 (Legibility & Level Scale)** — **ALL build + verify work DONE (Waves 1+2+BUG5+RG1). ⏸ AT THE HUMAN GATE: awaiting the Director's playtest.**
-**Last updated:** 2026-06-19 (RG1 integrated `c7e130b` — assembled M1.2 build verified, 14/20 rows headless green, all-off fp unmoved. Next: **Director playtest** (sweep configs) → RG2 telemetry analysis → RG3 verdict. Breakdown: `design/M1_2_Tasks/M1.2_Breakdown.md`.)
+**Current milestone:** M1.0 → M1.1 → **M1.2 (Legibility & Level Scale) — DONE, re-gated → verdict ITERATE** → **M1.3 (Legibility & Density) — AUTHORING (Phase 1 breakdown done; Phase 2 design fan-out next).**
+**Last updated:** 2026-06-19 (M1.2 fully closed: Director playtested → RG2 analysis (`9ba083c`) → RG3 **ITERATE**. M1.3 opened: Phase-1 breakdown authored `design/M1_3_Tasks/M1.3_Breakdown.md`. Next: Director scope-check → Phase 2 per-task design fan-out.)
 
 ---
 
@@ -22,24 +22,28 @@ Close-out: 0 formal deviations; 1 finding (W2.2-F1: R2 `exposure` toll fired its
 
 ---
 
-## ⏸ HUMAN GATE — Director playtest required (RG2/RG3 blocked on it)
+## ✓ M1.2 DONE — re-gated, verdict ITERATE (2026-06-19)
 
-All M1.2 build + verify work is on `main` (Waves 1+2+BUG5+RG1). RG1 assembled + headless-verified the build. **The next
-step is the Director's hands-on playtest** — Claude cannot do this part. Then Claude resumes for RG2.
+Director playtested the RG1 build (33 runs, `ba745e1`). RG2 (`design/M1_2_Tasks/G4_findings_M1.2.md`): run-length ~2×
+M1.1 (26.4s median), depth to 17, three-way end-causes (real hazard deaths), `duration_s` clean (I5 works). RG3 verdict:
+**ITERATE → M1.3.** Director decisions + new issues (BUG6 hazard-spam, R3/R4 config traps) recorded in §5 of that doc.
 
-**To run it (dev machine):** `godot project.godot` → play `scenes/game/main_game.tscn`; sweep configs from the pre-run CFG
-menu per `tools/playtest/tester_readme.md` + `tools/playtest/loop_smoke_checklist.md`. Telemetry → `user://telemetry/run_log.jsonl`
-(opt-in). Recommended sweep order (from RG1): **baseline control → size {1.0,1.5,2.0,3.0} w/ count at baseline → hazard on →
-R2 exposure toll + R3 → R4 vision → all-on.** Label each with `build_tag` (`m12-` prefix: `m12-size-2.0`, `m12-r1-catch`,
-`m12-all-on`) so RG2 can segment M1.2 from the M1.0/M1.1 logs. Drop the resulting `.jsonl` into `playtest_data/M1.2/`.
+## ▶ Next action (start here on a cold restart) — **M1.3 Phase 2 (per-task design fan-out)**
 
-**6 human-deferred verify rows to eyeball during the playtest** (RG1 headless-verified the other 14): I1 "feels like a
-journey", I2 visible hazard close-in, I3 cue legibility, I4 occlusion look + lost cue, I5 returned-log build id, screen nav.
+M1.3 (Legibility & Density) is the iteration on M1.2's ITERATE. **Phase 1 breakdown is authored:**
+`design/M1_3_Tasks/M1.3_Breakdown.md` (8 build tasks + re-gate; waves + dependency map + contracts). **Awaiting a Director
+scope-check, then Phase 2** = dispatch one design-doc subagent per task (J1, J2, J3, J4, J5, BUG6, DLV1) — each writes its
+own `design/M1_3_Tasks/<id>_*.md` (research + pseudocode + open questions), file-disjoint, in parallel. Then Phase 3
+fresh-eyes resolution (Director-review items surfaced) → Phase 4 wire-up (TASKS/board/STATUS) → build waves.
 
-**Then Claude resumes:**
-- **RG2** (qa-playtest-coordinator) — analyse the playtest `.jsonl`: end-cause / run-length / depth distributions per config,
-  side-by-side vs M1.0 (all-off) + M1.1; did legibility + level scale create a real, felt outcome spread? → analysis artifact.
-- **RG3** (Director decides) — record go/iterate/pivot in `design/M1_2_Tasks/G4_findings_M1.2.md`. go → M2; iterate → M1.3; pivot → rework.
+**M1.3 scope (from RG3 §5):** J1 default play-preset + size slider [4.0,40.0] (R1+R4 on, R2/R3 OFF) · J2 enemy spread across
+depths · J3 per-room density · J4 hallway-length knob + corridor telemetry · J5 depth-counter HUD fix · BUG6 hazard
+debounce + config-trap guards · DLV1 itch HTML5 delivery via butler. **Contract:** all-off default stays the permanent
+baseline (fp=e943ac9c8bc1); the fun config ships as a separate boot preset.
+
+> **F5/DLV1 environment note:** butler + Godot 4.6.3 **web export templates are NOT installed**; only a Windows preset
+> exists. DLV1 must install them + add a web preset + a push task to `qusto/the-far-yard` (web channel); BUTLER key is in
+> APIKEYS.md (never commit it).
 
 ---
 
