@@ -7,7 +7,7 @@ mirror lives in GitHub Projects. Update this every time a task is claimed, block
 See `CLAUDE.md` → "The orchestrator loop".
 
 **Current milestone:** M1.0 ✅ built (G4 verdict = ITERATE) → **M1.1 (Greybox Cost Axis)** — plan approved, **Wave 1 starting.**
-**Last updated:** 2026-06-19 (M1.0→M1.1 iterate: plan approved + repo cleaned up — breakdown moved to `design/M1_1_Tasks/`, completed tasks archived to `TASKS_COMPLETED.md`, `CLAUDE.md` updated with the build→gate→iterate loop. M1.1 board items created. Wave 1 dispatching: **R0 first & solo.**)
+**Last updated:** 2026-06-19 (M1.1 Wave 1 started: **R0 done + merged** (`30e41b9`). ⏸ **PAUSED at Director request after R0** — resume with BUG1→BUG2, then CFG/TEL/BUG3. Plan: `design/M1_1_Tasks/M1.1_Breakdown.md`.)
 
 ---
 
@@ -107,12 +107,17 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — M1.1 Wave 1: R0 dispatched (worktree)
-**R0** (run-config data model) dispatched 2026-06-19 — game-director-designer schema + general-purpose run-start
-wiring, briefed from `M1.1_Breakdown.md` §R0. It lands first & solo (defines the `RunConfig` everyone reads).
-On return: verify (all-off = M1.0 baseline; suite green), merge to `main`, push, then run BUG1→BUG2 (sequential),
-pre-declare the new EventBus signals, and fan out CFG/TEL/BUG3. Board: R0 → In Progress.
-(M1.0 is all Done + archived to `TASKS_COMPLETED.md`; G4 verdict ITERATE recorded.)
+## In progress — ⏸ PAUSED (Director request) after R0 merged; nothing dispatched
+**R0 is DONE** — merged to `main` (`30e41b9`) + verified green (import ok · SMOKE OK · **R0 OK** · MAIN GAME OK ·
+LOOP OK · GdUnit4 30/30). `RunConfig` data model + `GameState.active_run_config` wiring in place; all-off default
+reproduces M1.0 exactly (existing tests unchanged). Board: R0 → Done. Worktree cleaned up.
+
+**⏸ Paused at the Director's request after R0.** No subagent running. **Resume = M1.1 Wave 1, next steps:**
+1. **BUG1** (`duration_s` real) → then **BUG2** (within-band depth) — sequential (both touch `game_state.gd`).
+2. **Pre-declare on `main`** (via TEL, the sole `event_bus.gd` editor) the new signals — `depth_changed` + the 7
+   opposition signals — before the parallel fan-out.
+3. **CFG / TEL / BUG3** in parallel worktrees.
+Then Wave 2 (R1–R4 parallel), Wave 3 (re-gate). Full plan: `design/M1_1_Tasks/M1.1_Breakdown.md`.
 
 **Wave-5 close-out — COMPLETE (2026-06-18).** All 16 wave-5 deviations (G1×5, G2×5, G3×5, G6×1) dispositioned by
 the Director: **1 Addressed** (G3 #1 → built G6, the in-build consent prompt) / **15 Reviewed**. Reapplied to
