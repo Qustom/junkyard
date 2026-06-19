@@ -8,7 +8,7 @@
   keeps the determinism-sensitive catalog seam coherent. One shared worklog, as required.
 - **Milestone:** M1.2 (Wave 1)
 - **Branch:** gp/I1
-- **Commit:** 2cab397144475fafa8dbcde3a19e584e5b9ec5f2
+- **Commit:** e1e313cf3c736215df19845c3407fd25434fb609
 
 ## What changed
 Turned two currently-baked spatial parameters into swept `RunConfig` knobs and added a
