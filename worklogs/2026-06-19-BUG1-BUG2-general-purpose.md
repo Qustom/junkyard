@@ -5,7 +5,7 @@
 - **Subagent:** general-purpose (the programmer)
 - **Milestone:** M1.1 — Greybox Cost Axis (Wave 1)
 - **Branch:** general-purpose/bug1-bug2-game-state
-- **Commit:** 963154c2a0f3dff73d397f01ce46afe76b9f4d8b
+- **Commit (impl):** cf7e342e18ff9bb804a8fe9585a8a8b2a980f6e8 (`cf7e342`)
 
 Combined into one `game_state.gd` pass on a shared branch per BUG1 §8 Decision 4
 (small, file-adjacent, logically orthogonal; open `game_state.gd` once post-R0).
