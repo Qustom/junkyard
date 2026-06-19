@@ -60,6 +60,18 @@ var _spawner: JunkSpawner = null
 var _run_count: int = 0
 var _band_cell_size_px: int = DEFAULT_CELL_SIZE_PX
 
+# BUG2 (M1.1): the depth driver. The graded Band is a throwaway local in
+# start_new_run(); we flatten its depth model into a per-cell lookup that outlives
+# it, then resolve the player's live within-band depth on a throttle and feed it to
+# GameState.set_current_depth(). Built once per run from the graded band.
+# Vector2i band-global floor cell -> Vector2i(depth_index, dist_to_gate) (Decision 4).
+var _cell_to_depth: Dictionary = {}
+var _depth_tick_accum: float = 0.0
+## BUG2: throttle for the live-depth resolution (~every 9 physics frames). Pure
+## perf/responsiveness knob — correctness is throttle-independent (we emit on change,
+## not on tick), so it is safe to tune (ratified Decision 2).
+@export var depth_tick_interval := 0.15
+
 # G6: true while the first-run consent modal is up; blocks starting a run until answered.
 var _consent_pending: bool = false
 
@@ -116,6 +128,8 @@ func start_new_run() -> void:
 	var grader := DepthGrader.new()
 	grader.grade(band)
 	grader.compute_return_distance(band)
+	# BUG2: capture the depth model before `band` (a throwaway local) is discarded.
+	_build_cell_depth_map(band)
 	var placer := JunkPlacer.new()
 	var plan := placer.plan(band, _depth_curve, _junk_catalog)
 
@@ -150,6 +164,10 @@ func start_new_run() -> void:
 	GameState.stage_run_config(load(RUN_CONFIG_PATH) as RunConfig)
 	GameState.start_run(BAND_ID, seed)
 	GameState.enter_band(BAND_ID)
+	# BUG2: resolve once immediately so frame-0 within-band depth is correct (the
+	# player is at the entry → depth 0) before the throttled driver takes over.
+	_depth_tick_accum = 0.0
+	_resolve_player_depth()
 
 
 # --- Run-end handling --------------------------------------------------------
@@ -177,6 +195,49 @@ func _materialise_band(band: Band) -> int:
 		p.instance.position = Vector2(p.offset_cell * cell_size)
 		_band_container.add_child(p.instance)
 	return cell_size
+
+
+# --- BUG2: live within-band depth driver -------------------------------------
+
+## Flatten the graded band's depth model into a per-cell lookup that outlives the
+## throwaway `band` local. Each band-global FLOOR cell maps to BOTH metrics
+## (depth_index + dist_to_gate, Decision 4) so one lookup yields both. floor_cells
+## (walkable) only — the player can only stand on floor; walls map to no depth.
+func _build_cell_depth_map(band: Band) -> void:
+	_cell_to_depth.clear()
+	for p in band.pieces:
+		if p.depth_index < 0:        # ungraded guard
+			continue
+		for cell in p.floor_cells:   # band-global floor cells (B3)
+			_cell_to_depth[cell] = Vector2i(p.depth_index, p.dist_to_gate)
+
+
+## Throttled driver: while a run is active, resolve the player's live within-band
+## depth every depth_tick_interval seconds (correctness is throttle-independent —
+## set_current_depth emits on change only).
+func _physics_process(delta: float) -> void:
+	if not GameState.run_active:
+		return
+	_depth_tick_accum += delta
+	if _depth_tick_accum < depth_tick_interval:
+		return
+	_depth_tick_accum = 0.0
+	_resolve_player_depth()
+
+
+## Resolve the player's band-global cell → owning piece → (depth_index, dist_to_gate)
+## and push it into GameState. Pieces materialise at offset_cell * cell_size, so
+## band-global cell space and world space share the origin (no per-piece transform).
+## Decision 6: if the cell is in no piece's floor_cells (wall edge / mid-doorway
+## rounding) KEEP the last known depth — never snap to 0 (no spurious depth_changed).
+func _resolve_player_depth() -> void:
+	var player := get_tree().get_first_node_in_group(&"player")
+	if player == null:
+		return
+	var cell := Vector2i((player.global_position / float(_band_cell_size_px)).floor())
+	if _cell_to_depth.has(cell):
+		var d: Vector2i = _cell_to_depth[cell]
+		GameState.set_current_depth(d.x, d.y)   # (depth_index, dist_to_gate)
 
 
 ## World position the player spawns at: the centre of the entry piece's first floor
