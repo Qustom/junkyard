@@ -158,3 +158,27 @@ real art. Full milestone breakdown, dependency map, and build order: `design/M1_
 - Done when: playtest run with ≥ a few testers; a written verdict backed by telemetry; an explicit go/iterate/pivot call recorded. **Human-run** (dev-machine internal playtest); Claude prepares the loop-smoke checklist + analyzes telemetry and recommends, the Director decides.
 
 ---
+
+---
+
+## M1.1 — Greybox Cost Axis · Wave 1 (Foundations) — all done 2026-06-19
+
+### R0 — Run-config data model — **Done** (merged `30e41b9`)
+`RunConfig` Resource + `GameState.active_run_config`; all-off default = M1.0 baseline; 32 knobs; `to_flat_dict()`.
+
+### BUG1 — `run_ended.duration_s` always 0 — **Done** (merged `33eb786`, impl `cf7e342`)
+`_run_start_ms` + `_elapsed_s()`; real duration on extract/death/timeout, within a frame of a direct clock ref. `tests/test_run_duration.tscn` → RUN DURATION OK.
+
+### BUG2 — within-band depth not tracked — **Done** (merged `33eb786`, impl `cf7e342`)
+`current_depth_index`/`max_depth_reached`/`current_dist_to_gate` run-state; `set_current_depth()` edge-emits `depth_changed`; `main_game.gd` cell→depth driver; `run_ended.depth_reached`=max. `tests/test_within_band_depth.tscn` → WITHIN BAND DEPTH OK.
+
+### TEL — Telemetry config-marking + opposition events — **Done** (merged `c940ae4`, impl `66ec131`)
+Sole `event_bus.gd` editor: added 11 opposition/penalty signals (not `depth_changed`, already pre-declared). `run_started.data.run_config` snapshot; 7 opposition EventTypes; envelope `v=1` (no bump); `run_ended` arity unchanged. `tests/test_telemetry_config_marking.tscn` → TEL CONFIG MARKING OK.
+
+### BUG3 — open sockets to off-map void — **Done** (merged `c940ae4`, impl `f0baeae`)
+New `systems/bandgen/socket_sealer.gd` (RefCounted, zero RNG); 1-line call in `main_game.gd:_materialise_band`; caps unmated sockets with the existing WALL tile; `fingerprint()` byte-identical with/without seal. `tests/test_bandgen_determinism.tscn` → BUG3 SOCKET SEAL OK.
+
+### CFG — Pre-run Config menu — **Done** (merged `62e16b9`, impl `169bf6c`)
+`ui/config/config_menu.{tscn,gd}` + `config_strings.csv`, side rail in `main_game.tscn`'s MainMenu; surfaces 100% of `RunConfig`'s 32 knobs + master toggles + "reset to baseline (all off)"; stages working config via `MainGame.start_new_run` (shape a). `tests/test_config_menu.tscn` → CONFIG MENU OK (32/32 knobs reachable).
+
+**Wave 1 close-out (2026-06-19):** 2 orchestrator deviations dispositioned (W1.1-1 Reviewed, W1.1-2 Addressed); archived. Next: Wave 2 (R1–R4).

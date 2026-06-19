@@ -6,8 +6,8 @@ what's blocked, and the immediate next action. The full task queue lives in `TAS
 mirror lives in GitHub Projects. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 ✅ built (G4 verdict = ITERATE) → **M1.1 (Greybox Cost Axis)** — plan approved, **Wave 1 in progress.**
-**Last updated:** 2026-06-19 (M1.1 Wave 1: **R0 + BUG1 + BUG2 done + merged** (R0 `30e41b9`, BUG1+BUG2 `33eb786`); `depth_changed` pre-declared on `main` (`2450cde`). **Next: CFG / TEL / BUG3 parallel fan-out.** Plan: `design/M1_1_Tasks/M1.1_Breakdown.md`.)
+**Current milestone:** M1.0 ✅ built (G4 verdict = ITERATE) → **M1.1 (Greybox Cost Axis)** — **Wave 1 ✅ COMPLETE; Wave 2 (R1–R4) ready to dispatch.**
+**Last updated:** 2026-06-19 (M1.1 **Wave 1 done + merged** — R0 `30e41b9`, BUG1+BUG2 `33eb786`, TEL+BUG3 `c940ae4`, CFG `62e16b9`; close-out sweep done. **Next: Wave 2 — R1/R2/R3/R4 in 4 parallel worktrees.** Plan: `design/M1_1_Tasks/M1.1_Breakdown.md`.)
 
 ---
 
@@ -107,19 +107,24 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## In progress — M1.1 Wave 1c: CFG (last wave-1 task) — DISPATCHED 2026-06-19
-**R0 + BUG1 + BUG2 + TEL + BUG3 DONE + merged** (`c940ae4`). `depth_changed` + all 11 opposition/penalty signals on
-`main`; band is sealed (BUG3); telemetry config-marks every run (TEL). Only CFG remains in wave 1.
+## ▶ Next action — M1.1 Wave 2: dispatch R1 / R2 / R3 / R4 (4 parallel worktrees)
+**Wave 1 is COMPLETE + close-out done.** Foundations on `main` (`1428dc6`): `RunConfig` + Config menu (32 knobs),
+config-marked telemetry + 11 pre-declared opposition/penalty signals, real `duration_s`, live within-band depth, sealed band.
 
-**▶ DISPATCHED — CFG** (ui-ux-designer): new `ui/config/config_menu.{tscn,gd}` + `config_strings.csv`, instanced into
-`main_game.tscn`'s MainMenu as a side rail; surfaces 100% of `RunConfig`'s 32 knobs (per-opposition section + master
-toggle + sliders/enum OptionButtons/array list-editor), "reset to baseline (all off)", stages the working config via
-`MainGame.start_new_run` (shape a — exposes `apply_and_get_config()`). Edits `main_game.gd` (the `stage_run_config`
-seam) — sequential after BUG3 (shared file). Touches NO `event_bus.gd` / `game_state.gd`. Spec: `design/M1_1_Tasks/CFG_config_menu.md`.
+**Wave 2 — the cost axis (the heart of M1.1).** R1/R2/R3/R4 run in **4 parallel `isolation: worktree` agents**, file-disjoint
+by design. Each reads `GameState.active_run_config` (R0) + live `current_depth_index`/`current_dist_to_gate` (BUG2), emits
+its **already-pre-declared** TEL signals, and **must NOT edit `event_bus.gd` or `game_state.gd`** (route run-end through
+existing `fail_run`/`extract_and_end_run`). Specs ratified: `design/M1_1_Tasks/R{1,2,3,4}_*.md`.
+- **R1** pursuing/awakening hazard (general-purpose + game-director-designer spec exists + character-animator greybox tell) — emits `hazard_awoke`/`hazard_caught`; catch → `fail_run(&"death")`. BlockedBy R0,BUG2 ✅.
+- **R2** costlier return (general-purpose + g-d-d) — mechanism `egress_toll`+`clock` ratified; reads `current_dist_to_gate`; emits `return_cost_incurred`. BlockedBy R0,BUG2 ✅.
+- **R3** exposure meter (general-purpose + g-d-d + ui-ux HUD readout) — emits `exposure_crossed`/`exposure_penalty` + the 4 penalty/meter signals TEL declared; max → `fail_run(&"timeout")`. BlockedBy R0,BUG2 ✅.
+- **R4** maze/nav (general-purpose + environment-artist branch/fog + g-d-d) — raises B2 `branch_chance` w/ depth + vision/fog; emits `nav_branch_taken`/`nav_lost_proxy` (`"time_no_depth_progress"`); needs sealed map. BlockedBy R0,BUG2,BUG3 ✅.
 
-**After CFG merges:** run the **Wave 1 close-out deviation sweep** (Director dispositions every `DESIGN_DEVIATIONS.md`
-entry). Then **Wave 2** — R1/R2/R3/R4 in 4 parallel worktrees (each reads `active_run_config` + live depth, emits the
-pre-declared signals; none edit `event_bus.gd`/`game_state.gd`). Then **Wave 3** re-gate (RG1→playtest→RG2→RG3).
+⚠ **Watch for shared-file collisions** (the wave-1 lesson, W1.1-2): before dispatching, confirm none of R1–R4 need to edit
+`game_state.gd`/`event_bus.gd`/`main_game.gd` — if an opposition's spec requires a `main_game.gd` wiring seam, sequence
+those rather than running them in parallel. R3's player speed-penalty touches `entities/player/player.gd` (consumer of
+`exposure_speed_mult_changed`) — check R3 vs R1's hazard for any `player.gd`/`main_game.gd` overlap at brief time.
+**After Wave 2 integrates:** Wave 2 close-out deviation sweep (Director), then **Wave 3** re-gate (RG1→human playtest→RG2→RG3).
 
 **Wave-5 close-out — COMPLETE (2026-06-18).** All 16 wave-5 deviations (G1×5, G2×5, G3×5, G6×1) dispositioned by
 the Director: **1 Addressed** (G3 #1 → built G6, the in-build consent prompt) / **15 Reviewed**. Reapplied to
