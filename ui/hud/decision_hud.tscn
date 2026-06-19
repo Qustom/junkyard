@@ -83,35 +83,80 @@ unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 0
 offset_left = 16.0
-offset_top = 50.0
-offset_right = 256.0
-offset_bottom = 96.0
+offset_top = 52.0
+offset_right = 280.0
+offset_bottom = 116.0
 mouse_filter = 2
 script = ExtResource("4")
 
 [node name="ExposureBar" type="ProgressBar" parent="Root/ExposureReadout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(180, 18)
+custom_minimum_size = Vector2(220, 24)
 layout_mode = 1
 anchors_preset = 0
-offset_right = 180.0
-offset_bottom = 18.0
+offset_right = 220.0
+offset_bottom = 24.0
 max_value = 100.0
 value = 0.0
 show_percentage = false
+
+[node name="ExposureTicks" type="Control" parent="Root/ExposureReadout"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 0
+offset_right = 220.0
+offset_bottom = 24.0
+mouse_filter = 2
+
+[node name="ExposureFlash" type="ColorRect" parent="Root/ExposureReadout"]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 0
+offset_right = 220.0
+offset_bottom = 24.0
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
 
 [node name="ExposureLabel" type="Label" parent="Root/ExposureReadout"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 0
-offset_top = 20.0
-offset_right = 240.0
-offset_bottom = 46.0
+offset_top = 26.0
+offset_right = 264.0
+offset_bottom = 52.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 18
 text = "Exposure: 0 / 100"
+
+[node name="ExposurePenaltyBanner" type="Label" parent="Root/ExposureReadout"]
+unique_name_in_owner = true
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 0
+offset_top = 50.0
+offset_right = 264.0
+offset_bottom = 76.0
+theme_override_colors/font_color = Color(1, 0.78, 0.2, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 20
+text = ""
+
+[node name="CostIndicatorAnchor" type="Control" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -228.0
+offset_top = 70.0
+offset_right = -16.0
+offset_bottom = 70.0
+grow_horizontal = 0
+mouse_filter = 2
 
 [node name="InventoryPanel" parent="Root" instance=ExtResource("2")]
 

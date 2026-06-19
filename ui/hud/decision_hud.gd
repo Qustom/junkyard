@@ -18,6 +18,15 @@ extends CanvasLayer
 ##
 ## Greybox only: plain Labels + a default-theme ProgressBar. A human owns the visual pass.
 ## All player-facing strings go through tr() against ui/hud/hud_strings.csv.
+##
+## M1.2 I3 (R2 cues): this surface ALSO renders R2's egress toll — a clock-bar pulse
+## (the toll IS a DiveClock.modify_light(-cost) drain, so flashing the bar the player
+## already watches is the causally-truthful cue) plus a floating "-N {unit}" indicator
+## spawned near the clock. Both project the already-emitted return_cost_incurred —
+## NO new EventBus signal, NO game state. An optional subtle HUD-space screen-shake on
+## an R3 penalty (driven from this CanvasLayer's own Root, never the game camera) makes
+## the bite land; it is small, brief, and never the only channel. All R2/R3 cues are
+## gated on their opposition: with R2/R3 off the HUD is byte-for-byte the M1.0 baseline.
 
 ## Fraction of the clock at/below which urgency cues engage (pulse on Holding).
 ## Single tunable — the playtest-tightening knob (spec Open-question #2: start ~25%).
@@ -26,22 +35,54 @@ extends CanvasLayer
 ## Pulse speed (Hz-ish) for the Holding label under the urgency threshold.
 @export var pulse_speed: float = 6.0
 
+## I3: duration of the clock-bar toll pulse (motion channel for an R2 charge).
+@export var clock_pulse_seconds: float = 0.35
+
+## I3: lifetime of a floating "-N {unit}" cost indicator (rise + fade).
+@export var cost_indicator_seconds: float = 1.1
+
+## I3: subtle HUD-space screen-shake on an R3 penalty. Small/brief and never the only
+## channel (Q5 accepted, accessibility-friendly). Set 0 to disable; M5 owns a global toggle.
+@export var penalty_shake_pixels: float = 5.0
+@export var penalty_shake_seconds: float = 0.22
+
 # Off-ladder, colourblind-aware clock ramp. Backed by the numeric "Ns" readout and
 # the bar fill itself, so colour is never the only channel (readability rule).
 const CLOCK_GREEN := Color(0.30, 0.85, 0.35)
 const CLOCK_AMBER := Color(0.95, 0.80, 0.20)
 const CLOCK_RED := Color(0.92, 0.26, 0.24)
 
+# Off-ladder pulse colour for the R2 clock-toll punch (a hot amber-white spike that
+# settles back to the bar's ramp colour). Distinct from the steady ramp so the toll
+# reads as a discrete bite, not background drain. The number drop is the redundant channel.
+const CLOCK_TOLL_PULSE := Color(1.0, 0.95, 0.55)
+
 # Legibility layer: the at-risk number stays high-contrast regardless of band styling.
 const HOLDING_COLOR := Color(1, 1, 1)
 
+# return_cost_incurred cost_kind StringName → unit tr() key (confirmed against
+# return_cost.gd: &"clock"/&"exposure"/&"meter"/&"decay"). &"decay" has no number.
+const _COST_UNIT_KEYS := {
+	&"clock": "HUD_COST_LIGHT",
+	&"exposure": "HUD_COST_EXPOSURE",
+	&"meter": "HUD_COST_METER",
+	&"decay": "HUD_COST_DECAY",
+}
+
+@onready var _root: Control = $Root
 @onready var _haul_value_label: Label = %HaulValueLabel
 @onready var _clock_bar: ProgressBar = %ClockBar
 @onready var _clock_label: Label = %ClockLabel
 @onready var _depth_label: Label = %DepthLabel
+@onready var _cost_anchor: Control = %CostIndicatorAnchor
 
 var _clock_fraction: float = 1.0
 var _pulse_t: float = 0.0
+
+# I3 transient-cue budgets (one at a time; re-trigger rather than stack).
+var _clock_pulse_tween: Tween
+var _shake_tween: Tween
+var _root_home: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -52,6 +93,11 @@ func _ready() -> void:
 	# so re-project on those edges too (mirrors the D2 panel's boundary handling).
 	EventBus.run_started.connect(_on_run_boundary)
 	EventBus.run_ended.connect(_on_run_boundary)
+	# I3: R2 toll cues + the optional R3-penalty shake. Both already-emitted signals;
+	# both gated on their opposition so an all-off run stays the M1.0 HUD.
+	EventBus.return_cost_incurred.connect(_on_return_cost)
+	EventBus.exposure_penalty.connect(_on_exposure_penalty)
+	_root_home = _root.position
 	_refresh_haul()
 	_refresh_depth()
 
@@ -112,3 +158,105 @@ func _urgency_color(frac: float) -> Color:
 	if f > 0.5:
 		return CLOCK_AMBER.lerp(CLOCK_GREEN, (f - 0.5) * 2.0)
 	return CLOCK_RED.lerp(CLOCK_AMBER, f * 2.0)
+
+
+# --- M1.2 I3: R2 egress-toll cues (clock pulse + floating "-N {unit}") ---------
+
+## Projects the already-emitted return_cost_incurred. Gated on r2_enabled so an
+## R2-off run never shows these cues (= M1.0 HUD). The clock pulse only fires for the
+## clock toll (the only kind that actually drained the clock); every kind gets the
+## floating indicator naming HOW MUCH and WHICH resource (text + number channels).
+func _on_return_cost(_depth: int, cost_kind: StringName, magnitude: float) -> void:
+	if not _r2_enabled():
+		return
+	if cost_kind == &"clock":
+		_pulse_clock_bar()  # motion channel on the bar the toll actually drained
+	_spawn_cost_indicator(cost_kind, magnitude)
+
+
+## Motion channel: a hot punch on the clock bar settling back to its ramp colour, so
+## the toll's clock drop reads as a discrete bite. Re-triggers rather than stacks.
+func _pulse_clock_bar() -> void:
+	if _clock_pulse_tween != null and _clock_pulse_tween.is_valid():
+		_clock_pulse_tween.kill()
+	_clock_bar.modulate = CLOCK_TOLL_PULSE
+	_clock_pulse_tween = create_tween()
+	_clock_pulse_tween.tween_property(_clock_bar, "modulate",
+		_urgency_color(_clock_fraction), clock_pulse_seconds)
+
+
+## Text + number channel: a short-lived "-N {unit}" that rises and fades near the
+## clock (its causal home). &"decay" carries no number (its magnitude is a link count).
+func _spawn_cost_indicator(cost_kind: StringName, magnitude: float) -> void:
+	var unit_key: String = _COST_UNIT_KEYS.get(cost_kind, "HUD_COST_LIGHT")
+	var unit: String = tr(unit_key)
+	var text: String
+	if cost_kind == &"decay":
+		text = unit  # "route collapsed" — no number
+	else:
+		text = tr("HUD_RETREAT_COST").format({"amount": int(round(magnitude)), "unit": unit})
+
+	var label := Label.new()
+	label.text = text
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	# Legibility layer: high-contrast number regardless of band styling.
+	label.add_theme_color_override(&"font_color", Color(1, 0.55, 0.45))
+	label.add_theme_color_override(&"font_outline_color", Color(0, 0, 0))
+	label.add_theme_constant_override(&"outline_size", 5)
+	label.add_theme_font_size_override(&"font_size", 20)
+	label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	label.position = Vector2(-212.0, 0.0)
+	label.custom_minimum_size = Vector2(196, 26)
+	_cost_anchor.add_child(label)
+
+	var t := create_tween()
+	t.set_parallel(true)
+	t.tween_property(label, "position:y", -28.0, cost_indicator_seconds)
+	t.tween_property(label, "modulate:a", 0.0, cost_indicator_seconds)
+	t.chain().tween_callback(label.queue_free)
+
+
+# --- M1.2 I3: optional subtle HUD-space shake on an R3 penalty -----------------
+
+## Drives a tiny, brief positional shake of THIS HUD's own Root (never the game
+## camera — I3 owns no camera/main_game.gd). Gated on r3_enabled + a non-zero
+## amplitude knob; never the only channel (the bar flash + banner carry the penalty).
+## penalty_kind &"none" → no shake (the telemetry-only control stays silent).
+func _on_exposure_penalty(_level: int, penalty_kind: StringName) -> void:
+	if penalty_shake_pixels <= 0.0 or penalty_shake_seconds <= 0.0:
+		return
+	if penalty_kind == &"none":
+		return
+	if not _r3_enabled():
+		return
+	_shake_root()
+
+
+func _shake_root() -> void:
+	if _shake_tween != null and _shake_tween.is_valid():
+		_shake_tween.kill()
+		_root.position = _root_home
+	_shake_tween = create_tween()
+	var steps: int = 5
+	for i in range(steps):
+		var decay: float = 1.0 - float(i) / float(steps)
+		var off := Vector2(
+			(RNG.randf() * 2.0 - 1.0) * penalty_shake_pixels * decay,
+			(RNG.randf() * 2.0 - 1.0) * penalty_shake_pixels * decay)
+		_shake_tween.tween_property(_root, "position", _root_home + off,
+			penalty_shake_seconds / float(steps))
+	_shake_tween.tween_property(_root, "position", _root_home,
+		penalty_shake_seconds / float(steps))
+
+
+# --- Opposition gates (read-only on the run config; never mutate it) -----------
+
+func _r2_enabled() -> bool:
+	var cfg: RunConfig = GameState.active_run_config
+	return cfg != null and cfg.r2_enabled
+
+
+func _r3_enabled() -> bool:
+	var cfg: RunConfig = GameState.active_run_config
+	return cfg != null and cfg.r3_enabled

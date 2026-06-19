@@ -5,3 +5,11 @@ HUD_CLOCK_TIME,{seconds}s
 HUD_EXTRACT_PROMPT,Press {key} to Extract with {value}
 HUD_PUSH_HINT,...or push deeper for more
 HUD_EXPOSURE_FMT,Exposure: {value} / {max}
+HUD_PENALTY_SPEED,Slowed
+HUD_PENALTY_VISION,Sight narrows
+HUD_PENALTY_CLOCK,Light drains
+HUD_RETREAT_COST,-{amount} {unit}
+HUD_COST_LIGHT,light
+HUD_COST_EXPOSURE,exposure
+HUD_COST_METER,egress debt
+HUD_COST_DECAY,route collapsed
