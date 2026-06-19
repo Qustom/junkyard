@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.1
 - **Branch:** programmer/R0
-- **Commit:** f7ae8f99df783da8279a8d9797acd61bc9f61ece
+- **Commit:** e4d9007d245ba04aaa6b51299d4588e9ff5fa76d (implementation); worklog SHA-fixup in the immediate follow-up commit
 
 ## What changed
 Added the `RunConfig` Resource (`data/run_config/run_config.gd` + all-off default
