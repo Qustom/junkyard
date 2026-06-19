@@ -107,24 +107,26 @@ Then-unblocked (wave 4+): **E2** (E1,B3,D2,A3), **E3** (E1,A3), **F1** (E1) → 
 > EventBus signals on `main` before dispatch so no two agents edit `event_bus.gd`; push `main` after every
 > commit; mirror task status to GitHub Projects. All proven in wave 2. See `CLAUDE.md` orchestrator loop.
 
-## ▶ Next action — M1.1 Wave 2: dispatch R1 / R2 / R3 / R4 (4 parallel worktrees)
-**Wave 1 is COMPLETE + close-out done.** Foundations on `main` (`1428dc6`): `RunConfig` + Config menu (32 knobs),
-config-marked telemetry + 11 pre-declared opposition/penalty signals, real `duration_s`, live within-band depth, sealed band.
+## In progress — M1.1 Wave 2: R2 ∥ R3 ∥ R4 dispatched (batch A); R1 sequenced after (batch B)
+**Wave 1 COMPLETE + close-out done.** Foundations on `main`: `RunConfig` + Config menu (32 knobs), config-marked
+telemetry + 11 pre-declared opposition/penalty signals, real `duration_s`, live within-band depth, sealed band.
 
-**Wave 2 — the cost axis (the heart of M1.1).** R1/R2/R3/R4 run in **4 parallel `isolation: worktree` agents**, file-disjoint
-by design. Each reads `GameState.active_run_config` (R0) + live `current_depth_index`/`current_dist_to_gate` (BUG2), emits
-its **already-pre-declared** TEL signals, and **must NOT edit `event_bus.gd` or `game_state.gd`** (route run-end through
-existing `fail_run`/`extract_and_end_run`). Specs ratified: `design/M1_1_Tasks/R{1,2,3,4}_*.md`.
-- **R1** pursuing/awakening hazard (general-purpose + game-director-designer spec exists + character-animator greybox tell) — emits `hazard_awoke`/`hazard_caught`; catch → `fail_run(&"death")`. BlockedBy R0,BUG2 ✅.
-- **R2** costlier return (general-purpose + g-d-d) — mechanism `egress_toll`+`clock` ratified; reads `current_dist_to_gate`; emits `return_cost_incurred`. BlockedBy R0,BUG2 ✅.
-- **R3** exposure meter (general-purpose + g-d-d + ui-ux HUD readout) — emits `exposure_crossed`/`exposure_penalty` + the 4 penalty/meter signals TEL declared; max → `fail_run(&"timeout")`. BlockedBy R0,BUG2 ✅.
-- **R4** maze/nav (general-purpose + environment-artist branch/fog + g-d-d) — raises B2 `branch_chance` w/ depth + vision/fog; emits `nav_branch_taken`/`nav_lost_proxy` (`"time_no_depth_progress"`); needs sealed map. BlockedBy R0,BUG2,BUG3 ✅.
+**Collision map (resolved — the W1.1-2 lesson applied):** the only shared-file clash is **R1 and R4 both edit
+`scenes/game/main_game.gd`** (R1 = hazard spawn seam; R4 = vision/fog + lost-proxy instantiation + generator `RunConfig`
+threading). R2 (only `systems/oppositions/return_cost.gd`) and R3 (`exposure_meter.gd` + `player.gd` + `dive_clock.gd` +
+`ui/hud/`) are mutually disjoint and disjoint from R1/R4. So:
+- **▶ Batch A (3 parallel `isolation: worktree`, DISPATCHED):** **R2 ∥ R3 ∥ R4** — file-disjoint.
+- **Batch B (after R4's `main_game.gd` merges):** **R1** — sequential (shares `main_game.gd` with R4).
 
-⚠ **Watch for shared-file collisions** (the wave-1 lesson, W1.1-2): before dispatching, confirm none of R1–R4 need to edit
-`game_state.gd`/`event_bus.gd`/`main_game.gd` — if an opposition's spec requires a `main_game.gd` wiring seam, sequence
-those rather than running them in parallel. R3's player speed-penalty touches `entities/player/player.gd` (consumer of
-`exposure_speed_mult_changed`) — check R3 vs R1's hazard for any `player.gd`/`main_game.gd` overlap at brief time.
-**After Wave 2 integrates:** Wave 2 close-out deviation sweep (Director), then **Wave 3** re-gate (RG1→human playtest→RG2→RG3).
+**Shared as-built contract briefed to all four** (specs predate BUG2 merge — these are the real names):
+live depth = `GameState.current_depth_index`; max = `GameState.max_depth_reached`; dist home = `GameState.current_dist_to_gate`
+(NOT `current_depth` — that's the stuck band-entry counter); `EventBus.depth_changed(depth_index, max_depth)`; player is
+already in the `"player"` group; `RunConfig` enums are plain `@export_enum` **ints (no named consts)**; `run_t_ms` on
+hazard_caught/exposure_crossed is TEL-stamped (emit 0); all opposition/penalty signals pre-declared (emit only, never edit
+`event_bus.gd`); run-end via existing `fail_run(&"death"|&"timeout")` (call, never edit `game_state.gd`).
+
+**After Batch A+B integrate:** Wave 2 close-out deviation sweep (Director dispositions), then **Wave 3** re-gate
+(RG1 build → human playtest → RG2 analysis vs M1.0 baseline → RG3 verdict). RG1 wires R2/R3 run-state nodes into the dive scene.
 
 **Wave-5 close-out — COMPLETE (2026-06-18).** All 16 wave-5 deviations (G1×5, G2×5, G3×5, G6×1) dispositioned by
 the Director: **1 Addressed** (G3 #1 → built G6, the in-build consent prompt) / **15 Reviewed**. Reapplied to
