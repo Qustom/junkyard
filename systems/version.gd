@@ -9,37 +9,62 @@ extends RefCounted
 ##     m1-<YYYYMMDD>-<gitshortsha>
 ## per G3's "Build identity" recommendation (date for humans, SHA for exact repro).
 ##
-## The SHA is BAKED at build time into ProjectSettings (the CI/export step writes
-## `application/config/build_sha`), with a committed fallback for editor/dev runs
-## where that setting is absent. The date is resolved at boot (the day the build
-## runs is close enough to the nightly date for tester correlation, and needs no
-## CI plumbing). Telemetry stamps this string onto the run_started row so a feedback
-## report + its JSONL can be tied to one exact build (G3 + G1 correlation).
+## The SHA is BAKED at build time into a git-ignored generated artifact
+## (`systems/build_info_gen.gd`, written by `tools/stamp_build.sh` in CI and locally
+## before a playtest build) and read at runtime — so an EXPORTED binary, where `git`
+## and `.git` are absent, still knows its exact commit (I5, M1.2). The resolution
+## chain (I5 Resolved Q2/Q4):
+##   1. baked artifact (`build_info_gen.gd` const SHORT_SHA) — present in any stamped
+##      build (CI export, local stamped run); ships inside the export pack.
+##   2. editor/dev fallback — read `git rev-parse --short HEAD` live via OS.execute
+##      so an un-stamped editor run still shows the true working SHA.
+##   3. neutral FALLBACK_SHA sentinel — an UN-stamped, non-editor build reports
+##      "0000000" so a stale/un-stamped build is OBVIOUS in the log rather than
+##      masquerading as a real commit (the I5 lesson: a quiet plausible SHA masked a
+##      stale binary for a whole playtest).
+## The date is resolved at boot. Telemetry stamps this string onto the run_started
+## row so a feedback report + its JSONL tie to one exact build (G3 + G1 correlation).
 
 ## Milestone prefix. Bump per milestone (m1 → m2 …).
 const MILESTONE := "m1"
 
-## Committed fallback SHA — overwritten live by ProjectSettings("application/config/build_sha")
-## when CI/export bakes the real `git rev-parse --short HEAD` in. Kept current-ish so a
-## bare dev run still produces a plausible, non-empty id.
-const FALLBACK_SHA := "852b6e2"
+## Neutral "unknown" sentinel — NOT a real old SHA. An un-stamped, non-editor build
+## resolves to this, making "this binary was built without the stamp step" legible in
+## the telemetry log instead of lying about a commit (I5 Resolved Q4).
+const FALLBACK_SHA := "0000000"
 
-## Project-settings key the export/CI step writes the real short SHA into.
-const SHA_SETTING := "application/config/build_sha"
+## The git-ignored generated artifact `tools/stamp_build.sh` writes the real short
+## SHA into (a `const SHORT_SHA` script). Read at runtime; ships inside the export.
+const GEN_PATH := "res://systems/build_info_gen.gd"
 
 
-## The full build id, e.g. "m1-20260618-852b6e2". Stable within one process.
+## The full build id, e.g. "m1-20260619-691d9da" (or "...-691d9da+dirty" off an
+## uncommitted tree). Stable within one process.
 static func id() -> String:
 	return "%s-%s-%s" % [MILESTONE, _date_stamp(), short_sha()]
 
 
-## The git short SHA: the baked ProjectSettings value if present, else the
-## committed fallback. Never empty.
+## The git short SHA, resolved through the I5 chain: baked artifact → editor-git →
+## neutral sentinel. Never empty.
 static func short_sha() -> String:
-	if ProjectSettings.has_setting(SHA_SETTING):
-		var baked := String(ProjectSettings.get_setting(SHA_SETTING, "")).strip_edges()
-		if baked != "":
-			return baked
+	# 1) Stamped build (CI export / local stamped run): the baked artifact ships in
+	#    the pack, so no git is needed at runtime.
+	if ResourceLoader.exists(GEN_PATH):
+		var gen: GDScript = load(GEN_PATH) as GDScript
+		if gen != null:
+			var consts := gen.get_script_constant_map()
+			var baked := String(consts.get("SHORT_SHA", "")).strip_edges()
+			if baked != "":
+				return baked
+	# 2) Editor / dev run with a working tree: read HEAD live (cheap, dev-only).
+	#    Gives a true SHA in the editor even without running the stamp step.
+	if OS.has_feature("editor"):
+		var out: Array = []
+		if OS.execute("git", ["rev-parse", "--short", "HEAD"], out) == 0 and not out.is_empty():
+			var sha := String(out[0]).strip_edges()
+			if sha != "":
+				return sha
+	# 3) Last resort: neutral sentinel so "I don't know my SHA" is visible in the log.
 	return FALLBACK_SHA
 
 

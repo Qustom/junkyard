@@ -47,6 +47,13 @@ jobs:
       - name: Run save-migration test (release gate)
         run: ~/godot-bin/godot --headless res://tests/test_save_migration.tscn
 
+      # I5 (M1.2): duration regression-lock. Drives 3 sequential start_run loop
+      # re-entries (extract → timeout → death) and asserts each run_ended carries a
+      # real, independent, nonzero duration_s (telemetry off). The playtest zeros were
+      # a missed-stamp on re-entry; red here blocks merge so it can never silently ship.
+      - name: Run duration loop-reentry test (CI gate)
+        run: ~/godot-bin/godot --headless res://tests/test_duration_loop_reentry.tscn
+
       # G2: vendored GdUnit4 logic suites (proc-gen determinism, inventory capacity,
       # banking math, death-drop pockets). The CLI runner returns non-zero on any
       # failed/aborted test (100) or orphan-node warning (101), so this gates merge.
