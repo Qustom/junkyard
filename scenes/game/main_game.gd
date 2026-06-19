@@ -47,6 +47,10 @@ const DEFAULT_CELL_SIZE_PX := 16
 @onready var _start_button: Button = %StartButton
 @onready var _version_label: Label = %VersionLabel
 @onready var _sell_screen: SellScreen = $SellScreen
+## M1.1 CFG: the pre-run config rail on the main menu. start_new_run() stages its
+## working config (ratified shape (a)); if the node is absent we fall back to the
+## all-off default at RUN_CONFIG_PATH so the loop still reaches the M1.0 baseline.
+@onready var _config_menu: ConfigMenu = %ConfigMenu
 
 # Loaded fixtures (loaded once; pure data, never mutated here).
 var _piece_catalog: Array[ZonePieceData] = []
@@ -161,7 +165,10 @@ func start_new_run() -> void:
 	# now we stage the all-off default, which keeps the loop at the M1.0 baseline.
 	# Backward-compatible: if staging fails to load, start_run falls back to its own
 	# all-off default, so behaviour is identical either way.
-	GameState.stage_run_config(load(RUN_CONFIG_PATH) as RunConfig)
+	# M1.1 CFG: stage the menu-built working config (shape (a)); fall back to the
+	# all-off default if the rail is missing so behaviour is identical either way.
+	var run_cfg: RunConfig = _config_menu.apply_and_get_config() if _config_menu != null else (load(RUN_CONFIG_PATH) as RunConfig)
+	GameState.stage_run_config(run_cfg)
 	GameState.start_run(BAND_ID, seed)
 	GameState.enter_band(BAND_ID)
 	# BUG2: resolve once immediately so frame-0 within-band depth is correct (the

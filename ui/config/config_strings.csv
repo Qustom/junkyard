@@ -1,0 +1,52 @@
+keys,en
+CFG_RUN_SUMMARY,RUN: R1{r1} R2{r2} R3{r3} R4{r4} · seed {seed}
+CFG_SEED_AUTO,auto
+CFG_RESET,Reset to baseline (all off)
+CFG_CHIP_ON,ON
+CFG_CHIP_OFF,OFF
+CFG_FLAG_ON,[x]
+CFG_FLAG_OFF,[ ]
+CFG_SEC_META,Meta
+CFG_SEC_R1,R1 · Pursuing Hazard
+CFG_SEC_R2,R2 · Costlier Return
+CFG_SEC_R3,R3 · Exposure Meter
+CFG_SEC_R4,R4 · Maze / Navigation
+CFG_GLOSS_R1,a thing that chases you the deeper/longer you go
+CFG_GLOSS_R2,the walk back out costs you
+CFG_GLOSS_R3,a rising meter that punishes lingering
+CFG_GLOSS_R4,branching layout + limited vision; getting lost
+CFG_CHIP_R1_SUMMARY,awaken@d≥{depth}, speed {speed}
+CFG_CHIP_R2_SUMMARY,{mechanism}, cost {cost}
+CFG_CHIP_R3_SUMMARY,climb {rate}/s, {levels} levels
+CFG_CHIP_R4_SUMMARY,branch {chance}, vision {vision}
+CFG_ENUM_PLACEHOLDER,{name} (placeholder)
+CFG_LIST_ADD,+ add level
+CFG_LIST_REMOVE,x
+CFG_FIELD_SEED_OVERRIDE,seed_override
+CFG_FIELD_BUILD_TAG,build_tag
+CFG_FIELD_R1_DEPTH_THRESHOLD,depth_threshold
+CFG_FIELD_R1_LINGER_SECONDS,linger_seconds
+CFG_FIELD_R1_CHASE_SPEED,chase_speed
+CFG_FIELD_R1_SPEED_PER_DEPTH,speed_per_depth
+CFG_FIELD_R1_CATCH_RADIUS,catch_radius
+CFG_FIELD_R1_CATCH_KILLS,catch_kills
+CFG_FIELD_R1_SPAWN_COUNT,spawn_count
+CFG_FIELD_R2_MECHANISM,mechanism
+CFG_FIELD_R2_COST_MAGNITUDE,cost_magnitude
+CFG_FIELD_R2_COST_PER_DEPTH,cost_per_depth
+CFG_FIELD_R2_DEPTH_THRESHOLD,depth_threshold
+CFG_FIELD_R2_TOLL_RESOURCE,toll_resource
+CFG_FIELD_R3_BASE_CLIMB_RATE,base_climb_rate
+CFG_FIELD_R3_RATE_PER_DEPTH,rate_per_depth
+CFG_FIELD_R3_THRESHOLD_LEVELS,threshold_levels
+CFG_FIELD_R3_PENALTY_KIND,penalty_kind
+CFG_FIELD_R3_PENALTY_MAGNITUDE,penalty_magnitude
+CFG_FIELD_R3_MAX_FORCES_LOSS,max_forces_loss
+CFG_FIELD_R3_DECAY_ON_RETREAT,decay_on_retreat
+CFG_FIELD_R4_BRANCH_CHANCE_BASE,branch_chance_base
+CFG_FIELD_R4_BRANCH_PER_DEPTH,branch_per_depth
+CFG_FIELD_R4_MAX_BRANCH_DEPTH,max_branch_depth
+CFG_FIELD_R4_VISION_RADIUS,vision_radius
+CFG_FIELD_R4_VISION_TIGHTEN_PER_DEPTH,vision_tighten_per_depth
+CFG_FIELD_R4_FOG_ENABLED,fog_enabled
+CFG_FIELD_R4_LOST_PROXY_THRESHOLD,lost_proxy_threshold
