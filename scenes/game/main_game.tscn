@@ -1,10 +1,11 @@
-[gd_scene load_steps=7 format=3 uid="uid://dg3mainggame001"]
+[gd_scene load_steps=8 format=3 uid="uid://dg3mainggame001"]
 
 [ext_resource type="Script" path="res://scenes/game/main_game.gd" id="1"]
 [ext_resource type="PackedScene" path="res://entities/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://systems/dive_clock.tscn" id="3"]
 [ext_resource type="PackedScene" uid="uid://c2edecisionhud01" path="res://ui/hud/decision_hud.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://ui/sell/sell_screen.tscn" id="5"]
+[ext_resource type="PackedScene" uid="uid://cfgconfigmenu001" path="res://ui/config/config_menu.tscn" id="6"]
 
 [node name="MainGame" type="Node2D"]
 script = ExtResource("1")
@@ -33,6 +34,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.07, 0.08, 0.1, 1)
+
+[node name="ConfigMenu" parent="MainMenu" instance=ExtResource("6")]
+unique_name_in_owner = true
 
 [node name="Center" type="CenterContainer" parent="MainMenu"]
 anchors_preset = 15

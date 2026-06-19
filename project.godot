@@ -96,7 +96,7 @@ debug_kill={
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://ui/inventory/inventory_strings.en.translation", "res://ui/hud/hud_strings.en.translation", "res://ui/sell/sell_strings.en.translation")
+locale/translations=PackedStringArray("res://ui/inventory/inventory_strings.en.translation", "res://ui/hud/hud_strings.en.translation", "res://ui/sell/sell_strings.en.translation", "res://ui/config/config_strings.en.translation")
 
 [layer_names]
 
