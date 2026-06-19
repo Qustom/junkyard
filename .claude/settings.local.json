@@ -90,7 +90,12 @@
       "Bash(pkill -f \"test_player_movement test_interaction\")",
       "Bash(pkill -9 -f \"tests/test_player_movement\")",
       "Bash(git -C /mnt/c/source/junkyard/.claude/worktrees/agent-a288be13d00282a6b rev-parse --show-toplevel)",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash([ -s \"$f\" ])",
+      "Bash(awk '{s+=$1} END{print s\" tests via Statistics lines\"}')",
+      "Bash(awk '{s+=$1} END{print s\" total failures\"}')",
+      "Bash(awk '{s+=$1} END{print s\" total errors\"}')",
+      "Bash(echo \"exit=$?\")"
     ]
   }
 }
