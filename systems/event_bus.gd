@@ -68,3 +68,14 @@ signal junk_dropped(item: JunkItem, world_pos: Vector2)
 
 # Optional Telemetry hook: a band finished being populated with `count` pickups.
 signal band_populated(count: int)
+
+# --- Within-band depth (BUG2, M1.1) ------------------------------------------
+# Pre-declared on `main` by the orchestrator (BUG2 §3 sequencing: the declaration
+# must exist before any emitter ships; TEL adds the opposition signals later and
+# must NOT re-declare this). EMITTED by GameState.set_current_depth() — BUG2 only
+# emits, never declares. Edge-triggered: fires only when the player crosses into a
+# piece of a different depth_index. depth_index = current within-band depth
+# (entry == 0); max_depth = deepest reached this run. R1–R4 read
+# GameState.current_depth_index / .current_dist_to_gate directly; this signal is
+# the event-driven complement + Telemetry's depth row.
+signal depth_changed(depth_index: int, max_depth: int)
