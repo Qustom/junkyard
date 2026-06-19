@@ -34,6 +34,11 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	EventBus.run_started.connect(_on_run_started)
 	EventBus.run_ended.connect(_on_run_ended)
+	# R3 (M1.1) clock-tax seam: when the ExposureMeter's `clock` penalty fires it emits
+	# exposure_clock_tax(seconds); we subtract it from remaining light via the existing
+	# guarded mutator. No-op with R3 off (the meter never emits). modify_light clamps to
+	# 0 and fires dive_clock_timeout once if the tax empties the clock.
+	EventBus.exposure_clock_tax.connect(_on_exposure_clock_tax)
 
 
 ## Reset and begin draining for a new dive. Args come from run_started's
@@ -59,6 +64,16 @@ func _process(delta: float) -> void:
 	if not _active:
 		return
 	modify_light(-config.drain_per_second * delta)
+
+
+## R3 clock-tax consumer: subtract `seconds` of remaining light when the exposure
+## meter taxes the clock (r3_penalty_kind = clock). Inert when the clock is not active
+## (between dives) — modify_light early-returns on a null config and otherwise only
+## affects an in-progress dive.
+func _on_exposure_clock_tax(seconds: float) -> void:
+	if not _active:
+		return
+	modify_light(-seconds)
 
 
 ## The single guarded mutator for light — covers both drain (negative) and

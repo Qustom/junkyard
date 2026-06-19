@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://c2edecisionhud01"]
+[gd_scene load_steps=5 format=3 uid="uid://c2edecisionhud01"]
 
 [ext_resource type="Script" path="res://ui/hud/decision_hud.gd" id="1"]
 [ext_resource type="PackedScene" path="res://ui/inventory/inventory_panel.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://ui/hud/extract_prompt.tscn" id="3"]
+[ext_resource type="Script" path="res://ui/hud/exposure_readout.gd" id="4"]
 
 [node name="DecisionHUD" type="CanvasLayer"]
 script = ExtResource("1")
@@ -76,6 +77,41 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 20
 text = "Depth 0"
+
+[node name="ExposureReadout" type="Control" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 0
+offset_left = 16.0
+offset_top = 50.0
+offset_right = 256.0
+offset_bottom = 96.0
+mouse_filter = 2
+script = ExtResource("4")
+
+[node name="ExposureBar" type="ProgressBar" parent="Root/ExposureReadout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 18)
+layout_mode = 1
+anchors_preset = 0
+offset_right = 180.0
+offset_bottom = 18.0
+max_value = 100.0
+value = 0.0
+show_percentage = false
+
+[node name="ExposureLabel" type="Label" parent="Root/ExposureReadout"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 0
+offset_top = 20.0
+offset_right = 240.0
+offset_bottom = 46.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = "Exposure: 0 / 100"
 
 [node name="InventoryPanel" parent="Root" instance=ExtResource("2")]
 
