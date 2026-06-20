@@ -48,6 +48,10 @@ signal back_to_config_pressed
 @onready var _money_total_label: Label = %MoneyTotalLabel
 @onready var _continue_button: Button = %ContinueButton
 @onready var _back_to_config_button: Button = %BackToConfigButton
+# DLV2: web-only telemetry export. Hidden on desktop (the on-disk retrieval flow is
+# unchanged there); on web it downloads user://telemetry/run_log.jsonl to the browser.
+@onready var _export_telemetry_button: Button = %ExportTelemetryButton
+@onready var _export_status_label: Label = %ExportStatusLabel
 
 # Count-up animation state. We drive the roll-up manually from _process rather than
 # a Tween: the screen runs while the tree is paused, and Godot 4 has a standing
@@ -70,7 +74,38 @@ func _ready() -> void:
 	hide()
 	_continue_button.pressed.connect(_on_continue_pressed)
 	_back_to_config_button.pressed.connect(_on_back_to_config_pressed)
+	_setup_export_control()
 	EventBus.run_ended.connect(_on_run_ended)
+
+
+# --- DLV2: web telemetry export ----------------------------------------------
+
+## Web-platform guard: the export control only exists on a web build, where the
+## telemetry log lives in the browser's IndexedDB-backed VFS and can't be retrieved
+## by the desktop "zip the app-data dir" flow. On desktop we hide it entirely (and
+## skip wiring its signal) so DLV2 is fully inert off-web.
+func _setup_export_control() -> void:
+	if not TelemetryExporter.is_supported():
+		_export_telemetry_button.hide()
+		_export_status_label.hide()
+		return
+	_export_telemetry_button.text = tr("SELL_EXPORT_TELEMETRY")
+	_export_status_label.text = ""
+	_export_telemetry_button.pressed.connect(_on_export_telemetry_pressed)
+
+
+## Called only on web (the signal is connected only there). Reads the existing JSONL
+## log and hands it to the browser as a download — pure read, no schema/arity change.
+## download_buffer must run inside this user gesture or the browser blocks it.
+func _on_export_telemetry_pressed() -> void:
+	if not TelemetryExporter.has_log():
+		_export_status_label.text = tr("SELL_EXPORT_EMPTY")
+		return
+	var filename := TelemetryExporter.download_filename()
+	if TelemetryExporter.export():
+		_export_status_label.text = tr("SELL_EXPORT_DONE").format({"name": filename})
+	else:
+		_export_status_label.text = tr("SELL_EXPORT_EMPTY")
 
 
 # --- Run-end entry point ------------------------------------------------------
