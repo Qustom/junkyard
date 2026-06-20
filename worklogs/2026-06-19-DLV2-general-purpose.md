@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.3 (Wave 1 — infra)
 - **Branch:** worktree-agent-ada839477ba43a3d8 (isolated worktree off `main`)
-- **Commit:** b64e7ab23fc66f0b9d4fe250ae120e76f7aa5e67
+- **Commit:** c2c743f32e54bb838362c681b62de4972caa31a6
 
 ## What changed
 Added a web-only "Export telemetry" control to the sell/continue screen so a browser
