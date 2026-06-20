@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 → M1.2 (DONE → ITERATE) → **M1.3 (Legibility & Density) — Wave 1 DONE; Wave 2 IN PROGRESS (J2 DONE → J3 next → J4).**
-**Last updated:** 2026-06-19 (M1.3 Wave 2: **J2 integrated** on `main` — `4140d9f`. Hazards now distributed across `depth_index` (even_spread/single_gate/curve); preset = even_spread/count 5/min-depth 1; all-off fp byte-identical (`e943ac9c8bc1` via `test_rg1_m12_verify`), 38/38 knobs. Next: **J3** (per-room density, additive on J2's seam). Breakdown: `design/M1_3_Tasks/M1.3_Breakdown.md`.)
+**Current milestone:** M1.0 → M1.1 → M1.2 (DONE → ITERATE) → **M1.3 (Legibility & Density) — Wave 1 DONE; Wave 2 IN PROGRESS (J2 ✓ J3 ✓ → J4 next/last).**
+**Last updated:** 2026-06-20 (M1.3 Wave 2: **J2 + J3 integrated** on `main` — `4140d9f`, `4d54487`. Hazards distributed across `depth_index` (J2) + per-room cell-area density (J3, cap+ceiling); preset fills big rooms; loot-per-area built OFF. All-off fp byte-identical (`e943ac9c8bc1` via `test_rg1_m12_verify`); 44/44 knobs. Next: **J4** (hallway length + corridor telemetry — last Wave-2 task). Breakdown: `design/M1_3_Tasks/M1.3_Breakdown.md`.)
 
 ---
 
@@ -37,7 +37,10 @@ All 5 on `main`, verified, pushed, board=Done; all-off fp byte-identical (e943ac
 - **DLV1** itch HTML5 delivery (Web preset + `push_itch.sh` + web templates + nightly slugs) — `02ad951`. ⚠ **real butler push human-gated** (sandbox can't reach `broth.itch.ovh`; run `tools/push_itch.sh` per SETUP §1a).
 - **J1** `make_default_play_preset()` (19 rooms, size 4.0, R1 on, **R4 maze-only / occlusion OFF = match-played**, R2/R3 off) + `RANGE_MULT=[4.0,40.0]` — `3159aac` (+ `25072f6`).
 
-## ▶ Next action (start here on a cold restart) — **M1.3 Wave 2: J3 (per-room density) — dispatch next**
+## ▶ Next action (start here on a cold restart) — **M1.3 Wave 2: J4 (hallway length + corridor telemetry) — dispatch (last Wave-2 task)**
+
+- **J3** (general-purpose) — ✅ **DONE (2026-06-20, merge `4d54487`, board=Done, worklog `worklogs/2026-06-19-J3-general-purpose.md`).** Additive `_populate_room_density`/`_density_spawn_positions` on J2's seam; cell-area default (px-area capped option), per-room cap 3 + band ceiling 64; hazards primary, `lvl_loot_density_per_area` built OFF (never preset-on, disjoint `junk_placer.gd`). 44/44 knobs; all-off fp `e943ac9c8bc1` byte-identical. Perf: preset=14 density hazards, px-area@40×=42, worst-case clamped to 64. **Deviation: none functional** (`_density_sorted_cells` per-room stable y,x sort instead of calling `_hazard_spawn_position` directly — within spec allowance); **Q F observation surfaced for Director** (density hazards in deep rooms may wake immediately → R1 threshold/linger tuning at RG1, not a J3 change) → Wave-2 close-out.
+- **J4** (general-purpose) — ⏭ **NEXT (last Wave-2 task).** Configurable hallway length via **generator down-weight/drop** (NOT materialise re-pack) + **corridor-time telemetry**. ⚠ **Pre-declare `corridor_time_summary` on `main`** (per-frame piece-keyed accumulator) before dispatch; hoist `_player_piece_index` out of the R4 gate. Adds its own `run_config.gd` knob + preset wiring. Telemetry-only `main_game.gd` footprint (J2/J3 own the spawn seam). Spec `J4_hallway_length.md`.
 
 Wave 2 is **sequential on the shared spawn seam + `main_game.gd`** (single-writer):
 - **J2** (general-purpose) — ✅ **DONE (2026-06-19, merge `4140d9f`, board=Done, worklog `worklogs/2026-06-19-J2-general-purpose.md`).** N hazards distributed across depth_index (single_gate/even_spread/curve); owns `_spawn_r1_hazards`/`_hazard_spawn_position(band, depth, index)` (the stable helper J3 reuses); added `r1_spawn_distribution`+`r1_spread_min_depth`, preset = even_spread/count 5/min-depth 1; 38/38 knobs; all-off fp `e943ac9c8bc1` byte-identical. **1 deviation logged (curve `pow(t,1.6)` biases shallower not deeper — harmless, preset-OFF) → for Wave-2 close-out sweep.**
