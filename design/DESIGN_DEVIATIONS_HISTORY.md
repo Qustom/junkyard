@@ -226,3 +226,19 @@ should read at full contrast at the bubble rim, it sorts `z_index > 100` on the 
 stays empty (the finding is tracked as a task, not a pending deviation). **M1.2 Wave 2 (hazard refuge + vision/fog occlusion +
 R2/R3 cues) is complete** on `main`; all-off baseline byte-unchanged (fp=e943ac9c8bc1). **Next: BUG5, then Wave 3 — the
 re-gate** (RG1 build + verify → human playtest → RG2 analysis vs M1.0/M1.1 → RG3 verdict).
+
+---
+
+## M1.3 Wave 1 (Foundation & correctness) — Director-evaluated 2026-06-19
+
+All 5 Wave-1 tasks (J5, BUG6, DLV2, DLV1, J1) integrated on `main`, all-off fp byte-identical (e943ac9c8bc1). Close-out sweep:
+
+| # | Item | Verdict | Reapplied to |
+|---|---|---|---|
+| W1.3-1 | DLV2 used the built-in `JavaScriptBridge.download_buffer` instead of the spec's hand-rolled Blob+`<a>` shim (behaviour-identical, manages JS object lifetime, more robust; still fires from the button user-gesture). | **Reviewed** | No change — DLV2 doc note; the built-in is the better idiom. |
+| W1.3-2 | Orchestrator dropped "J1 pre-declares J2/J3 knobs" — the Phase-3 resolvers made Wave 2 **sequential** (J2→J3→J4), so each task adds its own `run_config.gd` knobs (no parallel collision); J1 stayed focused on the preset+slider+CFG warn-line. | **Reviewed** | Build-org refinement; folded into the J2/J3/J4 build briefs (each owns + wires its own knobs into the preset). |
+| W1.3-3 | J1's preset turned R4 **vision/fog/lost ON** (literal F1 "vision/maze ON"), but the actual most-fun M1.2 cell had R4 = maze ON, vision/fog/lost **trapped OFF** — i.e. the Director loved the maze *without* real occlusion. | **Addressed** | Director call "match what I played — occlusion off": preset now mirrors the played cell (R4 maze ON, vision/fog/lost OFF, only `r1_catch_radius` floored 23.3→24.0); BUG6's two R4 sub-traps merged into one **maze-aware `r4_no_effect`** (fires only when R4 is fully inert) so the deliberate maze-only default isn't nagged. Reapplied to `run_config.gd` + `test_run_config.gd` + `config_strings.csv` (commit `25072f6`). |
+
+**Non-deviation notes (tracked, not dispositions):** DLV1's real `butler push` is **human-gated** (sandbox can't reach `broth.itch.ovh`) — run `tools/push_itch.sh` once on a real network per `SETUP.md §1a`. J1's **live mult-40 window pass** ("void feel" at 640 px/cell) → on the RG1 playtest checklist (headless smoke passed).
+
+**M1.3 Wave 1 close-out complete (2026-06-19).** 3 items: **2 Reviewed, 1 Addressed** (the preset/trap reapply). `DESIGN_DEVIATIONS.md` empty between waves. **M1.3 Wave 1 (default preset + size slider, depth-counter fix, hazard latch + warn-only traps, itch HTML5 delivery + web telemetry export) is complete** on `main`. **Next: Wave 2 — J2→J3→J4 (density & spatial), then re-gate.**

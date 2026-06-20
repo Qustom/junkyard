@@ -34,39 +34,13 @@ decisions: `design/M1_3_Tasks/M1.3_Breakdown.md` (§"Phase 4 — Locked Decision
 **Design is LOCKED** — every task doc ends with a "Director Disposition (FINAL)". Greybox; all-off `RunConfig` stays the
 permanent baseline (fp=e943ac9c8bc1); the fun config ships as the `make_default_play_preset()` boot preset.
 
-### Wave 1 — Foundation & correctness  *(BUG6→J1 sequential on shared files; J5 ∥ DLV1 ∥ DLV2 parallel)*
+### Wave 1 — Foundation & correctness — ✓ **DONE 2026-06-19** (archived → `TASKS_COMPLETED.md`)
 
-### BUG6 — hazard_caught debounce + config-trap guards
-- Milestone: M1.3 (Wave 1)   Assignee: general-purpose   BlockedBy: none   (lands its `run_config.gd` method before J1)
-- Spec: `design/M1_3_Tasks/BUG6_hazard_debounce_and_config_traps.md`
-- Goal: one-shot `hazard_caught` latch (≤1/catch); `inert_enabled_oppositions()` + 5-trap **warn-only** guard (CFG line + `run_started` telemetry flag). No new knob/signal/schema; all-off byte-identical.
-- Done when: a sustained catch emits one `hazard_caught`; the 5 traps surface a warning + telemetry flag without blocking Start; smoke + determinism green.
+J5 (`50d8faf`) · BUG6 (`ed176bf`+`25072f6`) · DLV2 (`2b00a09`) · DLV1 (`02ad951`, push human-gated) · J1 (`3159aac`+`25072f6`) — all on
+`main`, board=Done; all-off fp byte-identical (e943ac9c8bc1). Close-out: 2 Reviewed + 1 Addressed (preset = match-played R4
+occlusion-OFF + maze-aware `r4_no_effect` trap). Default boot preset live. ⚠ butler push human-gated (`tools/push_itch.sh`, SETUP §1a).
 
-### J1 — Default play-preset + size-slider re-range
-- Milestone: M1.3 (Wave 1)   Assignee: game-director-designer + general-purpose   BlockedBy: BUG6 (rebases preset on its trap method)
-- Spec: `design/M1_3_Tasks/J1_default_preset_and_size_range.md`
-- Goal: `RunConfig.make_default_play_preset()` (lvl on, 19 rooms, size 4.0, R1+R4 on incl. `r4_lost_proxy_threshold≈0.5`, R2/R3 off) the game boots into; `RANGE_MULT=[4.0,40.0]`; all-off default stays the permanent baseline (Reset=all-off); pre-declares J2/J3's `r1_*` knobs.
-- Done when: game boots into the preset; size 4–40 settable (manual mult-40 smoke); all-off fp byte-identical; CFG coverage + `to_flat_dict` green.
-
-### J5 — Depth-counter HUD fix
-- Milestone: M1.3 (Wave 1)   Assignee: ui-ux-designer   BlockedBy: none (HUD-disjoint)
-- Spec: `design/M1_3_Tasks/J5_depth_counter_fix.md`
-- Goal: HUD shows `Depth {depth_index} / {max}` via `depth_changed` (not the band counter); fix stale comment + test assertion. HUD-only, determinism untouched.
-- Done when: the counter tracks the room depth_index live; `Depth N / max` reads correctly; smoke + decision-HUD test green.
-
-### DLV1 — itch.io HTML5 delivery via butler
-- Milestone: M1.3 (Wave 1/infra)   Assignee: producer + general-purpose   BlockedBy: none
-- Spec: `design/M1_3_Tasks/DLV1_itch_html5_delivery.md`
-- Goal: install butler + 4.6.3 web templates; add a Web export preset; `tools/push_itch.sh` → `qusto/the-far-yard:html5` (ship web+Windows); wire into RG1 + nightly; SETUP.md. Human prereqs (itch project, SAB toggle, GH secret) flagged. Never commit APIKEYS.md.
-- Done when: a web build exports + pushes to itch (Chromium-verified); Windows channel too; CI self-contained; install documented.
-
-### DLV2 — In-game telemetry export for web (JavaScriptBridge)
-- Milestone: M1.3 (Wave 1/infra)   Assignee: ui-ux-designer + general-purpose   BlockedBy: none (pairs with DLV1; blocks a web-only re-gate)
-- Spec: `design/M1_3_Tasks/DLV2_web_telemetry_export.md`
-- Goal: an in-game "Export telemetry" control (web-guarded) that downloads `user://telemetry/run_log.jsonl` from browser IndexedDB via JavaScriptBridge, so a browser playtest returns its log. No schema/arity change; inert on desktop.
-- Done when: a web build downloads a valid `run_log*.jsonl` matching the in-VFS log; desktop unaffected; tester_readme documents it.
-
-### Wave 2 — Density & spatial  *(J2→J3 shared spawn seam; J4 telemetry-only, sequenced)*
+### Wave 2 — Density & spatial  *(NEXT — J2→J3 shared spawn seam; J4 telemetry-only, sequenced)*
 
 ### J2 — Enemy spread across depths
 - Milestone: M1.3 (Wave 2)   Assignee: general-purpose (+ character-animator if a tell needs it)   BlockedBy: J1

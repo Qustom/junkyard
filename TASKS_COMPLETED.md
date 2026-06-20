@@ -302,3 +302,25 @@ playtest. Worklog `worklogs/2026-06-19-RG1-qa-playtest-coordinator.md`.
 
 **RG2 + RG3 are HUMAN-GATED** — require the Director's dev-machine playtest (sweep configs, drop `.jsonl` in `playtest_data/M1.2/`).
 Claude then analyses (RG2) + recommends; the Director plays + decides go/iterate/pivot (RG3).
+
+---
+
+## M1.3 — Legibility & Density · Wave 1 (Foundation & correctness) — done 2026-06-19
+
+All 5 integrated on `main`, verified, pushed, board=Done; all-off fp byte-identical (e943ac9c8bc1). Close-out: 2 Reviewed + 1
+Addressed (`DESIGN_DEVIATIONS_HISTORY.md` §"M1.3 Wave 1").
+
+### J5 — Depth-counter HUD fix — **Done** (merged `50d8faf`)
+HUD bottom-left now reads `Depth {current_depth_index} / {max_depth_reached}` via `EventBus.depth_changed` (was the static band counter, frozen at 1). HUD-only; determinism untouched. Worklog `worklogs/2026-06-19-J5-ui-ux-designer.md`.
+
+### BUG6 — hazard_caught debounce + config-trap guards — **Done** (merged `ed176bf`, refined `25072f6`)
+`_caught_latched` one-shot latch (sustained catch = 1 emit; was up to 2,199/run). `RunConfig.inert_enabled_oppositions()` warn-only config-trap guard + `run_started.data.inert_enabled_oppositions` flag. Trap set refined at close-out to 4 (the two R4 sub-traps merged into a maze-aware `r4_no_effect` so a deliberate maze-only R4 isn't nagged). fp byte-identical; CFG 36/36. Worklog `worklogs/2026-06-19-BUG6-m13-general-purpose.md`.
+
+### DLV2 — In-game telemetry export for web — **Done** (merged `2b00a09`)
+"Export telemetry" button on the sell screen, web-guarded (`OS.has_feature("web")`), downloads `user://telemetry/run_log.jsonl` from browser IndexedDB via `JavaScriptBridge.download_buffer` named `run_log_<build-id>.jsonl`. Inert on desktop; no schema/arity change. Worklog `worklogs/2026-06-19-DLV2-general-purpose.md`.
+
+### DLV1 — itch.io HTML5 delivery via butler — **Done** (merged `02ad951`)
+Web export preset (threaded, COI), `tools/push_itch.sh` → `qusto/the-far-yard:html5`, web templates installed, `nightly.yml` real slugs (web+Windows), SETUP §1a, tester_readme web/Chromium note. Web export **builds clean** (37 MB WASM). ⚠ **real butler push human-gated** — sandbox can't reach `broth.itch.ovh`; run `tools/push_itch.sh` once on a real network. Worklog `worklogs/2026-06-19-DLV1-producer.md`.
+
+### J1 — Default play-preset + size-slider re-range — **Done** (merged `3159aac`, refined `25072f6`)
+`RunConfig.make_default_play_preset()` (the game/CFG boots into it): lvl on, 19 rooms, size 4.0, R1 on (catch radius floored 23.3→24.0), **R4 maze-only / occlusion OFF (match-played, Director close-out)**, R2/R3 off; trap-free. `RANGE_MULT=[4.0,40.0]` (mult-40 headless smoke playable, 640 px/cell exact). All-off `RunConfig.new()` stays the permanent baseline (Reset=all-off); fp byte-identical. CFG warn-line folds BUG6's traps. Worklog `worklogs/2026-06-19-J1-general-purpose.md`.
