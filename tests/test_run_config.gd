@@ -77,6 +77,9 @@ func _ready() -> void:
 		"r1_speed_per_depth", "r1_catch_radius", "r1_catch_radius_per_depth", "r1_catch_kills", "r1_spawn_count",
 		# J2 (M1.3) — depth-spread distribution knobs.
 		"r1_spawn_distribution", "r1_spread_min_depth",
+		# J3 (M1.3) per-room density knobs.
+		"r1_per_room_density", "r1_density_metric", "r1_density_rooms_only",
+		"r1_density_min_area", "r1_density_per_room_cap",
 		"r2_enabled", "r2_mechanism", "r2_cost_magnitude", "r2_cost_per_depth",
 		"r2_depth_threshold", "r2_toll_resource",
 		"r3_enabled", "r3_base_climb_rate", "r3_rate_per_depth", "r3_threshold_levels",
@@ -85,6 +88,8 @@ func _ready() -> void:
 		"r4_vision_radius", "r4_vision_tighten_per_depth", "r4_fog_enabled", "r4_lost_proxy_threshold",
 		# I1 (M1.2) — level-scale knobs (additive payload).
 		"lvl_enabled", "lvl_room_count", "lvl_size_mult",
+		# J3 (M1.3) loot-per-area sub-knob.
+		"lvl_loot_density_per_area",
 	]
 	for k in expected_keys:
 		if not flat.has(k):
@@ -208,6 +213,35 @@ func _ready() -> void:
 		failures.append("J2 preset: r1_spawn_count == %d, expected 5 (Director starting sweep)" % preset.r1_spawn_count)
 	if preset.r1_spread_min_depth != 1:
 		failures.append("J2 preset: r1_spread_min_depth == %d, expected 1 (safe entry ramp)" % preset.r1_spread_min_depth)
+
+	# === Case 9: J3 (M1.3) per-room density knobs ============================
+	# All-off control = M1.2: density OFF (0.0), metric cell_area (0), no rooms-only, no
+	# floor, uncapped — so when the knobs exist but are untouched, NO density node spawns.
+	if fresh.r1_per_room_density != 0.0:
+		failures.append("J3: all-off r1_per_room_density == %f, expected 0.0 (OFF)" % fresh.r1_per_room_density)
+	if fresh.r1_density_metric != 0:
+		failures.append("J3: all-off r1_density_metric == %d, expected 0 (cell_area)" % fresh.r1_density_metric)
+	if fresh.r1_density_rooms_only:
+		failures.append("J3: all-off r1_density_rooms_only must be false")
+	if fresh.r1_density_min_area != 0:
+		failures.append("J3: all-off r1_density_min_area == %d, expected 0" % fresh.r1_density_min_area)
+	if fresh.r1_density_per_room_cap != 0:
+		failures.append("J3: all-off r1_density_per_room_cap == %d, expected 0 (uncapped)" % fresh.r1_density_per_room_cap)
+	if fresh.lvl_loot_density_per_area != 0.0:
+		failures.append("J3: all-off lvl_loot_density_per_area == %f, expected 0.0 (OFF)" % fresh.lvl_loot_density_per_area)
+	# The default play-preset carries the Director's density sweep: cell_area metric, a
+	# non-zero density, the MANDATORY per-room cap (> 0, Q E), a non-trivial min-area, and
+	# the loot sub-knob OFF (never preset-on — it contradicts depth_curve.gd's intent).
+	if not (preset.r1_per_room_density > 0.0):
+		failures.append("J3 preset: r1_per_room_density must be > 0 (a non-zero sweep)")
+	if preset.r1_density_metric != 0:
+		failures.append("J3 preset: r1_density_metric == %d, expected 0 (cell_area, Director default)" % preset.r1_density_metric)
+	if not (preset.r1_density_per_room_cap > 0):
+		failures.append("J3 preset: r1_density_per_room_cap must be > 0 (MANDATORY perf cap, Q E)")
+	if not (preset.r1_density_min_area > 0):
+		failures.append("J3 preset: r1_density_min_area must be > 0 (non-trivial floor so corridors stay empty)")
+	if preset.lvl_loot_density_per_area != 0.0:
+		failures.append("J3 preset: lvl_loot_density_per_area must be 0.0 (loot sub-knob NEVER preset-on)")
 
 	# === Verdict ============================================================
 	if failures.is_empty():

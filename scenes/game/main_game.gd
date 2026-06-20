@@ -213,7 +213,10 @@ func start_new_run() -> void:
 	# pickups are NOT children of the scaled piece nodes, so without this they cluster at
 	# 1x coords and land outside/atop scaled rooms.
 	var placer := JunkPlacer.new()
-	var plan := placer.plan(band, _depth_curve, _junk_catalog, false, cell_size_px)
+	# J3 (M1.3): the loot-per-area sub-knob (OFF by default / never preset-on). At 0.0 the
+	# planner draws byte-for-byte as M1.2; > 0 scales per-piece junk count by room area.
+	var loot_density: float = run_cfg.lvl_loot_density_per_area if run_cfg != null else 0.0
+	var plan := placer.plan(band, _depth_curve, _junk_catalog, false, cell_size_px, loot_density)
 
 	# 2. Materialise the band geometry into the world (instances at cell offsets),
 	#    scaling each piece + its spacing by the effective cell size.
@@ -280,7 +283,14 @@ func start_new_run() -> void:
 ## _clear_band() frees them. setup() binds the run config snapshot + the player (resolved
 ## via the "player" group — the player is already grouped in player.tscn).
 func _spawn_r1_hazards(rc: RunConfig, band: Band) -> void:
-	if rc == null or not rc.r1_enabled or rc.r1_spawn_count <= 0:
+	# Gate: R1 off → nothing. With R1 on, the J2 spread (r1_spawn_count) AND the J3 density
+	# (r1_per_room_density) are independent budgets — either may be zero. All-off-equivalent
+	# (spawn_count 0 AND density 0) instantiates NO node and is byte-identical to M1.2.
+	if rc == null or not rc.r1_enabled:
+		return
+	var spawn_count: int = maxi(rc.r1_spawn_count, 0)
+	var density_on: bool = rc.r1_per_room_density > 0.0
+	if spawn_count <= 0 and not density_on:
 		return
 	var hazard_scene := load(HAZARD_SCENE_PATH) as PackedScene
 	if hazard_scene == null:
@@ -288,16 +298,146 @@ func _spawn_r1_hazards(rc: RunConfig, band: Band) -> void:
 		return
 	var player := get_tree().get_first_node_in_group(&"player") as Node2D
 
-	# J2 STEP 1 — decide the depth for each of the N hazards (the spread concern).
-	var depths: Array[int] = _hazard_spawn_depths(band, rc)   # length == r1_spawn_count
+	# J2 — the spread budget: N hazards distributed across depth_index. Unchanged from J2;
+	# skipped entirely (no node) when r1_spawn_count == 0 so density-only runs stay clean.
+	if spawn_count > 0:
+		# STEP 1 — decide the depth for each of the N hazards (the spread concern).
+		var depths: Array[int] = _hazard_spawn_depths(band, rc)   # length == r1_spawn_count
+		# STEP 2 — place one hazard at each chosen depth. _hazard_spawn_position(band, depth,
+		# index) is the stable per-depth placement helper J3 reuses (§A.4 shared-seam contract).
+		for i in spawn_count:
+			var hz := hazard_scene.instantiate() as HazardEntity
+			_band_container.add_child(hz)
+			hz.global_position = _hazard_spawn_position(band, depths[i], i)
+			hz.setup(rc, player)
 
-	# J2 STEP 2 — place one hazard at each chosen depth. _hazard_spawn_position(band, depth,
-	# index) is the stable per-depth placement helper J3 reuses (§A.4 shared-seam contract).
-	for i in rc.r1_spawn_count:
+	# J3 — the per-room density budget: extra hazards seeded per room, scaled by room size.
+	# Additive on top of J2's population. Skipped entirely (no node) when density is off.
+	if density_on:
+		_populate_room_density(band, rc, hazard_scene, player)
+
+
+# --- J3 (M1.3): per-room size-scaled hazard density --------------------------
+
+## Seed EXTRA hazards per room, scaled by each room's size, additively on top of J2's
+## spread budget (G4 §5 F3b "a hazard per room" — big rooms aren't empty fields). For each
+## eligible piece: n = floor(r1_per_room_density * area / R1_DENSITY_AREA_UNIT), capped per
+## room and band-wide, placed across THAT room's own floor cells. DETERMINISTIC — walks
+## pieces depth-sorted then stable cell order, integer-index, NO RNG (same band+rc → byte-
+## identical positions). These are ordinary HazardEntities (reuse _hazard_spawn_position for
+## floor-cell selection); a density hazard wakes by the same depth/linger rules as any R1
+## hazard (no new wake rule — Q F). Nodes go into _band_container so _clear_band() frees them.
+func _populate_room_density(band: Band, rc: RunConfig, hazard_scene: PackedScene, player: Node2D) -> void:
+	# Instantiate one HazardEntity per planned world position. The PLAN is a pure,
+	# deterministic function of (band, rc) (see _density_spawn_positions) — this loop is the
+	# only impure half (scene-tree mutation), so the budget/placement logic stays unit-testable.
+	for pos in _density_spawn_positions(band, rc):
 		var hz := hazard_scene.instantiate() as HazardEntity
 		_band_container.add_child(hz)
-		hz.global_position = _hazard_spawn_position(band, depths[i], i)
+		hz.global_position = pos
 		hz.setup(rc, player)
+
+
+## The deterministic per-room density PLAN: the ordered world positions of every density
+## hazard for (band, rc), with NO RNG and NO node state — so the same (band, rc) yields a
+## byte-identical list every call (the J3 determinism contract). For each eligible piece it
+## computes n = floor(r1_per_room_density * area / R1_DENSITY_AREA_UNIT), applies the per-room
+## cap + the band-wide ceiling, and strides the n hazards across THAT room's own sorted floor
+## cells. Mirrors J2's _hazard_spawn_depths split (pure plan + thin instantiate loop) so the
+## J3 test drives this directly against a hand-built graded band (test_per_room_density.gd).
+func _density_spawn_positions(band: Band, rc: RunConfig) -> Array[Vector2]:
+	var out: Array[Vector2] = []
+	if rc == null or rc.r1_per_room_density <= 0.0:
+		return out
+	var per_room_cap: int = rc.r1_density_per_room_cap   # 0 = uncapped
+	var min_area: int = maxi(rc.r1_density_min_area, 0)   # CELL-area floor (room-shape gate)
+	var spawned_total: int = 0                            # band-wide ceiling accumulator (Q E)
+
+	# Walk pieces in a stable, depth-sorted then piece-order sequence so placement (and the
+	# band-ceiling truncation) is reproducible run-to-run, independent of band.pieces order.
+	for p in _density_pieces_sorted(band):
+		if spawned_total >= RunConfig.R1_DENSITY_BAND_CEILING:
+			break
+		# Optional corridor exclusion (rooms_only): skip piece_corridor*/piece_hall_v.
+		if rc.r1_density_rooms_only and _is_corridor(p.piece_id):
+			continue
+		# Min-area gate is always on CELL area (a room-shape gate, not pixels), so corridors
+		# and small boxes stay empty until genuinely big regardless of the metric.
+		var cell_area: int = p.floor_cells.size()
+		if cell_area <= min_area:
+			continue
+		var area: float = _density_area(p, rc)            # cell_area or px_area per the metric
+		var n: int = int(floor(rc.r1_per_room_density * area / float(RunConfig.R1_DENSITY_AREA_UNIT)))
+		if per_room_cap > 0:
+			n = mini(n, per_room_cap)
+		# Band-wide ceiling truncation: never exceed the global cap even mid-room.
+		n = mini(n, RunConfig.R1_DENSITY_BAND_CEILING - spawned_total)
+		if n <= 0:
+			continue
+		# Spread the room's n hazards across ITS OWN floor cells, index-deterministic — even
+		# fractions across the sorted cells (no RNG). Reuses the same stable (y, x) cell order
+		# JunkPlacer + _hazard_spawn_position use, so the placement is reproducible.
+		var cells: Array[Vector2i] = _density_sorted_cells(p)
+		var stride: int = maxi(cells.size() / maxi(n, 1), 1)
+		for k in n:
+			var cell: Vector2i = cells[(k * stride) % cells.size()]
+			out.append(_density_cell_to_world(cell))
+			spawned_total += 1
+	return out
+
+
+## The area scalar that scales the per-room budget. cell_area (default) is floor_cells.size()
+## — SIZE-INVARIANT (a 40× room holds a fixed count per room-shape, the Director's choice).
+## px_area multiplies by lvl_size_mult^2 so density grows with the on-screen room size (a
+## swept option; the per-room + band caps keep it bounded). lvl_size_mult is a pure pixel
+## projection (it does NOT change floor_cells.size()), so px_area is the correct screen-area.
+func _density_area(p: PlacedPiece, rc: RunConfig) -> float:
+	var cells := float(p.floor_cells.size())
+	if rc.r1_density_metric == 1:                         # px_area
+		var m := rc.lvl_size_mult if rc.lvl_enabled else 1.0
+		return cells * m * m
+	return cells                                          # cell_area (size-invariant)
+
+
+## True iff `id` is a corridor piece (piece_corridor*/piece_hall_v) — used by rooms_only to
+## exclude corridors from density. Matches the ext-catalog corridor id prefixes (J3 §(a)).
+func _is_corridor(id: StringName) -> bool:
+	return String(id).begins_with("piece_corridor") or id == &"piece_hall_v"
+
+
+## Pieces in a stable, deterministic order for density placement: depth_index ascending, then
+## by offset_cell (y, x) as a tiebreak so two pieces at the same depth keep a fixed order.
+## (The band-ceiling truncation then bites the deepest/last pieces, reproducibly.)
+func _density_pieces_sorted(band: Band) -> Array[PlacedPiece]:
+	var pieces: Array[PlacedPiece] = []
+	for p in band.pieces:
+		if p.depth_index < 0:        # ungraded guard (mirrors _build_cell_depth_map)
+			continue
+		pieces.append(p)
+	pieces.sort_custom(func(a: PlacedPiece, b: PlacedPiece) -> bool:
+		if a.depth_index != b.depth_index:
+			return a.depth_index < b.depth_index
+		if a.offset_cell.y != b.offset_cell.y:
+			return a.offset_cell.y < b.offset_cell.y
+		return a.offset_cell.x < b.offset_cell.x)
+	return pieces
+
+
+## A piece's walkable floor cells in the SAME stable (y, x) order JunkPlacer uses, so the
+## density placement draw is reproducible regardless of authored cell order.
+func _density_sorted_cells(p: PlacedPiece) -> Array[Vector2i]:
+	var cells := p.floor_cells.duplicate()
+	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		if a.y != b.y:
+			return a.y < b.y
+		return a.x < b.x)
+	return cells
+
+
+## Band-global cell → world pixel, centred (same projection as _hazard_spawn_position).
+func _density_cell_to_world(cell: Vector2i) -> Vector2:
+	return Vector2(cell * _band_cell_size_px) \
+		+ Vector2(_band_cell_size_px, _band_cell_size_px) * 0.5
 
 
 ## J2 (M1.3): the list of depths (one per hazard, length == rc.r1_spawn_count) the N

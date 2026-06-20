@@ -24,6 +24,23 @@ extends Resource
 ## file defines no behaviour.
 
 # =============================================================================
+# J3 (M1.3) — per-room density constants (shared by run_config + main_game)
+# =============================================================================
+## Floor-cell area that earns ONE hazard-unit at density 1.0:
+##   n_room = floor(r1_per_room_density * area / R1_DENSITY_AREA_UNIT).
+## Sized so a chunky room (≈100+ cells) earns ~1 hazard at density 1.0 while corridors
+## (≈32 cells) earn 0 — i.e. density "fills rooms," not corridors, at the preset start.
+const R1_DENSITY_AREA_UNIT: int = 96
+## Belt-and-braces global ceiling on TOTAL density hazards across the whole band (Q E).
+## The per-room cap bounds each room; this bounds the band so a mis-set px_area sweep
+## (size 40× ≈ 1600× area) can never spawn an unbounded chasing-body count.
+const R1_DENSITY_BAND_CEILING: int = 64
+## Junk floor-cell area that earns ONE base-count multiple at loot-density 1.0 (the loot
+## sub-knob's per-area unit; mirrors R1_DENSITY_AREA_UNIT for the loot axis).
+const LVL_LOOT_AREA_UNIT: int = 96
+
+
+# =============================================================================
 # META — run-scoped, not save-state
 # =============================================================================
 @export_group("Meta")
@@ -73,6 +90,30 @@ extends Resource
 ## Below this depth stays a safe entry ramp (the "shallow is safe, then it stirs" arc, I2 §2.4).
 ## Default 0 = no shallow exclusion (M1.2-equivalent; ignored by single_gate mode).
 @export var r1_spread_min_depth: int = 0
+## J3 (M1.3): EXTRA hazards seeded PER ROOM, scaled by room size, ADDITIVE on top of
+## J2's spread budget (so big rooms aren't empty fields, G4 §5 F3b "a hazard per room").
+## n_room = floor(r1_per_room_density * area / R1_DENSITY_AREA_UNIT), capped + min-area
+## gated. 0 = OFF (M1.2 behaviour: only J2's r1_spawn_count hazards). DETERMINISTIC, no
+## RNG (the room's n hazards spread across its OWN floor cells, index-deterministic). The
+## preset sets a non-zero sweep value. NEVER mutates the all-off control (default 0).
+@export var r1_per_room_density: float = 0.0
+## J3: which area metric scales the per-room budget.
+##   0 = cell_area   (floor_cells.size(); SIZE-INVARIANT — N per room shape; perf-safe, the
+##                    Director's chosen DEFAULT — a 40× room holds a fixed count per shape)
+##   1 = px_area     (cell_area * lvl_size_mult^2; grows with lvl_size_mult — N per screenful;
+##                    a swept option, MUST be capped or a 40× room explodes — see the cap below)
+@export_enum("cell_area", "px_area") var r1_density_metric: int = 0
+## J3: only seed density hazards in ROOM pieces (id not piece_corridor*/piece_hall_v),
+## never corridors. false = any piece above the area floor is eligible.
+@export var r1_density_rooms_only: bool = false
+## J3: floor-cell area a piece must exceed before it earns ANY density hazard (so small
+## boxes/corridors stay empty until genuinely big). 0 = no floor. Measured in CELL area
+## (floor_cells.size()) regardless of metric — the floor is a room-shape gate, not pixels.
+@export var r1_density_min_area: int = 0
+## J3 hard cap on density hazards per single room (perf + fun guard). 0 = uncapped. The
+## preset MUST set this > 0 (mandatory per Q E) — combined with the global band ceiling it
+## bounds the worst case (px_area × size 40× × high density) so a sweep can't explode.
+@export var r1_density_per_room_cap: int = 0
 
 # =============================================================================
 # R2 — Costlier return trip
@@ -164,6 +205,13 @@ extends Resource
 ## the SAME effective cell size feeds materialise AND JunkPlacer (no doorway seam,
 ## no loot mis-placement). Layout-invariant: it does NOT change fingerprint().
 @export var lvl_size_mult: float = 1.0
+## J3 (M1.3): SECONDARY "fill emptiness with reward" sub-knob — scales JunkPlacer's
+## per-piece junk count by room area (big rooms get proportionally more interest). 0 =
+## OFF (M1.2 behaviour: the depth curve's flat ~2 count only). Rides JunkPlacer's local
+## _JUNK_SALT sub-stream (reproducible from seed+config, never the global RNG). Built but
+## SHIPS OFF and is NEVER preset-on — it directly contradicts depth_curve.gd's "don't
+## flood deep rooms" intent (Director B disposition); a swept lever RG2 segments on only.
+@export var lvl_loot_density_per_area: float = 0.0
 
 
 ## True iff every opposition master toggle is OFF — i.e. this config reproduces
@@ -215,6 +263,12 @@ func to_flat_dict() -> Dictionary:
 		# R1 — J2 (M1.3) depth-spread knobs (additive payload; RG2 reads alongside hazard rows)
 		"r1_spawn_distribution": r1_spawn_distribution,
 		"r1_spread_min_depth": r1_spread_min_depth,
+		# R1 — J3 (M1.3) per-room density knobs (additive payload; RG2 segments density)
+		"r1_per_room_density": r1_per_room_density,
+		"r1_density_metric": r1_density_metric,
+		"r1_density_rooms_only": r1_density_rooms_only,
+		"r1_density_min_area": r1_density_min_area,
+		"r1_density_per_room_cap": r1_density_per_room_cap,
 		# R2
 		"r2_enabled": r2_enabled,
 		"r2_mechanism": r2_mechanism,
@@ -244,6 +298,8 @@ func to_flat_dict() -> Dictionary:
 		"lvl_enabled": lvl_enabled,
 		"lvl_room_count": lvl_room_count,
 		"lvl_size_mult": lvl_size_mult,
+		# LVL — J3 (M1.3) loot-per-area sub-knob (additive payload; RG2 segments loot count)
+		"lvl_loot_density_per_area": lvl_loot_density_per_area,
 	}
 
 
@@ -359,6 +415,18 @@ static func make_default_play_preset() -> RunConfig:
 	c.r1_spawn_count = 5
 	c.r1_spawn_distribution = 1                 # even_spread (F2); 0=single_gate is the M1.2-equivalent
 	c.r1_spread_min_depth = 1                   # shallowest depth that may receive a spread hazard
+
+	# --- R1 per-room density (J3, M1.3): fill the big rooms (G4 §5 F3b). ---
+	# ADDITIVE on top of the J2 spread above: each big room earns extra hazards from its
+	# size. Director chose CELL-AREA (size-invariant, perf-safe — a 40× room holds a fixed
+	# count per room-shape). A non-zero density sweep START (1.0), the per-room cap MANDATORY
+	# (3) and a non-trivial min-area (64 cells → corridors/small boxes stay empty). px_area is
+	# a swept option (metric=1); the loot-per-area sub-knob ships OFF (never preset-on).
+	c.r1_per_room_density = 1.0                 # sweep start (≈1 hazard per ~96-cell room)
+	c.r1_density_metric = 0                     # cell_area (Director DEFAULT; size-invariant)
+	c.r1_density_rooms_only = false             # any piece above the min-area floor is eligible
+	c.r1_density_min_area = 64                  # floor-cell area gate: corridors/small boxes earn none
+	c.r1_density_per_room_cap = 3               # MANDATORY > 0 (Q E perf guard); sweepable in RG1
 
 	# --- R4 maze: the most-fun cell VERBATIM — branching ON, vision occlusion OFF. ---
 	# Director M1.3 close-out call ("match what I played — occlusion off"): the played fun

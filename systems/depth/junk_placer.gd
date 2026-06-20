@@ -39,8 +39,14 @@ const _JUNK_SALT := 0x4A554E4B  # "JUNK"
 ## the 1x (16-px) coords and land outside/atop scaled rooms at any mult != 1.0. Default
 ## -1 = "use each piece's authored cell_size_px" (the baseline path, byte-for-byte the
 ## old behaviour: at mult 1.0 the override is 16, identical to the piece export).
+## J3 (M1.3): `loot_density_per_area` scales the per-piece junk count by ROOM AREA when
+## > 0 (big rooms get proportionally more interest). 0.0 = OFF — byte-for-byte the M1.2
+## behaviour (the depth curve's flat count only). Rides this same local _JUNK_SALT
+## sub-stream (reproducible from seed+config, never the global RNG). Built but SHIPS OFF
+## and is NEVER preset-on (it contradicts depth_curve.gd's "don't flood deep rooms").
 func plan(band: Band, curve: DepthCurve, catalog: JunkCatalog,
-		emit_events: bool = false, cell_size_override: int = -1) -> Array:
+		emit_events: bool = false, cell_size_override: int = -1,
+		loot_density_per_area: float = 0.0) -> Array:
 	var out: Array = []
 	if band == null or curve == null or catalog == null:
 		return out
@@ -57,7 +63,15 @@ func plan(band: Band, curve: DepthCurve, catalog: JunkCatalog,
 		var d := p.depth_norm
 
 		# 1. How much junk here (expected count -> seeded probabilistic integer).
-		var count := _seeded_round(curve.expected_count(d), rng)
+		# J3: when loot_density_per_area > 0, scale the expected count by ROOM AREA (in
+		# LVL_LOOT_AREA_UNIT-cell units) BEFORE the seeded round, so big rooms hold more
+		# interest. At 0.0 (the default/preset) this is the bare curve count — identical
+		# float fed to _seeded_round, so the sub-stream draws byte-for-byte as in M1.2.
+		var expected := curve.expected_count(d)
+		if loot_density_per_area > 0.0:
+			var area_units := float(p.floor_cells.size()) / float(RunConfig.LVL_LOOT_AREA_UNIT)
+			expected = expected + loot_density_per_area * expected * (area_units - 1.0)
+		var count := _seeded_round(expected, rng)
 		if count <= 0:
 			continue
 
