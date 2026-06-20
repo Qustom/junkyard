@@ -272,10 +272,13 @@ func start_new_run() -> void:
 
 ## Instantiate r1_spawn_count HazardEntity nodes when R1 is on. Fully gated: with
 ## r1_enabled == false (or r1_spawn_count == 0) nothing is loaded/instantiated, so the
-## all-off control is byte-for-byte the M1.0 loop. Each hazard spawns dormant at/near
-## the piece at r1_depth_threshold (§9 Q1) into _band_container (so _clear_band() frees
-## it), then setup() binds the run config snapshot + the player (resolved via the
-## "player" group — the player is already grouped in player.tscn).
+## all-off control is byte-for-byte the M1.0 loop. J2 (M1.3): the hazards are now
+## DISTRIBUTED across depth_index per rc.r1_spawn_distribution (single_gate keeps the
+## M1.2 placement; even_spread/curve scatter them) — STEP 1 decides each hazard's depth,
+## STEP 2 places one hazard at that depth. Placement is pure run-state on the ALREADY-
+## GRADED band (no RNG, never feeds fingerprint()); nodes go into _band_container so
+## _clear_band() frees them. setup() binds the run config snapshot + the player (resolved
+## via the "player" group — the player is already grouped in player.tscn).
 func _spawn_r1_hazards(rc: RunConfig, band: Band) -> void:
 	if rc == null or not rc.r1_enabled or rc.r1_spawn_count <= 0:
 		return
@@ -284,25 +287,69 @@ func _spawn_r1_hazards(rc: RunConfig, band: Band) -> void:
 		push_error("MainGame: R1 hazard scene missing at %s." % HAZARD_SCENE_PATH)
 		return
 	var player := get_tree().get_first_node_in_group(&"player") as Node2D
+
+	# J2 STEP 1 — decide the depth for each of the N hazards (the spread concern).
+	var depths: Array[int] = _hazard_spawn_depths(band, rc)   # length == r1_spawn_count
+
+	# J2 STEP 2 — place one hazard at each chosen depth. _hazard_spawn_position(band, depth,
+	# index) is the stable per-depth placement helper J3 reuses (§A.4 shared-seam contract).
 	for i in rc.r1_spawn_count:
 		var hz := hazard_scene.instantiate() as HazardEntity
 		_band_container.add_child(hz)
-		hz.global_position = _hazard_spawn_position(band, rc.r1_depth_threshold, i)
+		hz.global_position = _hazard_spawn_position(band, depths[i], i)
 		hz.setup(rc, player)
 
 
-## World position to spawn hazard `i` at: a floor cell on the piece whose depth_index
-## == r1_depth_threshold (clamped to the deepest graded piece if the threshold exceeds
-## the band's max depth, §9 Q1). Band-global cell space shares the world origin (pieces
-## materialise at offset_cell * cell_size), so cell → world is a flat scale. Falls back
-## to the entry spawn if no graded floor cell is found.
-func _hazard_spawn_position(band: Band, depth_threshold: int, index: int) -> Vector2:
-	# Find the deepest graded depth so we can clamp an over-threshold request.
-	var max_depth := 0
-	for p in band.pieces:
-		if p.depth_index > max_depth:
-			max_depth = p.depth_index
-	var target_depth: int = clampi(depth_threshold, 0, max_depth)
+## J2 (M1.3): the list of depths (one per hazard, length == rc.r1_spawn_count) the N
+## hazards spawn at. DETERMINISTIC — a pure function of band topology (depth_index /
+## band.max_depth) + the config, NO RNG. This is what makes the spread comparable run-to-
+## run AND keeps it physically downstream of fingerprint() (it reads the graded band; it
+## never writes the generator). single_gate reproduces the M1.2 single-threshold placement
+## exactly so the all-off control + M1.2-comparable cohort stay byte-identical.
+func _hazard_spawn_depths(band: Band, rc: RunConfig) -> Array[int]:
+	var max_depth := _band_max_depth(band)
+	var out: Array[int] = []
+	var n: int = rc.r1_spawn_count
+	match rc.r1_spawn_distribution:
+		1:  # even_spread (F2) — spread N across [min .. max] inclusive, as evenly as possible.
+			var lo: int = clampi(rc.r1_spread_min_depth, 0, max_depth)
+			var span: int = maxi(max_depth - lo, 0)
+			for i in n:
+				# Even fractional placement across the inclusive [lo, max] span, rounded.
+				var t: float = 0.5 if n <= 1 else float(i) / float(n - 1)
+				out.append(lo + int(round(t * float(span))))
+		2:  # curve (built but preset-OFF, §C-Q1) — bias deeper via pow(t, 1.6).
+			var lo2: int = clampi(rc.r1_spread_min_depth, 0, max_depth)
+			var span2: int = maxi(max_depth - lo2, 0)
+			for i in n:
+				var t2: float = 0.0 if n <= 1 \
+					else pow(float(i) / float(n - 1), 1.6)   # exponent > 1 → clusters deep
+				out.append(lo2 + int(round(t2 * float(span2))))
+		_:  # 0 = single_gate (default) — M1.2 behaviour: every hazard at the clamped threshold.
+			var d: int = clampi(rc.r1_depth_threshold, 0, max_depth)
+			for _i in n:
+				out.append(d)
+	return out
+
+
+## J2 (M1.3, Phase-3 Q3): the band's deepest graded depth. DepthGrader.grade() sets
+## band.max_depth (depth_grader.gd:47) during generation, well before this spawn seam runs
+## — it is the single source of truth and equals the old local band.pieces scan. Reading it
+## here keeps the helper cheap and removes a duplicate scan.
+func _band_max_depth(band: Band) -> int:
+	return band.max_depth
+
+
+## World position to spawn hazard `index` at: a floor cell on the piece(s) at `depth`
+## (clamped to the deepest graded piece if it exceeds the band's max depth). Band-global
+## cell space shares the world origin (pieces materialise at offset_cell * cell_size), so
+## cell → world is a flat scale. Falls back to the entry spawn if no graded floor cell is
+## found. J2 (M1.3): the middle arg is now a concrete `depth` (was `depth_threshold`) so
+## _hazard_spawn_depths can target any depth; the within-depth index%cells wrap is unchanged
+## (two hazards landing on the same depth still spread across that depth's floor cells). This
+## signature is the stable internal API J3 (per-room density) reuses (§A.4 shared-seam).
+func _hazard_spawn_position(band: Band, depth: int, index: int) -> Vector2:
+	var target_depth: int = clampi(depth, 0, _band_max_depth(band))
 	# Collect floor cells of pieces at the target depth (in piece order for determinism).
 	var cells: Array[Vector2i] = []
 	for p in band.pieces:

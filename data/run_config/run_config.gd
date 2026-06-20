@@ -62,6 +62,17 @@ extends Resource
 @export var r1_catch_kills: bool = false
 ## How many hazard entities spawn.
 @export var r1_spawn_count: int = 0
+## J2 (M1.3): how the r1_spawn_count hazards are distributed over depth_index.
+##   0 = single_gate  → ALL at r1_depth_threshold (M1.2 behaviour — the all-off-equivalent)
+##   1 = even_spread  → spread evenly across [r1_spread_min_depth .. band.max_depth] (F2 fix)
+##   2 = curve        → weighted deeper via pow(t, 1.6) (built but preset-OFF, §C-Q1)
+## Default 0 (single_gate) keeps the all-off control AND the M1.2-comparable cohort
+## byte-identical (same node placement; placement is run-state, never feeds fingerprint()).
+@export_enum("single_gate", "even_spread", "curve") var r1_spawn_distribution: int = 0
+## J2 (M1.3): shallowest depth that may receive a spread hazard. Clamped to [0, max_depth].
+## Below this depth stays a safe entry ramp (the "shallow is safe, then it stirs" arc, I2 §2.4).
+## Default 0 = no shallow exclusion (M1.2-equivalent; ignored by single_gate mode).
+@export var r1_spread_min_depth: int = 0
 
 # =============================================================================
 # R2 — Costlier return trip
@@ -201,6 +212,9 @@ func to_flat_dict() -> Dictionary:
 		"r1_catch_radius_per_depth": r1_catch_radius_per_depth,
 		"r1_catch_kills": r1_catch_kills,
 		"r1_spawn_count": r1_spawn_count,
+		# R1 — J2 (M1.3) depth-spread knobs (additive payload; RG2 reads alongside hazard rows)
+		"r1_spawn_distribution": r1_spawn_distribution,
+		"r1_spread_min_depth": r1_spread_min_depth,
 		# R2
 		"r2_enabled": r2_enabled,
 		"r2_mechanism": r2_mechanism,
@@ -336,7 +350,15 @@ static func make_default_play_preset() -> RunConfig:
 	c.r1_catch_radius = 24.0                    # was 23.3 in-log; floored to clear the 24px collision floor
 	c.r1_catch_radius_per_depth = 10.5
 	c.r1_catch_kills = true
-	c.r1_spawn_count = 3
+	# J2 (M1.3): F2 fix — spread the hazards across depth instead of one gate. Director
+	# starting sweep points (a sweep, NOT a fix): count 5 (≈4–6), even_spread, min-depth 1
+	# (≈1–2 — keeps depth 0 a safe entry, the I2 §2.4 "shallow is safe, then it stirs" arc).
+	# curve mode (2) is built but preset-OFF (Director: even_spread is the most legible
+	# "danger at every depth" for the first gate). single_gate (0) stays the all-off-equivalent
+	# reachable via CFG Reset — these preset values never mutate the all-off control default.
+	c.r1_spawn_count = 5
+	c.r1_spawn_distribution = 1                 # even_spread (F2); 0=single_gate is the M1.2-equivalent
+	c.r1_spread_min_depth = 1                   # shallowest depth that may receive a spread hazard
 
 	# --- R4 maze: the most-fun cell VERBATIM — branching ON, vision occlusion OFF. ---
 	# Director M1.3 close-out call ("match what I played — occlusion off"): the played fun

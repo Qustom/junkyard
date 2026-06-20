@@ -75,6 +75,8 @@ func _ready() -> void:
 		"seed_override", "build_tag",
 		"r1_enabled", "r1_depth_threshold", "r1_linger_seconds", "r1_chase_speed",
 		"r1_speed_per_depth", "r1_catch_radius", "r1_catch_radius_per_depth", "r1_catch_kills", "r1_spawn_count",
+		# J2 (M1.3) — depth-spread distribution knobs.
+		"r1_spawn_distribution", "r1_spread_min_depth",
 		"r2_enabled", "r2_mechanism", "r2_cost_magnitude", "r2_cost_per_depth",
 		"r2_depth_threshold", "r2_toll_resource",
 		"r3_enabled", "r3_base_climb_rate", "r3_rate_per_depth", "r3_threshold_levels",
@@ -190,6 +192,22 @@ func _ready() -> void:
 	var still_off := RunConfig.new()
 	if not still_off.all_oppositions_disabled() or still_off.lvl_enabled:
 		failures.append("preset factory leaked into RunConfig.new() (the all-off control drifted)")
+
+	# === Case 8: J2 (M1.3) depth-spread distribution knobs ===================
+	# All-off control = the M1.2-equivalent: single_gate (0) + min-depth 0, so when the
+	# distribution knob exists but is untouched, placement is byte-identical to M1.2.
+	if fresh.r1_spawn_distribution != 0:
+		failures.append("J2: all-off r1_spawn_distribution == %d, expected 0 (single_gate)" % fresh.r1_spawn_distribution)
+	if fresh.r1_spread_min_depth != 0:
+		failures.append("J2: all-off r1_spread_min_depth == %d, expected 0" % fresh.r1_spread_min_depth)
+	# The default play-preset carries the F2 spread (Director starting sweep: even_spread,
+	# count 5, min-depth 1) — sweep values, not balanced absolutes.
+	if preset.r1_spawn_distribution != 1:
+		failures.append("J2 preset: r1_spawn_distribution == %d, expected 1 (even_spread)" % preset.r1_spawn_distribution)
+	if preset.r1_spawn_count != 5:
+		failures.append("J2 preset: r1_spawn_count == %d, expected 5 (Director starting sweep)" % preset.r1_spawn_count)
+	if preset.r1_spread_min_depth != 1:
+		failures.append("J2 preset: r1_spread_min_depth == %d, expected 1 (safe entry ramp)" % preset.r1_spread_min_depth)
 
 	# === Verdict ============================================================
 	if failures.is_empty():
