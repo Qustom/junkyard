@@ -66,6 +66,13 @@ var _stun: float = 0.0               # >0 → frozen, doesn't chase (non-fatal p
 var _depin_dir: Vector2 = Vector2.ZERO   # I2: if non-zero, NEXT AWAKE frame steers along this
                                           # wall-tangent (toward the player) instead of straight
                                           # at the player — the anti-wall-stick de-pin (§2.2 (a)).
+var _caught_latched: bool = false    # BUG6 (M1.3): true while the player is CONTINUOUSLY inside
+                                          # catch radius. One-shot emit gate — hazard_caught fires once
+                                          # on the rising edge into radius, re-arms on the falling edge
+                                          # (player leaves). Kills the per-frame emit storm (was 85→2,199
+                                          # events/run) WITHOUT moving the fatal-catch frame. Complements
+                                          # GameState._run_ended run-end idempotency: that de-dupes the
+                                          # run-end, this de-dupes the telemetry emit.
 
 @onready var _tell: Polygon2D = $Tell
 
@@ -79,6 +86,7 @@ func setup(cfg: RunConfig, player: Node2D) -> void:
 	_state = State.DORMANT
 	_time_in_band = 0.0
 	_depin_dir = Vector2.ZERO
+	_caught_latched = false   # BUG6: a pooled/respawned hazard starts un-latched.
 	if _tell != null:
 		_set_tell_dormant()
 
@@ -136,9 +144,18 @@ func _physics_process(delta: float) -> void:
 	# Effective radius = flat r1_catch_radius + optional depth-scaled lunge (Q3 accepted,
 	# Director FINAL). r1_catch_radius_per_depth defaults 0.0 → flat (all-off baseline).
 	var catch_r: float = _cfg.r1_catch_radius + _cfg.r1_catch_radius_per_depth * float(depth)
-	if _catch_cooldown <= 0.0 \
-			and global_position.distance_to(_player.global_position) <= catch_r:
+	var in_range: bool = global_position.distance_to(_player.global_position) <= catch_r
+	# BUG6 one-shot latch: emit hazard_caught exactly once on the RISING edge into catch
+	# range and re-arm only on the FALLING edge (player leaves radius). The rising-edge
+	# condition is the SAME conjunction as before (in-range AND cooldown clear), so the
+	# fatal catch still fires on the identical frame — death timing / duration_s is
+	# byte-identical for a given seed. A sustained pin in radius = ONE catch (kills the
+	# per-frame storm); a genuine escape-and-re-catch still logs the second catch.
+	if in_range and not _caught_latched and _catch_cooldown <= 0.0:
+		_caught_latched = true
 		_on_catch(depth)
+	elif not in_range:
+		_caught_latched = false   # re-arm only after the player has left the radius
 
 
 ## Awaken when depth threshold is reached OR linger time elapses — first to fire.

@@ -127,11 +127,15 @@ func _on_run_started(band_id: StringName, seed: int) -> void:
 	# other row are untouched (G2 tests assert envelope keys, not run_started payload).
 	# M1.1 (TEL): also snapshot the active RunConfig flat dict under `run_config` so
 	# every run is a labelled experiment (additive `data` field — NOT a schema bump).
+	# BUG6 (M1.3): also stamp the enabled-but-inert opposition ids so a dead-config
+	# run is self-identifying in the log and RG2 can filter it (additive `data` field,
+	# [] for the all-off control — same additive pattern, NO schema bump).
 	_emit_row(Schema.RUN_STARTED, {
 		"band_id": String(band_id),
 		"seed": seed,
 		"build": BuildVersionScript.id(),
 		"run_config": _active_run_config_dict(),
+		"inert_enabled_oppositions": _active_inert_oppositions(),
 	})
 
 
@@ -289,6 +293,20 @@ func _active_run_config_dict() -> Dictionary:
 	if gs != null and gs.active_run_config != null:
 		return gs.active_run_config.to_flat_dict()
 	return {}
+
+
+## BUG6 (M1.3): the enabled-but-inert opposition ids for the active config, as a
+## plain Array (JSONL-safe) for the run_started row. Rides the same /root/GameState
+## read surface as _active_run_config_dict; [] when no config (clean log) AND [] for
+## the all-off control (no master enabled). RG2 filters dead-config runs on this.
+func _active_inert_oppositions() -> Array:
+	var gs := get_node_or_null("/root/GameState")
+	if gs != null and gs.active_run_config != null:
+		var out: Array = []
+		for id in gs.active_run_config.inert_enabled_oppositions():
+			out.append(String(id))
+		return out
+	return []
 
 
 ## Monotonic run-elapsed milliseconds (same basis as the envelope t_ms). TEL stamps

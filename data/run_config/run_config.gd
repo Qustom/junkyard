@@ -241,3 +241,51 @@ func _packed_to_float_array(p: PackedFloat32Array) -> Array:
 	for v in p:
 		out.append(v)
 	return out
+
+
+# =============================================================================
+# BUG6 (M1.3) — config-trap detector (self-contained appended method)
+# =============================================================================
+## Returns the ids of every opposition whose master toggle is ON but whose
+## load-bearing magnitude knob is at its all-off default — i.e. the section reads
+## "enabled" yet the mechanism is silently inert. The M1.2 re-gate was invalidated
+## precisely because two enabled oppositions ran dead unnoticed (R3 with empty
+## thresholds → 0 crossings; R4 with r4_lost_proxy_threshold=0.0 → 0 nav_lost_proxy).
+## Surfaced before the run commits via the CFG warn-line (J1 folds it into
+## config_menu) AND stamped onto the run_started telemetry row (additive `data`
+## field) so a dead-config run is self-identifying in the log and RG2 can filter it.
+##
+## WARN-ONLY (Director FINAL): a "climb-only R3 cell" or "branching-only R4 cell" is
+## a legitimate single-axis experiment, so this never blocks Start — it only reports.
+## The all-off control returns [] (no master enabled → nothing inert). Each entry is
+## one trap per ROOT CAUSE (r1_catch_radius_too_small is gated on spawn_count>0 so a
+## 0-spawn R1 reports r1_no_spawn alone, not both). A future trap is one more line
+## here — the single source of truth consumed by both the CFG warning and telemetry.
+func inert_enabled_oppositions() -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	# R3 — meter climbs but nothing ever crosses (exposure_meter.gd:131-136: the
+	# `while _levels_crossed < levels.size()` loop runs 0 iterations on an empty array).
+	if r3_enabled and r3_threshold_levels.is_empty():
+		out.append("r3_no_thresholds")
+	# R4 lost-proxy — never accumulates (lost_proxy.gd:40 self-disables when
+	# r4_lost_proxy_threshold <= 0.0 → set_process(false); no nav_lost_proxy emitted).
+	if r4_enabled and r4_lost_proxy_threshold <= 0.0:
+		out.append("r4_no_lost_proxy")
+	# R4 vision — the ENTIRE vision overlay is inert (vision_fog.gd:138 self-disables
+	# when r4_vision_radius <= 0.0). NOT gated on r4_fog_enabled: r4_fog_enabled is a
+	# separate knob inside the already-active overlay, so radius 0 kills vision
+	# regardless (Phase-3 Correction 1 — the most common M1.2 dead-R4 case).
+	if r4_enabled and r4_vision_radius <= 0.0:
+		out.append("r4_no_vision")
+	# R1 no-spawn — master on but 0 entities ever instantiated (the spawn seam skips it).
+	if r1_enabled and r1_spawn_count <= 0:
+		out.append("r1_no_spawn")
+	# R1 catch radius too small — recreates the M1.1 caught=0 defect: below the 24 px
+	# floor (player_r 14 + hazard_r 10, run_config.gd:51-54) the bodies physically
+	# collide before the script distance test can ever trip. Constant by design (no new
+	# @export knob — CFG 36-knob count pinned). Gated on spawn_count>0 so it does not
+	# double-warn with r1_no_spawn (one trap per root cause). r1_catch_radius_per_depth
+	# is additive and does not lower the BASE floor, so the check is on the base alone.
+	if r1_enabled and r1_spawn_count > 0 and r1_catch_radius < 24.0:
+		out.append("r1_catch_radius_too_small")
+	return out

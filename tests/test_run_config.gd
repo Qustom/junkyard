@@ -100,11 +100,94 @@ func _ready() -> void:
 		failures.append("to_flat_dict() JSON round-trip lost keys (%d -> %d)"
 			% [flat.size(), (parsed.size() if parsed is Dictionary else -1)])
 
+	# === Case 6: BUG6 (M1.3) inert_enabled_oppositions() config-trap detector ==
+	# All-off control + a fully-populated config both report NO traps; each known
+	# trap is detected exactly; r1_catch_radius_too_small is gated on spawn_count>0
+	# (one trap per root cause); multiple traps union.
+	if not fresh.inert_enabled_oppositions().is_empty():
+		failures.append("inert_enabled_oppositions(): all-off control reported a trap (must be [])")
+
+	var full := _populated_config()
+	if not full.inert_enabled_oppositions().is_empty():
+		failures.append("inert_enabled_oppositions(): fully-populated config reported a trap: %s"
+			% str(full.inert_enabled_oppositions()))
+
+	# R3 trap: enabled but empty threshold levels.
+	var t_r3 := _populated_config()
+	t_r3.r3_threshold_levels = PackedFloat32Array()
+	_assert_traps(t_r3.inert_enabled_oppositions(), ["r3_no_thresholds"], "r3 empty thresholds", failures)
+
+	# R4 lost-proxy trap: enabled but threshold <= 0.
+	var t_r4lp := _populated_config()
+	t_r4lp.r4_lost_proxy_threshold = 0.0
+	_assert_traps(t_r4lp.inert_enabled_oppositions(), ["r4_no_lost_proxy"], "r4 no lost-proxy", failures)
+
+	# R4 vision trap: enabled but radius <= 0 — NOT gated on r4_fog_enabled
+	# (Correction 1). Must fire even with fog OFF.
+	var t_r4v := _populated_config()
+	t_r4v.r4_vision_radius = 0.0
+	t_r4v.r4_fog_enabled = false
+	_assert_traps(t_r4v.inert_enabled_oppositions(), ["r4_no_vision"], "r4 no vision (fog off)", failures)
+
+	# R1 no-spawn trap: enabled but spawn_count <= 0 — must report r1_no_spawn ALONE
+	# (not also r1_catch_radius_too_small, which is gated on spawn_count>0).
+	var t_r1ns := _populated_config()
+	t_r1ns.r1_spawn_count = 0
+	_assert_traps(t_r1ns.inert_enabled_oppositions(), ["r1_no_spawn"], "r1 no spawn", failures)
+
+	# R1 catch-radius-too-small trap: enabled, spawns, but radius < 24 px floor.
+	var t_r1cr := _populated_config()
+	t_r1cr.r1_catch_radius = 23.0
+	_assert_traps(t_r1cr.inert_enabled_oppositions(), ["r1_catch_radius_too_small"], "r1 radius too small", failures)
+	# Exactly 24.0 is at the floor → NOT a trap.
+	var t_r1ok := _populated_config()
+	t_r1ok.r1_catch_radius = 24.0
+	if t_r1ok.inert_enabled_oppositions().has("r1_catch_radius_too_small"):
+		failures.append("inert_enabled_oppositions(): radius exactly 24.0 flagged (floor is inclusive)")
+
+	# Union: multiple coexisting traps.
+	var t_multi := _populated_config()
+	t_multi.r3_threshold_levels = PackedFloat32Array()
+	t_multi.r4_lost_proxy_threshold = 0.0
+	_assert_traps(t_multi.inert_enabled_oppositions(),
+		["r3_no_thresholds", "r4_no_lost_proxy"], "multi-trap union", failures)
+
 	# === Verdict ============================================================
 	if failures.is_empty():
-		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs." % expected_keys.size())
+		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs, BUG6 inert_enabled_oppositions() detects all 5 traps and []-clean for all-off + populated." % expected_keys.size())
 		get_tree().quit(0)
 	else:
 		for f in failures:
 			printerr("R0 FAIL: ", f)
 		get_tree().quit(1)
+
+
+## A config with EVERY opposition enabled AND its driver knobs populated above the
+## trap floors — the "fully populated, no trap" control for BUG6's detector. Each
+## test then zeroes one knob to provoke exactly one trap.
+func _populated_config() -> RunConfig:
+	var rc := RunConfig.new()
+	# R1 — spawns, radius above the 24 px floor.
+	rc.r1_enabled = true
+	rc.r1_spawn_count = 1
+	rc.r1_catch_radius = 32.0
+	# R3 — has at least one threshold level.
+	rc.r3_enabled = true
+	rc.r3_threshold_levels = PackedFloat32Array([0.5, 1.0])
+	# R4 — vision radius > 0 and lost-proxy threshold > 0.
+	rc.r4_enabled = true
+	rc.r4_vision_radius = 120.0
+	rc.r4_lost_proxy_threshold = 3.0
+	return rc
+
+
+## Assert the trap set equals `expected` (order-independent, exact membership).
+func _assert_traps(got: PackedStringArray, expected: Array, label: String, failures: Array[String]) -> void:
+	if got.size() != expected.size():
+		failures.append("inert_enabled_oppositions() [%s]: expected %s, got %s"
+			% [label, str(expected), str(got)])
+		return
+	for e in expected:
+		if not got.has(e):
+			failures.append("inert_enabled_oppositions() [%s]: missing '%s' (got %s)"
+				% [label, e, str(got)])
