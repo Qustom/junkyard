@@ -6,3 +6,6 @@ SELL_MONEY_TOTAL,Money: {value}
 SELL_EMPTY,(nothing salvaged)
 SELL_ROW,{name}    {value}
 SELL_CONTINUE,Continue
+SELL_EXPORT_TELEMETRY,Export telemetry
+SELL_EXPORT_DONE,Downloaded {name}
+SELL_EXPORT_EMPTY,No telemetry to export yet
