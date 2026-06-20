@@ -101,6 +101,13 @@ signal exposure_penalty(level: int, penalty_kind: StringName)
 signal nav_branch_taken(depth: int, junction_degree: int)
 signal nav_lost_proxy(metric: StringName, value: float, depth: int)
 
+# --- J4 (M1.3) corridor-time summary (telemetry row) -------------------------
+# Pre-declared on main before Wave 2's J4 (the M1.1 pre-declare rule). MainGame
+# emits this once on run end with the per-run accumulated seconds the player spent
+# in corridor vs room pieces; Telemetry folds it into an additive `corridor_summary`
+# JSONL row (no schema-version bump, no run_ended arity change). Primitives only.
+signal corridor_time_summary(corridor_s: float, room_s: float)
+
 # --- R3 penalty / meter signals (R3 emits; TEL declares; not telemetry rows) --
 # These let R3 apply speed/vision/clock penalties + drive the HUD WITHOUT editing
 # game_state.gd. Signatures per R3 spec (R3_exposure_meter.md §3.3, §6).
