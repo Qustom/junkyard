@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.3 (Wave 2 — Density & spatial; the last Wave-2 task)
 - **Branch:** general-purpose/J4-hallway-length
-- **Commit:** 3db5d19435363dbf566a7c14f516ae53eb8d02bd
+- **Commit:** c569c9d9e9473aaf87d0ef1588b51e4f38621714 (implementation) + a follow-up worklog commit
 
 ## What changed
 Built J4 to the LOCKED Director Disposition (2026-06-19 FINAL): the corridor-length lever is a
