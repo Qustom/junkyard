@@ -99,6 +99,23 @@ section**. To run an experiment:
 snapshot** (`run_config`) plus your `build_tag` and the auto build id onto its telemetry —
 that is the *ground truth* for which config ran. Just set the `build_tag` and play.
 
+### New in M1.3 — the build now BOOTS into the fun config (and what to watch)
+
+M1.3 ships the most-fun config as the **default the game boots into** (no dial-in needed —
+just press **Start**). Tag your M1.3 runs **`m13-`** (e.g. `m13-default`, `m13-size-40`,
+`m13-j4-mult-0.25`). **Reset** still returns the all-off baseline (tag `m13-baseline`). What
+we most want your eye on this round:
+
+- **J2 — danger at multiple depths:** hazards now spread across depths instead of one gate.
+  *Does the danger at multiple depths feel right, or like a wall?*
+- **J3 — big rooms filled:** big rooms now seed extra hazards scaled by size.
+  *Do the big rooms feel charged, not empty?* (Watch the **size-40** room — does it feel like
+  awe, or a void?)
+- **J4 — shorter halls:** the long dead hallways are biased down.
+  *Are the halls shorter / is there less dead time between rooms?*
+- **J5 — depth readout:** the bottom-left counter now reads **"Depth N / max"**.
+  *Does it read clearly and track the room you're in?*
+
 ## Please enable telemetry (it's how we read the playtest)
 
 Telemetry is **OFF by default** (privacy — nothing is written until you turn it on).
