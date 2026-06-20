@@ -212,6 +212,39 @@ const LVL_LOOT_AREA_UNIT: int = 96
 ## SHIPS OFF and is NEVER preset-on — it directly contradicts depth_curve.gd's "don't
 ## flood deep rooms" intent (Director B disposition); a swept lever RG2 segments on only.
 @export var lvl_loot_density_per_area: float = 0.0
+## J4 (M1.3): the corridor-RARITY lever — multiplies the generator's catalog WEIGHT of the
+## corridor pieces (piece_corridor_h/v/l, piece_corridor_long_h, piece_hall_v) by this factor
+## so long/dead corridors become rarer/shorter in the weighted piece-pick (Director: GENERATOR
+## DOWN-WEIGHT, NOT a materialise re-pack). 1.0 = baseline corridor rarity (M1.2 weight table
+## untouched). < 1.0 = fewer corridors, more rooms. Works R4-on (the default preset) since the
+## weighted draw runs in both modes. This is a CELL-SPACE change → it MOVES fingerprint() for
+## non-neutral configs (allowed under the seed+config contract, like R4 branching); the NEUTRAL
+## default (1.0) leaves the weight table byte-identical so the all-off fp stays e943ac9c8bc1.
+@export var lvl_corridor_weight_mult: float = 1.0
+## J4 (M1.3): bool companion — when true, DROPS the 16-cell long hall (piece_corridor_long_h)
+## from the effective catalog by zeroing its weight, forcing only short corridors. false =
+## the long hall keeps its catalog weight (M1.2). Also a CELL-SPACE change (moves fingerprint()
+## for non-neutral configs); false = neutral = no weight-table change = all-off fp byte-match.
+@export var lvl_short_corridors: bool = false
+
+
+## The hardcoded corridor piece-id set (J4) the corridor-rarity lever down-weights and the
+## corridor-time telemetry classifies on. Keyed on PlacedPiece.piece_id / ZonePieceData.piece_id
+## (the generator-populated id, NOT the pre-_ready size_cells). The aspect-ratio fallback is
+## DELIBERATELY DROPPED (Phase-3 correction): the 6×6 L-bend is NOT long-and-thin yet IS a
+## corridor, so an aspect rule would mis-classify it as a room. One source of truth, shared by
+## band_generator.gd (the weight lever) and main_game.gd (the corridor-time classification).
+const CORRIDOR_PIECE_IDS: Dictionary = {
+	&"piece_corridor_h": true,
+	&"piece_corridor_v": true,
+	&"piece_corridor_l": true,
+	&"piece_corridor_long_h": true,
+	&"piece_hall_v": true,
+}
+## The single long-hall id lvl_short_corridors drops (the 16-cell corridor — the "boring long
+## hallway" the Director named). Kept separate from CORRIDOR_PIECE_IDS so the bool lever targets
+## ONLY this piece while the weight-mult down-weights the whole corridor family.
+const CORRIDOR_LONG_PIECE_ID: StringName = &"piece_corridor_long_h"
 
 
 ## True iff every opposition master toggle is OFF — i.e. this config reproduces
@@ -300,6 +333,9 @@ func to_flat_dict() -> Dictionary:
 		"lvl_size_mult": lvl_size_mult,
 		# LVL — J3 (M1.3) loot-per-area sub-knob (additive payload; RG2 segments loot count)
 		"lvl_loot_density_per_area": lvl_loot_density_per_area,
+		# LVL — J4 (M1.3) corridor-rarity lever (additive payload; RG2 segments corridor_frac)
+		"lvl_corridor_weight_mult": lvl_corridor_weight_mult,
+		"lvl_short_corridors": lvl_short_corridors,
 	}
 
 
@@ -427,6 +463,16 @@ static func make_default_play_preset() -> RunConfig:
 	c.r1_density_rooms_only = false             # any piece above the min-area floor is eligible
 	c.r1_density_min_area = 64                  # floor-cell area gate: corridors/small boxes earn none
 	c.r1_density_per_room_cap = 3               # MANDATORY > 0 (Q E perf guard); sweepable in RG1
+
+	# --- J4 (M1.3): bias toward FEWER/SHORTER corridors (Director Q-F: big rooms + short halls). ---
+	# F3a's thesis is "huge rooms good, long hallways boring." The preset down-weights the corridor
+	# family so the spine spends less time in dead hallways (sweep start 0.5 — corridors at half their
+	# catalog weight) AND drops the 16-cell long hall outright. The CODE-LEVEL all-off default stays
+	# neutral (1.0 / false → byte-identical fp); only the named preset biases. Sweepable in RG1/RG2
+	# (read corridor_frac to tune). This MOVES fingerprint() for the preset — correct + expected for
+	# a non-neutral config (like R4 branching), not the all-off control.
+	c.lvl_corridor_weight_mult = 0.5            # corridors at half weight (sweep start)
+	c.lvl_short_corridors = true                # drop the 16-cell long hall (the boring long one)
 
 	# --- R4 maze: the most-fun cell VERBATIM — branching ON, vision occlusion OFF. ---
 	# Director M1.3 close-out call ("match what I played — occlusion off"): the played fun

@@ -74,6 +74,8 @@ func _ready() -> void:
 	EventBus.exposure_penalty.connect(_on_exposure_penalty)
 	EventBus.nav_branch_taken.connect(_on_nav_branch_taken)
 	EventBus.nav_lost_proxy.connect(_on_nav_lost_proxy)
+	# J4 (M1.3): per-run corridor-time summary (additive row; no schema/arity change).
+	EventBus.corridor_time_summary.connect(_on_corridor_time_summary)
 
 
 ## Public toggle entry point for the settings UI. Persists the flag and applies it
@@ -228,6 +230,23 @@ func _on_nav_branch_taken(depth: int, junction_degree: int) -> void:
 
 func _on_nav_lost_proxy(metric: StringName, value: float, depth: int) -> void:
 	_emit_row(Schema.NAV_LOST_PROXY, {"metric": String(metric), "value": value, "depth": depth})
+
+
+# --- J4 (M1.3): corridor-time summary ----------------------------------------
+## One per-run row of seconds-in-corridor vs. seconds-in-room (+ the derived corridor_frac),
+## so RG2 can compare "fraction of run spent in corridor" across M1.0–M1.3 on one axis directly
+## instead of inferring it. Additive event type (SCHEMA_VERSION stays 1); does NOT touch the
+## run_ended row/signal. Emitted by MainGame on run end (extract/death/timeout). corridor_frac is
+## 0.0 when the run logged no tracked time (e.g. a frame-0 quit) so the field is always present.
+func _on_corridor_time_summary(corridor_s: float, room_s: float) -> void:
+	var total := corridor_s + room_s
+	_emit_row(Schema.CORRIDOR_SUMMARY, {
+		"corridor_s": corridor_s,
+		"room_s": room_s,
+		"corridor_frac": (corridor_s / total) if total > 0.0 else 0.0,
+	})
+	if _writer != null:
+		_writer.flush()   # end-of-run summary, like run_ended
 
 
 func _on_run_ended(reason: StringName, duration_s: float, depth_reached: int) -> void:

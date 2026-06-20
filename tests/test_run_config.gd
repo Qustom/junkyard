@@ -90,6 +90,8 @@ func _ready() -> void:
 		"lvl_enabled", "lvl_room_count", "lvl_size_mult",
 		# J3 (M1.3) loot-per-area sub-knob.
 		"lvl_loot_density_per_area",
+		# J4 (M1.3) corridor-rarity lever.
+		"lvl_corridor_weight_mult", "lvl_short_corridors",
 	]
 	for k in expected_keys:
 		if not flat.has(k):
@@ -242,6 +244,23 @@ func _ready() -> void:
 		failures.append("J3 preset: r1_density_min_area must be > 0 (non-trivial floor so corridors stay empty)")
 	if preset.lvl_loot_density_per_area != 0.0:
 		failures.append("J3 preset: lvl_loot_density_per_area must be 0.0 (loot sub-knob NEVER preset-on)")
+
+	# === Case 10: J4 (M1.3) corridor-rarity lever knobs ======================
+	# All-off control = M1.2: corridor weight mult NEUTRAL (1.0) + short-corridors OFF (false)
+	# → the generator's weight table is untouched, so the all-off fingerprint stays e943ac9c8bc1.
+	if not is_equal_approx(fresh.lvl_corridor_weight_mult, 1.0):
+		failures.append("J4: all-off lvl_corridor_weight_mult == %f, expected 1.0 (neutral)" % fresh.lvl_corridor_weight_mult)
+	if fresh.lvl_short_corridors:
+		failures.append("J4: all-off lvl_short_corridors must be false (neutral)")
+	# The default play-preset BIASES toward fewer/shorter corridors (Director Q-F: big rooms +
+	# short halls) — a non-neutral weight mult AND/OR the long-hall drop. The CODE default stays
+	# neutral; only the named preset biases.
+	if not (preset.lvl_corridor_weight_mult < 1.0 or preset.lvl_short_corridors):
+		failures.append("J4 preset: must bias toward fewer/shorter corridors (mult < 1.0 and/or short_corridors)")
+	if not flat.has("lvl_corridor_weight_mult"):
+		failures.append("J4: to_flat_dict() missing lvl_corridor_weight_mult")
+	if not flat.has("lvl_short_corridors"):
+		failures.append("J4: to_flat_dict() missing lvl_short_corridors")
 
 	# === Verdict ============================================================
 	if failures.is_empty():

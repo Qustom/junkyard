@@ -65,6 +65,8 @@ CFG_LVL_COUNT_BASE,base
 CFG_FIELD_LVL_ROOM_COUNT,room_count
 CFG_FIELD_LVL_SIZE_MULT,size_mult
 CFG_FIELD_LVL_LOOT_DENSITY_PER_AREA,loot_density_per_area
+CFG_FIELD_LVL_CORRIDOR_WEIGHT_MULT,corridor_weight_mult
+CFG_FIELD_LVL_SHORT_CORRIDORS,short_corridors (drop long hall)
 CFG_TRAP_WARN,"⚠ enabled but inert (won't fire): {traps}"
 CFG_TRAP_R3_NO_THRESHOLDS,R3 (no threshold levels)
 CFG_TRAP_R4_NO_EFFECT,R4 (no maze/vision/lost — inert)
