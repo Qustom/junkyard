@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.3 (Wave 2 — Density & spatial)
 - **Branch:** worktree-agent-a8e275fc341969669 (isolated worktree; logically `general-purpose/J3-per-room-density`)
-- **Commit:** 5fdcc76f2e917dcaed4b739279f2f7486e71fd1c
+- **Commit:** 01f93124a6d47772cab2c83af834aa987ad5709d
 
 ## What changed
 Implemented J3 **additively on top of J2's spawn seam** (per the locked Director Disposition).
