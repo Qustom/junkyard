@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 → M1.2 (DONE → ITERATE) → **M1.3 (Legibility & Density) — Wave 1 DONE + closed out; Wave 2 ready to dispatch.**
-**Last updated:** 2026-06-19 (M1.3 Wave 1 integrated: J5+BUG6+DLV2+DLV1+J1 on `main`, all-off fp unmoved. Close-out: 2 Reviewed + 1 Addressed (preset = match-played occlusion-OFF + maze-aware `r4_no_effect` trap, `25072f6`). Next: Wave 2 (J2→J3→J4). Breakdown: `design/M1_3_Tasks/M1.3_Breakdown.md`.)
+**Current milestone:** M1.0 → M1.1 → M1.2 (DONE → ITERATE) → **M1.3 (Legibility & Density) — Wave 1 DONE; Wave 2 IN PROGRESS (J2 DONE → J3 next → J4).**
+**Last updated:** 2026-06-19 (M1.3 Wave 2: **J2 integrated** on `main` — `4140d9f`. Hazards now distributed across `depth_index` (even_spread/single_gate/curve); preset = even_spread/count 5/min-depth 1; all-off fp byte-identical (`e943ac9c8bc1` via `test_rg1_m12_verify`), 38/38 knobs. Next: **J3** (per-room density, additive on J2's seam). Breakdown: `design/M1_3_Tasks/M1.3_Breakdown.md`.)
 
 ---
 
@@ -37,10 +37,10 @@ All 5 on `main`, verified, pushed, board=Done; all-off fp byte-identical (e943ac
 - **DLV1** itch HTML5 delivery (Web preset + `push_itch.sh` + web templates + nightly slugs) — `02ad951`. ⚠ **real butler push human-gated** (sandbox can't reach `broth.itch.ovh`; run `tools/push_itch.sh` per SETUP §1a).
 - **J1** `make_default_play_preset()` (19 rooms, size 4.0, R1 on, **R4 maze-only / occlusion OFF = match-played**, R2/R3 off) + `RANGE_MULT=[4.0,40.0]` — `3159aac` (+ `25072f6`).
 
-## ▶ Next action (start here on a cold restart) — **M1.3 Wave 2: J2 → J3 → J4 (sequential)**
+## ▶ Next action (start here on a cold restart) — **M1.3 Wave 2: J3 (per-room density) — dispatch next**
 
 Wave 2 is **sequential on the shared spawn seam + `main_game.gd`** (single-writer):
-- **J2** (general-purpose) — `even_spread` distribution of N hazards across depth_index (curve mode built, preset-off); **owns `_spawn_r1_hazards`/`_hazard_spawn_position`, lands first**; adds its own `r1_spawn_distribution`/`r1_spread_min_depth` knobs + wires them into `make_default_play_preset()`. Spec `J2_enemy_spread.md`.
+- **J2** (general-purpose) — ✅ **DONE (2026-06-19, merge `4140d9f`, board=Done, worklog `worklogs/2026-06-19-J2-general-purpose.md`).** N hazards distributed across depth_index (single_gate/even_spread/curve); owns `_spawn_r1_hazards`/`_hazard_spawn_position(band, depth, index)` (the stable helper J3 reuses); added `r1_spawn_distribution`+`r1_spread_min_depth`, preset = even_spread/count 5/min-depth 1; 38/38 knobs; all-off fp `e943ac9c8bc1` byte-identical. **1 deviation logged (curve `pow(t,1.6)` biases shallower not deeper — harmless, preset-OFF) → for Wave-2 close-out sweep.**
 - **J3** (general-purpose) — **after J2 on `main`**: additive per-room **cell-area** density (`r1_per_room_density` + cap; px-area swept option; loot off-by-default) reusing J2's per-depth helper; adds its own knobs + preset wiring. Spec `J3_per_room_density.md`.
 - **J4** (general-purpose) — **after J3 (or parallel iff main_game.gd disjoint)**: hallway-length via **generator down-weight** (NOT materialise re-pack); corridor-time telemetry (per-frame piece-keyed accumulator; **pre-declare `corridor_time_summary` on `main`** first; hoist `_player_piece_index` out of the R4 gate). Spec `J4_hallway_length.md`.
 - Then **Wave 3** re-gate: RG1 build+verify → Director playtest → RG2 → RG3 (`G4_findings_M1.3.md`).
