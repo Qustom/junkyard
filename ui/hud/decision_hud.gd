@@ -9,8 +9,11 @@ extends CanvasLayer
 ## Signal-driven, no polling (playbook + TDD §2):
 ##   - Holding value  ← EventBus.run_inventory_changed → GameState.run_haul_value()
 ##   - Clock bar/time ← EventBus.dive_clock_changed(current, maximum)
-##   - Depth          ← GameState.current_depth, refreshed on run_inventory_changed /
-##                       band_entered (no depth_changed signal exists in M1).
+##   - Depth          ← GameState.current_depth_index / .max_depth_reached, refreshed
+##                       on EventBus.depth_changed (the BUG2/M1.1 signal, edge-triggered
+##                       in GameState.set_current_depth), plus run boundaries for the
+##                       reset-to-0 paint depth_changed doesn't emit. (J5, M1.3 — was
+##                       wrongly reading the band counter current_depth on inventory/band edges.)
 ## The clock bar tints green→amber→red as it drains (cost-of-pushing made visceral),
 ## and under a single urgency threshold the Holding label pulses ("this is what you'd
 ## walk away with"). Juice is intentionally MINIMAL — no vignette / slow-mo / heartbeat;
@@ -89,8 +92,14 @@ func _ready() -> void:
 	EventBus.run_inventory_changed.connect(_on_run_inventory_changed)
 	EventBus.dive_clock_changed.connect(_on_dive_clock_changed)
 	EventBus.band_entered.connect(_on_band_entered)
+	# J5: depth_changed is the signal that actually broadcasts ROOM depth
+	# (depth_index, max_depth). Edge-triggered in GameState.set_current_depth — fires
+	# exactly when the player crosses into a piece of a different depth_index.
+	EventBus.depth_changed.connect(_on_depth_changed)
 	# A run boundary swaps the bag / resets depth without a run_inventory_changed,
 	# so re-project on those edges too (mirrors the D2 panel's boundary handling).
+	# It also paints "Depth 0 / 0" at run start — set_current_depth(0,…) early-returns
+	# at entry, so depth_changed does NOT fire then (J5).
 	EventBus.run_started.connect(_on_run_boundary)
 	EventBus.run_ended.connect(_on_run_boundary)
 	# I3: R2 toll cues + the optional R3-penalty shake. Both already-emitted signals;
@@ -117,9 +126,16 @@ func _process(delta: float) -> void:
 # --- Signal handlers (projection only) ---------------------------------------
 
 func _on_run_inventory_changed(_used_slots: int, _max_slots: int) -> void:
-	# Holding is the at-risk number; refresh depth alongside it so the cost-of-pushing
-	# stays in sync without a dedicated depth_changed signal.
+	# Holding is the at-risk number. (Depth is no longer refreshed here — it has its
+	# own edge, EventBus.depth_changed; inventory has nothing to do with room depth. J5.)
 	_refresh_haul()
+
+
+## J5: the room depth changed — the player crossed into a piece of a new depth_index.
+## Pure projection of the already-emitted depth_changed(depth_index, max_depth); the
+## payload carries both numbers but we delegate to _refresh_depth() so the initial
+## paint and the signal paint share one code path (re-reads GameState).
+func _on_depth_changed(_depth_index: int, _max_depth: int) -> void:
 	_refresh_depth()
 
 
@@ -132,7 +148,10 @@ func _on_dive_clock_changed(current: float, maximum: float) -> void:
 
 
 func _on_band_entered(_band_id: StringName, _depth: int) -> void:
-	_refresh_depth()
+	# J5: band entry no longer touches the depth readout — the readout is room-based
+	# (current_depth_index), driven by depth_changed, not the band counter. Kept
+	# subscribed for future band-aware HUD work; a no-op for depth in M1.
+	pass
 
 
 func _on_run_boundary(_a = null, _b = null, _c = null) -> void:
@@ -147,8 +166,16 @@ func _refresh_haul() -> void:
 	_haul_value_label.text = tr("HUD_HOLDING").format({"value": GameState.run_haul_value()})
 
 
+## J5: project the ROOM depth (current_depth_index) and the deepest reached
+## (max_depth_reached, the gate metric reported as run_ended.depth_reached), NOT the
+## band counter current_depth. depth_index is the value run_config thresholds + the
+## gate all speak in, so the player's progress readout now matches the game's own
+## depth language. HUD-only: reads GameState, mutates nothing, emits nothing.
 func _refresh_depth() -> void:
-	_depth_label.text = tr("HUD_DEPTH").format({"depth": GameState.current_depth})
+	_depth_label.text = tr("HUD_DEPTH").format({
+		"depth": GameState.current_depth_index,
+		"max": GameState.max_depth_reached,
+	})
 
 
 ## 1.0 → green, ~0.5 → amber, 0.0 → red. Off-ladder ramp (not the rarity ladder);

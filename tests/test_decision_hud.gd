@@ -6,7 +6,8 @@ extends SceneTree
 ##   - Holding label tracks GameState.run_haul_value(), refreshed on run_inventory_changed,
 ##   - ClockBar value/max + ClockLabel track EventBus.dive_clock_changed(current, maximum),
 ##   - the clock-bar tint ramps green→amber→red as the fraction drains (distinct colours),
-##   - DepthLabel tracks GameState.current_depth (refreshed on the same edges),
+##   - DepthLabel tracks GameState.current_depth_index / max_depth_reached via
+##     EventBus.depth_changed (J5 — was wrongly reading the band counter current_depth),
 ##   - the ExtractPrompt is hidden until the GATE is the focused interactable
 ##     (interactable_focused), shows the live haul value, and hides on unfocus —
 ##     while a non-gate (junk) focus never raises it.
@@ -94,11 +95,26 @@ func _run() -> void:
 		if haul_label.text != tr("HUD_HOLDING").format({"value": expected}):
 			failures.append("Holding '%s' != run_haul_value() %d" % [haul_label.text, expected])
 
-	# --- Depth projection ---------------------------------------------------------
-	gs.enter_band(&"near")  # current_depth → 1, emits band_entered
+	# --- Depth projection (J5): HUD tracks ROOM depth via depth_changed ------------
+	# The run is already started (above) → entry is depth_index 0 / max 0. Descend by
+	# calling set_current_depth, which emits depth_changed(idx, max); the HUD must follow.
+	gs.set_current_depth(1, 1)  # room depth 1
 	await process_frame
-	if depth_label.text != tr("HUD_DEPTH").format({"depth": gs.current_depth}):
-		failures.append("Depth '%s' != current_depth %d" % [depth_label.text, gs.current_depth])
+	gs.set_current_depth(3, 3)  # jump to room depth 3 (max climbs to 3)
+	await process_frame
+	var want_depth := tr("HUD_DEPTH").format({
+		"depth": gs.current_depth_index,  # 3
+		"max": gs.max_depth_reached,       # 3
+	})
+	if depth_label.text != want_depth:
+		failures.append("Depth '%s' != depth_index/%d max/%d (J5: must track room depth, not band counter)"
+			% [depth_label.text, gs.current_depth_index, gs.max_depth_reached])
+	# Regression guard: the BAND counter must NOT be what's shown — band entry bumps
+	# current_depth but leaves the room readout (current_depth_index) untouched.
+	gs.enter_band(&"near")  # current_depth → 1 (band), room depth unchanged
+	await process_frame
+	if depth_label.text != want_depth:
+		failures.append("Depth readout moved on band entry — J5 regression (still reading current_depth?)")
 
 	# --- ExtractPrompt: hidden until the GATE is focused --------------------------
 	if prompt.visible:
@@ -139,7 +155,8 @@ func _run() -> void:
 
 	if failures.is_empty():
 		print("DECISION HUD OK — E2 verified (Holding tracks run_haul_value, clock bar/label/tint "
-			+ "mirror dive_clock_changed, depth tracks current_depth, extract prompt gate-only + live value).")
+			+ "mirror dive_clock_changed, depth tracks current_depth_index/max_depth_reached via "
+			+ "depth_changed, extract prompt gate-only + live value).")
 		quit(0)
 	else:
 		for f in failures:
