@@ -4,7 +4,8 @@
 - **Subagent:** qa-playtest-coordinator
 - **Milestone:** M1.3 (Wave 3 — re-gate)
 - **Branch:** worktree-agent-a8902b739b5485731 (worktree; logical name `qa/RG1-m13-verify`)
-- **Commit:** 9087fcf3158d0a0a675175678fc97931c98336c3
+- **Commit:** ddc330ba4474292ba4a142cf712dc778fcf2a8f3 (driver + doc + readme; this worklog SHA-fix
+  follows in the next commit on the branch)
 
 ## What changed
 
