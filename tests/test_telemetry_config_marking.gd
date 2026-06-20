@@ -138,6 +138,17 @@ func _run() -> int:
 			for off_key in ["r2_enabled", "r3_enabled", "r4_enabled"]:
 				if bool(snap.get(off_key, true)) != false:
 					failures.append("run_config.%s should be false" % off_key)
+			# --- BUG6 (M1.3): additive inert_enabled_oppositions flag present + array ---
+			# This config is r1_enabled with r1_spawn_count=0 (default), so it is a
+			# trap (r1_no_spawn) — the field must be present, an Array, and contain it.
+			if not sdata.has("inert_enabled_oppositions"):
+				failures.append("run_started.data missing additive 'inert_enabled_oppositions' flag (BUG6)")
+			else:
+				var inert: Variant = sdata["inert_enabled_oppositions"]
+				if not (inert is Array):
+					failures.append("inert_enabled_oppositions is not an Array (got %s)" % type_string(typeof(inert)))
+				elif not (inert as Array).has("r1_no_spawn"):
+					failures.append("inert_enabled_oppositions did not flag r1_no_spawn for the R1-on/0-spawn config (got %s)" % str(inert))
 
 	# --- Criterion 2: each opposition row present with envelope + payload ----
 	for t in OPPOSITION_ROW_FIELDS.keys():
@@ -174,6 +185,26 @@ func _run() -> int:
 			failures.append("run_ended.cause == %s, expected 'death'" % str(ed.get("cause")))
 	else:
 		failures.append("no run_ended row found")
+
+	# --- BUG6 (M1.3): the all-off control must stamp an EMPTY inert flag ---------
+	# A fresh all-off run_started row carries inert_enabled_oppositions == [] (no
+	# master enabled → nothing inert; the baseline must never warn).
+	_remove_log()
+	gs.active_run_config = RunConfigScript.new() as RunConfig   # all-off control
+	tel.set_enabled(true)
+	bus.run_started.emit(&"surface", 7)
+	tel.set_enabled(false)
+	var off_rows := _read_rows(LOG_PATH)
+	var off_by_type := _group_by_type(off_rows)
+	if off_by_type.has(Schema.RUN_STARTED):
+		var off_started: Dictionary = (off_by_type[Schema.RUN_STARTED] as Array)[0]
+		var off_inert: Variant = (off_started.get("data", {}) as Dictionary).get("inert_enabled_oppositions")
+		if not (off_inert is Array):
+			failures.append("all-off run_started.inert_enabled_oppositions is not an Array")
+		elif not (off_inert as Array).is_empty():
+			failures.append("all-off control reported inert oppositions (must be []): %s" % str(off_inert))
+	else:
+		failures.append("all-off control: no run_started row written")
 
 	_cleanup(tel, gs)
 

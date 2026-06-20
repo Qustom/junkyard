@@ -42,6 +42,8 @@ func _run() -> void:
 	await _case_linger_awaken(gs, failures)
 	await _case_latch_no_resleep(gs, failures)
 	await _case_nonfatal_catch(gs, failures)
+	await _case_fatal_sustained_one_emit(gs, failures)
+	await _case_nonfatal_escape_recatch(gs, failures)
 	_case_all_off_spawns_nothing(failures)
 
 	if failures.is_empty():
@@ -223,6 +225,80 @@ func _case_nonfatal_catch(gs: Node, failures: Array[String]) -> void:
 		failures.append("c4: non-fatal catch ended the run (death) — must NOT")
 	if not gs.run_active:
 		failures.append("c4: run is no longer active after a non-fatal catch")
+
+	hz.queue_free()
+	player.queue_free()
+
+
+# === Case 6: BUG6 — fatal catch held in radius emits hazard_caught ONCE =======
+## Regression lock for the per-frame emit storm (M1.2: 85→2,199 events/run). With
+## the player pinned inside catch radius for many physics frames on the FATAL path
+## (which never sets _catch_cooldown), the one-shot latch must yield EXACTLY ONE
+## hazard_caught (was N, one per frame). The fatal frame itself is unchanged: the
+## single emit still fires on the same rising-edge frame and routes through
+## fail_run(&"death").
+func _case_fatal_sustained_one_emit(gs: Node, failures: Array[String]) -> void:
+	_reset_signal_logs()
+	gs.start_run(&"test_band", 55)
+	gs.set_current_depth(3, 3)
+
+	var player := _make_player(Vector2.ZERO)
+	var rc := _r1_config()                # r1_catch_kills = true (fatal path)
+	var hz := _make_hazard(Vector2.ZERO, rc, player)
+
+	await _frames(1)                      # awaken (depth 3 >= threshold)
+	player.global_position = hz.global_position   # pin INSIDE radius
+	# Hold the overlap for many frames — the old code emitted once PER frame here.
+	await _frames(30)
+	if _caught.size() != 1:
+		failures.append("c6: sustained fatal overlap emitted %d hazard_caught (expected exactly 1 — storm not fixed)"
+			% _caught.size())
+	if not _run_ended_reasons.has(&"death"):
+		failures.append("c6: fatal catch did not route through fail_run(&\"death\")")
+
+	hz.queue_free()
+	player.queue_free()
+
+
+# === Case 7: BUG6 — non-fatal escape-and-re-catch emits TWICE =================
+## The latch must NOT swallow a genuine second catch. Non-fatal path: catch once
+## (1 emit), move the player OUT of radius to re-arm the latch (falling edge), let
+## the 1.0s cooldown expire, then snap back in → a second distinct catch (2 emits).
+## A sustained pin would be 1; a real escape-and-re-catch is 2.
+func _case_nonfatal_escape_recatch(gs: Node, failures: Array[String]) -> void:
+	_reset_signal_logs()
+	gs.start_run(&"test_band", 66)
+	gs.set_current_depth(3, 3)
+
+	var player := _make_player(Vector2.ZERO)
+	var rc := _r1_config()
+	rc.r1_catch_kills = false             # non-fatal so the run survives both catches
+	rc.r1_chase_speed = 0.0               # don't let the hazard chase the parked player
+	var hz := _make_hazard(Vector2.ZERO, rc, player)
+
+	await _frames(1)                      # awaken
+	# First catch.
+	player.global_position = hz.global_position
+	await _frames(1)
+	if _caught.size() != 1:
+		failures.append("c7: first non-fatal catch emitted %d (expected 1)" % _caught.size())
+
+	# Escape: move far out of radius → latch re-arms on the falling edge.
+	player.global_position = Vector2(5000, 0)
+	await _frames(1)
+	# Hold a few more frames (still out) and let the 1.0s cooldown bleed off.
+	await _frames(70)                     # ~1.17s @ 60Hz > NONFATAL_COOLDOWN_SECONDS
+	if _caught.size() != 1:
+		failures.append("c7: a catch fired while the player was OUT of radius (%d)" % _caught.size())
+
+	# Re-catch: snap back in → a second distinct catch.
+	player.global_position = hz.global_position
+	await _frames(1)
+	if _caught.size() != 2:
+		failures.append("c7: escape-and-re-catch emitted %d (expected exactly 2 — latch swallowed the re-catch?)"
+			% _caught.size())
+	if _run_ended_reasons.has(&"death"):
+		failures.append("c7: non-fatal path ended the run")
 
 	hz.queue_free()
 	player.queue_free()
