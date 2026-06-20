@@ -97,6 +97,17 @@ var _depth_tick_accum: float = 0.0
 # same per-cell resolution as the BUG2 depth driver — no second spatial system.
 var _cell_to_junction: Dictionary = {}
 var _player_piece_index: int = -1
+
+# J4 (M1.3): corridor-time telemetry. _piece_kind_by_index maps piece_index -> is_corridor
+# (bool), built once per run alongside _build_junction_map from the hardcoded
+# RunConfig.CORRIDOR_PIECE_IDS set keyed on PlacedPiece.piece_id (NOT size_cells — that's an
+# @export recomputed in _ready, not authoritative pre-tree). _corridor_time_s / _room_time_s
+# accumulate wall-clock seconds the player spends in corridor vs. room pieces (reset on
+# run_started, emitted on run end via EventBus.corridor_time_summary). The accumulation rides
+# the existing per-piece tracking (_player_piece_index) — no new spatial system.
+var _piece_kind_by_index: Dictionary = {}   # int piece_index -> bool is_corridor
+var _corridor_time_s: float = 0.0
+var _room_time_s: float = 0.0
 ## R4 vision/fog node packed scene (Lever 2). Spawned per dive; inert when R4 off.
 const VISION_FOG_SCENE_PATH := "res://entities/dive/vision_fog.tscn"
 ## R1 (M1.1): the pursuing-hazard greybox scene. Instantiated per dive ONLY when
@@ -507,6 +518,12 @@ func _hazard_spawn_position(band: Band, depth: int, index: int) -> Vector2:
 # --- Run-end handling --------------------------------------------------------
 
 func _on_run_ended(_reason: StringName, _duration_s: float, _depth_reached: int) -> void:
+	# J4 (M1.3): emit the corridor-time summary for this run (corridor vs. room seconds) so
+	# Telemetry writes a dedicated additive `corridor_summary` JSONL row (no run_ended arity
+	# change, no schema bump). Fires on EVERY run end (extract/death/timeout) — run_ended is
+	# the single resolve point for all three. The accumulators reset on the next run's
+	# _build_cell_depth_map (run-state, never persisted).
+	EventBus.corridor_time_summary.emit(_corridor_time_s, _room_time_s)
 	# The SellScreen (a sibling) presents the reward beat over the paused tree and,
 	# on Continue, calls start_new_run(). We just freeze the player so it can't keep
 	# sliding under the paused overlay edge cases; start_new_run repositions it.
@@ -582,6 +599,10 @@ func _build_cell_depth_map(band: Band) -> void:
 	# R4: build the parallel junction map (piece_index, junction_degree per cell).
 	_build_junction_map(band)
 	_player_piece_index = -1
+	# J4 (M1.3): reset the per-run corridor/room time accumulators (run-state, like
+	# Telemetry's bookkeeping). _build_junction_map already populated _piece_kind_by_index.
+	_corridor_time_s = 0.0
+	_room_time_s = 0.0
 
 
 ## R4 (M1.1): flatten per-piece junction degree into a per-cell lookup. A piece's
@@ -591,6 +612,13 @@ func _build_cell_depth_map(band: Band) -> void:
 ## ≥3 = a real branch/intersection. Used only to emit nav_branch_taken on entry.
 func _build_junction_map(band: Band) -> void:
 	_cell_to_junction.clear()
+	# J4 (M1.3): classify each piece's kind (corridor vs. room) ONCE here, in the same pass,
+	# keyed by piece index. Hardcoded RunConfig.CORRIDOR_PIECE_IDS on PlacedPiece.piece_id (the
+	# generator-populated id; NO aspect-ratio fallback — it mis-classifies the 6×6 L-bend, and
+	# size_cells isn't authoritative pre-_ready). One source of truth shared with the weight lever.
+	_piece_kind_by_index.clear()
+	for i in band.pieces.size():
+		_piece_kind_by_index[i] = RunConfig.CORRIDOR_PIECE_IDS.has(band.pieces[i].piece_id)
 	# Map every FLOOR cell -> owning piece index.
 	var cell_owner := {}
 	for i in band.pieces.size():
@@ -623,11 +651,28 @@ func _build_junction_map(band: Band) -> void:
 func _physics_process(delta: float) -> void:
 	if not GameState.run_active:
 		return
+	# J4 (M1.3): accumulate corridor/room time EVERY frame (exact, NOT a tick-sampled
+	# approximation), keyed by the player's current piece kind. Runs BEFORE the depth-tick
+	# throttle so it captures every frame. Guards _player_piece_index < 0 (frame 0 / mid-
+	# doorway) → attributed to neither bucket, which is fine (corridor_frac is a ratio).
+	_accumulate_piece_time(delta)
 	_depth_tick_accum += delta
 	if _depth_tick_accum < depth_tick_interval:
 		return
 	_depth_tick_accum = 0.0
 	_resolve_player_depth()
+
+
+## J4 (M1.3): add `delta` to the corridor or room bucket for the player's current piece. The
+## piece-kind lookup uses _piece_kind_by_index (built in _build_junction_map); _player_piece_index
+## is kept current by _update_player_piece (hoisted OUT of the R4 gate so this works R4-off too).
+func _accumulate_piece_time(delta: float) -> void:
+	if _player_piece_index < 0:
+		return   # not yet resolved into a piece (frame 0 / mid-doorway) — attribute to neither
+	if bool(_piece_kind_by_index.get(_player_piece_index, false)):
+		_corridor_time_s += delta
+	else:
+		_room_time_s += delta
 
 
 ## Resolve the player's band-global cell → owning piece → (depth_index, dist_to_gate)
@@ -643,28 +688,44 @@ func _resolve_player_depth() -> void:
 	if _cell_to_depth.has(cell):
 		var d: Vector2i = _cell_to_depth[cell]
 		GameState.set_current_depth(d.x, d.y)   # (depth_index, dist_to_gate)
-	# R4 (M1.1): junction-entry detection for nav_branch_taken. Reuse the same cell
-	# resolution: when the player crosses into a NEW piece whose junction_degree ≥ 2
-	# (a real fork), emit once. Only fires while R4 is enabled.
-	_maybe_emit_branch_taken(cell)
+	# J4 (M1.3): update "which piece am I in" UNCONDITIONALLY (the hoist) so corridor-time
+	# works with R4 off (the all-off control + the M1.0/M1.1/M1.2 baseline all run R4 off).
+	# This used to live inside the R4-gated _maybe_emit_branch_taken; now ONE source of truth
+	# tracks the piece, and only the nav_branch_taken EMIT stays R4-gated.
+	var entered_new_piece := _update_player_piece(cell)
+	# R4 (M1.1): junction-entry detection for nav_branch_taken — when the player crosses into a
+	# NEW piece whose junction_degree ≥ 2 (a real fork), emit once. Only fires while R4 enabled.
+	_maybe_emit_branch_taken(cell, entered_new_piece)
+
+
+## J4 (M1.3): update _player_piece_index from the player's current cell, UNCONDITIONALLY (no R4
+## gate). Returns true iff the player crossed into a NEW piece this resolve (so the R4 emit can
+## fire exactly once per piece-entry). Off-floor cells (mid-doorway / wall edge) are not in
+## _cell_to_junction → keep the last known piece (never spuriously reset), like the depth driver.
+func _update_player_piece(cell: Vector2i) -> bool:
+	if not _cell_to_junction.has(cell):
+		return false
+	var piece_index: int = _cell_to_junction[cell].x
+	if piece_index == _player_piece_index:
+		return false   # same piece — no new entry
+	_player_piece_index = piece_index
+	return true
 
 
 ## R4: emit nav_branch_taken(depth, junction_degree) exactly once per junction-entry.
-## A junction-entry = the player's owning piece changed to a piece with ≥2 distinct
-## neighbouring pieces (a fork/intersection). Tracks the last owning piece index so
-## staying within a piece (or re-resolving the same cell) never re-emits.
-func _maybe_emit_branch_taken(cell: Vector2i) -> void:
+## A junction-entry = the player's owning piece changed (entered_new_piece, resolved by
+## _update_player_piece) to a piece with ≥2 distinct neighbouring pieces (a fork/intersection).
+## Only the EMIT is R4-gated now (J4 hoisted the piece-index tracking out); staying within a
+## piece never re-emits because _update_player_piece returns false then.
+func _maybe_emit_branch_taken(cell: Vector2i, entered_new_piece: bool) -> void:
 	var rc := GameState.active_run_config
 	if rc == null or not rc.r4_enabled:
 		return
+	if not entered_new_piece:
+		return
 	if not _cell_to_junction.has(cell):
 		return
-	var meta: Vector2i = _cell_to_junction[cell]   # (piece_index, junction_degree)
-	var piece_index := meta.x
-	if piece_index == _player_piece_index:
-		return   # same piece — no new entry
-	_player_piece_index = piece_index
-	var junction_degree := meta.y
+	var junction_degree: int = _cell_to_junction[cell].y
 	if junction_degree >= 2:
 		EventBus.nav_branch_taken.emit(GameState.current_depth_index, junction_degree)
 

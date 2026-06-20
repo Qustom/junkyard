@@ -4,8 +4,9 @@ extends Node
 ## Proves the menu is a faithful, complete surface over the R0 RunConfig schema:
 ##   1. COVERAGE — every one of RunConfig's exported @export fields has a bound
 ##      control (the §3.2/§3.6 "no opposition knob is unreachable" net), and the
-##      count matches the schema (44 knobs: 32 R0 + 1 I2 r1_catch_radius_per_depth + 3 I1 lvl_
-##      + 2 J2 r1_spawn_distribution/r1_spread_min_depth + 5 J3 r1_density_* + 1 J3 lvl_loot_density_per_area).
+##      count matches the schema (46 knobs: 32 R0 + 1 I2 r1_catch_radius_per_depth + 3 I1 lvl_
+##      + 2 J2 r1_spawn_distribution/r1_spread_min_depth + 5 J3 r1_density_* + 1 J3 lvl_loot_density_per_area
+##      + 2 J4 lvl_corridor_weight_mult/lvl_short_corridors).
 ##   2. EDIT — toggling a master + setting a knob via its control is reflected in
 ##      apply_and_get_config() (the working config the run will stage).
 ##   3. RESET — "Reset to baseline" returns an all-off config equal to the on-disk
@@ -41,9 +42,9 @@ func _run() -> int:
 	var default_cfg := load(DEFAULT_CFG_PATH) as RunConfig
 	var exported := _exported_fields(default_cfg)
 	# Sanity vs. the schema's own count (R0: 32 + I2's 1 r1_ + I1's 3 lvl_ + J2's 2 r1_
-	# + J3's 5 r1_density_* + J3's 1 lvl_loot_density_per_area = 44).
-	if exported.size() != 44:
-		failures.append("expected 44 exported RunConfig fields, schema has %d" % exported.size())
+	# + J3's 5 r1_density_* + J3's 1 lvl_loot_density_per_area + J4's 2 lvl_corridor_* = 46).
+	if exported.size() != 46:
+		failures.append("expected 46 exported RunConfig fields, schema has %d" % exported.size())
 
 	var bound := menu._rows.keys()   # bound controls; masters are included as CheckButtons
 	for f in exported:

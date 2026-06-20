@@ -43,6 +43,12 @@ const EXPOSURE_PENALTY: String = "exposure_penalty"          # R3: penalty fires
 const NAV_BRANCH_TAKEN: String = "nav_branch_taken"          # R4: junction degree > 2 traversed
 const NAV_LOST_PROXY: String = "nav_lost_proxy"              # R4: lost-proxy metric crosses threshold
 
+# --- J4 (M1.3) corridor-time summary -----------------------------------------
+# One per-run summary row of seconds-in-corridor vs. seconds-in-room (+ the derived
+# corridor_frac), so the re-gate measures "time in hallway" directly instead of inferring it.
+# ADDITIVE event-type string (like NAV_BRANCH_TAKEN / JUNK_LOST) — SCHEMA_VERSION STAYS 1.
+const CORRIDOR_SUMMARY: String = "corridor_summary"          # J4: per-run corridor vs. room time
+
 ## Every event-type string, for tests/validators that want to assert a row's
 ## `type` is known.
 const ALL_TYPES: Array[String] = [
@@ -62,6 +68,8 @@ const ALL_TYPES: Array[String] = [
 	EXPOSURE_PENALTY,
 	NAV_BRANCH_TAKEN,
 	NAV_LOST_PROXY,
+	# J4 (M1.3) corridor-time summary row
+	CORRIDOR_SUMMARY,
 ]
 
 ## The envelope keys every row carries (used by tests to assert structure).

@@ -43,6 +43,9 @@ const RANGE_MULT := Vector2(4.0, 40.0)   # J1 (M1.3): lvl_size_mult slider re-ra
 const RANGE_DENSITY := Vector2(0.0, 4.0)   # r1_per_room_density / lvl_loot_density_per_area (0.25 step)
 const RANGE_AREA := Vector2(0, 256)        # r1_density_min_area (floor-cell area gate)
 const RANGE_ROOM_CAP := Vector2(0, 16)     # r1_density_per_room_cap (0 = uncapped)
+## J4 (M1.3): the corridor-rarity weight multiplier — [0.0, 1.0] (corridors can be dialled to
+## 0× their catalog weight, never UP past baseline 1.0). 0.25 step. SpinBox still types past.
+const RANGE_CORRIDOR := Vector2(0.0, 1.0)  # lvl_corridor_weight_mult (0.25 step)
 
 ## Per-section descriptor: prefix (Meta = ""), the CSV title/gloss keys, the master
 ## field name ("" = none, Meta), whether the section is collapsible.
@@ -87,6 +90,8 @@ const MANIFEST := {
 		"lvl_enabled", "lvl_room_count", "lvl_size_mult",
 		# J3 (M1.3) — loot-per-area sub-knob (off by default; a swept lever, never preset-on).
 		"lvl_loot_density_per_area",
+		# J4 (M1.3) — corridor-rarity lever: a float (weight mult, slider+spin) + a bool (drop long).
+		"lvl_corridor_weight_mult", "lvl_short_corridors",
 	],
 }
 
@@ -126,6 +131,8 @@ const FIELD_RANGE := {
 	"lvl_size_mult": RANGE_MULT,
 	# J3 (M1.3) loot-per-area sub-knob.
 	"lvl_loot_density_per_area": RANGE_DENSITY,
+	# J4 (M1.3) corridor-rarity weight multiplier (lvl_short_corridors is a bool → CheckButton).
+	"lvl_corridor_weight_mult": RANGE_CORRIDOR,
 }
 
 ## I1 (M1.2): per-field SpinBox/slider STEP override. lvl_size_mult is snapped to 0.25
@@ -136,6 +143,8 @@ const FIELD_STEP := {
 	# J3 (M1.3): density floats scrub in 0.25 steps (matches the spec's suggested step).
 	"r1_per_room_density": 0.25,
 	"lvl_loot_density_per_area": 0.25,
+	# J4 (M1.3): the corridor weight multiplier scrubs in 0.25 steps over [0, 1].
+	"lvl_corridor_weight_mult": 0.25,
 }
 
 # Dimming alpha for a section body whose master is OFF (redundant "inert" cue).

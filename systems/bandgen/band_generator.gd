@@ -48,7 +48,11 @@ func generate(seed: int, cfg: BandGenConfig, catalog: Array[ZonePieceData],
 	EventBus.band_generation_started.emit(seed)
 
 	# Pre-compute the integer cumulative-weight table once (stable catalog order).
-	var weight_table := _build_weight_table(catalog)
+	# J4 (M1.3): rc carries the corridor-rarity lever (lvl_corridor_weight_mult /
+	# lvl_short_corridors) which down-weights/drops corridor pieces in the table. With the
+	# neutral default (mult 1.0, short_corridors false) the table is byte-identical to M1.2,
+	# so the all-off fingerprint is unchanged; a non-neutral config legitimately moves it.
+	var weight_table := _build_weight_table(catalog, rc)
 	var cell_size_px := _assert_uniform_cell_size(catalog)
 
 	var attempt := 0
@@ -229,14 +233,44 @@ func _tags_ok() -> bool:
 
 ## Cumulative integer weight table over the catalog (stable order). Float
 ## ZonePieceData.weight scaled to ints once so the pick is pure integer math.
-func _build_weight_table(catalog: Array[ZonePieceData]) -> Array[int]:
+##
+## J4 (M1.3): the corridor-RARITY lever. rc.lvl_corridor_weight_mult multiplies the
+## EFFECTIVE float weight of every corridor piece (RunConfig.CORRIDOR_PIECE_IDS) DOWN before
+## the int scale, and rc.lvl_short_corridors zeroes the 16-cell long-hall outright (drop). With
+## the NEUTRAL default (mult 1.0, short false) the corridor multiply is *1.0 and short is off,
+## so the table is BYTE-IDENTICAL to M1.2 → the all-off fingerprint (e943ac9c8bc1) is unchanged.
+## A non-neutral config legitimately moves the table (and thus fingerprint()), allowed under the
+## (seed+config) determinism contract exactly like R4 branching.
+##
+## A dropped (zero-weight) corridor contributes 0 to the cumulative sum, so the binary search
+## can NEVER land on it (roll < table[i] reduces to roll < table[i-1], false for that slot) —
+## the piece becomes genuinely unpickable. The normal `w <= 0 → w = 1` floor (so an authored
+## piece is never accidentally unpickable) is bypassed ONLY for a corridor the lever
+## INTENTIONALLY drops, never for a real authored 0.
+func _build_weight_table(catalog: Array[ZonePieceData], rc: RunConfig = null) -> Array[int]:
 	const SCALE := 1000
+	var corridor_mult := 1.0
+	var drop_long := false
+	if rc != null:
+		corridor_mult = maxf(rc.lvl_corridor_weight_mult, 0.0)
+		drop_long = rc.lvl_short_corridors
 	var table: Array[int] = []
 	var running := 0
 	for entry in catalog:
-		var w := int(round(maxf(entry.weight, 0.0) * SCALE))
-		if w <= 0:
-			w = 1  # never let an authored piece be unpickable
+		var eff_weight := maxf(entry.weight, 0.0)
+		var is_corridor := RunConfig.CORRIDOR_PIECE_IDS.has(entry.piece_id)
+		var dropped := false
+		if is_corridor:
+			if drop_long and entry.piece_id == RunConfig.CORRIDOR_LONG_PIECE_ID:
+				eff_weight = 0.0   # intentionally drop the long hall (genuinely unpickable)
+				dropped = true
+			else:
+				eff_weight *= corridor_mult   # down-weight the corridor family
+		var w := int(round(eff_weight * SCALE))
+		# Never let an authored piece be unpickable UNLESS the lever intentionally dropped it
+		# (drop → 0 contribution → unpickable, by design). A non-dropped piece floors at 1.
+		if w <= 0 and not dropped:
+			w = 1
 		running += w
 		table.append(running)  # store cumulative sum
 	return table
