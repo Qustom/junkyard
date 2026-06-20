@@ -289,3 +289,73 @@ func inert_enabled_oppositions() -> PackedStringArray:
 	if r1_enabled and r1_spawn_count > 0 and r1_catch_radius < 24.0:
 		out.append("r1_catch_radius_too_small")
 	return out
+
+
+# =============================================================================
+# J1 (M1.3) — the named default play-preset (the game/CFG boots into THIS)
+# =============================================================================
+## Builds the Director's most-fun M1.2 stack as a SECOND, named RunConfig — level
+## scale ON (~19 rooms, big rooms at the new slider floor 4.0), R1 pursuing hazard
+## ON, R4 vision/maze ON (non-inert so the M1.3 re-gate actually exercises it), with
+## R2/R3 deliberately OFF (Director F1, `G4_findings_M1.2.md` §5). This is what the
+## CFG rail (`config_menu._ready`) and the no-CFG fallback (`main_game.gd`) seed.
+##
+## LOAD-BEARING CONTRACT (M1.3 Breakdown §2): this is built ON TOP of a fresh all-off
+## `RunConfig.new()`, so it NEVER mutates the code-level all-off default. `RunConfig.new()`
+## and `data/run_config/run_config.tres` stay byte-identical (determinism fp=e943ac9c8bc1,
+## telemetry comparability) — the all-off config remains the permanent in-build control
+## (Reset returns to it). The preset is a separate artifact, not the default.
+##
+## PROVENANCE (J1 disposition D): the R1/R4 magnitudes are lifted VERBATIM from the
+## most-fun M1.2 cell — the dominant `m1-20260619-ba745e1` snapshot in
+## `playtest_data/M1.2/run_log_2026-06-19.jsonl` with
+## `lvl_room_count=19, lvl_size_mult=4.0, r1_enabled, r1_catch_radius=23.3,
+## r1_spawn_count=3, r4_enabled` (the 7-run cell). Four values DIVERGE from that
+## snapshot to make the preset trap-free (BUG6 pairing) and to honour F1's "R4
+## vision/maze ON" (M1.2 ran R4's disorientation config-disabled):
+##   - r4_lost_proxy_threshold: 0.0 -> 0.5   (disposition D; M1.2 ran the trap 0.0)
+##   - r4_vision_radius:        0.0 -> 64.0  (F1 "vision ON"; 64.0 is a Director-played
+##                                            value from the vision-on ba745e1 variant)
+##   - r4_fog_enabled:        false -> true  (F1 "vision/maze ON"; matches that variant)
+##   - r1_catch_radius:        23.3 -> 24.0  (clears the player_r+hazard_r=24px physical
+##                                            floor so the catch test can trip — the most-
+##                                            fun cell sat 0.7px under it)
+## These four are flagged in the J1 worklog and are sweepable in the first M1.3 re-gate.
+static func make_default_play_preset() -> RunConfig:
+	var c := RunConfig.new()                  # starts from the all-off control (NEVER mutated)
+
+	# --- Level scale: ON, ~19 rooms, big rooms (the new slider floor 4.0). ---
+	c.lvl_enabled = true
+	c.lvl_room_count = 19                      # disposition B: 19 (sweepable)
+	c.lvl_size_mult = 4.0                       # the new RANGE_MULT floor / most-fun cell size
+
+	# --- R1 pursuing hazard: the most-fun ba745e1 cell, verbatim (catch_radius floored). ---
+	c.r1_enabled = true
+	c.r1_depth_threshold = 1
+	c.r1_linger_seconds = 8.1
+	c.r1_chase_speed = 56.0
+	c.r1_speed_per_depth = 18.9
+	c.r1_catch_radius = 24.0                    # was 23.3 in-log; floored to clear the 24px collision floor
+	c.r1_catch_radius_per_depth = 10.5
+	c.r1_catch_kills = true
+	c.r1_spawn_count = 3
+
+	# --- R4 vision/maze: the most-fun cell's branching, made NON-INERT (F1 + BUG6). ---
+	c.r4_enabled = true
+	c.r4_branch_chance_base = 0.43
+	c.r4_branch_per_depth = 43.8
+	c.r4_max_branch_depth = 5
+	c.r4_vision_radius = 64.0                   # was 0.0 (trapped) -> non-inert, Director-played value
+	c.r4_vision_tighten_per_depth = 0.0
+	c.r4_fog_enabled = true                     # F1: vision/maze ON
+	c.r4_lost_proxy_threshold = 0.5            # was 0.0 (trapped) -> non-inert (disposition D)
+
+	# --- R2 / R3 deliberately OFF (Director F1: "R2 and R3 OFF by default"). ---
+	# r2_enabled / r3_enabled stay false (all-off defaults) — do not touch.
+
+	# Provably trap-free: every enabled opposition's load-bearing magnitude is non-inert,
+	# so the M1.3 re-gate measures R1+R4 for real (no silent dead-config like M1.2).
+	assert(c.inert_enabled_oppositions().is_empty(),
+		"make_default_play_preset(): preset has an inert enabled opposition: %s"
+			% str(c.inert_enabled_oppositions()))
+	return c

@@ -38,7 +38,7 @@ const RANGE_RADIUS := Vector2(0, 64)
 const RANGE_MAGNITUDE := Vector2(0, 100)
 ## I1 (M1.2) level-scale ranges (greybox scrub conveniences; SpinBox types past these).
 const RANGE_COUNT := Vector2(1, 30)   # lvl_room_count slider span (override is >=1)
-const RANGE_MULT := Vector2(0.5, 4)   # lvl_size_mult slider span (0.25 steps -> integer px/cell)
+const RANGE_MULT := Vector2(4.0, 40.0)   # J1 (M1.3): lvl_size_mult slider re-ranged to the Director's [floor 4.0, max 40.0] (0.25 steps -> integer px/cell; SpinBox still types past via allow_greater)
 
 ## Per-section descriptor: prefix (Meta = ""), the CSV title/gloss keys, the master
 ## field name ("" = none, Meta), whether the section is collapsible.
@@ -122,13 +122,18 @@ var _rows: Dictionary = {}                # field_name -> the bound control node
 var _section_bodies: Dictionary = {}      # prefix -> the body container (dim target)
 var _section_chips: Dictionary = {}       # prefix -> the ON/OFF + summary chip Label
 var _summary_label: Label = null
+var _trap_label: Label = null             # J1/BUG6: non-blocking inert-opposition warn line
 
 # Built UI roots (created in _build_ui).
 var _scroll_vbox: VBoxContainer = null
 
 
 func _ready() -> void:
-	_cfg = _load_default()
+	# J1 (M1.3): the CFG rail BOOTS INTO the default play-preset (the Director's most-fun
+	# M1.2 stack — LVL on/19 rooms/size 4.0, R1 + R4 on, R2/R3 off), NOT the all-off control.
+	# Reset (_on_reset_pressed -> _load_default) still returns the all-off baseline, so the
+	# permanent control (fp=e943ac9c8bc1) is one click away.
+	_cfg = _make_boot_config()
 	_build_ui()
 	_assert_full_coverage()               # build-time: no RunConfig knob left unreachable
 	_refresh_all()
@@ -136,8 +141,16 @@ func _ready() -> void:
 
 # --- Working config -----------------------------------------------------------
 
+## The config the CFG rail OPENS INTO = the default play-preset (J1 / Director F1). The
+## factory builds on a fresh all-off RunConfig.new(), so the all-off control is never
+## mutated; Reset still reaches it via _load_default().
+func _make_boot_config() -> RunConfig:
+	return RunConfig.make_default_play_preset()
+
+
 ## Duplicate the on-disk all-off default so the working config is independent and the
 ## .tres is never mutated. Falls back to a fresh RunConfig (also all-off) if missing.
+## This is the ALL-OFF CONTROL — Reset returns here (the permanent baseline), unchanged.
 func _load_default() -> RunConfig:
 	var base := load(DEFAULT_CFG_PATH) as RunConfig
 	if base == null:
@@ -242,6 +255,18 @@ func _build_summary_bar(parent: Control) -> void:
 	_summary_label.name = "SummaryLabel"
 	_summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	bar.add_child(_summary_label)
+
+	# J1 folds BUG6's config-trap guard into CFG: a WARN-ONLY line that lists every
+	# enabled-but-inert opposition (RunConfig.inert_enabled_oppositions()). It NEVER
+	# blocks Start (a single-axis "branching-only R4" cell is a legitimate experiment) —
+	# it only reports, so a dead-config run can't silently invalidate a re-gate again.
+	# Hidden when the config is trap-free (the boot preset is, by construction).
+	_trap_label = Label.new()
+	_trap_label.name = "TrapWarnLabel"
+	_trap_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_trap_label.add_theme_color_override("font_color", Color(0.96, 0.78, 0.30))  # amber; text "⚠" carries it too (non-colour-only)
+	_trap_label.visible = false
+	bar.add_child(_trap_label)
 
 	# Reset is part of the highest-contrast legibility layer — make it prominent.
 	var reset := Button.new()
@@ -647,6 +672,25 @@ func _refresh_summary() -> void:
 		"r4": _flag(bool(_cfg.get("r4_enabled"))),
 		"seed": seed_str,
 	})
+	_refresh_trap_warning()
+
+
+## J1/BUG6 config-trap warn line. Lists every enabled-but-inert opposition the working
+## config holds (RunConfig.inert_enabled_oppositions()) so the Director sees a dead
+## section before committing the run. WARN-ONLY — never blocks Start; hidden when clean.
+func _refresh_trap_warning() -> void:
+	if _trap_label == null:
+		return
+	var traps := _cfg.inert_enabled_oppositions()
+	if traps.is_empty():
+		_trap_label.visible = false
+		_trap_label.text = ""
+		return
+	var parts: PackedStringArray = PackedStringArray()
+	for id in traps:
+		parts.append(tr("CFG_TRAP_%s" % id.to_upper()))
+	_trap_label.text = tr("CFG_TRAP_WARN").format({"traps": ", ".join(parts)})
+	_trap_label.visible = true
 
 
 func _set_body_dimmed(prefix: String, dimmed: bool) -> void:
