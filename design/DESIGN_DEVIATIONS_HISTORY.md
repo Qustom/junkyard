@@ -242,3 +242,20 @@ All 5 Wave-1 tasks (J5, BUG6, DLV2, DLV1, J1) integrated on `main`, all-off fp b
 **Non-deviation notes (tracked, not dispositions):** DLV1's real `butler push` is **human-gated** (sandbox can't reach `broth.itch.ovh`) — run `tools/push_itch.sh` once on a real network per `SETUP.md §1a`. J1's **live mult-40 window pass** ("void feel" at 640 px/cell) → on the RG1 playtest checklist (headless smoke passed).
 
 **M1.3 Wave 1 close-out complete (2026-06-19).** 3 items: **2 Reviewed, 1 Addressed** (the preset/trap reapply). `DESIGN_DEVIATIONS.md` empty between waves. **M1.3 Wave 1 (default preset + size slider, depth-counter fix, hazard latch + warn-only traps, itch HTML5 delivery + web telemetry export) is complete** on `main`. **Next: Wave 2 — J2→J3→J4 (density & spatial), then re-gate.**
+
+---
+
+## M1.3 Wave 2 (Density & spatial) — Director-evaluated 2026-06-20
+
+All 3 Wave-2 tasks (J2 enemy spread, J3 per-room density, J4 corridor lever + telemetry) integrated on `main`
+(`4140d9f`, `4d54487`, `200f38c`; signal pre-decl `12e8932`); all-off fp byte-identical (e943ac9c8bc1); 46/46 knobs; schema v1. Close-out sweep:
+
+| # | Item | Verdict | Reapplied to |
+|---|---|---|---|
+| W2.3-1 | J2 `curve` distribution mode (2) ships the locked `pow(t,1.6)`, which is **shallow-biased** (`pow(t,1.6) ≤ t` for t∈[0,1]) — it thins hazards toward the deep end, opposite the "clusters deep" intent. Built but **preset-OFF** (booted preset = `even_spread`), so nothing measured changes this gate; `test_hazard_spread.gd` is locked to the real behaviour. | **Reviewed** | As-built note appended to `J2_enemy_spread.md` (Director-Reviewed: leave as-is; flip the exponent + fix the comment only if `curve` is swept ON at RG2). |
+
+**Non-deviation notes (tracked, not dispositions):**
+- **J3 Q-F wake-cadence observation:** density hazards seeded in deep big rooms may wake immediately (per-hazard R1 depth gate) → deep big rooms could read instant-death. Not a J3 change — an **R1 `r1_depth_threshold`/`r1_linger_seconds` preset-tuning** call for the RG1 playtest. On the RG1 checklist.
+- **Preset-value fun calls (RG2 sweeps, not deviations):** J2 count(5)/min-depth(1)/curve-on?, J3 density(1.0)/cap(3)/min-area(64)/metric(cell-area)/loot-off, J4 `lvl_corridor_weight_mult`(0.5)/`lvl_short_corridors`(true) — all Director sweeps against the new room scale at RG2, not values this build fixes.
+
+**M1.3 Wave 2 close-out complete (2026-06-20).** 1 deviation: **Reviewed** (J2 curve as-built note). `DESIGN_DEVIATIONS.md` empty between waves. **M1.3 Wave 2 (enemy depth-spread + per-room cell-area density + corridor-rarity generator lever & corridor-time telemetry) is complete** on `main`; baseline byte-unchanged. **Next: Wave 3 — the re-gate** (RG1 build+verify + itch publish → human playtest → RG2 analysis vs M1.0/M1.1/M1.2 → RG3 verdict in `G4_findings_M1.3.md`).

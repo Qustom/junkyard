@@ -15,20 +15,9 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*Last close-out: **M1.2 Wave 1** (2026-06-19) — 4 deviations, all Reviewed, archived to
-`DESIGN_DEVIATIONS_HISTORY.md`.*
+*Last close-out: **M1.3 Wave 2** (2026-06-20) — 1 deviation (J2 curve as-built), Reviewed, archived to
+`DESIGN_DEVIATIONS_HISTORY.md`. This file is empty between waves.*
 
 ---
 
-`[2026-06-19] J2 (M1.3 Wave 2) — curve distribution mode is shallow-biased, not "deeper-biased"` —
-The locked J2 spec §B.2 + Director Disposition call mode 2 `curve` "deeper-biased `pow(t,1.6)`"
-(spec comment: `# >1 → clusters deep`), but `pow(t, 1.6)` for `t ∈ [0,1]` returns values `<= t`,
-so it maps intermediate hazards SHALLOWER and the density actually thins toward the deep end
-(opposite of the stated intent). · **Why I shipped it anyway:** the formula is the *locked* spec
-pseudocode, and `curve` is **built but preset-OFF** (the booted preset uses `even_spread`), so this
-changes no booted/measured experience this gate; building to the literal spec keeps the lock honest
-and the deviation visible. · **Recommendation (needs Director review — fun/feel + a 1-line spec-text
-fix):** leave the formula as-specced for the M1.3 gate; if/when `curve` is swept on at RG2, flip the
-direction — use `pow(t, e<1)` (e.g. `0.6`) or `1 - pow(1 - t, e)` to actually cluster deep — and
-correct the spec comment. The `test_hazard_spread.gd` (c) assertion is locked to the real
-`pow(t,1.6) <= even` behaviour so the build won't silently drift.
+*(empty — no un-assessed deviations)*

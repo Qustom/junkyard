@@ -285,3 +285,13 @@ Fresh-eyes reviewer (not the author). I read the target doc, then verified **eve
 - **Build structure (J2+J3):** built as **one population system on the shared spawn seam**, single owner — **J2 lands first on `main`, J3 additive/sequential** reusing J2's per-depth helper (`_hazard_spawn_position(band, depth, index)`); J1 pre-declares both tasks' knobs in Wave 1. (Reconciled at Phase 4: the two resolvers' ownership sketches → this single sequence; helper names unified at the Wave-2 brief.)
 
 **Design LOCKED.**
+
+## As-Built Note (Wave-2 close-out, Director-Reviewed 2026-06-20)
+
+⚠ **`curve` mode (2) as-built is SHALLOW-biased, not deeper-biased.** It ships the locked `pow(t, 1.6)`
+formula, but for `t ∈ [0,1]` `pow(t,1.6) ≤ t`, so intermediate hazards land *shallower* and density thins
+toward the deep end — opposite of the "clusters deep" intent in the Disposition/comment. **Director
+disposition: Reviewed (leave as-is).** It changes nothing this gate (`curve` is built but **preset-OFF**;
+the booted preset uses `even_spread`). `test_hazard_spread.gd` asserts the real `pow(t,1.6) ≤ even`
+behaviour so it can't silently drift. **If `curve` is swept ON at RG2** and "deeper = denser" is wanted,
+flip the exponent (`pow(t, e<1)`, e.g. `0.6`, or `1 - pow(1 - t, e)`) and correct the comment then.
