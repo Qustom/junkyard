@@ -61,6 +61,8 @@ const MANIFEST := {
 		"r1_enabled", "r1_depth_threshold", "r1_linger_seconds", "r1_chase_speed",
 		"r1_speed_per_depth", "r1_catch_radius", "r1_catch_radius_per_depth",
 		"r1_catch_kills", "r1_spawn_count",
+		# J2 (M1.3) — depth-spread distribution: an enum (OptionButton) + an int (slider+spin).
+		"r1_spawn_distribution", "r1_spread_min_depth",
 	],
 	"r2_": [
 		"r2_enabled", "r2_mechanism", "r2_cost_magnitude", "r2_cost_per_depth",
@@ -89,6 +91,9 @@ const FIELD_RANGE := {
 	"r1_catch_radius": RANGE_RADIUS,
 	"r1_catch_radius_per_depth": RANGE_MAGNITUDE,
 	"r1_spawn_count": RANGE_DEPTH,
+	# J2 (M1.3) — r1_spawn_distribution is an @export_enum (handled as an OptionButton, no
+	# numeric range); r1_spread_min_depth is an int depth (same scrub range as the thresholds).
+	"r1_spread_min_depth": RANGE_DEPTH,
 	"r2_cost_magnitude": RANGE_MAGNITUDE,
 	"r2_cost_per_depth": RANGE_MAGNITUDE,
 	"r2_depth_threshold": RANGE_DEPTH,
