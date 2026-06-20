@@ -65,8 +65,8 @@ occlusion-OFF + maze-aware `r4_no_effect` trap). Default boot preset live. ⚠ b
 ### RG1 — M1.3 playtest build + verify
 - Milestone: M1.3 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: J1,J2,J3,J4,J5,BUG6,DLV1,DLV2
 - Spec: author from `design/M1_1_Tasks/RG1_playtest_build.md` + the M1.2 `RG1_playtest_build.md` template
-- Goal: assemble + verify the M1.3 loop (preset boots, every knob fires, traps warn, corridor telemetry, config-marked logs); auto-push via DLV1; DLV2 export available.
-- Done when: a fresh build runs the full loop with the fixes; per-run config works; telemetry clean; multiple runs/session.
+- Goal: assemble + verify the M1.3 loop (preset boots, every knob fires, traps warn, corridor telemetry, config-marked logs); **publish the playtest build to itch** via `bash tools/push_itch.sh` (`BUTLER=/mnt/c/wsl-libraries/butler/butler` if aliased) — the standing playtest-gate step (CLAUDE.md); DLV2 export available for web telemetry.
+- Done when: a fresh build runs the full loop with the fixes; per-run config works; telemetry clean; multiple runs/session; **the build is live on `qusto/the-far-yard:html5`** (verify `butler status`).
 
 ### RG2 — M1.3 telemetry analysis vs M1.0/M1.1/M1.2
 - Milestone: M1.3 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data

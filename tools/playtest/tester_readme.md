@@ -22,6 +22,23 @@ axis *legible and fair* and adds a *level scale*.** What changed since last roun
 The question this round: **now that the gamble is legible and the levels are worth traversing, is
 "push deeper vs extract now" a real, tense, fun decision?**
 
+## Publishing a playtest build (MAINTAINER step — part of every re-gate / playtest)
+
+Each playtest build is **published to itch.io** as part of producing it (RG1 / the playtest gate). Run, from the repo root:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"      # godot
+export BUTLER=/mnt/c/wsl-libraries/butler/butler   # only if `butler` is a shell alias (scripts can't see aliases)
+bash tools/push_itch.sh                    # stamp → export Web preset → butler push qusto/the-far-yard:html5
+```
+
+Prereqs (one-time, see `SETUP.md §1a`): butler installed + `butler login` (or `BUTLER_API_KEY`), Godot 4.6.3 web export
+templates, and the itch project's **SharedArrayBuffer toggle ON** + password page. Notes: the godot web export often
+core-dumps on *exit* after writing the full artifact set — that's harmless, the script gates on the artifacts and pushes
+anyway. Confirm with `$BUTLER status qusto/the-far-yard:html5`. **Live page:** `https://qusto.itch.io/the-far-yard`
+(password-gated; play in **Chrome/Edge** only). The Windows build stays the proven telemetry vehicle; web is the quick
+feel-read (web telemetry comes back via the in-game "Export telemetry" button, DLV2).
+
 ## How to run
 
 - **Windows (the build we read the data from):** unzip the build, run `TheFarYard.exe`.

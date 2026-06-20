@@ -31,7 +31,15 @@ EXPORT_PRESET="Web"
 EXPORT_DIR="build/web"
 
 # --- 0. tooling sanity ----------------------------------------------------------
-command -v butler >/dev/null 2>&1 || { echo "ERROR: butler not on PATH — see SETUP.md §1." >&2; exit 1; }
+# Resolve butler: honor $BUTLER, else PATH, else the known WSL-mounted install (it is
+# often a shell ALIAS, which scripts don't see — so PATH lookup alone can miss it).
+BUTLER="${BUTLER:-butler}"
+if ! command -v "$BUTLER" >/dev/null 2>&1; then
+  for cand in /mnt/c/wsl-libraries/butler/butler "$HOME/.local/bin/butler"; do
+    [ -x "$cand" ] && { BUTLER="$cand"; break; }
+  done
+fi
+command -v "$BUTLER" >/dev/null 2>&1 || [ -x "$BUTLER" ] || { echo "ERROR: butler not found — set \$BUTLER or put it on PATH (see SETUP.md §1)." >&2; exit 1; }
 command -v godot  >/dev/null 2>&1 || { echo "ERROR: godot not on PATH (export PATH=\$HOME/.local/bin:\$PATH)." >&2; exit 1; }
 
 # --- 1. stamp the build id the same way CI does (BuildVersion reads build_info_gen.gd) ---
@@ -41,7 +49,12 @@ USER_VERSION="m1-$(date -u +%Y%m%d)-${SHA}"
 
 # --- 2. export the Web preset (templates must be installed) ----------------------
 mkdir -p "$EXPORT_DIR"
-godot --headless --path . --export-release "$EXPORT_PRESET" "$EXPORT_DIR/index.html"
+# NOTE: Godot 4.6.3 headless `--export-release` for Web frequently writes the full
+# artifact set, then ABORTS on exit (core dump during teardown, AFTER "DONE savepack").
+# That nonzero exit is NOT an export failure — so we ignore the exit code here and gate
+# on the artifact-existence checks below instead (the script's real success criterion).
+godot --headless --path . --export-release "$EXPORT_PRESET" "$EXPORT_DIR/index.html" || \
+  echo "(godot exited nonzero — likely the known teardown crash; verifying artifacts...)" >&2
 # A produced file is the minimum proof — a partial export can still emit, but a MISSING
 # entry file is a hard fail. Also require the wasm + pck (the load-bearing payload).
 test -f "$EXPORT_DIR/index.html" || { echo "ERROR: export produced no $EXPORT_DIR/index.html" >&2; exit 1; }
@@ -67,5 +80,6 @@ fi
 export BUTLER_API_KEY
 
 # --- 4. push the DIRECTORY to the :html5 channel --------------------------------
-butler push "$EXPORT_DIR" "$ITCH_TARGET" --userversion "$USER_VERSION"
+# If BUTLER_API_KEY is empty here, butler falls back to its saved `butler login` creds.
+"$BUTLER" push "$EXPORT_DIR" "$ITCH_TARGET" --userversion "$USER_VERSION"
 echo "pushed ${ITCH_TARGET} @ ${USER_VERSION}"
