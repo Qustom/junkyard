@@ -33,6 +33,54 @@ gh --version             # gh version 2.94.0
 python3 -c "import PIL, numpy; print('placeholder gen ready')"
 ```
 
+### 1a. Export templates + butler (for local exports & itch publishing — DLV1)
+
+A real `--export-release` (Win64 *or* Web) needs the Godot **export templates** for the pinned
+version installed where the editor looks. The **one `.tpz` carries every platform** (Windows + web
++ …), so this single install unblocks both the Windows playtest build and the itch HTML5 web build.
+CI fetches these per-run (see `.github/workflows/nightly.yml`); install them once locally too:
+
+```bash
+# Export templates — one-time, version-EXACT (4.6.3-stable templates only work with 4.6.3-stable).
+tpl="https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz"
+curl -sL -o /tmp/templates.tpz "$tpl"
+tdir="$HOME/.local/share/godot/export_templates/4.6.3.stable"   # note the version-string normalization
+mkdir -p "$tdir"
+python3 -c "import zipfile; zipfile.ZipFile('/tmp/templates.tpz').extractall('/tmp/tpl')"
+mv /tmp/tpl/templates/* "$tdir/"
+ls "$tdir" | grep -E 'web|wasm'    # expect web_release.zip + web_nothreads_release.zip (the fallback)
+```
+
+```bash
+# butler (itch.io upload CLI) — lands in ~/.local/bin alongside godot (shares the §0 PATH).
+# NOTE: butler is distributed ONLY from broth.itch.ovh; if that host is unreachable from your
+# network, install butler on a machine that can reach it.
+curl -sL -o /tmp/butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+python3 -c "import zipfile; zipfile.ZipFile('/tmp/butler.zip').extractall('$HOME/.local/bin/')"
+chmod +x "$HOME/.local/bin/butler"
+butler -V          # verify (PATH already has ~/.local/bin)
+```
+
+Now a local web export + push works via `bash tools/push_itch.sh` (it stamps the build, exports the
+`Web` preset to `build/web/`, resolves the itch key from `BUTLER_API_KEY` or the `# Itch.io` section
+of `APIKEYS.md` **without printing it**, and pushes `qusto/the-far-yard:html5`).
+
+**Human-only prerequisites for an actual publish** (butler pushes *builds*, not page settings):
+
+1. **`BUTLER_API_KEY` repo secret** — generate at itch.io → Account → Settings → API Keys; add as a
+   GitHub repo secret named `BUTLER_API_KEY` (this gates the nightly publish). Locally, the key is
+   read from `APIKEYS.md` (gitignored — **never commit it**).
+2. **The itch project `qusto/the-far-yard`** — created on the **personal** account (itch username
+   `qusto`, distinct from the GitHub login `Qustom`); set **Visibility = Restricted/Draft + a project
+   password** (private playtest); **Kind of project = HTML / playable-in-browser**.
+3. **"SharedArrayBuffer support" toggle = ON** on the HTML5 upload — the threaded web build needs
+   cross-origin isolation. The threaded build is **CHROMIUM-ONLY** on itch (Firefox lacks the
+   `credentialless` COEP scheme itch serves) — play in **Chrome or Edge**. Fallback if the toggle is
+   fiddly: a single-threaded export (`variant/thread_support=false` in `export_presets.cfg`, which
+   uses the installed `web_nothreads_release.zip` — no SAB/headers, a perf cost, but portable).
+4. **Confirm one manual push** — `bash tools/push_itch.sh` (or `butler push build/web
+   qusto/the-far-yard:html5`) once, before the nightly cron is relied on.
+
 ## 2. Git LFS
 
 Configured via `.gitattributes` (images/audio/fonts/xlsx → LFS; `.gd/.tres/.tscn/.import` stay plain text).
