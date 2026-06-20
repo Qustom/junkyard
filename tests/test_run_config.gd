@@ -117,17 +117,23 @@ func _ready() -> void:
 	t_r3.r3_threshold_levels = PackedFloat32Array()
 	_assert_traps(t_r3.inert_enabled_oppositions(), ["r3_no_thresholds"], "r3 empty thresholds", failures)
 
-	# R4 lost-proxy trap: enabled but threshold <= 0.
-	var t_r4lp := _populated_config()
-	t_r4lp.r4_lost_proxy_threshold = 0.0
-	_assert_traps(t_r4lp.inert_enabled_oppositions(), ["r4_no_lost_proxy"], "r4 no lost-proxy", failures)
+	# R4 fully-inert trap (M1.3-refined): enabled, maze NOT branching, vision off, lost off
+	# → the whole opposition does nothing. (_populated_config has no maze, so zero vision+lost.)
+	var t_r4dead := _populated_config()
+	t_r4dead.r4_vision_radius = 0.0
+	t_r4dead.r4_fog_enabled = false
+	t_r4dead.r4_lost_proxy_threshold = 0.0
+	_assert_traps(t_r4dead.inert_enabled_oppositions(), ["r4_no_effect"], "r4 fully inert", failures)
 
-	# R4 vision trap: enabled but radius <= 0 — NOT gated on r4_fog_enabled
-	# (Correction 1). Must fire even with fog OFF.
-	var t_r4v := _populated_config()
-	t_r4v.r4_vision_radius = 0.0
-	t_r4v.r4_fog_enabled = false
-	_assert_traps(t_r4v.inert_enabled_oppositions(), ["r4_no_vision"], "r4 no vision (fog off)", failures)
+	# Maze-only R4 (branching ON, vision/fog/lost OFF) is the Director-blessed default shape
+	# (M1.3 "match what I played — occlusion off") → must NOT be flagged.
+	var t_r4maze := _populated_config()
+	t_r4maze.r4_vision_radius = 0.0
+	t_r4maze.r4_fog_enabled = false
+	t_r4maze.r4_lost_proxy_threshold = 0.0
+	t_r4maze.r4_branch_chance_base = 0.43
+	t_r4maze.r4_max_branch_depth = 5
+	_assert_traps(t_r4maze.inert_enabled_oppositions(), [], "r4 maze-only (blessed)", failures)
 
 	# R1 no-spawn trap: enabled but spawn_count <= 0 — must report r1_no_spawn ALONE
 	# (not also r1_catch_radius_too_small, which is gated on spawn_count>0).
@@ -145,12 +151,13 @@ func _ready() -> void:
 	if t_r1ok.inert_enabled_oppositions().has("r1_catch_radius_too_small"):
 		failures.append("inert_enabled_oppositions(): radius exactly 24.0 flagged (floor is inclusive)")
 
-	# Union: multiple coexisting traps.
+	# Union: multiple coexisting traps (R3 empty thresholds + a fully-inert R4).
 	var t_multi := _populated_config()
 	t_multi.r3_threshold_levels = PackedFloat32Array()
+	t_multi.r4_vision_radius = 0.0
 	t_multi.r4_lost_proxy_threshold = 0.0
 	_assert_traps(t_multi.inert_enabled_oppositions(),
-		["r3_no_thresholds", "r4_no_lost_proxy"], "multi-trap union", failures)
+		["r3_no_thresholds", "r4_no_effect"], "multi-trap union", failures)
 
 	# === Case 7: J1 (M1.3) make_default_play_preset() ========================
 	# The named default play-preset is the Director's most-fun M1.2 stack, built ON TOP
@@ -170,10 +177,12 @@ func _ready() -> void:
 		failures.append("preset: lvl_room_count == %d, expected 19" % preset.lvl_room_count)
 	if not is_equal_approx(preset.lvl_size_mult, 4.0):
 		failures.append("preset: lvl_size_mult == %f, expected 4.0" % preset.lvl_size_mult)
-	# Config-trap guard (disposition D + BUG6 pairing): the preset exercises every enabled
-	# opposition — R4 lost-proxy non-zero, and the whole preset is provably trap-free.
-	if preset.r4_lost_proxy_threshold <= 0.0:
-		failures.append("preset: r4_lost_proxy_threshold must be > 0 (M1.2 config-trap was 0.0)")
+	# Match-played shape (M1.3 close-out "occlusion off"): R4 maze ON, vision/fog/lost OFF.
+	if preset.r4_max_branch_depth <= 0 or preset.r4_branch_chance_base <= 0.0:
+		failures.append("preset: R4 maze must be active (branching) — it is the only non-inert R4 feature")
+	if preset.r4_vision_radius > 0.0 or preset.r4_fog_enabled or preset.r4_lost_proxy_threshold > 0.0:
+		failures.append("preset: R4 vision/fog/lost must be OFF (Director: match what I played — occlusion off)")
+	# Config-trap guard (BUG6 pairing): a maze-only R4 is blessed, so the whole preset is trap-free.
 	if not preset.inert_enabled_oppositions().is_empty():
 		failures.append("preset: has an inert enabled opposition (must be trap-free): %s"
 			% str(preset.inert_enabled_oppositions()))
@@ -184,7 +193,7 @@ func _ready() -> void:
 
 	# === Verdict ============================================================
 	if failures.is_empty():
-		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs, BUG6 inert_enabled_oppositions() detects all 5 traps and []-clean for all-off + populated, J1 make_default_play_preset() is the F1 stack (LVL/R1/R4 on, R2/R3 off, 19 rooms, size 4.0), trap-free, and does NOT leak into the all-off control." % expected_keys.size())
+		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs, BUG6 inert_enabled_oppositions() detects all 4 traps (r3_no_thresholds/r4_no_effect/r1_no_spawn/r1_catch_radius_too_small), blesses maze-only R4, and []-clean for all-off + populated, J1 make_default_play_preset() is the F1 stack (LVL/R1 on, R4 maze-only/occlusion-off, R2/R3 off, 19 rooms, size 4.0), trap-free, and does NOT leak into the all-off control." % expected_keys.size())
 		get_tree().quit(0)
 	else:
 		for f in failures:

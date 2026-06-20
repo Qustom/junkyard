@@ -267,16 +267,16 @@ func inert_enabled_oppositions() -> PackedStringArray:
 	# `while _levels_crossed < levels.size()` loop runs 0 iterations on an empty array).
 	if r3_enabled and r3_threshold_levels.is_empty():
 		out.append("r3_no_thresholds")
-	# R4 lost-proxy — never accumulates (lost_proxy.gd:40 self-disables when
-	# r4_lost_proxy_threshold <= 0.0 → set_process(false); no nav_lost_proxy emitted).
-	if r4_enabled and r4_lost_proxy_threshold <= 0.0:
-		out.append("r4_no_lost_proxy")
-	# R4 vision — the ENTIRE vision overlay is inert (vision_fog.gd:138 self-disables
-	# when r4_vision_radius <= 0.0). NOT gated on r4_fog_enabled: r4_fog_enabled is a
-	# separate knob inside the already-active overlay, so radius 0 kills vision
-	# regardless (Phase-3 Correction 1 — the most common M1.2 dead-R4 case).
-	if r4_enabled and r4_vision_radius <= 0.0:
-		out.append("r4_no_vision")
+	# R4 — warns ONLY when the whole opposition is inert: enabled but the maze does not
+	# branch AND vision occlusion is off AND the lost-proxy never fires. A maze-only R4
+	# (branching ON, vision/fog/lost OFF) is a LEGITIMATE, Director-blessed config — it IS
+	# the M1.3 default play-preset ("match what I played — occlusion off", M1.3 close-out
+	# disposition) — so it must NOT be flagged. (Supersedes the M1.2-era separate
+	# r4_no_vision / r4_no_lost_proxy traps, which would have nagged on the intended
+	# default; the maze still gives R4 a visible effect, so it is not a dead config.)
+	var r4_maze_active := r4_max_branch_depth > 0 and (r4_branch_chance_base > 0.0 or r4_branch_per_depth > 0.0)
+	if r4_enabled and not r4_maze_active and r4_vision_radius <= 0.0 and r4_lost_proxy_threshold <= 0.0:
+		out.append("r4_no_effect")
 	# R1 no-spawn — master on but 0 entities ever instantiated (the spawn seam skips it).
 	if r1_enabled and r1_spawn_count <= 0:
 		out.append("r1_no_spawn")
@@ -296,8 +296,8 @@ func inert_enabled_oppositions() -> PackedStringArray:
 # =============================================================================
 ## Builds the Director's most-fun M1.2 stack as a SECOND, named RunConfig — level
 ## scale ON (~19 rooms, big rooms at the new slider floor 4.0), R1 pursuing hazard
-## ON, R4 vision/maze ON (non-inert so the M1.3 re-gate actually exercises it), with
-## R2/R3 deliberately OFF (Director F1, `G4_findings_M1.2.md` §5). This is what the
+## ON, R4 **maze ON but vision occlusion OFF** (match-what-I-played, M1.3 close-out),
+## with R2/R3 deliberately OFF (Director F1, `G4_findings_M1.2.md` §5). This is what the
 ## CFG rail (`config_menu._ready`) and the no-CFG fallback (`main_game.gd`) seed.
 ##
 ## LOAD-BEARING CONTRACT (M1.3 Breakdown §2): this is built ON TOP of a fresh all-off
@@ -310,17 +310,15 @@ func inert_enabled_oppositions() -> PackedStringArray:
 ## most-fun M1.2 cell — the dominant `m1-20260619-ba745e1` snapshot in
 ## `playtest_data/M1.2/run_log_2026-06-19.jsonl` with
 ## `lvl_room_count=19, lvl_size_mult=4.0, r1_enabled, r1_catch_radius=23.3,
-## r1_spawn_count=3, r4_enabled` (the 7-run cell). Four values DIVERGE from that
-## snapshot to make the preset trap-free (BUG6 pairing) and to honour F1's "R4
-## vision/maze ON" (M1.2 ran R4's disorientation config-disabled):
-##   - r4_lost_proxy_threshold: 0.0 -> 0.5   (disposition D; M1.2 ran the trap 0.0)
-##   - r4_vision_radius:        0.0 -> 64.0  (F1 "vision ON"; 64.0 is a Director-played
-##                                            value from the vision-on ba745e1 variant)
-##   - r4_fog_enabled:        false -> true  (F1 "vision/maze ON"; matches that variant)
-##   - r1_catch_radius:        23.3 -> 24.0  (clears the player_r+hazard_r=24px physical
-##                                            floor so the catch test can trip — the most-
-##                                            fun cell sat 0.7px under it)
-## These four are flagged in the J1 worklog and are sweepable in the first M1.3 re-gate.
+## r1_spawn_count=3, r4_enabled` (the 7-run cell), with R4's maze ON and vision/fog/lost
+## OFF — exactly as played. **Only ONE value diverges** from that snapshot:
+##   - r1_catch_radius: 23.3 -> 24.0  (clears the player_r+hazard_r=24px physical floor so
+##                                     the catch test can trip — the most-fun cell sat 0.7px
+##                                     under it; without this the hazard could never catch).
+## (Earlier J1 turned R4 occlusion/fog/lost ON per a literal reading of F1 "vision/maze ON";
+## the Director's M1.3 close-out call corrected this to "match what I played — occlusion OFF",
+## so R4 vision_radius/fog/lost-proxy are back at the played 0. BUG6's r4_no_effect trap was
+## refined so this maze-only R4 is not flagged.) The catch-radius floor is sweepable in RG1.
 static func make_default_play_preset() -> RunConfig:
 	var c := RunConfig.new()                  # starts from the all-off control (NEVER mutated)
 
@@ -340,15 +338,20 @@ static func make_default_play_preset() -> RunConfig:
 	c.r1_catch_kills = true
 	c.r1_spawn_count = 3
 
-	# --- R4 vision/maze: the most-fun cell's branching, made NON-INERT (F1 + BUG6). ---
+	# --- R4 maze: the most-fun cell VERBATIM — branching ON, vision occlusion OFF. ---
+	# Director M1.3 close-out call ("match what I played — occlusion off"): the played fun
+	# cell had R4's maze ON but vision/fog/lost-proxy all OFF (config-trapped at 0 in M1.2).
+	# The default mirrors that exactly — a deliberate maze-only R4, NOT a dead one (BUG6's
+	# r4_no_effect trap blesses maze-only R4). Real occlusion/fog/lost are sweepable M1.3
+	# re-gate variants, not the default.
 	c.r4_enabled = true
 	c.r4_branch_chance_base = 0.43
 	c.r4_branch_per_depth = 43.8
 	c.r4_max_branch_depth = 5
-	c.r4_vision_radius = 64.0                   # was 0.0 (trapped) -> non-inert, Director-played value
+	c.r4_vision_radius = 0.0                    # occlusion OFF (match played) — node self-disables
 	c.r4_vision_tighten_per_depth = 0.0
-	c.r4_fog_enabled = true                     # F1: vision/maze ON
-	c.r4_lost_proxy_threshold = 0.5            # was 0.0 (trapped) -> non-inert (disposition D)
+	c.r4_fog_enabled = false                    # fog OFF (match played)
+	c.r4_lost_proxy_threshold = 0.0            # lost-proxy OFF (match played)
 
 	# --- R2 / R3 deliberately OFF (Director F1: "R2 and R3 OFF by default"). ---
 	# r2_enabled / r3_enabled stay false (all-off defaults) — do not touch.
