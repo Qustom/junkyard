@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.3
 - **Branch:** gp/BUG6-m13
-- **Commit:** 1d7897c2c8ffc237dc4cd196646207f396e030b5
+- **Commit:** 921174e86bd106cc1bb16dc8de0269d26160de5c (build) + worklog-SHA fixup follow-up
 
 ## What changed
 Two telemetry-trustworthiness correctness fixes from the M1.2 re-gate, per the LOCKED spec
