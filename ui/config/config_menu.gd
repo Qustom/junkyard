@@ -39,6 +39,10 @@ const RANGE_MAGNITUDE := Vector2(0, 100)
 ## I1 (M1.2) level-scale ranges (greybox scrub conveniences; SpinBox types past these).
 const RANGE_COUNT := Vector2(1, 30)   # lvl_room_count slider span (override is >=1)
 const RANGE_MULT := Vector2(4.0, 40.0)   # J1 (M1.3): lvl_size_mult slider re-ranged to the Director's [floor 4.0, max 40.0] (0.25 steps -> integer px/cell; SpinBox still types past via allow_greater)
+## J3 (M1.3) per-room density ranges (greybox scrub conveniences; SpinBox types past these).
+const RANGE_DENSITY := Vector2(0.0, 4.0)   # r1_per_room_density / lvl_loot_density_per_area (0.25 step)
+const RANGE_AREA := Vector2(0, 256)        # r1_density_min_area (floor-cell area gate)
+const RANGE_ROOM_CAP := Vector2(0, 16)     # r1_density_per_room_cap (0 = uncapped)
 
 ## Per-section descriptor: prefix (Meta = ""), the CSV title/gloss keys, the master
 ## field name ("" = none, Meta), whether the section is collapsible.
@@ -63,6 +67,9 @@ const MANIFEST := {
 		"r1_catch_kills", "r1_spawn_count",
 		# J2 (M1.3) — depth-spread distribution: an enum (OptionButton) + an int (slider+spin).
 		"r1_spawn_distribution", "r1_spread_min_depth",
+		# J3 (M1.3) — per-room density: a float, an enum (OptionButton), a bool, and two ints.
+		"r1_per_room_density", "r1_density_metric", "r1_density_rooms_only",
+		"r1_density_min_area", "r1_density_per_room_cap",
 	],
 	"r2_": [
 		"r2_enabled", "r2_mechanism", "r2_cost_magnitude", "r2_cost_per_depth",
@@ -78,6 +85,8 @@ const MANIFEST := {
 	],
 	"lvl_": [
 		"lvl_enabled", "lvl_room_count", "lvl_size_mult",
+		# J3 (M1.3) — loot-per-area sub-knob (off by default; a swept lever, never preset-on).
+		"lvl_loot_density_per_area",
 	],
 }
 
@@ -94,6 +103,11 @@ const FIELD_RANGE := {
 	# J2 (M1.3) — r1_spawn_distribution is an @export_enum (handled as an OptionButton, no
 	# numeric range); r1_spread_min_depth is an int depth (same scrub range as the thresholds).
 	"r1_spread_min_depth": RANGE_DEPTH,
+	# J3 (M1.3) — per-room density. r1_density_metric is an @export_enum (OptionButton, no
+	# range); r1_density_rooms_only is a bool (CheckButton, no range).
+	"r1_per_room_density": RANGE_DENSITY,
+	"r1_density_min_area": RANGE_AREA,
+	"r1_density_per_room_cap": RANGE_ROOM_CAP,
 	"r2_cost_magnitude": RANGE_MAGNITUDE,
 	"r2_cost_per_depth": RANGE_MAGNITUDE,
 	"r2_depth_threshold": RANGE_DEPTH,
@@ -110,6 +124,8 @@ const FIELD_RANGE := {
 	# I1 (M1.2) level scale.
 	"lvl_room_count": RANGE_COUNT,
 	"lvl_size_mult": RANGE_MULT,
+	# J3 (M1.3) loot-per-area sub-knob.
+	"lvl_loot_density_per_area": RANGE_DENSITY,
 }
 
 ## I1 (M1.2): per-field SpinBox/slider STEP override. lvl_size_mult is snapped to 0.25
@@ -117,6 +133,9 @@ const FIELD_RANGE := {
 ## pieces never gap and materialise/JunkPlacer share one integer cell size (Resolved F).
 const FIELD_STEP := {
 	"lvl_size_mult": 0.25,
+	# J3 (M1.3): density floats scrub in 0.25 steps (matches the spec's suggested step).
+	"r1_per_room_density": 0.25,
+	"lvl_loot_density_per_area": 0.25,
 }
 
 # Dimming alpha for a section body whose master is OFF (redundant "inert" cue).
