@@ -24,7 +24,16 @@ The question this round: **now that the gamble is legible and the levels are wor
 
 ## How to run
 
-- **Windows:** unzip the build, run `TheFarYard.exe`.
+- **Windows (the build we read the data from):** unzip the build, run `TheFarYard.exe`.
+- **Web (itch.io — the quick browser feel-read):** open the password-gated itch page in
+  **Chrome or Edge** (the web build needs `SharedArrayBuffer`, which **does not work in Firefox**
+  on itch — a Firefox run shows a black/white screen and never starts). Click the launch button on
+  the page; the game runs in the browser, no download. The same WASD/E/Q/K/Esc controls apply.
+  - **Where the telemetry goes on web:** a browser build does **not** write to `%APPDATA%` — its
+    `user://` lives in the browser's storage (IndexedDB). Use the in-game **"Export telemetry"**
+    button (M1.3 / DLV2) to download `run_log.jsonl`, then send that file back. **Do NOT** rely on
+    the "zip `%APPDATA%\...\telemetry\`" steps below for a web session — those are Windows-only.
+    Don't clear site data / use a private window between sessions, or the IndexedDB log is wiped.
 - Controls:
   - **WASD / arrows / left stick** — move
   - **E (or A / south button)** — interact: grab junk, and **extract** at the green gate

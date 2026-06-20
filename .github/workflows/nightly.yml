@@ -1,21 +1,33 @@
 name: nightly-playtest
 
-# G3 — nightly greybox playtest build → itch.io via Butler.
+# G3 / DLV1 — nightly greybox playtest build → itch.io via Butler.
 #
 # Scheduled nightly (UTC) + manual on-demand. The export/publish job is GATED on a
 # test job (decision: gate the nightly on tests passing — blocking a publish when
 # parse/tests are already red costs nothing and stops broken nightlies reaching itch;
 # the manual loop-smoke checklist is the SECOND line of defence, not the first).
 #
+# DLV1 (F5): publishes BOTH targets — a Windows build (the proven on-disk telemetry
+# vehicle: user:// → %APPDATA%, so testers zip+send run_log.jsonl) AND an HTML5 web
+# build (the Director's browser feel-read on the password-gated itch page). The same
+# export-templates .tpz carries BOTH platform templates, so web adds only one extra
+# export+push step. Web telemetry (user:// → browser IndexedDB) is retrieved by DLV2's
+# in-game "Export telemetry" download button — NOT by this workflow.
+#
 # !!! HUMAN-GATED — this workflow cannot publish until a human provisions: !!!
 #   1. BUTLER_API_KEY  — a GitHub repo secret. Generate from itch.io
 #        Account > Settings > API Keys, store as repo secret `BUTLER_API_KEY`.
-#   2. An itch.io project owned by the STUDIO account (not a personal one), set to
-#        restricted/draft so nightlies are not public, with channel slug
-#        `studio/the-far-yard:win-nightly`. Update ITCH_TARGET below to the real slug
-#        and confirm once with a manual `butler push` before relying on the cron.
-#   3. Windows export TEMPLATES for the pinned Godot version (fetched in the export job).
-# Claude did NOT invent a key or a slug — the placeholders below must be filled by a human.
+#   2. The itch.io project `qusto/the-far-yard` (personal account; note `qusto`, the
+#        itch username, is distinct from the GitHub login `Qustom`), set to
+#        Restricted/Draft + a project password so nightlies are private, with
+#        Kind = HTML / playable-in-browser. Confirm once with a manual `butler push`
+#        (or `bash tools/push_itch.sh`) before relying on the cron.
+#   3. The "SharedArrayBuffer support" toggle ON for the HTML5 upload (the threaded
+#        web build needs cross-origin isolation). The threaded build is CHROMIUM-ONLY
+#        on itch (Firefox lacks the `credentialless` COEP scheme) — play in Chrome/Edge.
+#   4. Export TEMPLATES for the pinned Godot version (fetched in the export job; the
+#        one .tpz supplies both Windows and web templates).
+# Claude did NOT invent a key or a slug — the secret above must be provisioned by a human.
 
 on:
   schedule:
@@ -24,8 +36,9 @@ on:
 
 env:
   GODOT_VERSION: 4.6.3-stable
-  # HUMAN: replace with the real studio itch slug once the project + channel exist.
-  ITCH_TARGET: "studio/the-far-yard:win-nightly"
+  # DLV1/F5 real slugs (personal acct). Windows = data vehicle; web = feel read.
+  ITCH_TARGET_WIN: "qusto/the-far-yard:win-nightly"
+  ITCH_TARGET_WEB: "qusto/the-far-yard:html5"
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -88,7 +101,7 @@ jobs:
   # workflow does not fail loudly before a human provisions the secret).
   # ---------------------------------------------------------------------------
   export-and-publish:
-    name: Export Win64 + publish to itch (Butler)
+    name: Export Win64 + Web + publish to itch (Butler)
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -102,7 +115,7 @@ jobs:
         run: |
           if [ -z "${{ secrets.BUTLER_API_KEY }}" ]; then
             echo "::warning::BUTLER_API_KEY is not set — skipping publish. A human must add the"
-            echo "::warning::repo secret + create the studio itch project before nightlies publish."
+            echo "::warning::repo secret + create the qusto/the-far-yard itch project before nightlies publish."
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else
             echo "publish=true" >> "$GITHUB_OUTPUT"
@@ -158,6 +171,18 @@ jobs:
           # still emit a file. Fail if the expected exe is missing.
           test -f build/win/TheFarYard.exe
 
+      - name: Export Web (HTML5 release)
+        run: |
+          mkdir -p build/web
+          # The same .tpz installed above carries the web template, so no extra fetch.
+          ~/godot-bin/godot --headless --path . \
+            --export-release "Web" build/web/index.html
+          # Require the load-bearing payload (entry + wasm + pck), not just any file —
+          # a partial export can still emit index.html.
+          test -f build/web/index.html
+          test -f build/web/index.wasm
+          test -f build/web/index.pck
+
       - name: Install Butler
         if: steps.guard.outputs.publish == 'true'
         run: |
@@ -166,17 +191,34 @@ jobs:
           chmod +x /tmp/butler/butler
           /tmp/butler/butler -V
 
-      - name: Push to itch.io (Butler)
+      - name: Push Win64 to itch.io (Butler)
         if: steps.guard.outputs.publish == 'true'
         env:
           BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
         run: |
-          /tmp/butler/butler push build/win "${ITCH_TARGET}" \
+          /tmp/butler/butler push build/win "${ITCH_TARGET_WIN}" \
             --userversion "${USER_VERSION}"
 
-      - name: Upload build artifact (always — usable even without itch)
+      - name: Push Web (HTML5) to itch.io (Butler)
+        if: steps.guard.outputs.publish == 'true'
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          # Pushes the build/web DIRECTORY to the :html5 channel; itch tags it
+          # playable-in-browser from the channel name on the first push.
+          /tmp/butler/butler push build/web "${ITCH_TARGET_WEB}" \
+            --userversion "${USER_VERSION}"
+
+      - name: Upload Win64 build artifact (always — usable even without itch)
         uses: actions/upload-artifact@v4
         with:
           name: TheFarYard-Win64-${{ env.USER_VERSION }}
           path: build/win/**
+          if-no-files-found: error
+
+      - name: Upload Web build artifact (always — usable even without itch)
+        uses: actions/upload-artifact@v4
+        with:
+          name: TheFarYard-Web-${{ env.USER_VERSION }}
+          path: build/web/**
           if-no-files-found: error
