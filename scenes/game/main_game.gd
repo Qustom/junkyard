@@ -173,9 +173,12 @@ func start_new_run() -> void:
 	# M1.1 CFG / R4: resolve the run config BEFORE generation so R4's depth-scaled
 	# branching (Lever 1) can read it inside generate(). We stage this SAME config
 	# object onto GameState in step 6, so generation and the run share one config —
-	# the M1.1 determinism key is (seed + config). Fall back to the all-off default
-	# if the CFG rail is missing so behaviour is identical either way.
-	var run_cfg: RunConfig = _config_menu.apply_and_get_config() if _config_menu != null else (load(RUN_CONFIG_PATH) as RunConfig)
+	# the M1.1 determinism key is (seed + config).
+	# J1 (M1.3): when there's no CFG rail, fall back to the default play-preset (not the
+	# all-off .tres) so a CFG-less launch boots into the same fun stack the CFG path does.
+	# Tests that want the all-off control stage RunConfig.new()/the .tres explicitly via
+	# GameState.stage_run_config, so the determinism baseline is unaffected.
+	var run_cfg: RunConfig = _config_menu.apply_and_get_config() if _config_menu != null else RunConfig.make_default_play_preset()
 
 	# 1. Generate + grade + plan (B2 → B3) — pure functions of (seed + config).
 	#    I1 (M1.2): pick the catalog by lvl_enabled (Resolved G — config-dependent

@@ -57,3 +57,9 @@ CFG_CHIP_LVL_SUMMARY,count {count}, size x{mult}
 CFG_LVL_COUNT_BASE,base
 CFG_FIELD_LVL_ROOM_COUNT,room_count
 CFG_FIELD_LVL_SIZE_MULT,size_mult
+CFG_TRAP_WARN,"⚠ enabled but inert (won't fire): {traps}"
+CFG_TRAP_R3_NO_THRESHOLDS,R3 (no threshold levels)
+CFG_TRAP_R4_NO_LOST_PROXY,R4 (lost-proxy off)
+CFG_TRAP_R4_NO_VISION,R4 (vision radius 0)
+CFG_TRAP_R1_NO_SPAWN,R1 (0 hazards spawn)
+CFG_TRAP_R1_CATCH_RADIUS_TOO_SMALL,R1 (catch radius < 24px)

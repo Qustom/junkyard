@@ -152,9 +152,39 @@ func _ready() -> void:
 	_assert_traps(t_multi.inert_enabled_oppositions(),
 		["r3_no_thresholds", "r4_no_lost_proxy"], "multi-trap union", failures)
 
+	# === Case 7: J1 (M1.3) make_default_play_preset() ========================
+	# The named default play-preset is the Director's most-fun M1.2 stack, built ON TOP
+	# of a fresh all-off RunConfig.new() so it NEVER mutates the control.
+	var preset := RunConfig.make_default_play_preset()
+	# F1 stack: LVL on, R1 on, R4 on, R2/R3 off.
+	if not preset.lvl_enabled:
+		failures.append("preset: lvl_enabled must be true")
+	if not preset.r1_enabled:
+		failures.append("preset: r1_enabled must be true")
+	if not preset.r4_enabled:
+		failures.append("preset: r4_enabled must be true")
+	if preset.r2_enabled or preset.r3_enabled:
+		failures.append("preset: R2/R3 must be OFF (Director F1)")
+	# Disposition B/C: 19 rooms, size 4.0 (the new slider floor).
+	if preset.lvl_room_count != 19:
+		failures.append("preset: lvl_room_count == %d, expected 19" % preset.lvl_room_count)
+	if not is_equal_approx(preset.lvl_size_mult, 4.0):
+		failures.append("preset: lvl_size_mult == %f, expected 4.0" % preset.lvl_size_mult)
+	# Config-trap guard (disposition D + BUG6 pairing): the preset exercises every enabled
+	# opposition — R4 lost-proxy non-zero, and the whole preset is provably trap-free.
+	if preset.r4_lost_proxy_threshold <= 0.0:
+		failures.append("preset: r4_lost_proxy_threshold must be > 0 (M1.2 config-trap was 0.0)")
+	if not preset.inert_enabled_oppositions().is_empty():
+		failures.append("preset: has an inert enabled opposition (must be trap-free): %s"
+			% str(preset.inert_enabled_oppositions()))
+	# The factory must NOT leak into the code-level default: RunConfig.new() stays all-off.
+	var still_off := RunConfig.new()
+	if not still_off.all_oppositions_disabled() or still_off.lvl_enabled:
+		failures.append("preset factory leaked into RunConfig.new() (the all-off control drifted)")
+
 	# === Verdict ============================================================
 	if failures.is_empty():
-		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs, BUG6 inert_enabled_oppositions() detects all 5 traps and []-clean for all-off + populated." % expected_keys.size())
+		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs, BUG6 inert_enabled_oppositions() detects all 5 traps and []-clean for all-off + populated, J1 make_default_play_preset() is the F1 stack (LVL/R1/R4 on, R2/R3 off, 19 rooms, size 4.0), trap-free, and does NOT leak into the all-off control." % expected_keys.size())
 		get_tree().quit(0)
 	else:
 		for f in failures:
