@@ -571,11 +571,18 @@ func inert_enabled_oppositions() -> PackedStringArray:
 # =============================================================================
 # J1 (M1.3) — the named default play-preset (the game/CFG boots into THIS)
 # =============================================================================
-## Builds the Director's most-fun M1.2 stack as a SECOND, named RunConfig — level
+## Builds the Director's most-fun stack as a SECOND, named RunConfig — level
 ## scale ON (~19 rooms, big rooms at the new slider floor 4.0), R1 pursuing hazard
 ## ON, R4 **maze ON but vision occlusion OFF** (match-what-I-played, M1.3 close-out),
 ## with R2/R3 deliberately OFF (Director F1, `G4_findings_M1.2.md` §5). This is what the
 ## CFG rail (`config_menu._ready`) and the no-CFG fallback (`main_game.gd`) seed.
+##
+## M1.4 (RG1) ADDS the full M1.4 fun stack on top of the M1.3 base: K2 quota (the headline
+## roguelite-wipe stake), K3 resolution-independent camera, **K4 dive timer + ~10s near-end
+## warning** (60s dive, visual-only), and **all three K5 new hazard types** (ping-pong / bomb /
+## rotating-spikes) at RG1 sweep-START magnitudes with a mandatory per-room cap. K7 exits ship
+## OFF for a clean re-gate. The K4/K5/quota/camera knobs are pure run-state (never feed
+## fingerprint()) so the all-off control stays byte-identical (fp e943ac9c8bc1).
 ##
 ## LOAD-BEARING CONTRACT (M1.3 Breakdown §2): this is built ON TOP of a fresh all-off
 ## `RunConfig.new()`, so it NEVER mutates the code-level all-off default. `RunConfig.new()`
@@ -683,6 +690,65 @@ static func make_default_play_preset() -> RunConfig:
 	c.cam_enabled = true
 	c.cam_visible_world_width = 576.0          # = base 1152 / zoom 2 (today's horizontal FOV), now fixed
 	c.cam_zoom_policy = 0                        # fit_width (lock the horizontal sight-line — K3 Resolved Decisions)
+
+	# --- K4 (M1.4): configurable dive timer + near-end warning. Director FINAL (Phase-3
+	# lock): a ~60s dive with a ~10s near-end warning, VISUAL-ONLY for RG1 (audio is M2-gated,
+	# so timer_warning_channel stays visual_only). This makes "the clock" a real, legible stake
+	# in the re-gate instead of the implicit DiveClockConfig default. Pure run-state: timer_*
+	# never feed fingerprint(), so the all-off control (timer_enabled=false) is untouched.
+	c.timer_enabled = true
+	c.timer_length_s = 60.0                     # Director FINAL: 60s dive
+	c.timer_warning_threshold_s = 10.0          # Director FINAL: ~10s near-end warning
+	c.timer_warning_channel = 0                 # visual_only (audio gated to M2 — Phase-3 lock)
+
+	# --- K5 (M1.4): the three new greybox hazard types ON at RG1 SWEEP-START magnitudes. The
+	# Director's Phase-3 verdict: "magnitudes are RG1 sweeps" — these are SANE GREYBOX STARTING
+	# values to give the re-gate something to play + tune, NOT balanced finals. Each type gets a
+	# small base_count, a modest count_per_depth (so danger scales with depth), and a MANDATORY
+	# per_room_cap > 0 (the K5i perf guard — the all-off default is 0/uncapped; the preset MUST
+	# set it > 0). The shared NEW_HAZARD_BAND_CEILING (48) bounds all three combined. These knobs
+	# are pure run-state (never feed fingerprint()) so the all-off control stays byte-identical.
+	# inert_enabled_oppositions() does NOT track the new hazards (they are NOT R-oppositions), but
+	# these values are provably non-inert anyway (enabled + non-zero base/per_depth + cap>0).
+
+	# NOTE on the shared budget (K5i NEW_HAZARD_BAND_CEILING=48, starvation order
+	# pingpong→bomb→spike): the per-type magnitudes below are deliberately MODEST so all THREE
+	# types fit comfortably under the combined 48-body ceiling on a deep (~15-depth) band and
+	# spikes are NOT starved to zero by the earlier types. With base_count 0 + a gentle per-depth
+	# ramp (+1 every ~7 depths) + a per_room_cap of 2, each type's band total is ~9 on the
+	# default 19-room/15-depth band (≈27 combined, well under 48), so the re-gate actually SEES
+	# all three. NB: a higher base/per_depth/cap saturates the shared 48 ceiling with pingpong
+	# alone and starves spikes — the SHIPPED preset must let every type spawn; pushing these up
+	# is a valid RG1 sweep but NOT the shipped default (verified by test_rg1_m14_verify).
+	# base 0 also reads as "danger ramps with depth": shallow rooms stay calmer.
+
+	# K5a ping-pong (bounces off room walls, lethal on contact). speed ~70 px/s greybox.
+	c.hpp_enabled = true
+	c.hpp_base_count = 0                        # sweep start: none at depth 0 (ramps in with depth)
+	c.hpp_count_per_depth = 0.15               # sweep start: +1 every ~7 within-band depths
+	c.hpp_speed = 70.0                          # sweep start travel speed (px/s, greybox)
+	c.hpp_per_room_cap = 2                      # MANDATORY > 0 (K5i perf guard); sweepable in RG1
+
+	# K5b bomb (proximity pulse ~2s then explodes; committed/no-defuse — Director K5 verdict).
+	c.hbomb_enabled = true
+	c.hbomb_base_count = 0                      # sweep start: none at depth 0 (ramps in with depth)
+	c.hbomb_count_per_depth = 0.15            # sweep start: +1 every ~7 within-band depths
+	c.hbomb_proximity_radius = 64.0            # sweep start: starts pulsing within ~64 px
+	c.hbomb_pulse_seconds = 2.0                # Director ~2s pulse before detonation
+	c.hbomb_blast_radius = 48.0               # sweep start lethal radius at detonation
+	c.hbomb_per_room_cap = 2                   # MANDATORY > 0 (K5i perf guard); sweepable in RG1
+
+	# K5c rotating spikes (rotates in place, lethal on contact; 3 arms = in-file const, NOT a knob).
+	c.hspike_enabled = true
+	c.hspike_base_count = 0                     # sweep start: none at depth 0 (ramps in with depth)
+	c.hspike_count_per_depth = 0.15           # sweep start: +1 every ~7 within-band depths
+	c.hspike_rotation_speed = 90.0            # sweep start: 90 deg/s (signed → direction)
+	c.hspike_arm_length = 48.0                # sweep start lethal arm reach (px)
+	c.hspike_per_room_cap = 2                  # MANDATORY > 0 (K5i perf guard); sweepable in RG1
+
+	# --- K7 (M1.4): exits SHIP OFF for a clean re-gate (Director Phase-3 lock: "preset ships
+	# exits OFF"). exit_enabled stays false (the all-off default) → today's single fixed gate at
+	# GATE_SPAWN_OFFSET, fingerprint byte-unmoved. Do NOT enable exit_* in the preset.
 
 	# Provably trap-free: every enabled opposition's load-bearing magnitude is non-inert,
 	# so the M1.3 re-gate measures R1+R4 for real (no silent dead-config like M1.2).
