@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.4 (Wave 5 — bug fixes)
 - **Branch:** worktree-agent-a51d13ea6ef40ac6e
-- **Commit:** 8d7abc012a96fc1d053b0636578f09a426046910
+- **Commit:** a5b1b573b05c14c6170fedf654696055d2202747 (fix); worklog SHA finalised in the follow-up commit below
 
 ## What changed
 Feedback #7 (CRITICAL, confirmed via telemetry session `s_384be7` runs 19–47): with the new
