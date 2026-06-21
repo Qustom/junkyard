@@ -24,4 +24,4 @@ archived to `DESIGN_DEVIATIONS_HISTORY.md`.*
 
 ---
 
-*(empty — no un-assessed deviations)*
+**[2026-06-21] W3-F1 (K5b test hygiene)** — `tests/test_bomb_hazard.gd` (lines 134/161/194) calls `queue_free()` on the bomb instance in its per-case cleanup, but `BombHazard` is one-shot self-freeing on detonation — so a detonated bomb is already freed, producing three **non-fatal** `SCRIPT ERROR: Cannot call method 'queue_free' on a previously freed instance` lines on stderr. **The test still passes** (`BOMB HAZARD OK`, exit 0) — the logic is correct; only cleanup is noisy. · *Why it matters:* a "green" test that emits `SCRIPT ERROR` would false-trip any future CI gate that greps stderr for errors (cf. the STATUS carry-over to wire test scenes into the CI set). · **Claude's recommendation: Addressed (trivial)** — guard the cleanup frees with `if is_instance_valid(bomb): bomb.queue_free()`. Test-only, no production-code change. Surfaced here for the Wave-3 close-out disposition.
