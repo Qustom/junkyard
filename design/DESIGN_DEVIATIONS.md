@@ -15,8 +15,12 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*Last close-out: **M1.4 Wave 1** (2026-06-21) — 3 deviations: 2 Reviewed + 1 Addressed (camera enabled in preset),
-archived to `DESIGN_DEVIATIONS_HISTORY.md`. This file is empty between waves.*
+*Last close-out: **M1.4 Wave 2** (2026-06-21) — K2 (quota) + K7 (exits): **0 deviations** (both agents "none";
+the as-built K0 API matched each design's reconciled contract — quota signals/knobs and exit knobs/signal all
+pre-existed with the locked names). K7's DR-3/DR-4/DR-7 Director flags were already settled at the Phase-4 lock
+(preset ships exits OFF). Nothing to disposition. This file is empty between waves.*
+*Prior close-out: **M1.4 Wave 1** (2026-06-21) — 3 deviations: 2 Reviewed + 1 Addressed (camera enabled in preset),
+archived to `DESIGN_DEVIATIONS_HISTORY.md`.*
 
 ---
 
