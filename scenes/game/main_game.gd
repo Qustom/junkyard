@@ -48,7 +48,14 @@ const DEFAULT_CELL_SIZE_PX := 16
 
 @onready var _band_container: Node2D = $BandContainer
 @onready var _player: Player = $Player
-@onready var _camera: Camera2D = $Player/Camera2D
+## K6 (M1.4): the camera is now on a LEVEL-OWNED follow rig (not a child of the
+## player body), matching player.gd's documented intent and making the camera
+## interpolation-clean. The rig copies the player position on the physics tick
+## (_physics_process below); physics interpolation (project.godot [physics]) smooths
+## the render. K3 (M1.4): the camera is a CameraView that drives a fixed visible
+## world-width from the cam_* run-config knobs (default-off => today's (2,2) framing).
+@onready var _camera_rig: Node2D = $CameraRig
+@onready var _camera: CameraView = $CameraRig/CameraView
 @onready var _menu: CanvasLayer = $MainMenu
 @onready var _start_button: Button = %StartButton
 @onready var _version_label: Label = %VersionLabel
@@ -245,9 +252,19 @@ func start_new_run() -> void:
 	# 5. Put the player at the entry and let the camera find it.
 	_player.global_position = spawn_pos
 	_player.velocity = Vector2.ZERO
+	# K6 (M1.4): the camera rig is level-owned now (not a child of the player), so it
+	# must be re-centred on the player at run start before make_current/reset_smoothing
+	# — otherwise the camera would snap from its last run's position. The per-tick
+	# follow (_physics_process) keeps it locked thereafter; interpolation smooths it.
+	if _camera_rig != null:
+		_camera_rig.global_position = spawn_pos
 	if _camera != null:
 		_camera.make_current()
 		_camera.reset_smoothing()
+		# K3 (M1.4): apply the resolution-independent camera config AFTER make_current
+		# (so the camera is current before its first zoom recompute, K3 OQ-6). Default-off
+		# (cam_enabled=false) leaves zoom at BASE_ZOOM=(2,2) => today's framing exactly.
+		_camera.apply_from_config(run_cfg)
 
 	# 6. Start the run lifecycle. This resets ALL run-state (fresh bag, clock reset
 	#    via run_started, depth 0, _run_ended guard cleared) and emits run_started,
@@ -649,6 +666,15 @@ func _build_junction_map(band: Band) -> void:
 ## depth every depth_tick_interval seconds (correctness is throttle-independent —
 ## set_current_depth emits on change only).
 func _physics_process(delta: float) -> void:
+	# K6 (M1.4): level-owned camera follow. The rig copies the player's position on the
+	# physics tick (the same clock the player integrates on); physics interpolation
+	# (project.godot [physics]) smooths the render between ticks, which — together with the
+	# camera no longer being a child of the physics body — is the jitter fix. Done every
+	# tick (not gated on run_active) so the view tracks the player exactly as the old
+	# child-of-body camera did. Camera2D position_smoothing (kept @8.0, K6 RD-4) still
+	# applies the trail feel on top, now smoothing an interpolated transform.
+	if _camera_rig != null and _player != null:
+		_camera_rig.global_position = _player.global_position
 	if not GameState.run_active:
 		return
 	# J4 (M1.3): accumulate corridor/room time EVERY frame (exact, NOT a tick-sampled
