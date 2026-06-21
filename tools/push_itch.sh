@@ -64,12 +64,20 @@ test -f "$EXPORT_DIR/index.pck"  || { echo "ERROR: export produced no $EXPORT_DI
 # --- 3. resolve the itch key WITHOUT printing it --------------------------------
 if [ -z "${BUTLER_API_KEY:-}" ]; then
   if [ -f APIKEYS.md ]; then
-    # Take the last whitespace-token of the first non-empty, non-comment line under the
-    # "# Itch.io" header. Handles both `label value` and `key: value` shapes. Never echoed.
+    # Under the "# Itch.io" header, take the API key's last whitespace-token. PREFER a line
+    # whose label contains "key" (the itch API key, e.g. `key: <~40 chars>`); else fall back to
+    # the LONGEST token. This avoids grabbing a co-located page/access-PASSWORD line (a short
+    # value butler rejects with "403 invalid key" — the API key and the page password are
+    # different credentials). Handles `label value` / `key: value` shapes. Never echoed.
     BUTLER_API_KEY="$(awk '
       /^[[:space:]]*#[[:space:]]*Itch\.io/ {f=1; next}
-      f && /^[[:space:]]*#/ {exit}
-      f && NF {print $NF; exit}
+      f && /^[[:space:]]*#/ {f=0}
+      f && NF {
+        tok=$NF
+        if (tolower($0) ~ /key/) keytok=tok
+        if (length(tok) > length(longest)) longest=tok
+      }
+      END {print (keytok != "" ? keytok : longest)}
     ' APIKEYS.md)"
   fi
 fi
