@@ -29,6 +29,12 @@ var _current: float = 0.0
 var _active: bool = false
 var _fired_timeout: bool = false
 
+# K4 (M1.4): near-end warning + configurable length. All gated so timer_enabled=false
+# reproduces the M1.0/M1.3 clock byte-for-byte — see _on_run_started.
+var _fired_warning: bool = false      # one-shot warning latch, mirrors _fired_timeout
+var _warning_threshold: float = 0.0   # resolved seconds-remaining; 0.0 => no warning this run
+var _effective_max: float = 0.0       # config.max_light OR the timer_length_s override
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -47,10 +53,28 @@ func _on_run_started(_band_id: StringName = &"", _seed: int = 0) -> void:
 	if config == null:
 		push_error("DiveClock: no config assigned; cannot start.")
 		return
-	_current = config.start_light if config.start_light > 0.0 else config.max_light
+	# K4: resolve the EFFECTIVE length + warning threshold from the run config. All-off
+	# default (timer_enabled=false / no config) keeps _effective_max = config.max_light and
+	# _warning_threshold = 0.0 => M1.0/M1.3 behaviour exactly, no warning ever fires.
+	# Mirrors the effective_room_count() override precedent (run_config.gd:400).
+	_effective_max = config.max_light
+	_warning_threshold = 0.0
+	var cfg: RunConfig = GameState.active_run_config  # same accessor decision_hud uses
+	if cfg != null and cfg.timer_enabled:
+		if cfg.timer_length_s > 0.0:
+			_effective_max = cfg.timer_length_s        # 0.0 => keep DiveClockConfig.max_light
+		_warning_threshold = cfg.timer_warning_threshold_s  # 0.0 => still no warning
+	# "full" now means the EFFECTIVE max (start_light > 0 still starts at the authored value).
+	_current = config.start_light if config.start_light > 0.0 else _effective_max
 	_active = true
 	_fired_timeout = false
-	EventBus.dive_clock_changed.emit(_current, config.max_light)
+	_fired_warning = false
+	# Edge case: if the dive STARTS at/below the threshold (a tiny timer_length_s, or a low
+	# start_light), pre-arm the latch so we never warn on frame 0 — the warning is a
+	# "running low" cue, not a "you start low" cue.
+	if _warning_threshold > 0.0 and _current <= _warning_threshold:
+		_fired_warning = true
+	EventBus.dive_clock_changed.emit(_current, _effective_max)
 
 
 ## Stop draining on extract/death/timeout-handling. Args come from run_ended's
@@ -84,8 +108,17 @@ func _on_exposure_clock_tax(seconds: float) -> void:
 func modify_light(amount: float) -> void:
 	if config == null:
 		return
-	_current = clampf(_current + amount, 0.0, config.max_light)
-	EventBus.dive_clock_changed.emit(_current, config.max_light)
+	_current = clampf(_current + amount, 0.0, _effective_max)
+	EventBus.dive_clock_changed.emit(_current, _effective_max)
+	# K4: near-end warning — fire EXACTLY ONCE as remaining light crosses the threshold.
+	# Latched with _fired_warning (reset only at _on_run_started), mirroring _fired_timeout,
+	# so per-frame drain below the threshold never re-fires it. Ordered BEFORE the timeout
+	# block so a single mutation that blows past the threshold straight to zero still emits
+	# the warning before the timeout ("almost -> gone"). Inert when _warning_threshold == 0.0
+	# (all-off control), so an all-off run is byte-identical to M1.0/M1.3.
+	if _warning_threshold > 0.0 and not _fired_warning and _current <= _warning_threshold:
+		_fired_warning = true
+		EventBus.dive_clock_warning.emit(_current, _effective_max)
 	if _current <= 0.0 and not _fired_timeout:
 		_fired_timeout = true
 		_active = false
@@ -98,6 +131,11 @@ func get_light() -> float:
 
 
 func get_max_light() -> float:
+	# K4: report the EFFECTIVE max (the timer_length_s override when applied at run start,
+	# else the authored config.max_light). _effective_max is 0.0 before the first run starts,
+	# so fall back to the config value until then — preserves the pre-run accessor contract.
+	if _effective_max > 0.0:
+		return _effective_max
 	return config.max_light if config != null else 0.0
 
 

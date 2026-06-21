@@ -13,3 +13,4 @@ HUD_COST_LIGHT,light
 HUD_COST_EXPOSURE,exposure
 HUD_COST_METER,egress debt
 HUD_COST_DECAY,route collapsed
+HUD_TIME_LOW,Time almost up!
