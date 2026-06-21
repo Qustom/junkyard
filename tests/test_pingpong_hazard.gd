@@ -106,6 +106,51 @@ func _run() -> int:
 		failures.append("(d) kill: new_hazard_killed kind %s != &\"pingpong\"" % str(_killed_events[0][0]))
 	EventBus.new_hazard_killed.disconnect(_on_new_hazard_killed)
 
+	# --- (f) WALL/CORNER ANTI-STALL (BUG8) ----------------------------------
+	# Build an L-corner of static walls on the `world` layer (bit 2 = value 2, the only
+	# layer the bouncer masks) and aim a bouncer diagonally INTO the inside corner. The old
+	# code reflected the post-move_and_slide (tangential) velocity, so a corner collapsed the
+	# heading to wall-parallel and the bouncer ground to a halt parked against the wall. The
+	# fix reflects the intended heading _dir off the summed normals, reversing it out of the
+	# corner. Assert: after N frames it still moves at ~_speed AND has moved away from the
+	# corner (it is not parked at the wall).
+	player.global_position = Vector2(-5000, -5000)   # park the player far away — no kill interference
+	var corner := Vector2(2000, 2000)                # an isolated test corner, away from everything
+	var wall_thick := 40.0
+	var wall_len := 400.0
+	# Bottom wall (a horizontal slab whose TOP edge sits at corner.y) and right wall (a
+	# vertical slab whose LEFT edge sits at corner.x): together an inside corner opening
+	# up-left, so a bouncer heading down-right (1,1) drives straight into the vertex.
+	var bottom_wall := _make_wall(Vector2(corner.x - wall_len * 0.5, corner.y + wall_thick * 0.5),
+		Vector2(wall_len, wall_thick))
+	var right_wall := _make_wall(Vector2(corner.x + wall_thick * 0.5, corner.y - wall_len * 0.5),
+		Vector2(wall_thick, wall_len))
+	add_child(bottom_wall)
+	add_child(right_wall)
+
+	var hz_f := scene.instantiate() as PingPongHazard
+	add_child(hz_f)
+	# Start just inside the corner, heading down-right INTO the vertex.
+	hz_f.global_position = corner - Vector2(60, 60)
+	hz_f.setup(cfg, player, {"initial_dir": Vector2(1, 1)})
+	var start_pos := hz_f.global_position
+	# Step many physics frames so it hits the corner and (must) bounce back out.
+	for _i in 90:
+		await get_tree().physics_frame
+	# Still travelling at ~constant speed (never stalled / ground to a halt).
+	var spd := hz_f.velocity.length()
+	if not is_equal_approx(spd, cfg.hpp_speed):
+		failures.append("(f) corner anti-stall: speed %f != _speed %f after 90 frames (stalled/ground down)" % [spd, cfg.hpp_speed])
+	# It must NOT be parked AT the corner vertex — it has to have bounced away from it.
+	if hz_f.global_position.distance_to(corner) <= 30.0:
+		failures.append("(f) corner anti-stall: parked at corner (dist %f <= 30) — did not bounce out" % hz_f.global_position.distance_to(corner))
+	# And it must have moved a meaningful distance overall (not frozen at the wall).
+	if hz_f.global_position.distance_to(start_pos) <= 20.0:
+		failures.append("(f) corner anti-stall: barely moved (dist %f <= 20) — looks stuck on the wall" % hz_f.global_position.distance_to(start_pos))
+	bottom_wall.queue_free()
+	right_wall.queue_free()
+	hz_f.queue_free()
+
 	# --- (e) NO global-RNG call in the entity source ------------------------
 	var src := FileAccess.get_file_as_string(PINGPONG_SCRIPT_PATH)
 	if src.is_empty():
@@ -117,11 +162,29 @@ func _run() -> int:
 		print("K5a OK — PingPongHazard verified: empty spawn_ctx constructs safely (default RIGHT heading), "
 			+ "spawn_ctx initial_dir sets velocity, room_bounds clamp reflects + snaps back inside, the "
 			+ "distance-test kill ends the run via fail_run(&\"death\") and emits new_hazard_killed(&\"pingpong\") "
-			+ "EXACTLY once (BUG6 latch), and the entity makes no global-RNG call.")
+			+ "EXACTLY once (BUG6 latch), it bounces cleanly OUT of a wall corner without stalling (BUG8), "
+			+ "and the entity makes no global-RNG call.")
 		return 0
 	for f in failures:
 		printerr("K5a FAIL: ", f)
 	return 1
+
+
+## Build a static wall on the `world` layer (bit 2 = value 2) — the only layer the bouncer
+## masks. `top_left` is the rect's top-left corner in world px; `size` its extent.
+func _make_wall(top_left: Vector2, size: Vector2) -> StaticBody2D:
+	var body := StaticBody2D.new()
+	body.collision_layer = 2   # world (bit 2)
+	body.collision_mask = 0
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = size
+	shape.shape = rect
+	# A RectangleShape2D is centred on the CollisionShape2D's origin; offset so its top-left
+	# sits at top_left.
+	shape.position = top_left + size * 0.5
+	body.add_child(shape)
+	return body
 
 
 func _on_new_hazard_killed(kind: StringName, depth: int, run_t_ms: int) -> void:
