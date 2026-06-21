@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c7fb5exitcount0"]
+
+[ext_resource type="Script" path="res://tests/test_exit_placement_count.gd" id="1"]
+
+[node name="TestExitPlacementCount" type="Node"]
+script = ExtResource("1")
