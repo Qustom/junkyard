@@ -15,7 +15,6 @@ var current_intensity: int = 0  # 0..N, raised by band depth & combat
 func _ready() -> void:
 	EventBus.band_entered.connect(_on_band_entered)
 	EventBus.player_died.connect(_on_player_died)
-	EventBus.light_low.connect(_on_tension)
 	EventBus.stamina_low.connect(_on_tension)
 
 func _on_band_entered(_band_id: StringName, depth: int) -> void:

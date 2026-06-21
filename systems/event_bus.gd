@@ -20,7 +20,6 @@ signal exposure_threshold_crossed(threshold: int)
 
 # --- Player / in-dive clock --------------------------------------------------
 signal player_died(cause: StringName)
-signal light_low()
 signal stamina_low()
 
 # === M1 wave-2 contract (orchestrator-locked 2026-06-15) =====================
@@ -115,3 +114,42 @@ signal exposure_speed_mult_changed(mult: float)   # player multiplies into stats
 signal exposure_vision_mult_changed(mult: float)  # R4 fog node multiplies into radius (no-op if R4 off)
 signal exposure_clock_tax(seconds: float)         # A3 dive-clock subtracts from remaining light
 signal exposure_meter_changed(value: float, maximum: float)  # greybox HUD exposure bar reads this
+
+# === M1.4 signals (sole event_bus.gd edit this milestone, owner = K0) =========
+# Pre-declared up front so K2/K3/K4/K5/K7 only EMIT — they never edit this file
+# (the M1.1 pre-declare rule, M1.4 Breakdown §6/Phase-4 Lock). Telemetry-row
+# payloads are PRIMITIVES ONLY (straight to JSONL). Names/signatures are the
+# Phase-4-locked set (the dead `light_low()` removed above; its AudioDirector
+# connect dropped in the same pass).
+
+# --- K2 Quota (telemetry row + HUD/SellScreen drive) -------------------------
+## Quota resolved at a run end (extract/death/timeout per quota_check_timing): the
+## single telemetry row RG2 reads (met-rate, achieved-vs-target). Owner: K2.
+signal quota_evaluated(run_number: int, target: int, achieved: int, met: bool)
+## A met quota advanced the run-number + raised the target (HUD bump + "next quota").
+signal quota_advanced(new_run_number: int, new_target: int)
+## The roguelite wipe ran (the META fields cleared to defaults). Emitted by K2's
+## wipe_meta() AFTER run_ended resolves (no run_ended arity change — separate meta op).
+signal meta_wiped(prev_run_number: int)
+
+# --- K3 Camera ---------------------------------------------------------------
+## The fixed visible world-units actually applied this run ("how far could I see").
+## Approach-agnostic telemetry. Owner: K3.
+signal camera_view_set(visible_world_width: float, zoom: float)
+
+# --- K4 Timer warning --------------------------------------------------------
+## Fires ONCE when remaining dive time crosses the near-end warning threshold.
+## `maximum` rides along for fraction symmetry with dive_clock_changed (line 36).
+## (dive_clock_changed/dive_clock_timeout already exist above.) Owner: K4.
+signal dive_clock_warning(seconds_remaining: float, maximum: float)
+
+# --- K5a/b/c new hazards (telemetry rows; the kill flows through player_died) --
+## A new-hazard kill (kind = &"pingpong"/&"bomb"/&"spike"). The shared kill-telemetry
+## row for all three new hazards (parallels hazard_caught). Owners: K5a/K5b/K5c.
+signal new_hazard_killed(kind: StringName, depth: int, run_t_ms: int)
+## A bomb began its proximity pulse (telemetry: how often bombs are triggered). Owner: K5b.
+signal bomb_pulse_started(depth: int, run_t_ms: int)
+
+# --- K7 Exits ----------------------------------------------------------------
+## Emitted once per band after exits are placed (telemetry: exit count + depth). Owner: K7.
+signal exits_placed(count: int, depth: int)

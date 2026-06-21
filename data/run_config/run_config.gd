@@ -228,6 +228,135 @@ const LVL_LOOT_AREA_UNIT: int = 96
 @export var lvl_short_corridors: bool = false
 
 
+# =============================================================================
+# K2 (M1.4) — Per-run quota / roguelite wipe (CONFIG knobs only; the live quota +
+# run-number are META-STATE owned by K2's save schema v3, NEVER stored here).
+# All-off default = no quota gate, no wipe (M1.3 behaviour). The Director-FINAL
+# starting value ($50) + step (+$50/run) live in make_default_play_preset(), NOT
+# the code-level default, so the all-off control stays byte-identical.
+# =============================================================================
+@export_group("K2 Quota", "quota_")
+## Master toggle. OFF = no quota gate, no wipe (M1.3 behaviour).
+@export var quota_enabled: bool = false
+## Starting quota for run #1 (Director FINAL $50 — set in the preset, not the default).
+@export var quota_base: int = 0
+## How much the quota rises each time it is met (Director FINAL +$50/run — preset).
+@export var quota_step: int = 0
+## WHEN the quota is checked (Director KEPT this configurable). 0 = on_extract only,
+## 1 = every_run_end (Director-FINAL default — set in the preset). Code default 0 is
+## the all-off-neutral choice; the preset carries the Director default.
+@export_enum("on_extract", "every_run_end") var quota_check_timing: int = 0
+## WHAT counts toward "met" (Director KEPT this configurable). 0 = this_run_banked
+## (all-off-neutral code default), 1 = cumulative_money (Director FINAL — set in preset).
+@export_enum("this_run_banked", "cumulative_money") var quota_basis: int = 0
+
+# =============================================================================
+# K3 (M1.4) — Resolution-independent camera (fixed visible world-units). All-off
+# default = today's camera (whatever the window shows). Post-generation, never
+# fed to fingerprint().
+# =============================================================================
+@export_group("K3 Camera", "cam_")
+## Master toggle. OFF = today's camera (M1.3 behaviour).
+@export var cam_enabled: bool = false
+## Visible world width (px) the viewport always shows, regardless of resolution.
+## 0.0 = use today's behaviour (no fixed-units enforcement).
+@export var cam_visible_world_width: float = 0.0
+## Zoom policy when window aspect != design aspect:
+##   0 = fit_width (lock horizontal units), 1 = fit_height, 2 = contain (letterbox).
+@export_enum("fit_width", "fit_height", "contain") var cam_zoom_policy: int = 0
+
+# =============================================================================
+# K4 (M1.4) — Configurable dive timer + near-end warning. All-off default = today's
+# DiveClockConfig length, no warning (M1.3 behaviour). Post-generation run-state.
+# =============================================================================
+@export_group("K4 Timer", "timer_")
+## Master toggle. OFF = today's DiveClockConfig length, no warning (M1.3 behaviour).
+@export var timer_enabled: bool = false
+## Dive length (s). 0.0 = use the existing DiveClockConfig default.
+@export var timer_length_s: float = 0.0
+## Seconds-remaining at which the near-end warning fires ONCE. 0.0 = no warning.
+@export var timer_warning_threshold_s: float = 0.0
+## Warning channel: 0 = visual_only, 1 = visual+audio (audio gated, M2 stub).
+@export_enum("visual_only", "visual_audio") var timer_warning_channel: int = 0
+
+# =============================================================================
+# K5a (M1.4) — Ping-pong hazard (bounces off room walls, lethal on contact). The
+# spawn-seam knobs (enabled/base_count/count_per_depth/per_room_cap) are read by
+# K5i's descriptor table; the type-specific knob (speed) is read by the entity.
+# All-off default = no hazard spawned (pure run-state, never feeds fingerprint()).
+# =============================================================================
+@export_group("K5a Ping-Pong Hazard", "hpp_")
+## Master toggle. OFF = no ping-pong hazard exists (M1.3 behaviour).
+@export var hpp_enabled: bool = false
+## Spawn count at within-band depth 0.
+@export var hpp_base_count: int = 0
+## Additive count scaling per unit of within-band depth.
+@export var hpp_count_per_depth: float = 0.0
+## Travel speed (px/s, greybox). Entity-read.
+@export var hpp_speed: float = 0.0
+## Hard cap on count per room (perf guard). 0 = uncapped (preset MUST set > 0).
+@export var hpp_per_room_cap: int = 0
+
+# =============================================================================
+# K5b (M1.4) — Bomb hazard (proximity pulse ~2s then explode; kills in radius).
+# Spawn-seam knobs read by K5i; the type-specific knobs (proximity/pulse/blast)
+# read by the entity. All-off default = no bomb (pure run-state).
+# =============================================================================
+@export_group("K5b Bomb Hazard", "hbomb_")
+## Master toggle. OFF = no bomb hazard exists (M1.3 behaviour).
+@export var hbomb_enabled: bool = false
+## Spawn count at within-band depth 0.
+@export var hbomb_base_count: int = 0
+## Additive count scaling per unit of within-band depth.
+@export var hbomb_count_per_depth: float = 0.0
+## Proximity that starts the pulse (px). Entity-read.
+@export var hbomb_proximity_radius: float = 0.0
+## Pulse duration before detonation (s; Director ~2s preset). Entity-read.
+@export var hbomb_pulse_seconds: float = 0.0
+## Lethal radius at detonation (px). Entity-read.
+@export var hbomb_blast_radius: float = 0.0
+## Hard cap on count per room (perf guard). 0 = uncapped (preset MUST set > 0).
+@export var hbomb_per_room_cap: int = 0
+
+# =============================================================================
+# K5c (M1.4) — Rotating-spikes hazard (rotates in place, lethal on contact).
+# Spawn-seam knobs read by K5i; the type-specific knobs (rotation/arm) read by
+# the entity. (Arm count is an in-file const, NOT a knob — Director K5 verdict.)
+# All-off default = no spikes (pure run-state).
+# =============================================================================
+@export_group("K5c Rotating Spikes", "hspike_")
+## Master toggle. OFF = no rotating-spikes hazard exists (M1.3 behaviour).
+@export var hspike_enabled: bool = false
+## Spawn count at within-band depth 0.
+@export var hspike_base_count: int = 0
+## Additive count scaling per unit of within-band depth.
+@export var hspike_count_per_depth: float = 0.0
+## Rotation speed (deg/s; signed → direction). Entity-read.
+@export var hspike_rotation_speed: float = 0.0
+## Reach of the lethal arm (px). Entity-read.
+@export var hspike_arm_length: float = 0.0
+## Hard cap on count per room (perf guard). 0 = uncapped (preset MUST set > 0).
+@export var hspike_per_room_cap: int = 0
+
+# =============================================================================
+# K7 (M1.4) — Exit placement rework (random/multiple exits, run-config-keyed for
+# determinism via a local sub-stream). All-off default = today's single fixed gate
+# at GATE_SPAWN_OFFSET, byte-identical, so the all-off fingerprint never moves.
+# K7 enforces determinism (local run_seed ^ salt); K0 only declares the knobs.
+# =============================================================================
+@export_group("K7 Exits", "exit_")
+## Master toggle. OFF = today's single fixed gate (M1.3 behaviour, fp unchanged).
+@export var exit_enabled: bool = false
+## Base exit count at depth 0. 0 = fall back to the single fixed gate (neutral).
+@export var exit_base_count: int = 0
+## Additive exit-count scaling per unit of within-band depth.
+@export var exit_count_per_depth: float = 0.0
+## If true, ONE exit is always pinned at the spawn gate (the rest placed randomly).
+@export var exit_keep_one_at_spawn: bool = false
+## Hard cap on total exits per band (perf/legibility guard). 0 = uncapped.
+@export var exit_max_count: int = 0
+
+
 ## The hardcoded corridor piece-id set (J4) the corridor-rarity lever down-weights and the
 ## corridor-time telemetry classifies on. Keyed on PlacedPiece.piece_id / ZonePieceData.piece_id
 ## (the generator-populated id, NOT the pre-_ready size_cells). The aspect-ratio fallback is
@@ -336,6 +465,48 @@ func to_flat_dict() -> Dictionary:
 		# LVL — J4 (M1.3) corridor-rarity lever (additive payload; RG2 segments corridor_frac)
 		"lvl_corridor_weight_mult": lvl_corridor_weight_mult,
 		"lvl_short_corridors": lvl_short_corridors,
+		# K2 (M1.4) — quota config knobs (additive payload; RG2 segments quota cohorts)
+		"quota_enabled": quota_enabled,
+		"quota_base": quota_base,
+		"quota_step": quota_step,
+		"quota_check_timing": quota_check_timing,
+		"quota_basis": quota_basis,
+		# K3 (M1.4) — camera config knobs
+		"cam_enabled": cam_enabled,
+		"cam_visible_world_width": cam_visible_world_width,
+		"cam_zoom_policy": cam_zoom_policy,
+		# K4 (M1.4) — timer + warning config knobs
+		"timer_enabled": timer_enabled,
+		"timer_length_s": timer_length_s,
+		"timer_warning_threshold_s": timer_warning_threshold_s,
+		"timer_warning_channel": timer_warning_channel,
+		# K5a (M1.4) — ping-pong hazard config knobs
+		"hpp_enabled": hpp_enabled,
+		"hpp_base_count": hpp_base_count,
+		"hpp_count_per_depth": hpp_count_per_depth,
+		"hpp_speed": hpp_speed,
+		"hpp_per_room_cap": hpp_per_room_cap,
+		# K5b (M1.4) — bomb hazard config knobs
+		"hbomb_enabled": hbomb_enabled,
+		"hbomb_base_count": hbomb_base_count,
+		"hbomb_count_per_depth": hbomb_count_per_depth,
+		"hbomb_proximity_radius": hbomb_proximity_radius,
+		"hbomb_pulse_seconds": hbomb_pulse_seconds,
+		"hbomb_blast_radius": hbomb_blast_radius,
+		"hbomb_per_room_cap": hbomb_per_room_cap,
+		# K5c (M1.4) — rotating-spikes hazard config knobs
+		"hspike_enabled": hspike_enabled,
+		"hspike_base_count": hspike_base_count,
+		"hspike_count_per_depth": hspike_count_per_depth,
+		"hspike_rotation_speed": hspike_rotation_speed,
+		"hspike_arm_length": hspike_arm_length,
+		"hspike_per_room_cap": hspike_per_room_cap,
+		# K7 (M1.4) — exit-placement config knobs
+		"exit_enabled": exit_enabled,
+		"exit_base_count": exit_base_count,
+		"exit_count_per_depth": exit_count_per_depth,
+		"exit_keep_one_at_spawn": exit_keep_one_at_spawn,
+		"exit_max_count": exit_max_count,
 	}
 
 
@@ -438,9 +609,9 @@ static func make_default_play_preset() -> RunConfig:
 	c.r1_depth_threshold = 1
 	c.r1_linger_seconds = 8.1
 	c.r1_chase_speed = 56.0
-	c.r1_speed_per_depth = 18.9
-	c.r1_catch_radius = 24.0                    # was 23.3 in-log; floored to clear the 24px collision floor
-	c.r1_catch_radius_per_depth = 10.5
+	c.r1_speed_per_depth = 3.0                  # K1 (M1.4, was 18.9): flatten the per-depth chase-speed ramp (Director "catch_speed_per_depth → 3.0" maps to this, the only chase-speed-per-depth ramp on R1 — RD-3)
+	c.r1_catch_radius = 24.0                    # unchanged — stays at the 24px collision floor so the catch test can trip and the BUG6 r1_catch_radius_too_small trap stays clear
+	c.r1_catch_radius_per_depth = 1.0           # K1 (M1.4, was 10.5): flatten the per-depth catch-radius lunge
 	c.r1_catch_kills = true
 	# J2 (M1.3): F2 fix — spread the hazards across depth instead of one gate. Director
 	# starting sweep points (a sweep, NOT a fix): count 5 (≈4–6), even_spread, min-depth 1

@@ -46,6 +46,13 @@ const RANGE_ROOM_CAP := Vector2(0, 16)     # r1_density_per_room_cap (0 = uncapp
 ## J4 (M1.3): the corridor-rarity weight multiplier — [0.0, 1.0] (corridors can be dialled to
 ## 0× their catalog weight, never UP past baseline 1.0). 0.25 step. SpinBox still types past.
 const RANGE_CORRIDOR := Vector2(0.0, 1.0)  # lvl_corridor_weight_mult (0.25 step)
+## M1.4 (K0) greybox scrub ranges for the new knobs (SpinBox still types past all of these).
+const RANGE_COUNT_SMALL := Vector2(0, 10)   # *_base_count hazard/exit spawn counts (0 = none)
+const RANGE_PER_DEPTH := Vector2(0.0, 5.0)  # *_count_per_depth additive scaling per depth
+const RANGE_MONEY := Vector2(0, 500)        # quota_base / quota_step ($ values; step 10)
+const RANGE_TIMER := Vector2(0, 120)        # timer_length_s dive length (s)
+const RANGE_VIEW := Vector2(0, 1920)        # cam_visible_world_width (visible world px)
+const RANGE_ROTATION := Vector2(-360, 360)  # hspike_rotation_speed (signed deg/s)
 
 ## Per-section descriptor: prefix (Meta = ""), the CSV title/gloss keys, the master
 ## field name ("" = none, Meta), whether the section is collapsible.
@@ -56,6 +63,15 @@ const SECTIONS := [
 	{"prefix": "r3_", "title_key": "CFG_SEC_R3", "gloss_key": "CFG_GLOSS_R3", "master": "r3_enabled", "collapsible": true},
 	{"prefix": "r4_", "title_key": "CFG_SEC_R4", "gloss_key": "CFG_GLOSS_R4", "master": "r4_enabled", "collapsible": true},
 	{"prefix": "lvl_", "title_key": "CFG_SEC_LVL", "gloss_key": "CFG_GLOSS_LVL", "master": "lvl_enabled", "collapsible": true},
+	# M1.4 (K0) — 7 new sections, each with a master *_enabled toggle (structural rows
+	# only; the per-knob UI tasks style/range-tune their sections later, not coverage).
+	{"prefix": "quota_", "title_key": "CFG_SEC_QUOTA", "gloss_key": "CFG_GLOSS_QUOTA", "master": "quota_enabled", "collapsible": true},
+	{"prefix": "cam_", "title_key": "CFG_SEC_CAM", "gloss_key": "CFG_GLOSS_CAM", "master": "cam_enabled", "collapsible": true},
+	{"prefix": "timer_", "title_key": "CFG_SEC_TIMER", "gloss_key": "CFG_GLOSS_TIMER", "master": "timer_enabled", "collapsible": true},
+	{"prefix": "hpp_", "title_key": "CFG_SEC_HPP", "gloss_key": "CFG_GLOSS_HPP", "master": "hpp_enabled", "collapsible": true},
+	{"prefix": "hbomb_", "title_key": "CFG_SEC_HBOMB", "gloss_key": "CFG_GLOSS_HBOMB", "master": "hbomb_enabled", "collapsible": true},
+	{"prefix": "hspike_", "title_key": "CFG_SEC_HSPIKE", "gloss_key": "CFG_GLOSS_HSPIKE", "master": "hspike_enabled", "collapsible": true},
+	{"prefix": "exit_", "title_key": "CFG_SEC_EXIT", "gloss_key": "CFG_GLOSS_EXIT", "master": "exit_enabled", "collapsible": true},
 ]
 
 ## HAND-AUTHORED field manifest (§3.6 — NOT reflection). Each section's ordered field
@@ -92,6 +108,37 @@ const MANIFEST := {
 		"lvl_loot_density_per_area",
 		# J4 (M1.3) — corridor-rarity lever: a float (weight mult, slider+spin) + a bool (drop long).
 		"lvl_corridor_weight_mult", "lvl_short_corridors",
+	],
+	# M1.4 (K0) — 7 new sections (master first; the per-knob UI tasks restyle later).
+	"quota_": [
+		# K2 — quota gate: master + base/step ($) + the two KEPT behaviour enums.
+		"quota_enabled", "quota_base", "quota_step", "quota_check_timing", "quota_basis",
+	],
+	"cam_": [
+		# K3 — resolution-independent camera: master + visible width (float) + zoom enum.
+		"cam_enabled", "cam_visible_world_width", "cam_zoom_policy",
+	],
+	"timer_": [
+		# K4 — dive timer + near-end warning: master + length/threshold floats + channel enum.
+		"timer_enabled", "timer_length_s", "timer_warning_threshold_s", "timer_warning_channel",
+	],
+	"hpp_": [
+		# K5a — ping-pong hazard: spawn-seam ints/float + the type-specific speed float.
+		"hpp_enabled", "hpp_base_count", "hpp_count_per_depth", "hpp_speed", "hpp_per_room_cap",
+	],
+	"hbomb_": [
+		# K5b — bomb hazard: spawn-seam + proximity/pulse/blast type-specific floats.
+		"hbomb_enabled", "hbomb_base_count", "hbomb_count_per_depth",
+		"hbomb_proximity_radius", "hbomb_pulse_seconds", "hbomb_blast_radius", "hbomb_per_room_cap",
+	],
+	"hspike_": [
+		# K5c — rotating spikes: spawn-seam + rotation (signed deg/s) + arm-length floats.
+		"hspike_enabled", "hspike_base_count", "hspike_count_per_depth",
+		"hspike_rotation_speed", "hspike_arm_length", "hspike_per_room_cap",
+	],
+	"exit_": [
+		# K7 — exit placement: master + base/per-depth count + keep-at-spawn bool + max cap.
+		"exit_enabled", "exit_base_count", "exit_count_per_depth", "exit_keep_one_at_spawn", "exit_max_count",
 	],
 }
 
@@ -133,6 +180,39 @@ const FIELD_RANGE := {
 	"lvl_loot_density_per_area": RANGE_DENSITY,
 	# J4 (M1.3) corridor-rarity weight multiplier (lvl_short_corridors is a bool → CheckButton).
 	"lvl_corridor_weight_mult": RANGE_CORRIDOR,
+	# M1.4 (K0) — numeric scalars only (the *_enabled bools + the *_zoom_policy/check_timing/
+	# basis/warning_channel enums + the keep-one-at-spawn bool render as their own widgets, no
+	# range). Spans are greybox scrub conveniences; the per-knob UI tasks may tune them.
+	# K2 quota.
+	"quota_base": RANGE_MONEY,
+	"quota_step": RANGE_MONEY,
+	# K3 camera.
+	"cam_visible_world_width": RANGE_VIEW,
+	# K4 timer.
+	"timer_length_s": RANGE_TIMER,
+	"timer_warning_threshold_s": RANGE_SECONDS,
+	# K5a ping-pong.
+	"hpp_base_count": RANGE_COUNT_SMALL,
+	"hpp_count_per_depth": RANGE_PER_DEPTH,
+	"hpp_speed": RANGE_SPEED,
+	"hpp_per_room_cap": RANGE_ROOM_CAP,
+	# K5b bomb.
+	"hbomb_base_count": RANGE_COUNT_SMALL,
+	"hbomb_count_per_depth": RANGE_PER_DEPTH,
+	"hbomb_proximity_radius": RANGE_RADIUS,
+	"hbomb_pulse_seconds": RANGE_SECONDS,
+	"hbomb_blast_radius": RANGE_RADIUS,
+	"hbomb_per_room_cap": RANGE_ROOM_CAP,
+	# K5c rotating spikes.
+	"hspike_base_count": RANGE_COUNT_SMALL,
+	"hspike_count_per_depth": RANGE_PER_DEPTH,
+	"hspike_rotation_speed": RANGE_ROTATION,
+	"hspike_arm_length": RANGE_RADIUS,
+	"hspike_per_room_cap": RANGE_ROOM_CAP,
+	# K7 exits.
+	"exit_base_count": RANGE_COUNT_SMALL,
+	"exit_count_per_depth": RANGE_PER_DEPTH,
+	"exit_max_count": RANGE_ROOM_CAP,
 }
 
 ## I1 (M1.2): per-field SpinBox/slider STEP override. lvl_size_mult is snapped to 0.25
@@ -145,6 +225,9 @@ const FIELD_STEP := {
 	"lvl_loot_density_per_area": 0.25,
 	# J4 (M1.3): the corridor weight multiplier scrubs in 0.25 steps over [0, 1].
 	"lvl_corridor_weight_mult": 0.25,
+	# M1.4 (K0): quota $ values scrub in 10s (Director uses 50s; SpinBox types exact).
+	"quota_base": 10.0,
+	"quota_step": 10.0,
 }
 
 # Dimming alpha for a section body whose master is OFF (redundant "inert" cue).
@@ -745,7 +828,10 @@ func _num(v) -> String:
 
 
 func _prefix_of(field: String) -> String:
-	for p in ["r1_", "r2_", "r3_", "r4_", "lvl_"]:
+	for p in ["r1_", "r2_", "r3_", "r4_", "lvl_",
+			# M1.4 (K0): the 7 new section prefixes — without these a new knob's live
+			# chip/summary refresh would mis-route to the Meta section.
+			"quota_", "cam_", "timer_", "hpp_", "hbomb_", "hspike_", "exit_"]:
 		if field.begins_with(p):
 			return p
 	return ""

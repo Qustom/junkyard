@@ -42,9 +42,12 @@ func _run() -> int:
 	var default_cfg := load(DEFAULT_CFG_PATH) as RunConfig
 	var exported := _exported_fields(default_cfg)
 	# Sanity vs. the schema's own count (R0: 32 + I2's 1 r1_ + I1's 3 lvl_ + J2's 2 r1_
-	# + J3's 5 r1_density_* + J3's 1 lvl_loot_density_per_area + J4's 2 lvl_corridor_* = 46).
-	if exported.size() != 46:
-		failures.append("expected 46 exported RunConfig fields, schema has %d" % exported.size())
+	# + J3's 5 r1_density_* + J3's 1 lvl_loot_density_per_area + J4's 2 lvl_corridor_* = 46;
+	# + M1.4's K2 5 quota_ (enabled/base/step/check_timing/basis — the two enums KEPT per the
+	# Phase-4 Lock) + K3 3 cam_ + K4 4 timer_ + K5a 5 hpp_ + K5b 7 hbomb_ + K5c 6 hspike_
+	# + K7 5 exit_ = 35 → 46 + 35 = 81).
+	if exported.size() != 81:
+		failures.append("expected 81 exported RunConfig fields, schema has %d" % exported.size())
 
 	var bound := menu._rows.keys()   # bound controls; masters are included as CheckButtons
 	for f in exported:

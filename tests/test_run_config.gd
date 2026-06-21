@@ -92,6 +92,22 @@ func _ready() -> void:
 		"lvl_loot_density_per_area",
 		# J4 (M1.3) corridor-rarity lever.
 		"lvl_corridor_weight_mult", "lvl_short_corridors",
+		# K2 (M1.4) — quota config knobs (the two behaviour enums KEPT per the Phase-4 Lock).
+		"quota_enabled", "quota_base", "quota_step", "quota_check_timing", "quota_basis",
+		# K3 (M1.4) — camera config knobs.
+		"cam_enabled", "cam_visible_world_width", "cam_zoom_policy",
+		# K4 (M1.4) — timer + warning config knobs.
+		"timer_enabled", "timer_length_s", "timer_warning_threshold_s", "timer_warning_channel",
+		# K5a (M1.4) — ping-pong hazard config knobs.
+		"hpp_enabled", "hpp_base_count", "hpp_count_per_depth", "hpp_speed", "hpp_per_room_cap",
+		# K5b (M1.4) — bomb hazard config knobs.
+		"hbomb_enabled", "hbomb_base_count", "hbomb_count_per_depth",
+		"hbomb_proximity_radius", "hbomb_pulse_seconds", "hbomb_blast_radius", "hbomb_per_room_cap",
+		# K5c (M1.4) — rotating-spikes hazard config knobs.
+		"hspike_enabled", "hspike_base_count", "hspike_count_per_depth",
+		"hspike_rotation_speed", "hspike_arm_length", "hspike_per_room_cap",
+		# K7 (M1.4) — exit-placement config knobs.
+		"exit_enabled", "exit_base_count", "exit_count_per_depth", "exit_keep_one_at_spawn", "exit_max_count",
 	]
 	for k in expected_keys:
 		if not flat.has(k):
