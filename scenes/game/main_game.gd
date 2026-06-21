@@ -318,7 +318,9 @@ func start_new_run() -> void:
 	# cell helpers (no duplicated placement math). Fully gated: with every *_enabled false
 	# (the K0 default) no descriptor is enabled → no scene loaded, no node built → all-off is
 	# byte-identical to M1.3 (fp e943ac9c8bc1 UNMOVED). Sibling of _spawn_r1_hazards.
-	_spawn_new_hazards(run_cfg, band)
+	# BUG7: thread spawn_pos so the seam can exclude the player's entry cell + a safe radius
+	# around it (the player is already AT spawn_pos by this call → no frame-0 spawn-kill).
+	_spawn_new_hazards(run_cfg, band, spawn_pos)
 
 
 # --- K5i (M1.4): new-hazard spawn seam (ping-pong / bomb / spikes) ------------
@@ -341,6 +343,15 @@ const NEW_HAZARD_BAND_CEILING: int = 48
 ## K5i: per-instance angular stride for the ping-pong's deterministic initial direction —
 ## the golden angle (~137.5°) so successive instances fan out without repeating, NO RNG.
 const NEW_HAZARD_GOLDEN_ANGLE: float = 2.39996322972865332   # PI * (3 - sqrt(5))
+
+## BUG7 (M1.4 Wave-5): no new hazard may spawn on or dangerously near the player's entry.
+## The player is placed AT _entry_spawn_position(band) BEFORE _spawn_new_hazards runs, so a
+## hazard at base_count >= 1 in the depth-0 entry piece could land on the spawn cell → instant
+## frame-0 lethal contact (feedback #7, session s_384be7 runs 19–47). Belt-and-braces alongside
+## skipping the depth-0 entry piece: any candidate cell whose world centre is within this many
+## CELL-WIDTHS of spawn_pos is excluded — a couple of cells clears the largest hazard kill
+## radius. Pure run-state, NO RNG (never feeds fingerprint(), like the rest of the seam).
+const NEW_HAZARD_SPAWN_SAFE_CELLS: float = 2.5
 
 
 ## K5i: one descriptor per new hazard type — its telemetry kind, scene path, and the FOUR
@@ -368,9 +379,20 @@ func _new_hazard_descriptors(rc: RunConfig) -> Array[Dictionary]:
 ## Nodes go into _band_container so _clear_band() frees them; setup(rc, player, spawn_ctx)
 ## binds the config snapshot + the per-kind context. Called from start_new_run() right after
 ## _spawn_r1_hazards (the K5i single-writer seam).
-func _spawn_new_hazards(rc: RunConfig, band: Band) -> void:
+## BUG7: `spawn_pos` is the player's entry world position (threaded from start_new_run, where
+## the player is already placed AT it). The seam NEVER spawns a hazard in the depth-0 entry
+## piece, nor on any cell within NEW_HAZARD_SPAWN_SAFE_CELLS of spawn_pos, so base_count >= 1
+## can no longer spawn-kill the player on frame 0 (mirrors _exit_candidate_cells's exclusion).
+## spawn_pos defaults to a sentinel; when not supplied it is recomputed from band topology so
+## the exclusion still applies (deterministic, NO RNG — the fingerprint stays untouched).
+func _spawn_new_hazards(rc: RunConfig, band: Band, spawn_pos: Vector2 = Vector2.INF) -> void:
 	if rc == null:
 		return
+	# BUG7: resolve the entry-spawn position + its band-global cell so we can exclude the
+	# player's start from new-hazard placement. Recompute from topology if the caller didn't
+	# thread it (e.g. the headless seam test) — still deterministic, pure run-state.
+	var entry_pos: Vector2 = spawn_pos if spawn_pos != Vector2.INF else _entry_spawn_position(band)
+	var safe_dist_px: float = NEW_HAZARD_SPAWN_SAFE_CELLS * float(_band_cell_size_px)
 	# Resolve the player once via the "player" group (already grouped in player.tscn). Use the
 	# band container's tree (it is parented before this runs, both in-game and under test) so the
 	# lookup never depends on THIS node being in the tree — null is fine (entities are null-safe).
@@ -401,6 +423,11 @@ func _spawn_new_hazards(rc: RunConfig, band: Band) -> void:
 			if spawned_total >= NEW_HAZARD_BAND_CEILING:
 				break
 			var depth: int = p.depth_index
+			# BUG7: never place a new hazard in the depth-0 entry piece — that's where the player
+			# spawns, so a base_count >= 1 hazard there is a frame-0 spawn-kill. Skipping it keeps
+			# "shallow entry is safe, then it stirs" (I2 §2.4 arc); deeper pieces still get hazards.
+			if depth <= 0:
+				continue
 			# "More with depth": base at depth 0, +per_depth per within-band depth (J3-style floor).
 			var n: int = base + int(floor(per_depth * float(depth)))
 			if per_room_cap > 0:
@@ -409,6 +436,11 @@ func _spawn_new_hazards(rc: RunConfig, band: Band) -> void:
 			if n <= 0:
 				continue
 			var cells: Array[Vector2i] = _density_sorted_cells(p)   # stable (y, x) order
+			# BUG7 belt-and-braces: drop any cell within the safe radius of the entry spawn (a
+			# deep piece can still straddle the entry in world space). Mirrors how
+			# _exit_candidate_cells excludes the entry cell. Pure topology filter, NO RNG.
+			cells = cells.filter(func(c: Vector2i) -> bool:
+				return _density_cell_to_world(c).distance_to(entry_pos) >= safe_dist_px)
 			if cells.is_empty():
 				continue
 			var room_bounds: Rect2 = _piece_floor_bounds_world(cells)   # for ping-pong clamp
