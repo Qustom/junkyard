@@ -684,11 +684,12 @@ static func make_default_play_preset() -> RunConfig:
 	# --- K3 (M1.4): resolution-independent camera ON in the preset (Director disposition,
 	# M1.4 Wave-1 close-out: "Addressed"). The fixed visible-world width makes "how far can I
 	# see" a controlled variable the re-gate actually exercises, instead of today's window-
-	# resolution-dependent FOV. 576 px = today's horizontal FOV (base 1152 / zoom 2), so the
-	# default framing is unchanged on a 1152-wide window and only becomes RESOLUTION-INVARIANT.
+	# resolution-dependent FOV. RG1 re-gate (Feedback #1): the Director set the visible-world
+	# width to 1000 px — the prior 576 (base 1152 / zoom 2) framed too tight, so the playtester
+	# could not see enough of the band ahead. 1000 px zooms the view out to show more world.
 	# Pure presentation: cam_* never feed fingerprint() — the all-off control is untouched.
 	c.cam_enabled = true
-	c.cam_visible_world_width = 576.0          # = base 1152 / zoom 2 (today's horizontal FOV), now fixed
+	c.cam_visible_world_width = 1000.0         # RG1 Feedback #1: Director set 1000 px visible-world-width (was 576)
 	c.cam_zoom_policy = 0                        # fit_width (lock the horizontal sight-line — K3 Resolved Decisions)
 
 	# --- K4 (M1.4): configurable dive timer + near-end warning. Director FINAL (Phase-3
@@ -714,13 +715,19 @@ static func make_default_play_preset() -> RunConfig:
 	# NOTE on the shared budget (K5i NEW_HAZARD_BAND_CEILING=48, starvation order
 	# pingpong→bomb→spike): the per-type magnitudes below are deliberately MODEST so all THREE
 	# types fit comfortably under the combined 48-body ceiling on a deep (~15-depth) band and
-	# spikes are NOT starved to zero by the earlier types. With base_count 0 + a gentle per-depth
-	# ramp (+1 every ~7 depths) + a per_room_cap of 2, each type's band total is ~9 on the
-	# default 19-room/15-depth band (≈27 combined, well under 48), so the re-gate actually SEES
-	# all three. NB: a higher base/per_depth/cap saturates the shared 48 ceiling with pingpong
-	# alone and starves spikes — the SHIPPED preset must let every type spawn; pushing these up
-	# is a valid RG1 sweep but NOT the shipped default (verified by test_rg1_m14_verify).
-	# base 0 also reads as "danger ramps with depth": shallow rooms stay calmer.
+	# spikes are NOT starved to zero by the earlier types (spikes are placed LAST, so big
+	# pingpong/bomb totals would eat the budget first). Worked estimate on the default ~19-room
+	# /~15-depth band:
+	#   • pingpong: base 0, per_depth 0.15, cap 2 → ~0 in shallow rooms, ~1 mid, ~2 deep ⇒ ~9 total.
+	#   • bomb:     base 0, per_depth 0.15, cap 2 → same shape ⇒ ~9 total.
+	#   • spike:    base 1, per_depth 0.1, cap 1 → exactly 1 per eligible room (cap clamps the
+	#               ramp) ⇒ ~19 total (≈ the eligible-room count).
+	# Combined ≈ 37, comfortably under the 48 ceiling, so spikes get their full share and the
+	# re-gate SEES all three. Keeping pingpong/bomb base_count at 0 (only a gentle per-depth ramp)
+	# is what protects the spike budget — pushing pingpong/bomb base/per_depth/cap up would saturate
+	# the shared 48 with the earlier types and starve spikes, so those stay where they are. Spikes
+	# now ship base 1 (RG1 Feedback #3) so they actually APPEAR at shallow depth; pingpong/bomb keep
+	# base 0 so their danger still "ramps with depth" (shallow rooms stay calmer on those two).
 
 	# K5a ping-pong (bounces off room walls, lethal on contact). speed ~70 px/s greybox.
 	c.hpp_enabled = true
@@ -739,12 +746,22 @@ static func make_default_play_preset() -> RunConfig:
 	c.hbomb_per_room_cap = 2                   # MANDATORY > 0 (K5i perf guard); sweepable in RG1
 
 	# K5c rotating spikes (rotates in place, lethal on contact; 3 arms = in-file const, NOT a knob).
+	# RG1 Feedback #3: at the old base 0 + per_depth 0.1, floor(0.1*depth) stayed 0 until depth 10,
+	# so rotating spikes effectively NEVER appeared in a normal ~15-depth run — the playtester never
+	# saw them. base_count is now 1 so at least one spike RELIABLY spawns from the very first eligible
+	# room (shallow depth), and the per_room_cap is dropped to 1 so each room gets exactly one spike —
+	# this keeps the spike band total ~equal to the eligible-room count (~19) regardless of the depth
+	# ramp, well under the shared 48 ceiling even after pingpong+bomb take their share (see the budget
+	# note above). Because pingpong/bomb keep base 0 and only ramp gently, spikes are NOT starved by
+	# the pingpong→bomb→spike placement order. base_count>=1 at the entry is now SAFE: BUG7 (sibling
+	# Wave-5 task) adds spawn-room/entry-cell exclusion to _spawn_new_hazards, so a shallow spike can
+	# no longer spawn-kill the player at the band entry.
 	c.hspike_enabled = true
-	c.hspike_base_count = 0                     # sweep start: none at depth 0 (ramps in with depth)
-	c.hspike_count_per_depth = 0.15           # sweep start: +1 every ~7 within-band depths
+	c.hspike_base_count = 1                     # RG1 #3: >=1 spike from the first eligible room (was 0 → never appeared)
+	c.hspike_count_per_depth = 0.1            # gentle ramp; the cap=1 below holds each room to one spike anyway
 	c.hspike_rotation_speed = 90.0            # sweep start: 90 deg/s (signed → direction)
 	c.hspike_arm_length = 48.0                # sweep start lethal arm reach (px)
-	c.hspike_per_room_cap = 2                  # MANDATORY > 0 (K5i perf guard); sweepable in RG1
+	c.hspike_per_room_cap = 1                  # RG1 #3: one spike per room (MANDATORY > 0 — K5i perf guard); bounds the band total
 
 	# --- K7 (M1.4): exits SHIP OFF for a clean re-gate (Director Phase-3 lock: "preset ships
 	# exits OFF"). exit_enabled stays false (the all-off default) → today's single fixed gate at
