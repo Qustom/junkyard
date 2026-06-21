@@ -712,14 +712,6 @@ static func make_default_play_preset() -> RunConfig:
 	# these values are provably non-inert anyway (enabled + non-zero base/per_depth + cap>0).
 
 	# NOTE on the shared budget (K5i NEW_HAZARD_BAND_CEILING=48, starvation order
-	# pingpong→bomb→spike): the per-type magnitudes below are deliberately MODEST so that all
-	# THREE types fit comfortably under the combined 48-body ceiling on a deep (~15-depth)
-	# band and spikes are NOT starved to zero. A per_room_cap of 2 + a gentle per-depth ramp
-	# (~+1 every 5 depths) keeps each type's band total well under a third of the ceiling, so
-	# the re-gate actually SEES all three. Pushing these up is a valid RG1 sweep — but the
-	# SHIPPED preset must let every type spawn (the Director can't evaluate a starved type).
-
-	# NOTE on the shared budget (K5i NEW_HAZARD_BAND_CEILING=48, starvation order
 	# pingpong→bomb→spike): the per-type magnitudes below are deliberately MODEST so all THREE
 	# types fit comfortably under the combined 48-body ceiling on a deep (~15-depth) band and
 	# spikes are NOT starved to zero by the earlier types. With base_count 0 + a gentle per-depth
