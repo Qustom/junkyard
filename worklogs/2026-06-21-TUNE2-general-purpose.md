@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.4 (Wave 5)
 - **Branch:** worktree-agent-ab0a5763932b81220
-- **Commit:** 69e0ec76508a6b702fb47180a2b60cc2bd26e7a9
+- **Commit:** 7854ddd9d72361402a74c19e67ae41c34f83f1b9 (TUNE2 work) + a trailing worklog-SHA fixup
 
 ## What changed
 Director-requested RG1 re-gate tuning of the fun preset (`make_default_play_preset()`) — NOT a
