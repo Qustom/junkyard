@@ -112,6 +112,22 @@ func _run() -> int:
 	if a != b:
 		failures.append("(f) density positions not deterministic across calls (%s vs %s)" % [str(a), str(b)])
 
+	# --- (f2) K5i GUARD: J3's golden positions are BYTE-UNCHANGED by K5i ------------
+	# K5i (M1.4) shares J3's cell helpers but MUST NOT refactor _density_spawn_positions
+	# (OQ-2 "don't refactor R1" — R1's fingerprint-frozen plan stays byte-untouched). This
+	# golden snapshot for the fixed (areas [32,96,200], density 1.0, cell 16) band fails the
+	# instant K5i accidentally moves R1's plan. Captured from the as-built J3 placement.
+	const J3_GOLDEN: Array[Vector2] = [
+		Vector2(1608.0, 8.0), Vector2(3208.0, 8.0), Vector2(3208.0, 88.0),
+	]
+	var golden_band := _make_band([32, 96, 200])
+	var golden_rc := _rc(1.0)
+	var golden: Array = mg._density_spawn_positions(golden_band, golden_rc)
+	if golden != J3_GOLDEN:
+		failures.append("(f2) K5i guard: J3 golden positions moved — R1's plan regressed! got %s, expected %s"
+			% [str(golden), str(J3_GOLDEN)])
+	_free_band(golden_band)
+
 	# --- (g) px_area metric scales by lvl_size_mult^2 ------------------------------
 	# cell_area: a 96-cell room at density 1.0 earns floor(96/96)=1.
 	# px_area at lvl_size_mult 2.0: area = 96 * 4 = 384 → floor(384/96)=4 (but capped below).
