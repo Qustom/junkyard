@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.4 (Wave 3 — Danger variety)
 - **Branch:** general-purpose/K5i-spawn-integration
-- **Commit:** 1253013
+- **Commit:** b1f7f0f (worklog SHA-fix follow-up)
 
 ## What changed
 Wired the three merged M1.4 hazard entities (K5a ping-pong, K5b bomb, K5c spikes) into
