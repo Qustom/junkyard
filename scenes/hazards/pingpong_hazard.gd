@@ -38,6 +38,11 @@ const SQUASH_TIME := 0.06
 var _cfg: RunConfig                 # snapshot of GameState.active_run_config at setup
 var _player: Node2D                 # resolved at setup via the "player" group
 var _speed: float = 0.0             # snapshot of hpp_speed (px/s)
+var _dir: Vector2 = Vector2.RIGHT   # intended unit heading — the SOURCE OF TRUTH for the bounce.
+                                    # BUG8: reflect THIS off wall normals, never the post-slide
+                                    # velocity (which move_and_slide projects ALONG the wall —
+                                    # feeding it back into the bounce collapsed the heading to
+                                    # wall-parallel in corners → grinding/stalling).
 var _killed_latched: bool = false   # one-shot telemetry latch (BUG6 pattern) — NOT a fail_run guard
 var _spawn_time: float = 0.0        # self-timed run clock for the telemetry run_t_ms (R1 §4 pattern)
 
@@ -63,8 +68,8 @@ func setup(cfg: RunConfig, player: Node2D, spawn_ctx: Dictionary = {}) -> void:
 	_killed_latched = false
 	_spawn_time = 0.0
 	var initial_dir: Vector2 = spawn_ctx.get("initial_dir", Vector2.RIGHT)
-	var d := initial_dir.normalized() if initial_dir.length() > 0.001 else Vector2.RIGHT
-	velocity = d * _speed
+	_dir = initial_dir.normalized() if initial_dir.length() > 0.001 else Vector2.RIGHT
+	velocity = _dir * _speed
 	if _tell != null:
 		_tell.color = COLOR_LIVE
 
@@ -75,20 +80,33 @@ func _physics_process(delta: float) -> void:
 	_spawn_time += delta
 
 	# --- Travel + bounce ----------------------------------------------------
-	# Constant-speed straight-line travel; move_and_slide() stops the body on a wall
-	# (layer `world`) and reports the contact. We then REFLECT velocity off the wall
-	# normal so the next frame travels the mirrored heading — the "ping-pong". Speed is
-	# re-normalised after the bounce so glancing hits don't bleed speed (OQ-2 explicit
-	# reflect; slide alone would project ALONG the wall = wall-grinding, the I2 bug).
+	# Drive from the intended heading _dir (NOT the post-slide velocity). Each frame:
+	#   velocity = _dir * _speed → move_and_slide() → reflect _dir off the wall normal(s).
+	# BUG8 FIX: the previous code reflected the POST-move_and_slide velocity, which
+	# move_and_slide had already projected ALONG the wall (tangential). In a glancing hit
+	# or a corner that tangential vector points nearly wall-parallel, so bounce() couldn't
+	# restore the real incoming heading — the bouncer ground along the wall and stalled at
+	# a corner. Reflecting the intended heading _dir keeps the ping-pong angle exact and the
+	# speed constant forever (the tangential mutation never feeds back into the bounce).
+	velocity = _dir * _speed
 	move_and_slide()
-	if get_slide_collision_count() > 0:
-		var col := get_last_slide_collision()
-		if col != null:
-			var n: Vector2 = col.get_normal()
-			# Reflect only if heading INTO the wall (dot < 0), so we never double-flip
-			# on a frame where we're already moving away (prevents corner jitter).
-			if velocity.dot(n) < 0.0:
-				velocity = velocity.bounce(n).normalized() * _speed
+	var hits := get_slide_collision_count()
+	if hits > 0:
+		# A corner = two (or more) contacts in one frame. Summing the slide normals (each a
+		# unit vector) yields the resultant "away from the corner" normal; reflecting _dir off
+		# it reverses the bouncer out of the corner instead of trapping it between two walls.
+		var n := Vector2.ZERO
+		for i in hits:
+			var col := get_slide_collision(i)
+			if col != null:
+				n += col.get_normal()
+		if n.length() > 0.001:
+			n = n.normalized()
+			# Reflect only when still heading INTO the (resultant) wall (dot < 0), so we never
+			# double-flip on a frame where the heading already points away (prevents jitter).
+			if _dir.dot(n) < 0.0:
+				_dir = _dir.bounce(n).normalized()
+				velocity = _dir * _speed
 				_squash_on_bounce()
 
 	# --- Room-rect clamp (OQ-1): hard-confine to the room rect as belt-and-braces.
@@ -121,17 +139,22 @@ func _on_contact() -> void:
 
 
 ## OQ-1 clamp: if the body crossed a room-rect edge this frame, snap it back inside and
-## reflect the perpendicular velocity component. Pure run-state math, no physics —
-## complementary to the wall-bounce above (wall-bounce handles concave/L interiors).
+## reflect the perpendicular component. Pure run-state math, no physics — complementary to
+## the wall-bounce above (wall-bounce handles concave/L interiors).
+## BUG8: flip the perpendicular component of _dir (the heading source of truth), not just
+## velocity — velocity is recomputed from _dir at the top of every frame, so a velocity-only
+## flip here would be discarded next frame and the bouncer would walk back through the edge.
+## velocity is kept synced so it reads consistent within this same frame.
 func _confine_to_room() -> void:
 	var p := global_position
 	if p.x < _room_bounds.position.x or p.x > _room_bounds.end.x:
-		velocity.x = -velocity.x
+		_dir.x = -_dir.x
 		p.x = clampf(p.x, _room_bounds.position.x, _room_bounds.end.x)
 	if p.y < _room_bounds.position.y or p.y > _room_bounds.end.y:
-		velocity.y = -velocity.y
+		_dir.y = -_dir.y
 		p.y = clampf(p.y, _room_bounds.position.y, _room_bounds.end.y)
 	global_position = p
+	velocity = _dir * _speed
 
 
 # --- Greybox tell juice (inline placeholder, no sprite sheets / AnimationTree) ------
