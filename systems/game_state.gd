@@ -34,6 +34,13 @@ var unlocked_recipes: Array[StringName] = []
 # them. Holds the actual JunkItem resources in memory (so F2 can itemize the
 # payoff); persisted/rehydrated by id through the JunkCatalog (objects-off save).
 var banked_junk: Array[JunkItem] = []
+# K2 (M1.4): the headline-stakes quota meta. Both are META-STATE — they persist
+# across runs, escalate when a quota is met, and reset to these defaults on a
+# roguelite wipe. The live quota_target was *set by the previous run's outcome*;
+# the per-run "did this run meet it?" evaluation is RUN-STATE (below), not these.
+var run_number: int = 1        # 1-based; the run currently being played. Resets to 1 on wipe.
+var quota_target: int = 0      # the Money bar THIS run must clear. 0 = "not yet initialised"
+                               # (lazy-init at the first quota-enabled start_run from quota_base).
 
 # --- RUN-STATE (disposable) --------------------------------------------------
 var run_active: bool = false
@@ -69,6 +76,20 @@ var _staged_run_config: RunConfig
 # is honored (the player-friendly resolution; E3 Open questions).
 var _run_ended: bool = false
 
+# K2 (M1.4): per-run quota evaluation state — RUN-STATE (disposable, never
+# persisted). Snapshotted at start_run from active_run_config because end_run()
+# clears active_run_config BEFORE the SellScreen sells (the eval cannot re-read
+# the config later). The cached _quota_result is read by SellScreen via
+# last_quota_result(); _quota_evaluated_this_run makes the eval idempotent
+# regardless of how many times sell_banked_junk is called in a run (Gap 1).
+var _quota_active_this_run: bool = false
+var _quota_step_snapshot: int = 0
+var _quota_check_timing_snapshot: int = 0   # 0=on_extract, 1=every_run_end (RunConfig enum)
+var _quota_basis_snapshot: int = 0          # 0=this_run_banked, 1=cumulative_money
+var _quota_end_reason: StringName = &""     # the run's end reason (for on_extract gating)
+var _quota_evaluated_this_run: bool = false
+var _quota_result: Dictionary = {"checked": false}
+
 # E3: cached pockets-drop tuning, loaded once. Authored at RUN_RULES_PATH; falls
 # back to a code-default RunRules if the .tres is missing so the fail path is safe.
 var run_rules: RunRules
@@ -102,6 +123,28 @@ func start_run(band_id: StringName, seed: int) -> void:
 	# slot so it can't leak into a later run.
 	active_run_config = _staged_run_config if _staged_run_config != null else _default_run_config()
 	_staged_run_config = null
+	# K2 (M1.4): snapshot the quota config for this run (active_run_config is cleared
+	# by end_run() before the SellScreen sells, so the eval cannot re-read it later)
+	# and reset the per-run evaluation state. All snapshots default to the all-off
+	# values when there is no config, so a quota-off run is fully inert here.
+	var qc: RunConfig = active_run_config
+	_quota_active_this_run = qc != null and qc.quota_enabled
+	_quota_step_snapshot = qc.quota_step if qc != null else 0
+	_quota_check_timing_snapshot = qc.quota_check_timing if qc != null else 0
+	_quota_basis_snapshot = qc.quota_basis if qc != null else 0
+	_quota_end_reason = &""
+	_quota_evaluated_this_run = false
+	_quota_result = {"checked": false}
+	if _quota_active_this_run and quota_target <= 0:
+		# Lazy meta-init on the first quota-enabled run of a ladder (fresh profile OR
+		# just-wiped): seed the bar from quota_base, run 1. Q4 lock: eager-persist so
+		# the seeded bar is durable immediately (a quit-before-any-run-end reloads at
+		# the correct bar). Gap 2: this is the ONLY place start_run touches the save,
+		# guarded STRICTLY behind active+uninitialised so a quota-OFF run writes NOTHING
+		# at start (preserving the all-off control's byte-identical-to-M1.3 guarantee).
+		quota_target = qc.quota_base
+		run_number = 1
+		SaveManager.save_meta(0)
 	RNG.seed_from(seed)
 	EventBus.run_started.emit(band_id, seed)
 
@@ -234,6 +277,10 @@ func set_current_depth(idx: int, dist_home: int) -> void:
 
 func end_run(reason: StringName, duration_s: float) -> void:
 	run_active = false
+	# K2 (M1.4): remember the run's end reason BEFORE active_run_config is cleared, so
+	# _evaluate_quota (run later from the SellScreen) can honor quota_check_timing's
+	# on_extract option (evaluate only on a clean extract). Run-state; reset each start_run.
+	_quota_end_reason = reason
 	if run_inventory != null:        # D1: wipe the bag so it never survives into the next run
 		run_inventory.clear_run()
 	# M1.1 R0: the active config is run-state — clear it on run end. The next run
@@ -291,7 +338,90 @@ func sell_banked_junk(source: StringName = &"sell") -> Array[Dictionary]:
 	# Persist the new Money total + emptied bank (slot 0; same path as E1/E3).
 	SaveManager.save_meta(0)
 
+	# K2 (M1.4): evaluate the quota AFTER the credit + save — `money` is only final
+	# for the run here (Q2 lock). `total` is the sum just sold this call (the
+	# this_run_banked basis reads it; the cumulative_money basis reads `money`).
+	_evaluate_quota(total)
+
 	return breakdown
+
+
+## K2 (M1.4): evaluate this run against the quota. Run-state only — it mutates the
+## quota META (run_number/quota_target) ONLY on a met quota, and never wipes here
+## (a miss is wiped by MainGame on Continue, after the player sees the tally). Inert
+## unless the run was configured with the quota on (_quota_active_this_run snapshot).
+## Idempotent via _quota_evaluated_this_run (Gap 1): a second call in the same run
+## returns the cached result, so it can never double-advance the quota regardless of
+## how many times sell_banked_junk is invoked. `sold_total` is the value sold THIS
+## call (the this_run_banked basis); cumulative_money reads the post-credit `money`.
+func _evaluate_quota(sold_total: int) -> Dictionary:
+	if _quota_evaluated_this_run:
+		return _quota_result
+	if not _quota_active_this_run:
+		_quota_result = {"checked": false}
+		return _quota_result
+	# Honor quota_check_timing: on_extract (0) only evaluates on a clean extract;
+	# every_run_end (1) evaluates on extract/death/timeout alike.
+	if _quota_check_timing_snapshot == 0 and _quota_end_reason != &"extract":
+		_quota_result = {"checked": false}
+		return _quota_result
+	_quota_evaluated_this_run = true
+	# Compute `achieved` by the basis: cumulative_money (1) reads the running balance
+	# after this run's sale; this_run_banked (0) reads only what was sold this run.
+	var achieved: int = money if _quota_basis_snapshot == 1 else sold_total
+	var met: bool = achieved >= quota_target
+	EventBus.quota_evaluated.emit(run_number, quota_target, achieved, met)
+	if met:
+		# Escalate: bump the run number AND raise the next quota, then persist.
+		run_number += 1
+		quota_target += _quota_step_snapshot
+		SaveManager.save_meta(0)
+		EventBus.quota_advanced.emit(run_number, quota_target)
+		_quota_result = {"checked": true, "met": true, "achieved": achieved, "target": quota_target}
+	else:
+		# MISS → the wipe is a SEPARATE meta op MainGame triggers on Continue: we want
+		# the player to SEE the tally + the QUOTA MISSED beat first, then wipe → fresh.
+		# `target` reported here is the bar that was MISSED (not yet escalated).
+		_quota_result = {"checked": true, "met": false, "achieved": achieved, "target": quota_target}
+	return _quota_result
+
+
+## K2 (M1.4): the cached result of this run's quota evaluation, for the SellScreen
+## (pure consumer — no quota math in the UI). Run-state: cleared at next start_run.
+## Returns {"checked": false} until/unless _evaluate_quota ran this run.
+func last_quota_result() -> Dictionary:
+	return _quota_result
+
+
+## K2 (M1.4): the full roguelite wipe (Director FINAL). Resets EVERY meta field to
+## its construction default, re-persists through SaveManager's atomic write + .bak so
+## a quit-after-wipe stays wiped, and signals observers. A SEPARATE meta op called by
+## MainGame on the GameOver→Continue path AFTER the player saw the QUOTA MISSED beat,
+## BEFORE the next start_run (which re-seeds the quota from quota_base). It touches
+## ONLY meta — never run_active/run_seed/run_inventory/active_run_config/_run_ended
+## (it runs between runs, after end_run cleared run-state, so there is no run-state to
+## corrupt). Freshly-TYPED empty arrays (an untyped [] would not match the typed field).
+func wipe_meta() -> void:
+	var prev_run_number := run_number
+	money = 0
+	salvage = 0
+	lore = 0
+	exposure = 0
+	knowledge_level = 0
+	var empty_recipes: Array[StringName] = []
+	unlocked_recipes = empty_recipes
+	var empty_junk: Array[JunkItem] = []
+	banked_junk = empty_junk
+	# K2 meta: back to run 1 / "uninitialised" so the next quota-enabled start_run
+	# re-seeds the bar from quota_base (run 1, quota $50).
+	run_number = 1
+	quota_target = 0
+	# Persist the wiped state through the SAME atomic path (slot 0) as every meta op.
+	SaveManager.save_meta(0)
+	# Fire AFTER the persist so observers (HUD/Telemetry/GameOver) read settled state.
+	EventBus.meta_wiped.emit(prev_run_number)
+	# Nudge any money-projection HUD to repaint to 0.
+	EventBus.currency_changed.emit(&"money", 0, &"wipe")
 
 func add_exposure(delta: int) -> void:
 	var before := exposure
@@ -421,6 +551,9 @@ func to_meta_dict() -> Dictionary:
 		"exposure": exposure, "knowledge_level": knowledge_level,
 		"unlocked_recipes": unlocked_recipes,
 		"banked_junk": banked_ids,
+		# K2 (M1.4): quota meta — persists/escalates/resets-on-wipe.
+		"run_number": run_number,
+		"quota_target": quota_target,
 	}
 
 func from_meta_dict(d: Dictionary) -> void:
@@ -436,6 +569,10 @@ func from_meta_dict(d: Dictionary) -> void:
 	# E1: rehydrate banked_junk from persisted ids via the catalog. Unknown ids
 	# (e.g. a retired .tres) are skipped with a warning rather than crashing load.
 	banked_junk = _rehydrate_banked_junk(d.get("banked_junk", []))
+	# K2 (M1.4): quota meta. Pre-K2 saves migrate to run_number=1/quota_target=0
+	# (the v2->v3 migration adds them); the defaults here match for a raw read.
+	run_number = d.get("run_number", 1)
+	quota_target = d.get("quota_target", 0)
 
 ## E1: map persisted junk ids back to their JunkItem resources via the catalog.
 func _rehydrate_banked_junk(ids: Array) -> Array[JunkItem]:

@@ -14,3 +14,4 @@ HUD_COST_EXPOSURE,exposure
 HUD_COST_METER,egress debt
 HUD_COST_DECAY,route collapsed
 HUD_TIME_LOW,Time almost up!
+HUD_QUOTA,Run {run} · Quota: ${have} / ${need}

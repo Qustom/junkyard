@@ -604,6 +604,17 @@ static func make_default_play_preset() -> RunConfig:
 	c.lvl_room_count = 19                      # disposition B: 19 (sweepable)
 	c.lvl_size_mult = 4.0                       # the new RANGE_MULT floor / most-fun cell size
 
+	# --- K2 quota (M1.4): the headline stakes — a per-run quota whose miss is a full
+	# roguelite wipe. Director FINAL: start $50, +$50/run. Phase-3 locks: checked at
+	# every run end (extract/death/timeout) and met by cumulative money (forgiving Act-1
+	# reading). The all-off control (quota_enabled=false) keeps these code defaults so
+	# an unconfigured run is byte-identical to M1.3.
+	c.quota_enabled = true
+	c.quota_base = 50                          # run 1's bar (Director FINAL $50)
+	c.quota_step = 50                          # +$50 each time the bar is met (Director FINAL)
+	c.quota_check_timing = 1                    # every_run_end (Q1 locked: any-run-end)
+	c.quota_basis = 1                          # cumulative_money (Q2 locked: cumulative)
+
 	# --- R1 pursuing hazard: the most-fun ba745e1 cell, verbatim (catch_radius floored). ---
 	c.r1_enabled = true
 	c.r1_depth_threshold = 1

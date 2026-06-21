@@ -142,7 +142,9 @@ func _ready() -> void:
 	# W4-11: the production SellScreen only announces intent; G3 owns the restart.
 	# Continue from the reward beat loops straight back into a fresh dive (door 2 —
 	# reuses the menu's config, no menu shown: the config carry-forward of §2.3).
-	_sell_screen.continue_pressed.connect(start_new_run)
+	# K2 (M1.4): Continue routes through _on_continue_pressed so a MISSED quota triggers
+	# the roguelite wipe BEFORE the next run (the SellScreen flagged pending_wipe()).
+	_sell_screen.continue_pressed.connect(_on_continue_pressed)
 	# RG1 (§8 Q2): "Back to Config" re-opens the menu so the Director can switch configs
 	# mid-session. The next Start (door 1) re-reads ConfigMenu.apply_and_get_config().
 	_sell_screen.back_to_config_pressed.connect(_on_back_to_config)
@@ -174,6 +176,17 @@ func _load_fixtures() -> void:
 
 
 # --- The loop entry point (G3-owned) -----------------------------------------
+
+## K2 (M1.4): SellScreen.continue_pressed handler. On a MISSED quota the SellScreen
+## set pending_wipe() — run the roguelite wipe (a SEPARATE meta op) BEFORE the next
+## run so it restarts at run 1 / quota_base. A met / quota-off Continue is unchanged
+## (no wipe). A wiped run is just a normal fresh run whose meta is at defaults, so
+## start_new_run needs no special case (start_run re-seeds the quota from quota_base).
+func _on_continue_pressed() -> void:
+	if _sell_screen != null and _sell_screen.pending_wipe():
+		GameState.wipe_meta()
+	start_new_run()
+
 
 ## Start a fresh dive. The SINGLE place a run begins — both the menu's Start button
 ## and SellScreen.continue_pressed call this. Tears down any previous band, builds a

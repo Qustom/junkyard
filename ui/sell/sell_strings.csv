@@ -9,3 +9,6 @@ SELL_CONTINUE,Continue
 SELL_EXPORT_TELEMETRY,Export telemetry
 SELL_EXPORT_DONE,Downloaded {name}
 SELL_EXPORT_EMPTY,No telemetry to export yet
+SELL_TITLE_QUOTA_FAIL,QUOTA MISSED
+SELL_QUOTA_MET,Quota cleared — next: ${target}
+SELL_QUOTA_MISS,${achieved} / needed ${target} — meta wiped

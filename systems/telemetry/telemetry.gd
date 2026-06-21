@@ -132,12 +132,19 @@ func _on_run_started(band_id: StringName, seed: int) -> void:
 	# BUG6 (M1.3): also stamp the enabled-but-inert opposition ids so a dead-config
 	# run is self-identifying in the log and RG2 can filter it (additive `data` field,
 	# [] for the all-off control — same additive pattern, NO schema bump).
+	# K2 (M1.4, Q8): also stamp the LIVE quota meta (run_number + quota_target) so RG2
+	# can segment in-progress / abandoned runs by quota pressure even without a clean end.
+	# Additive `data` keys only — no schema bump, no run_ended arity change. For an all-off
+	# run these are the inert defaults (1 / 0), so the row stays self-identifying.
+	var quota_meta: Dictionary = _active_quota_meta()
 	_emit_row(Schema.RUN_STARTED, {
 		"band_id": String(band_id),
 		"seed": seed,
 		"build": BuildVersionScript.id(),
 		"run_config": _active_run_config_dict(),
 		"inert_enabled_oppositions": _active_inert_oppositions(),
+		"quota_run_number": quota_meta.get("run_number", 1),
+		"quota_target": quota_meta.get("quota_target", 0),
 	})
 
 
@@ -312,6 +319,16 @@ func _active_run_config_dict() -> Dictionary:
 	if gs != null and gs.active_run_config != null:
 		return gs.active_run_config.to_flat_dict()
 	return {}
+
+
+## K2 (M1.4, Q8): the live quota meta (run_number + quota_target) from GameState, via
+## the same /root lookup as the other run_started helpers so it stays robust headless.
+## Defaults (1 / 0) when GameState is absent so the row never crashes.
+func _active_quota_meta() -> Dictionary:
+	var gs := get_node_or_null("/root/GameState")
+	if gs != null:
+		return {"run_number": gs.run_number, "quota_target": gs.quota_target}
+	return {"run_number": 1, "quota_target": 0}
 
 
 ## BUG6 (M1.3): the enabled-but-inert opposition ids for the active config, as a

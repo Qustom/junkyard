@@ -89,6 +89,9 @@ const _COST_UNIT_KEYS := {
 @onready var _clock_bar: ProgressBar = %ClockBar
 @onready var _clock_label: Label = %ClockLabel
 @onready var _depth_label: Label = %DepthLabel
+# K2 (M1.4): the quota readout ("Run N · Quota: $have / $need"). Gated on quota_enabled
+# (mirrors the R2/R3/timer gating) so an all-off run keeps the M1.0 HUD byte-for-byte.
+@onready var _quota_label: Label = %QuotaLabel
 @onready var _cost_anchor: Control = %CostIndicatorAnchor
 
 var _clock_fraction: float = 1.0
@@ -124,9 +127,16 @@ func _ready() -> void:
 	# K4: the one-shot near-end warning. Already-emitted dive_clock_warning, gated on
 	# timer_enabled so an all-off run never shows it (= M1.0 HUD).
 	EventBus.dive_clock_warning.connect(_on_dive_clock_warning)
+	# K2 (M1.4): the quota readout repaints on run start (paint the bar), on a met-quota
+	# advance (bump run#/target), and on a wipe (back to run 1 / fresh bar). All gated on
+	# quota_enabled inside _refresh_quota so an all-off run never shows the line.
+	EventBus.quota_advanced.connect(_on_quota_changed)
+	EventBus.meta_wiped.connect(_on_quota_changed)
+	EventBus.run_started.connect(_on_quota_run_started)
 	_root_home = _root.position
 	_refresh_haul()
 	_refresh_depth()
+	_refresh_quota()
 
 
 func _process(delta: float) -> void:
@@ -193,6 +203,36 @@ func _refresh_depth() -> void:
 	_depth_label.text = tr("HUD_DEPTH").format({
 		"depth": GameState.current_depth_index,
 		"max": GameState.max_depth_reached,
+	})
+
+
+## K2 (M1.4): repaint the quota line. Variadic-tolerant so it can serve both
+## quota_advanced(new_run, new_target) and meta_wiped(prev_run). Pure projection of
+## GameState.run_number / .money / .quota_target — owns no quota truth.
+func _on_quota_changed(_a = null, _b = null) -> void:
+	_refresh_quota()
+
+
+## K2 (M1.4): run_started(band, seed) handler for the quota line. Separate from the
+## generic _on_run_boundary so the variadic shape stays explicit; just re-paints.
+func _on_quota_run_started(_band_id: StringName = &"", _seed: int = 0) -> void:
+	_refresh_quota()
+
+
+## K2 (M1.4): project "Run N · Quota: $have / $need". Gated on quota_enabled (mirrors
+## the R2/R3/timer gates) so an all-off run keeps the line hidden = the M1.0 HUD. `have`
+## reads cumulative GameState.money (matches the cumulative_money basis the preset ships);
+## with a this_run_banked basis the cumulative reading still legibly shows "your balance".
+func _refresh_quota() -> void:
+	var cfg: RunConfig = GameState.active_run_config
+	if cfg == null or not cfg.quota_enabled:
+		_quota_label.visible = false
+		return
+	_quota_label.visible = true
+	_quota_label.text = tr("HUD_QUOTA").format({
+		"run": GameState.run_number,
+		"have": GameState.money,
+		"need": GameState.quota_target,
 	})
 
 
