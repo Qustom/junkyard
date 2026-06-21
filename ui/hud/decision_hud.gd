@@ -49,6 +49,12 @@ extends CanvasLayer
 @export var penalty_shake_pixels: float = 5.0
 @export var penalty_shake_seconds: float = 0.22
 
+## K4: the one-shot near-end "time almost up" warning flash. Longer/hotter than the R2
+## toll pulse (it is a discrete alarm, not a per-bite punch). Blinks N times then settles
+## back onto the live drain ramp. Gated on timer_enabled (= M1.0 HUD when off).
+@export var warning_pulse_seconds: float = 0.8
+@export var warning_flash_count: int = 3
+
 # Off-ladder, colourblind-aware clock ramp. Backed by the numeric "Ns" readout and
 # the bar fill itself, so colour is never the only channel (readability rule).
 const CLOCK_GREEN := Color(0.30, 0.85, 0.35)
@@ -59,6 +65,12 @@ const CLOCK_RED := Color(0.92, 0.26, 0.24)
 # settles back to the bar's ramp colour). Distinct from the steady ramp so the toll
 # reads as a discrete bite, not background drain. The number drop is the redundant channel.
 const CLOCK_TOLL_PULSE := Color(1.0, 0.95, 0.55)
+
+# K4: off-ladder one-shot "time almost up" alarm colour. Distinct from CLOCK_TOLL_PULSE
+# (the R2 amber-white toll) so a near-end warning reads as a DIFFERENT event from an egress
+# toll. Hotter red-white; the bar fill + numeric "Ns" readout + banner are the redundant
+# non-colour channels (readability rule).
+const CLOCK_WARNING_PULSE := Color(1.0, 0.35, 0.30)
 
 # Legibility layer: the at-risk number stays high-contrast regardless of band styling.
 const HOLDING_COLOR := Color(1, 1, 1)
@@ -87,6 +99,9 @@ var _clock_pulse_tween: Tween
 var _shake_tween: Tween
 var _root_home: Vector2 = Vector2.ZERO
 
+# K4 one-shot warning flash tween (re-trigger rather than stack).
+var _warning_tween: Tween
+
 
 func _ready() -> void:
 	EventBus.run_inventory_changed.connect(_on_run_inventory_changed)
@@ -106,6 +121,9 @@ func _ready() -> void:
 	# both gated on their opposition so an all-off run stays the M1.0 HUD.
 	EventBus.return_cost_incurred.connect(_on_return_cost)
 	EventBus.exposure_penalty.connect(_on_exposure_penalty)
+	# K4: the one-shot near-end warning. Already-emitted dive_clock_warning, gated on
+	# timer_enabled so an all-off run never shows it (= M1.0 HUD).
+	EventBus.dive_clock_warning.connect(_on_dive_clock_warning)
 	_root_home = _root.position
 	_refresh_haul()
 	_refresh_depth()
@@ -277,7 +295,63 @@ func _shake_root() -> void:
 		penalty_shake_seconds / float(steps))
 
 
+# --- M1.4 K4: near-end "time almost up" warning --------------------------------
+
+## Projects the already-emitted dive_clock_warning (DiveClock fires it ONCE as remaining
+## light crosses timer_warning_threshold_s). Gated on timer_enabled so an all-off run never
+## shows it (= M1.0 HUD). VISUAL is always shown when enabled; AUDIO is AudioDirector's job,
+## gated separately on timer_warning_channel — keeps this surface pure-visual.
+func _on_dive_clock_warning(_seconds_remaining: float, _maximum: float) -> void:
+	if not _timer_enabled():
+		return
+	_flash_warning()
+	_spawn_warning_banner()
+
+
+## Motion channel: an N-blink alarm punch on the clock bar, settling back onto the live
+## drain ramp colour (the same _urgency_color the R2 toll pulse settles onto), so the
+## steady drain resumes cleanly afterward. Re-triggers rather than stacks.
+func _flash_warning() -> void:
+	if _warning_tween != null and _warning_tween.is_valid():
+		_warning_tween.kill()
+	var blinks: int = maxi(warning_flash_count, 1)
+	var half: float = warning_pulse_seconds / float(blinks) * 0.5
+	_warning_tween = create_tween()
+	for _i in range(blinks):
+		_warning_tween.tween_property(_clock_bar, "modulate", CLOCK_WARNING_PULSE, half)
+		_warning_tween.tween_property(_clock_bar, "modulate",
+			_urgency_color(_clock_fraction), half)
+
+
+## Text channel: a short-lived "Time almost up!" banner that rises and fades near the
+## clock, reusing the I3 float-and-fade idiom so colour is never the only channel.
+func _spawn_warning_banner() -> void:
+	var label := Label.new()
+	label.text = tr("HUD_TIME_LOW")
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.add_theme_color_override(&"font_color", Color(1.0, 0.45, 0.40))
+	label.add_theme_color_override(&"font_outline_color", Color(0, 0, 0))
+	label.add_theme_constant_override(&"outline_size", 5)
+	label.add_theme_font_size_override(&"font_size", 22)
+	label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	label.position = Vector2(-212.0, 0.0)
+	label.custom_minimum_size = Vector2(196, 26)
+	_cost_anchor.add_child(label)
+
+	var t := create_tween()
+	t.set_parallel(true)
+	t.tween_property(label, "position:y", -28.0, cost_indicator_seconds)
+	t.tween_property(label, "modulate:a", 0.0, cost_indicator_seconds)
+	t.chain().tween_callback(label.queue_free)
+
+
 # --- Opposition gates (read-only on the run config; never mutate it) -----------
+
+func _timer_enabled() -> bool:
+	var cfg: RunConfig = GameState.active_run_config
+	return cfg != null and cfg.timer_enabled
+
 
 func _r2_enabled() -> bool:
 	var cfg: RunConfig = GameState.active_run_config
