@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.4 (Wave 1, lands first; blocks K2/K3/K4/K5a/K5b/K5c/K5i/K7)
 - **Branch:** worktree-agent-a141f2be73e7e7181 (isolated worktree feature branch; NOT main)
-- **Commit:** 6755b4ce25b327e7e222c760cb36335920b042df
+- **Commit:** 74034bc23927d2733495380d97bc22e3ef25c000 (K0 foundation; worklog SHA-fix follow-up records this)
 
 ## What changed
 K0 is the single-writer foundation pass over the two shared files + the CFG menu for M1.4. It
