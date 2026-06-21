@@ -59,13 +59,27 @@ K5a + K5b + K5c (parallel) + K5i (integration) all on `main`, pushed, board=Done
 - **K5c** anchored rotating spikes: 3 arms (const), analytic point-to-segment kill (no CollisionShape2D), deterministic phase from `spawn_ctx.phase_salt`, steel/cyan tell. `res://scenes/hazards/spike_hazard.tscn`. Worklog `2026-06-21-K5c-general-purpose.md`.
 - **K5i** spawn-seam integration (merge `91be51f`): `_spawn_new_hazards` sibling of `_spawn_r1_hazards`, descriptor table (pingpong→bomb→spike starvation order), per-room count `base+floor(per_depth*depth)` capped per-room + shared 48 ceiling, per-kind `spawn_ctx`, pure-deterministic; R1's `_density_spawn_positions` untouched (golden-guard added). `test_new_hazard_spawn` green. Worklog `2026-06-21-K5i-general-purpose.md`.
 
-## ▶ Next action (start here on a cold restart) — **M1.4 Wave 4: re-gate (RG1 build+verify → Director playtest → RG2 → RG3)**
+## ✓ M1.4 Wave 4 — RG1 build+verify — DONE (2026-06-21)
 
-Waves 1–3 done (K0,K1,K2,K3,K4,K5*,K6,K7). **Wave 4 = the re-gate** (`design/M1_4_Tasks/` RG1 spec / M1.1 RG1 template). **RG1** (`general-purpose` + `qa`): author the M1.4 RG1 build+verify doc, set `make_default_play_preset()` to the M1.4 fun stack, assemble the runnable loop, verify each feature individually + stacked, confirm config-marked telemetry, **publish to itch** (`bash tools/push_itch.sh`, `BUTLER=/mnt/c/wsl-libraries/butler/butler` — human-gated on real network, Chromium-only). **RG1 carry-forward (OQ-3 action 2): measure worst-case ~112-body (R1's 64 + new 48) headless tick-time on the web build — don't assume it.** Then **RG2/RG3 are HUMAN-GATED**: Director plays a config sweep, `qa` analyses telemetry vs the M1.0/M1.1/M1.2/M1.3 baselines, Director records go/iterate/pivot in `G4_findings_M1.4.md`.
+RG1 on `main` (merge `0da631f`; build commits `183d19f`/`aa58a99`), pushed, board=Done. **Director lifted the Wave-4 hold → RG1 built + verified + published to itch.**
+- **Preset = M1.4 fun stack:** `make_default_play_preset()` now layers **K4** timer (60s dive / 10s near-end warning / visual-only) + **all three K5 hazards** (hpp/hbomb/hspike ON at RG1 sweep-START magnitudes, each with a mandatory `per_room_cap=2`, balanced ~9/9/9 under the 48 ceiling so all three spawn) on top of the M1.3 base + K2 quota + K3 camera. **K7 exits ship OFF** (Phase-3 lock). All-off code defaults untouched.
+- **Headless `test_rg1_m14_verify`** (run as a SCENE: `godot --headless res://tests/test_rg1_m14_verify.tscn`) → **`RG1 M1.4 VERIFY OK`, exit 0**: preset shape, all-off fp byte-identical **`e943ac9c8bc1`**, no-leak into the control, `to_flat_dict()` carries all 81 knobs incl. K4/K5/K7, K5i spawn helper spawns ≥1 of each kind bounded by cap + 48 ceiling, extract/timeout end-causes reachable. 11 rows headless / 7 human-deferred.
+- Gates re-run by orchestrator: import clean · smoke OK · run_config 81 · config_menu 81/81.
+- Verify doc `design/M1_4_Tasks/RG1_playtest_build.md`; `loop_smoke_checklist.md` + `tester_readme.md` updated. Worklog `worklogs/2026-06-21-RG1-general-purpose.md`.
+- **itch published:** `qusto/the-far-yard:html5 @ m1-20260621-...` (Chromium-only, password-gated). *(Re-published post-merge so the live build matches final `main`.)*
 
-> ⏸ **BUILD HELD after Wave 3 at the Director's request (2026-06-21).** All M1.4 features (Waves 1–3) are integrated + pushed; nothing mid-flight. **Resume by dispatching RG1** (the step above) on the Director's go.
+> **Board drift flagged (2026-06-21):** the GitHub Project only carries items through M1.1 (R0/CFG); the M1.2/M1.3/M1.4 `J*`/`K*` tasks were never added despite STATUS marking them "board=Done." RG1 item created + set Done (`PVTI_lAHOAAXnOs4BasyMzgwZAFk`); back-filling the ~20 missing items is a Director call (surfaced, not silently done).
 
-> **Wave-3 close-out DONE (2026-06-21).** 1 deviation **W3-F1** → Director: **Addressed** — guarded the K5b test cleanup with `is_instance_valid` (`tests/test_bomb_hazard.gd`); `test_bomb_hazard` now runs clean (`BOMB HAZARD OK`, exit 0, **0 SCRIPT ERROR**). Archived → `DESIGN_DEVIATIONS_HISTORY.md`. `DESIGN_DEVIATIONS.md` empty between waves. Deferred (RG1 sweep/Director-taste, no action now): `NEW_HAZARD_BAND_CEILING=48` value; OQ-4 deterministic-vs-sub-stream striping; K7 preset `exit_*` (ship OFF); worst-case ~112-body tick-time check → RG1 checklist.
+> **Wave-4 RG1 close-out (2026-06-21):** 1 deviation flagged by the build agent → **RG1-F1** (the K5 sweep-start magnitudes — chose modest base 0 / per_depth 0.15 / cap 2 so all three hazards spawn rather than pingpong starving spikes at the shared 48 ceiling; the load-bearing constraint "every type must spawn in the default" was held; values are an explicit RG1 sweep the Director delegated). **Awaiting Director disposition** (recommend **Reviewed**). `DESIGN_DEVIATIONS.md` carries it.
+
+## ▶ Next action (start here on a cold restart) — **M1.4 RG2/RG3: HUMAN-GATED re-gate**
+
+RG1 is done + published. The re-gate now hands off to the **Director**:
+1. **Director playtest** — play the itch build (and/or a desktop config sweep) across the M1.4 fun stack + variants; export telemetry (in-game "Export telemetry" button on web; `user://telemetry/run_log.jsonl` on desktop).
+2. **RG2 (`qa`)** — analyse the returned telemetry: per-config distributions side-by-side across **M1.0/M1.1/M1.2/M1.3/M1.4**; did stakes (quota+wipe), variety (3 new hazards), and the legibility fixes (camera/timer/jitter) land? **OQ-3 carry-forward:** confirm worst-case ~112-body (R1 64 + new 48) tick-time on the web build is acceptable.
+3. **RG3 (Director)** — record **go → M2 / iterate → M1.5 / pivot** in `design/M1_4_Tasks/G4_findings_M1.4.md`. Claude assembles + recommends; the human plays + decides.
+
+Also pending the Director: **RG1-F1 disposition** (above) and the **board back-fill** call.
 
 > **Standing contracts (M1.4):** all-off `RunConfig` default = permanent baseline (fp e943ac9c8bc1); fun values only in `make_default_play_preset()`; config-marked telemetry; `run_ended` arity locked; single-writer-per-`.gd`-file per wave; parallel agents `isolation: worktree`; verify branch topology before every merge (qa git-switch leak — memory); push + board mirror after every merge; wave close-out deviation sweep.
 
