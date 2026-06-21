@@ -4,7 +4,7 @@
 - **Subagent:** qa-playtest-coordinator
 - **Milestone:** M1.4 (Wave 5)
 - **Branch:** worktree-agent-a1ca7b185c1e88515
-- **Commit:** ad8d2a8466fa0fb5381a65a367001acf8eebb512
+- **Commit:** 3e1c95be8160720c3a7b529cf6ad7f97df68262c (worklog SHA-line updated in a follow-up commit)
 
 ## Verdict
 
