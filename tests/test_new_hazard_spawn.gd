@@ -63,14 +63,15 @@ func _run() -> int:
 			% mg_neu._band_container.get_child_count())
 
 	# --- (ii) base>0 puts a hazard in every eligible room ---------------------------
-	# bomb only, base 1, no depth scaling → exactly one per room (3 rooms → 3 nodes).
+	# BUG7: the depth-0 ENTRY piece is excluded from new-hazard placement (the player spawns
+	# there), so bomb base 1, no depth scaling → one per ELIGIBLE room = the 2 deeper rooms.
 	var rc_base := _rc()
 	rc_base.hbomb_enabled = true
 	rc_base.hbomb_base_count = 1
 	var mg_base := _fresh_mg(mg_script)
 	mg_base._spawn_new_hazards(rc_base, band3)
-	if mg_base._band_container.get_child_count() != 3:
-		failures.append("(ii) base=1 bomb over 3 rooms produced %d nodes, expected 3"
+	if mg_base._band_container.get_child_count() != 2:
+		failures.append("(ii) base=1 bomb over 3 rooms (entry excluded) produced %d nodes, expected 2"
 			% mg_base._band_container.get_child_count())
 
 	# --- (ii) DEPTH SCALING: a deeper room earns >= a shallower one (per_depth > 0) --
@@ -91,15 +92,16 @@ func _run() -> int:
 		failures.append("(ii) expected 3 rooms, got %d depth buckets" % per_room.size())
 
 	# --- (iii) PER-ROOM CAP bounds the per-room count -------------------------------
-	# spikes, base 10, cap 2 → each of the 3 rooms capped to 2 → 6 total.
+	# spikes, base 10, cap 2 → each ELIGIBLE room capped to 2. BUG7: the depth-0 entry room is
+	# excluded, so 2 eligible rooms (depths 1,2) → 4 total (was 6 before the entry exclusion).
 	var rc_cap := _rc()
 	rc_cap.hspike_enabled = true
 	rc_cap.hspike_base_count = 10
 	rc_cap.hspike_per_room_cap = 2
 	var mg_cap := _fresh_mg(mg_script)
 	mg_cap._spawn_new_hazards(rc_cap, _make_band([16, 16, 16]))
-	if mg_cap._band_container.get_child_count() != 6:
-		failures.append("(iii) per-room cap 2 over 3 rooms produced %d nodes, expected 6"
+	if mg_cap._band_container.get_child_count() != 4:
+		failures.append("(iii) per-room cap 2 over 3 rooms (entry excluded) produced %d nodes, expected 4"
 			% mg_cap._band_container.get_child_count())
 
 	# --- (iv) SHARED BAND CEILING bounds the total across ALL three types -----------
@@ -162,6 +164,46 @@ func _run() -> int:
 	var bm_ctx: Dictionary = mg_ctx._new_hazard_spawn_ctx(&"bomb", p0, 0, 0, room_bounds)
 	if not bm_ctx.is_empty():
 		failures.append("(vi) bomb spawn_ctx should be empty, got %s" % str(bm_ctx))
+
+	# --- (vii) BUG7: no new hazard spawns on/near the player's entry-spawn cell -----
+	# Feedback #7 (CRITICAL): with base_count >= 1 the seam placed a hazard on the entry cell
+	# → frame-0 spawn-kill. Assert that with ALL three types base-heavy the nearest spawned
+	# hazard is still clear of the entry by the safe radius (and the entry depth-0 room is empty).
+	var safe_cells: float = mg_script.NEW_HAZARD_SPAWN_SAFE_CELLS
+	var bug7_band := _make_band([16, 16, 16])   # entry at depth 0, two deeper rooms
+	var entry_cell: Vector2i = bug7_band.entry_piece.floor_cells[0]
+	var entry_pos: Vector2 = Vector2(entry_cell * CELL) + Vector2(CELL, CELL) * 0.5
+	var rc_bug7 := _rc()
+	rc_bug7.hpp_enabled = true
+	rc_bug7.hpp_base_count = 3
+	rc_bug7.hbomb_enabled = true
+	rc_bug7.hbomb_base_count = 3
+	rc_bug7.hspike_enabled = true
+	rc_bug7.hspike_base_count = 3
+	var mg_bug7 := _fresh_mg(mg_script)
+	mg_bug7._spawn_new_hazards(rc_bug7, bug7_band)   # spawn_pos recomputed from band topology
+	var safe_px: float = safe_cells * float(CELL)
+	var min_dist: float = INF
+	var entry_room_x_base: int = bug7_band.entry_piece.offset_cell.x   # depth-0 room x base
+	var entry_room_hits: int = 0
+	for child in mg_bug7._band_container.get_children():
+		if child is Node2D:
+			var gp: Vector2 = (child as Node2D).global_position
+			min_dist = minf(min_dist, gp.distance_to(entry_pos))
+			# A node whose cell x falls in the entry room's x-strip is in the depth-0 room.
+			if int(gp.x / float(CELL)) / 100 == entry_room_x_base / 100:
+				entry_room_hits += 1
+	if mg_bug7._band_container.get_child_count() == 0:
+		failures.append("(vii) BUG7 case produced no nodes (test mis-set — can't prove safety)")
+	if entry_room_hits != 0:
+		failures.append("(vii) BUG7: %d hazard(s) landed in the depth-0 entry room (expected 0)"
+			% entry_room_hits)
+	if min_dist < safe_px:
+		failures.append(("(vii) BUG7: a hazard landed %.1fpx from the entry spawn (< safe radius "
+			+ "%.1fpx) — frame-0 spawn-kill risk") % [min_dist, safe_px])
+	mg_bug7._band_container.queue_free()
+	mg_bug7.free()
+	_free_band(bug7_band)
 
 	for m in [mg_off, mg_neu, mg_base, mg_cap, mg_exp, mg_ctx]:
 		if m._band_container != null and is_instance_valid(m._band_container):
