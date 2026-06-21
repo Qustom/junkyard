@@ -663,6 +663,16 @@ static func make_default_play_preset() -> RunConfig:
 	# --- R2 / R3 deliberately OFF (Director F1: "R2 and R3 OFF by default"). ---
 	# r2_enabled / r3_enabled stay false (all-off defaults) — do not touch.
 
+	# --- K3 (M1.4): resolution-independent camera ON in the preset (Director disposition,
+	# M1.4 Wave-1 close-out: "Addressed"). The fixed visible-world width makes "how far can I
+	# see" a controlled variable the re-gate actually exercises, instead of today's window-
+	# resolution-dependent FOV. 576 px = today's horizontal FOV (base 1152 / zoom 2), so the
+	# default framing is unchanged on a 1152-wide window and only becomes RESOLUTION-INVARIANT.
+	# Pure presentation: cam_* never feed fingerprint() — the all-off control is untouched.
+	c.cam_enabled = true
+	c.cam_visible_world_width = 576.0          # = base 1152 / zoom 2 (today's horizontal FOV), now fixed
+	c.cam_zoom_policy = 0                        # fit_width (lock the horizontal sight-line — K3 Resolved Decisions)
+
 	# Provably trap-free: every enabled opposition's load-bearing magnitude is non-inert,
 	# so the M1.3 re-gate measures R1+R4 for real (no silent dead-config like M1.2).
 	assert(c.inert_enabled_oppositions().is_empty(),

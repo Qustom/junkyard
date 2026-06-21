@@ -259,3 +259,26 @@ All 3 Wave-2 tasks (J2 enemy spread, J3 per-room density, J4 corridor lever + te
 - **Preset-value fun calls (RG2 sweeps, not deviations):** J2 count(5)/min-depth(1)/curve-on?, J3 density(1.0)/cap(3)/min-area(64)/metric(cell-area)/loot-off, J4 `lvl_corridor_weight_mult`(0.5)/`lvl_short_corridors`(true) — all Director sweeps against the new room scale at RG2, not values this build fixes.
 
 **M1.3 Wave 2 close-out complete (2026-06-20).** 1 deviation: **Reviewed** (J2 curve as-built note). `DESIGN_DEVIATIONS.md` empty between waves. **M1.3 Wave 2 (enemy depth-spread + per-room cell-area density + corridor-rarity generator lever & corridor-time telemetry) is complete** on `main`; baseline byte-unchanged. **Next: Wave 3 — the re-gate** (RG1 build+verify + itch publish → human playtest → RG2 analysis vs M1.0/M1.1/M1.2 → RG3 verdict in `G4_findings_M1.3.md`).
+
+---
+
+## M1.4 Wave 1 close-out (2026-06-21) — Director dispositioned
+
+3 deviations, all dispositioned by the Director at the Wave-1 close-out:
+
+- **K0 — quota-enum knob count (doc vs as-built) → REVIEWED.** The K0 design doc's RD-1/RD-6 dropped the two quota
+  behaviour enums (→79); the Breakdown Phase-4 Lock KEPT them (Director wants quota configurable) → as-built **81**.
+  Reapply: the canonical count lives in `M1.4_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock", which already
+  states 81; the K0 doc's internal RD arithmetic is superseded by the Lock. No code change (build is correct).
+- **K3/K6 — render-time behaviour not headless-verifiable → REVIEWED.** Jitter-gone + fixed-FOV look can't be proven
+  in `--headless`; verified green at the code/determinism level (fp `e943ac9c8bc1`, smoke, `test_camera_view`/
+  `test_dive_clock`). Reapply: folded into the M1.4 RG1 verify matrix as an explicit "confirm on a >60Hz monitor/
+  browser" item. Not a design change.
+- **K3 — resolution-independent camera shipped opt-in → ADDRESSED.** The preset didn't enable the fixed camera, so the
+  default playtest wouldn't exercise it. Director: enable it in the preset. Reapply (DONE): `make_default_play_preset()`
+  now sets `cam_enabled=true`, `cam_visible_world_width=576.0` (= today's horizontal FOV, now resolution-invariant),
+  `cam_zoom_policy=0` (fit_width). Verified: smoke OK, all-off fp `e943ac9c8bc1` unchanged (cam_* never feed fingerprint).
+
+**M1.4 Wave 1 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 2 — K2 (quota + roguelite
+wipe + save-schema v2→v3) → K7 (exit placement),** then Wave 3 (3 new hazards) → Wave 4 (re-gate). *Build PAUSED after
+Wave 1 at the Director's request (2026-06-21) — resume by dispatching K2.*

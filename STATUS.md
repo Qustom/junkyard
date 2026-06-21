@@ -50,7 +50,13 @@ Wave 1 done. **Wave 2 is sequential** (both touch `main_game.gd`/`game_state.gd`
 1. **Dispatch K2 — Quota + roguelite wipe** (`general-purpose` + game-director-designer economy + ui-ux + qa fixture; `isolation: worktree`) per `design/M1_4_Tasks/K2_quota_system.md` §"Resolved Decisions": per-run quota (start $50, +$50/run), **checked every run end**, **met by cumulative money**, **miss = full meta wipe** (9-field reset); save META **v2→v3** + migration + `meta_v2.sav` QA fixture; HUD quota readout + Game-Over→wipe→fresh-start. Knobs already exist (K0): `quota_enabled/base/step/check_timing/basis`. Verify: migration + fixture green, miss wipes meta, all-off (`quota_enabled=false`) = M1.3 byte-identical, fp unmoved.
 2. **After K2 on `main`** → **K7 — Exit placement** (random local-sub-stream, multiple, depth-scaled, keep-at-spawn toggle; default = today's single fixed gate). Then **Wave 3** (**K5a ∥ K5b ∥ K5c → K5i**), **Wave 4** (re-gate RG1→playtest→RG2→RG3).
 
-> **Wave-1 close-out deviation sweep is PENDING** (Director dispositions) before Wave 2 dispatch — see `design/DESIGN_DEVIATIONS.md`: (a) K0 quota-enum count reconciliation (doc says 79, as-built 81 per Phase-4 Lock); (b) K3/K6 render-time deferred-checks; (c) camera ships opt-in (preset doesn't enable the fixed FOV — Director may want RG1 to default it on).
+> **Wave-1 close-out sweep DONE (2026-06-21).** 3 deviations dispositioned → archived to `DESIGN_DEVIATIONS_HISTORY.md`:
+> K0 count (Reviewed, as-built 81 per Lock) · K3/K6 render-time deferred-checks (Reviewed → RG1 matrix) · **camera now
+> ENABLED in the preset** (Addressed: `make_default_play_preset()` → `cam_enabled=true`, `cam_visible_world_width=576`,
+> `cam_zoom_policy=fit_width`; smoke OK, all-off fp `e943ac9c8bc1` unchanged).
+
+> ⏸ **BUILD PAUSED after Wave 1 at the Director's request (2026-06-21).** Resume by dispatching **K2** (the first Wave-2
+> task) per the step above. Design is locked, Wave 1 is integrated + pushed; nothing is mid-flight.
 
 > **Contracts (M1.4):** all-off `RunConfig` default = permanent baseline (fp=e943ac9c8bc1); fun values ship in
 > `make_default_play_preset()`; quota = every-run-end × cumulative-money, miss = full wipe (Director FINAL); config-marked
