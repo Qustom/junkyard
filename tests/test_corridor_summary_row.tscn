@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://bj4corridorrow001"]
+[gd_scene format=3 uid="uid://o5txvjoaj5d1"]
 
 [ext_resource type="Script" path="res://tests/test_corridor_summary_row.gd" id="1"]
 
