@@ -37,20 +37,20 @@ All 5 on `main`, verified, pushed, board=Done; all-off fp byte-identical (e943ac
 - **DLV1** itch HTML5 delivery (Web preset + `push_itch.sh` + web templates + nightly slugs) — `02ad951`. ⚠ **real butler push human-gated** (sandbox can't reach `broth.itch.ovh`; run `tools/push_itch.sh` per SETUP §1a).
 - **J1** `make_default_play_preset()` (19 rooms, size 4.0, R1 on, **R4 maze-only / occlusion OFF = match-played**, R2/R3 off) + `RANGE_MULT=[4.0,40.0]` — `3159aac` (+ `25072f6`).
 
-## ▶ Next action (start here on a cold restart) — **M1.4 Wave 1: dispatch K0 (foundation) FIRST, alone**
+## ✓ M1.4 Wave 1 — DONE (2026-06-21)
 
-M1.4 design is **LOCKED** (Phases 0–4 complete; breakdown + 10 per-task designs + fresh-eyes resolution + Director
-dispositions in `design/M1_4_Tasks/`). **No build code written yet.** Begin the build:
+K0 + K3/K6 + K4 all on `main`, pushed, board=Done; all-off fp byte-identical (`e943ac9c8bc1`); 81 knobs.
+- **K0** foundation (`74034bc`+`02b8a00`): 35 new knobs off/neutral + `to_flat_dict()` + 7 new signals + removed dead `light_low()` + CFG rows (46→81) + K1 retune (`r1_speed_per_depth→3.0`, `r1_catch_radius_per_depth→1.0`). Worklog `worklogs/2026-06-21-K0-general-purpose.md`. **Deviation for close-out:** K0 doc RD-1/RD-6 dropped the two quota enums (would be 79) but the Phase-4 Lock KEPT them → 81 as-built (reconcile the doc).
+- **K3+K6** camera + jitter (`f3147d2`): `[display]` (canvas_items/integer/expand, base 1152×648) + `[physics]` `physics_interpolation=true`; camera reparented off the player to a level-owned `CameraRig`/`CameraView` (`entities/dive/camera_view.gd`) driving fixed visible-world-width from `cam_*`. Default-off = today's framing byte-for-byte. **Deferred check:** jitter-gone + fixed-FOV *look* are render-time, confirm in RG1 playtest on >60Hz hardware.
+- **K4** timer + warning (`878fe1f`): `timer_length_s` override + one-shot `dive_clock_warning` latch + HUD visual cue + gated audio stub. All-off = today's clock.
 
-1. **Dispatch K0 — Foundation** (`general-purpose`, `isolation: worktree`): single-writer pass on `run_config.gd` +
-   `event_bus.gd` + `config_menu.gd` per `design/M1_4_Tasks/K0_foundation_knobs_signals.md` §"Resolved Decisions": declare
-   the 35 new knobs (off/neutral) + extend `to_flat_dict()` + declare the new signals (incl. `meta_wiped(prev_run_number)`,
-   `dive_clock_warning(seconds_remaining, maximum)`, `bomb_pulse_started`, `new_hazard_killed`, `quota_evaluated/advanced`) +
-   **remove dead `light_low()`** + CFG rows/CSV stubs (knob-count test 46→81) + the **K1 retune** (`r1_speed_per_depth→3.0`,
-   `r1_catch_radius_per_depth→1.0`). **K0 lands ALONE** (it owns the shared files for the whole milestone). Verify: import
-   clean, all-off fp `e943ac9c8bc1` byte-identical, CFG boots, knob-count tests green.
-2. **After K0 on `main`** → dispatch Wave 1 parallel: **K3+K6** (one combined `project.godot`+camera change — single writer) ∥
-   **K4** (timer + HUD warning). Then Wave 2 (**K2 → K7** sequential), Wave 3 (**K5a ∥ K5b ∥ K5c → K5i**), Wave 4 (re-gate).
+## ▶ Next action (start here on a cold restart) — **M1.4 Wave 2: K2 → K7 (sequential)**
+
+Wave 1 done. **Wave 2 is sequential** (both touch `main_game.gd`/`game_state.gd`):
+1. **Dispatch K2 — Quota + roguelite wipe** (`general-purpose` + game-director-designer economy + ui-ux + qa fixture; `isolation: worktree`) per `design/M1_4_Tasks/K2_quota_system.md` §"Resolved Decisions": per-run quota (start $50, +$50/run), **checked every run end**, **met by cumulative money**, **miss = full meta wipe** (9-field reset); save META **v2→v3** + migration + `meta_v2.sav` QA fixture; HUD quota readout + Game-Over→wipe→fresh-start. Knobs already exist (K0): `quota_enabled/base/step/check_timing/basis`. Verify: migration + fixture green, miss wipes meta, all-off (`quota_enabled=false`) = M1.3 byte-identical, fp unmoved.
+2. **After K2 on `main`** → **K7 — Exit placement** (random local-sub-stream, multiple, depth-scaled, keep-at-spawn toggle; default = today's single fixed gate). Then **Wave 3** (**K5a ∥ K5b ∥ K5c → K5i**), **Wave 4** (re-gate RG1→playtest→RG2→RG3).
+
+> **Wave-1 close-out deviation sweep is PENDING** (Director dispositions) before Wave 2 dispatch — see `design/DESIGN_DEVIATIONS.md`: (a) K0 quota-enum count reconciliation (doc says 79, as-built 81 per Phase-4 Lock); (b) K3/K6 render-time deferred-checks; (c) camera ships opt-in (preset doesn't enable the fixed FOV — Director may want RG1 to default it on).
 
 > **Contracts (M1.4):** all-off `RunConfig` default = permanent baseline (fp=e943ac9c8bc1); fun values ship in
 > `make_default_play_preset()`; quota = every-run-end × cumulative-money, miss = full wipe (Director FINAL); config-marked
