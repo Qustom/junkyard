@@ -82,7 +82,9 @@ var _junk_catalog: JunkCatalog
 var _depth_curve: DepthCurve
 
 # Per-run scene plumbing.
-var _gate: ExtractGate = null
+# K7 (M1.4): one OR MORE extract gates per band (was the single var _gate). The all-off
+# control still produces exactly one gate at GATE_SPAWN_OFFSET; enabled exits append more.
+var _gates: Array[ExtractGate] = []
 var _spawner: JunkSpawner = null
 var _run_count: int = 0
 var _band_cell_size_px: int = DEFAULT_CELL_SIZE_PX
@@ -258,9 +260,10 @@ func start_new_run() -> void:
 	_band_container.add_child(_spawner)
 	_spawner.populate(plan, _band_container)
 
-	# 4. Place the gate at the fixed offset from the entry spawn (E1 decision #8).
+	# 4. Place the exit gate(s). All-off (exit_enabled=false) = today's single fixed gate
+	#    at the offset from spawn (E1 decision #8); K7 passes `band` for the candidate pool.
 	var spawn_pos := _entry_spawn_position(band)
-	_place_gate(spawn_pos)
+	_place_gate(band, spawn_pos)
 
 	# 5. Put the player at the entry and let the camera find it.
 	_player.global_position = spawn_pos
@@ -780,23 +783,122 @@ func _entry_spawn_position(band: Band) -> Vector2:
 	return Vector2.ZERO
 
 
-## Instance the gate at the fixed hand-authored offset from spawn (decision #8,
-## GameState.GATE_SPAWN_OFFSET). The gate is dumb: it just calls extract_and_end_run.
-func _place_gate(spawn_pos: Vector2) -> void:
+## K7 (M1.4): place ONE OR MORE extract gates. The all-off control (exit_enabled=false,
+## or no active config) is byte-identical to M1.3 — a single gate at spawn_pos +
+## GATE_SPAWN_OFFSET. With exit_enabled, the count scales with band depth and gates are
+## placed across the band's floor cells via a LOCAL sub-stream (run-state, no global RNG →
+## fingerprint() is untouched). `band` supplies the floor-cell candidate pool. The gate is
+## dumb: each instance just calls extract_and_end_run on interact (first-to-resolve wins).
+func _place_gate(band: Band, spawn_pos: Vector2) -> void:
+	var rc := GameState.active_run_config
+
+	# --- All-off control: exactly today's single fixed gate (no RNG, no candidate pool). ---
+	if rc == null or not rc.exit_enabled:
+		_spawn_gate_at(spawn_pos + GameState.GATE_SPAWN_OFFSET)
+		EventBus.exits_placed.emit(1, _band_max_depth(band))
+		return
+
+	# --- exit_enabled: depth-scaled count of gates placed across the level. ---
+	var depth: int = _band_max_depth(band)                       # band.max_depth (band.gd:37)
+	var count: int = _exit_count_for_depth(rc, depth)            # >= 1
+
+	var positions: Array[Vector2] = []
+
+	# exit_keep_one_at_spawn: pin ONE gate at the legacy offset, place the rest in the level.
+	if rc.exit_keep_one_at_spawn:
+		positions.append(spawn_pos + GameState.GATE_SPAWN_OFFSET)
+
+	var remaining: int = count - positions.size()
+	if remaining > 0:
+		positions.append_array(_exit_placement_positions(band, rc, remaining, spawn_pos))
+
+	for pos in positions:
+		_spawn_gate_at(pos)
+	EventBus.exits_placed.emit(positions.size(), depth)
+
+
+## Thin instantiate helper (the body of the old _place_gate). One ExtractGate, into
+## _band_container, at a world position. Every gate keeps interactable_id = &"gate" (DR-6):
+## same-id gates do NOT cross-fire — each acts only when the focused Interactable is its own
+## child (the node-identity guard at extract_gate.gd:45), and the first to resolve wins via
+## GameState._run_ended. Do NOT introduce per-gate ids — the shared id is not a bug.
+func _spawn_gate_at(world_pos: Vector2) -> void:
 	var gate_scene := load(GATE_SCENE_PATH) as PackedScene
 	if gate_scene == null:
 		push_error("MainGame: gate scene missing at %s." % GATE_SCENE_PATH)
 		return
-	_gate = gate_scene.instantiate() as ExtractGate
-	_band_container.add_child(_gate)
-	_gate.global_position = spawn_pos + GameState.GATE_SPAWN_OFFSET
+	var gate := gate_scene.instantiate() as ExtractGate
+	_band_container.add_child(gate)
+	gate.global_position = world_pos
+	_gates.append(gate)
 
 
-## Tear down the previous band, gate, spawner and pickups. The player + HUD + sell
+## K7: how many exits at this band's depth (DR-2). base + per-depth ramp, FLOORED AT 1
+## (a band must ALWAYS have at least one exit — you can never strand the player), capped by
+## exit_max_count when > 0, then re-floored at 1 so the cap can never clamp below one. Pure
+## read, no RNG. depth = band.max_depth (per-band scaling, not per-piece).
+func _exit_count_for_depth(rc: RunConfig, depth: int) -> int:
+	var base: int = maxi(rc.exit_base_count, 1)                  # 0 base → treat as 1 (never zero exits)
+	var raw: int = base + int(floor(rc.exit_count_per_depth * float(depth)))
+	raw = maxi(raw, 1)
+	if rc.exit_max_count > 0:
+		raw = mini(raw, rc.exit_max_count)
+	return maxi(raw, 1)                                          # DR-2: re-floor at 1 AFTER the cap
+
+
+## K7 Strategy A (DR-1): pick `n` distinct floor cells at random via a LOCAL RNG seeded
+## run_seed ^ EXITS_RNG_SALT (B3/E3 pattern — game_state.gd:_resolve_pockets). Reproducible
+## per run, NEVER the global RNG autoload (so fingerprint() is untouched). Fisher–Yates over
+## a COPY of the stable candidate pool spreads exits across ALL graded pieces, not clustered.
+## If the pool is empty (degenerate band) fall back to one fixed gate at the spawn offset; if
+## pool.size() < n, return pool.size() distinct cells — do NOT re-sample to force n (would
+## stack gates).
+func _exit_placement_positions(band: Band, rc: RunConfig, n: int, spawn_pos: Vector2) -> Array[Vector2]:
+	var pool: Array[Vector2i] = _exit_candidate_cells(band, spawn_pos)   # stable order, entry/spawn excluded
+	if pool.is_empty():
+		return [spawn_pos + GameState.GATE_SPAWN_OFFSET]                  # degenerate band → one fixed gate
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = GameState.run_seed ^ GameState.EXITS_RNG_SALT              # local sub-stream, like POCKETS/JUNK
+	# Fisher–Yates over a COPY, then take the first n (distinct cells, no global RNG).
+	for i in range(pool.size() - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var tmp: Vector2i = pool[i]
+		pool[i] = pool[j]
+		pool[j] = tmp
+
+	var out: Array[Vector2] = []
+	for k in mini(n, pool.size()):
+		out.append(_density_cell_to_world(pool[k]))
+	return out
+
+
+## K7: the band's floor cells eligible to host an exit, in the J3 stable order (depth asc,
+## then (y,x)). Excludes the entry-spawn cell and the spawn-offset cell so a gate never lands
+## on the player's start or doubles the pinned spawn gate. Deterministic — pure topology.
+func _exit_candidate_cells(band: Band, spawn_pos: Vector2) -> Array[Vector2i]:
+	var entry_cell: Vector2i = _world_to_cell(spawn_pos)
+	var spawn_gate_cell: Vector2i = _world_to_cell(spawn_pos + GameState.GATE_SPAWN_OFFSET)
+	var out: Array[Vector2i] = []
+	for p in _density_pieces_sorted(band):                  # depth asc, then (y,x)
+		for cell in _density_sorted_cells(p):               # stable (y, x) order
+			if cell == entry_cell or cell == spawn_gate_cell:
+				continue
+			out.append(cell)
+	return out
+
+
+## K7: world position → band-global cell, the inverse of _density_cell_to_world.
+func _world_to_cell(world_pos: Vector2) -> Vector2i:
+	return Vector2i((world_pos / float(_band_cell_size_px)).floor())
+
+
+## Tear down the previous band, gates, spawner and pickups. The player + HUD + sell
 ## screen persist (they are loop-level, not per-band). Run-state is GameState's to
 ## reset in start_run; this is pure scene cleanup so old geometry never stacks up.
+## The _band_container free disposes the gate nodes; we just reset the list.
 func _clear_band() -> void:
-	_gate = null
+	_gates.clear()
 	_spawner = null
 	for child in _band_container.get_children():
 		child.queue_free()
