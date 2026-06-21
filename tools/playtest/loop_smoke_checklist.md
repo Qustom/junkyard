@@ -57,6 +57,37 @@ see `tester_readme.md`):
                     EXPOSURE bar JUMP (the toll feeds R3's meter) — not just the floating number.
 ```
 
+## M1.4 stakes / variety / legibility matrix (RG1) — manual pass on the integrated build
+
+> **M1.4 = "add the stakes, the danger variety, and the legibility, then re-gate."** The build
+> BOOTS into the M1.4 fun preset (the Config menu rail shows it at launch). The objective rows
+> are auto-checked headless by `godot --headless res://tests/test_rg1_m14_verify.tscn` (prints
+> `RG1 M1.4 VERIFY OK`: all-off fp unmoved e943ac9c8bc1, the preset shape (M1.3 base + K4 timer +
+> all three K5 hazards + K7 off), trap-free, all 81 knobs in the snapshot, ≥1 of each new hazard
+> spawns bounded by the 48 band ceiling). This manual pass confirms the *felt / on-screen* half.
+
+Per-feature manual pass (set each in the **Config menu**; the build boots into the preset):
+```
+[ ] K2 Quota + WIPE: with the quota ON, miss the per-run quota at a run end (extract/death/
+                     timeout) -> the meta WIPES (Money/run-number reset). Meeting it advances the
+                     bar (+$50). The quota target + "met" basis are legible.
+[ ] K3 Camera FOV:   the visible world is a FIXED width regardless of window size (resize the
+                     window -> the same amount of world shows, no zoom-with-resolution).
+[ ] K4 Timer warning: on a ~60s dive, a near-end WARNING fires ~10s before timeout (visual cue;
+                     audio is M2-gated). The clock pressure is legible.
+[ ] K5a Ping-pong:   a warm hazard BOUNCES off the room walls; lethal on contact.
+[ ] K5b Bomb:        a warm hazard PULSES (~2s) when you approach, then EXPLODES (committed, no
+                     defuse); the blast kills in radius.
+[ ] K5c Spikes:      a cool steel/cyan 3-arm hazard ROTATES in place; thread the gap or die.
+[ ] K5 variety:      all three new hazards spawn in the dive, read DISTINCTLY (warm bouncers/bombs
+                     vs cool rotating blades), and danger ramps with depth (shallow rooms calmer).
+[ ] K6 Jitter:       motion is SMOOTH — no camera/sprite jitter as you move (physics_interpolation).
+[ ] K7 Exits OFF:    this re-gate build ships exits OFF -> a SINGLE fixed green gate near spawn
+                     (the M1.3 behaviour); no random/multiple exits in the default.
+[ ] Perf (OQ-3):     in an aggressive cell (size 40 + maxed hazard magnitudes, ~112 bodies), the
+                     frame rate HOLDS; if it dips, lower the per-type caps.
+```
+
 ## M1.1 cost-axis matrix (RG1 §4) — still applies (M1.2 layers on top)
 
 The base loop checklist above is the **all-off (M0/V6) baseline** — the permanent in-build
@@ -130,3 +161,10 @@ Telemetry defaults **OFF** (privacy). To verify the telemetry rows, enable it fi
     (fp=e943ac9c8bc1), level scale takes effect (I1), depth-scaled hazard catch (I2), BUG5 exposure
     toll moves R3's meter, real build SHA + duration_s>0 (I5), the new lvl_*/r1_catch_radius_per_depth
     knobs in the snapshot, carry-forward + repeated runs with no leak).
+  - `godot --headless res://tests/test_rg1_m13_verify.tscn`    -> prints `RG1 M1.3 VERIFY OK` (the
+    M1.3 matrix objective half: density + the fun-default made the default).
+  - `godot --headless res://tests/test_rg1_m14_verify.tscn`    -> prints `RG1 M1.4 VERIFY OK` (the
+    M1.4 matrix objective half: the M1.4 fun preset (M1.3 base + K4 timer 60s/10s/visual-only + all
+    three K5 hazards on with per_room_cap>0 + K7 exits off), trap-free, the all-off fp unmoved
+    (fp=e943ac9c8bc1), all 81 knobs in the snapshot, the K5i spawn seam materialises ≥1 of each new
+    hazard kind bounded by the 48 band ceiling, extract/timeout end-causes, no leak).

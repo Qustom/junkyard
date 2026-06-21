@@ -116,6 +116,31 @@ we most want your eye on this round:
 - **J5 — depth readout:** the bottom-left counter now reads **"Depth N / max"**.
   *Does it read clearly and track the room you're in?*
 
+### New in M1.4 — stakes, danger variety, and legibility (the current re-gate build)
+
+M1.4 ships the **full M1.4 fun stack** as the default the game boots into — just press **Start**.
+Tag your M1.4 runs **`m14-`** (e.g. `m14-default`, `m14-quota-100`, `m14-haz-off-spike`). **Reset**
+still returns the all-off baseline (tag `m14-baseline`). What's new this round and what we want
+your eye on:
+
+- **K2 — the QUOTA (the headline stake):** each run end checks a per-run quota (cumulative money
+  ≥ target). **Miss it and your meta WIPES** (Money + run-number reset to a fresh start). Meeting
+  it raises the bar (+$50). *Does the wipe feel like a real stake, or a wall?*
+- **K3 — fixed-FOV camera:** the visible world is a fixed width regardless of window size.
+  *Resize the window — does the same amount of world show (no zoom-with-resolution)?*
+- **K4 — the dive clock + warning:** ~60s dive with a **~10s near-end warning** (visual cue;
+  audio comes in M2). *Is the clock pressure right; is the warning legible?*
+- **K5 — three NEW hazard types:** a **ping-pong** bouncer, a **bomb** (pulses ~2s then explodes,
+  no defuse), and **rotating spikes** (cool steel/cyan 3-arm blades). Danger ramps with depth.
+  *Do they read distinctly and teach their telegraph, or is it chaos?*
+- **K6 — smooth motion:** physics interpolation is on. *Any camera/sprite jitter as you move?*
+- **K7 — exits OFF:** this re-gate build ships a single fixed gate (no random/multiple exits).
+
+> **Ground truth = the `run_config` snapshot on `run_started`.** Every run stamps its **full
+> 81-knob config snapshot** onto its `run_started` telemetry row — that is the authoritative record
+> of which config ran, NOT your memory. Just **set `build_tag`** (in the Config menu's Meta
+> section) before a sweep and play; RG2 segments on it.
+
 ## Please enable telemetry (it's how we read the playtest)
 
 Telemetry is **OFF by default** (privacy — nothing is written until you turn it on).
