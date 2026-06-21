@@ -4,7 +4,8 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.4 (Wave 5 — bug-fix re-gate)
 - **Branch:** worktree-agent-a5a116edd676e190d
-- **Commit:** e624c9e6a33d3f338346b15ca743aa177f6316f5
+- **Commit:** b11571c729acb545774b92675d4ad0580adac44e (BUG8 fix; this worklog SHA-stamp
+  follows in the next commit on the branch)
 
 ## What changed
 Fixed the ping-pong bouncer grinding along walls / stalling at corners (RG3 feedback #2).
