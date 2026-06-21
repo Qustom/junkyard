@@ -12,7 +12,7 @@ extends Node
 ##     so autosave-on-sleep/extract can never corrupt meta-state.
 
 const SAVE_ROOT := "user://saves"
-const META_SCHEMA_VERSION := 2
+const META_SCHEMA_VERSION := 3
 const RUN_SCHEMA_VERSION := 1
 
 func slot_dir(slot: int) -> String:
@@ -85,6 +85,14 @@ func _migrate_meta(data: Dictionary) -> Dictionary:
 				# to an empty id list so from_meta_dict rehydrates to [].
 				if not data.has("banked_junk"):
 					data["banked_junk"] = []
+			2:
+				# v2 -> v3 (K2): run_number + quota_target added. Old saves predate
+				# the quota → default to run 1 / "uninitialised" (0) so the first
+				# quota-enabled start_run re-seeds the bar from quota_base.
+				if not data.has("run_number"):
+					data["run_number"] = 1
+				if not data.has("quota_target"):
+					data["quota_target"] = 0
 		v += 1
 		data["schema_version"] = v
 	return data

@@ -46,6 +46,8 @@ signal back_to_config_pressed
 @onready var _item_list: VBoxContainer = %ItemList
 @onready var _subtotal_label: Label = %SubtotalLabel
 @onready var _money_total_label: Label = %MoneyTotalLabel
+# K2 (M1.4): the quota outcome line. Hidden when the quota is off (= M1.3 reward beat).
+@onready var _quota_line: Label = %QuotaLine
 @onready var _continue_button: Button = %ContinueButton
 @onready var _back_to_config_button: Button = %BackToConfigButton
 # DLV2: web-only telemetry export. Hidden on desktop (the on-disk retrieval flow is
@@ -63,6 +65,11 @@ var _tallying: bool = false
 var _tally_elapsed: float = 0.0
 var _tally_from: int = 0
 var _tally_to: int = 0
+
+# K2 (M1.4): true when this run MISSED the quota → Continue must route through the
+# roguelite wipe (MainGame reads pending_wipe() before start_new_run). Reset each
+# _present so a met/quota-off run never carries a stale wipe flag.
+var _pending_wipe: bool = false
 
 
 func _ready() -> void:
@@ -131,6 +138,9 @@ func _present(reason: StringName, source: StringName) -> void:
 
 	_render_rows(breakdown)
 	_render_title(reason, breakdown.size())
+	# K2 (M1.4): render the quota outcome (may override the title on a miss) + flag the
+	# wipe. Must run AFTER _render_title so a MISS title override sticks.
+	_render_quota()
 
 	# Continue (and Back to Config) are locked until the tally completes/skips so the
 	# reward beat lands.
@@ -147,6 +157,35 @@ func _render_title(reason: StringName, sold_count: int) -> void:
 	else:
 		# "RUN LOST — kept N" — N is the count of items that survived into pockets.
 		_title_label.text = tr("SELL_TITLE_LOST").format({"count": sold_count})
+
+
+## K2 (M1.4): project the quota outcome from GameState.last_quota_result() — the
+## SellScreen owns no quota truth, it only DISPLAYS the cached evaluation. Quota OFF
+## (or not checked this run) → the line is hidden and the M1.3 reward beat is unchanged.
+## On MET: show "Quota cleared — next $X" (target is the already-escalated next bar).
+## On MISS: override the title to "QUOTA MISSED", show "$achieved / needed $target",
+## and set _pending_wipe so Continue routes through the roguelite wipe (MainGame).
+func _render_quota() -> void:
+	_pending_wipe = false
+	var q: Dictionary = GameState.last_quota_result()
+	if not bool(q.get("checked", false)):
+		_quota_line.visible = false
+		return
+	_quota_line.visible = true
+	if bool(q.get("met", false)):
+		_quota_line.text = tr("SELL_QUOTA_MET").format({"target": int(q.get("target", 0))})
+	else:
+		_title_label.text = tr("SELL_TITLE_QUOTA_FAIL")
+		_quota_line.text = tr("SELL_QUOTA_MISS").format({
+			"achieved": int(q.get("achieved", 0)),
+			"target": int(q.get("target", 0)),
+		})
+		_pending_wipe = true
+
+
+## K2 (M1.4): MainGame reads this on Continue — true → wipe meta before the next run.
+func pending_wipe() -> bool:
+	return _pending_wipe
 
 
 func _render_rows(breakdown: Array[Dictionary]) -> void:
