@@ -313,6 +313,149 @@ func start_new_run() -> void:
 	# _band_container so _clear_band() disposes them with the band for free. setup()
 	# binds the config snapshot + the player so the hazard never re-reads active_run_config.
 	_spawn_r1_hazards(run_cfg, band)
+	# K5i (M1.4): spawn the three new M1.4 hazard types (ping-pong / bomb / spikes) into the
+	# same graded band, each with a per-type depth-scaled count placed through the SAME J3
+	# cell helpers (no duplicated placement math). Fully gated: with every *_enabled false
+	# (the K0 default) no descriptor is enabled → no scene loaded, no node built → all-off is
+	# byte-identical to M1.3 (fp e943ac9c8bc1 UNMOVED). Sibling of _spawn_r1_hazards.
+	_spawn_new_hazards(run_cfg, band)
+
+
+# --- K5i (M1.4): new-hazard spawn seam (ping-pong / bomb / spikes) ------------
+
+## K5i (M1.4): new-hazard scene paths (LOCKED, matching the merged K5a/b/c entities).
+## load()ed LAZILY inside the spawn loop — only when that type is enabled — so an all-off
+## run loads nothing and is byte-identical to M1.3.
+const HPP_SCENE_PATH := "res://scenes/hazards/pingpong_hazard.tscn"      # K5a PingPongHazard
+const HBOMB_SCENE_PATH := "res://scenes/hazards/bomb_hazard.tscn"        # K5b BombHazard
+const HSPIKE_SCENE_PATH := "res://scenes/hazards/spike_hazard.tscn"      # K5c SpikeHazard
+
+## K5i: band-wide ceiling across ALL THREE new hazard types COMBINED (OQ-3, Director-flagged
+## value 48; RG1 must measure the worst-case combined tick time). SEPARATE from R1's
+## R1_DENSITY_BAND_CEILING (R1 keeps its own 64 budget); this bounds K5a+K5b+K5c together so
+## three stacked per-depth budgets can't flood the band with _physics_process nodes. The
+## descriptor order (pingpong → bomb → spikes) is the INTENTIONAL shared-ceiling STARVATION
+## order: when the budget runs low, later types in the list get fewer/none.
+const NEW_HAZARD_BAND_CEILING: int = 48
+
+## K5i: per-instance angular stride for the ping-pong's deterministic initial direction —
+## the golden angle (~137.5°) so successive instances fan out without repeating, NO RNG.
+const NEW_HAZARD_GOLDEN_ANGLE: float = 2.39996322972865332   # PI * (3 - sqrt(5))
+
+
+## K5i: one descriptor per new hazard type — its telemetry kind, scene path, and the FOUR
+## spawn-seam knobs read off rc. This is the ONLY per-type data; the spawn loop is written
+## ONCE and dispatched over this table. Order is the documented starvation order (above).
+func _new_hazard_descriptors(rc: RunConfig) -> Array[Dictionary]:
+	return [
+		{ "kind": &"pingpong", "path": HPP_SCENE_PATH, "enabled": rc.hpp_enabled,
+		  "base": rc.hpp_base_count, "per_depth": rc.hpp_count_per_depth, "cap": rc.hpp_per_room_cap },
+		{ "kind": &"bomb", "path": HBOMB_SCENE_PATH, "enabled": rc.hbomb_enabled,
+		  "base": rc.hbomb_base_count, "per_depth": rc.hbomb_count_per_depth, "cap": rc.hbomb_per_room_cap },
+		{ "kind": &"spike", "path": HSPIKE_SCENE_PATH, "enabled": rc.hspike_enabled,
+		  "base": rc.hspike_base_count, "per_depth": rc.hspike_count_per_depth, "cap": rc.hspike_per_room_cap },
+	]
+
+
+## K5i (M1.4): spawn the three M1.4 hazard types into the graded band, each with a per-type
+## depth-scaled count placed through the EXISTING J3 cell helpers. FULLY GATED: rc == null →
+## return; each disabled descriptor → continue without loading its scene; with all three off
+## (K0 default) nothing is loaded/instantiated → all-off == M1.3 byte-for-byte (fp UNMOVED).
+## Placement is PURE run-state on the already-graded band: NO global RNG, never feeds
+## fingerprint() (like R1). The loop iterates PIECES (so the PlacedPiece is in scope to build
+## each type's spawn_ctx), strides n hazards across that piece's own sorted floor cells, and
+## a SINGLE band-wide accumulator (NEW_HAZARD_BAND_CEILING) bounds K5a+K5b+K5c together.
+## Nodes go into _band_container so _clear_band() frees them; setup(rc, player, spawn_ctx)
+## binds the config snapshot + the per-kind context. Called from start_new_run() right after
+## _spawn_r1_hazards (the K5i single-writer seam).
+func _spawn_new_hazards(rc: RunConfig, band: Band) -> void:
+	if rc == null:
+		return
+	# Resolve the player once via the "player" group (already grouped in player.tscn). Use the
+	# band container's tree (it is parented before this runs, both in-game and under test) so the
+	# lookup never depends on THIS node being in the tree — null is fine (entities are null-safe).
+	var tree := _band_container.get_tree()
+	var player: Node2D = tree.get_first_node_in_group(&"player") as Node2D if tree != null else null
+	var pieces := _density_pieces_sorted(band)   # depth asc, then (y,x) — the J3 stable order
+	var spawned_total: int = 0                   # band-wide accumulator ACROSS all new types
+
+	for desc in _new_hazard_descriptors(rc):
+		if not desc["enabled"]:
+			continue   # type off → never load its scene (all-off-equivalent for that type)
+		if spawned_total >= NEW_HAZARD_BAND_CEILING:
+			break
+		var base: int = desc["base"]
+		var per_depth: float = desc["per_depth"]
+		var per_room_cap: int = desc["cap"]
+		if base <= 0 and per_depth <= 0.0:
+			continue   # neutral knobs → no node for this type (all-off-equivalent)
+		var scene := load(desc["path"]) as PackedScene
+		if scene == null:
+			push_error("MainGame: new-hazard scene missing at %s." % desc["path"])
+			continue
+		var kind: StringName = desc["kind"]
+
+		# Walk pieces in the J3 stable depth-sorted order so the band-ceiling truncation is
+		# reproducible (later/deeper pieces are starved first when the budget runs out).
+		for p in pieces:
+			if spawned_total >= NEW_HAZARD_BAND_CEILING:
+				break
+			var depth: int = p.depth_index
+			# "More with depth": base at depth 0, +per_depth per within-band depth (J3-style floor).
+			var n: int = base + int(floor(per_depth * float(depth)))
+			if per_room_cap > 0:
+				n = mini(n, per_room_cap)
+			n = mini(n, NEW_HAZARD_BAND_CEILING - spawned_total)   # shared remaining budget
+			if n <= 0:
+				continue
+			var cells: Array[Vector2i] = _density_sorted_cells(p)   # stable (y, x) order
+			if cells.is_empty():
+				continue
+			var room_bounds: Rect2 = _piece_floor_bounds_world(cells)   # for ping-pong clamp
+			var stride: int = maxi(cells.size() / maxi(n, 1), 1)
+			for k in n:
+				var cell: Vector2i = cells[(k * stride) % cells.size()]
+				var pos: Vector2 = _density_cell_to_world(cell)
+				var hz := scene.instantiate() as Node2D
+				_band_container.add_child(hz)
+				hz.global_position = pos
+				hz.setup(rc, player, _new_hazard_spawn_ctx(kind, p, k, spawned_total, room_bounds))
+				spawned_total += 1
+
+
+## K5i (M1.4): build the per-kind spawn_ctx Dictionary for one placed instance (the LOCKED
+## family setup(cfg, player, spawn_ctx) third param). Each entity reads only its own keys:
+##   ping-pong: "initial_dir" (deterministic per-index golden-angle fan, NO RNG) +
+##              "room_bounds" (the piece's floor-cell bbox in WORLD space, so it reflects
+##              inside the real room).
+##   spikes:    "phase_salt" (deterministic per-instance phase = depth_index * 131 + k).
+##   bomb:      {} (its blast is radial; it ignores spawn_ctx).
+## `index` is the global per-type spawn index (for the angle fan); `k` is the within-room index.
+func _new_hazard_spawn_ctx(kind: StringName, p: PlacedPiece, k: int, index: int,
+		room_bounds: Rect2) -> Dictionary:
+	match kind:
+		&"pingpong":
+			return {
+				"initial_dir": Vector2.from_angle(float(index) * NEW_HAZARD_GOLDEN_ANGLE),
+				"room_bounds": room_bounds,
+			}
+		&"spike":
+			return { "phase_salt": p.depth_index * 131 + k }
+		_:   # bomb (and any future type that needs no context)
+			return {}
+
+
+## K5i (M1.4): the encompassing Rect2 of a piece's floor cells, projected to WORLD space via
+## the SAME _density_cell_to_world projection used for placement (so the ping-pong reflects
+## within the real room in world coordinates). Pure topology, NO RNG. Returns an empty Rect2
+## for an empty cell list (the ping-pong then falls back to pure-wall confinement).
+func _piece_floor_bounds_world(cells: Array[Vector2i]) -> Rect2:
+	if cells.is_empty():
+		return Rect2()
+	var bounds := Rect2(_density_cell_to_world(cells[0]), Vector2.ZERO)
+	for c in cells:
+		bounds = bounds.expand(_density_cell_to_world(c))
+	return bounds
 
 
 # --- R1 (M1.1): pursuing hazard spawn ----------------------------------------
