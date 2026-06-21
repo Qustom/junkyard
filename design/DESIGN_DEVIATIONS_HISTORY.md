@@ -282,3 +282,33 @@ All 3 Wave-2 tasks (J2 enemy spread, J3 per-room density, J4 corridor lever + te
 **M1.4 Wave 1 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 2 — K2 (quota + roguelite
 wipe + save-schema v2→v3) → K7 (exit placement),** then Wave 3 (3 new hazards) → Wave 4 (re-gate). *Build PAUSED after
 Wave 1 at the Director's request (2026-06-21) — resume by dispatching K2.*
+
+---
+
+## M1.4 Wave 2 close-out (2026-06-21) — Director dispositioned
+
+**0 deviations.** K2 (quota + roguelite wipe, save v2→v3) and K7 (exit placement) both reported "none" — the as-built
+K0 API matched each design's Phase-3-reconciled contract (quota signals/knobs and exit knobs/signal all pre-existed
+with the locked names). K7's DR-3/DR-4/DR-7 Director flags were settled at the Phase-4 lock (preset ships exits OFF).
+Nothing to disposition. `DESIGN_DEVIATIONS.md` empty between waves.
+
+## M1.4 Wave 3 close-out (2026-06-21) — Director dispositioned
+
+1 deviation, dispositioned by the Director:
+
+- **W3-F1 — K5b bomb test `queue_free`-on-freed-instance stderr noise → ADDRESSED.** `tests/test_bomb_hazard.gd`
+  (cases 1/2/3) called `bomb.queue_free()` in cleanup, but `BombHazard` self-frees on detonation — so a detonated bomb
+  was already freed, emitting 3 non-fatal `SCRIPT ERROR: Cannot call method 'queue_free' on a previously freed instance`
+  lines on stderr. The test still passed (`BOMB HAZARD OK`, exit 0); only cleanup was noisy. Risk: a "green" test emitting
+  `SCRIPT ERROR` would false-trip a future CI gate that greps stderr for errors (cf. the carried plan to wire test scenes
+  into the CI set). Director: **fix now.** Reapply (DONE): guarded all three cleanup frees with
+  `if is_instance_valid(bomb): bomb.queue_free()`. Test-only, no production change. Verified: `test_bomb_hazard` now runs
+  clean (`BOMB HAZARD OK`, exit 0, **zero SCRIPT ERROR lines**).
+
+**Deferred (NOT deviations — RG1 sweep/Director-taste calls, no action now):** `NEW_HAZARD_BAND_CEILING=48` value;
+OQ-4 pure-deterministic vs local-sub-stream hazard striping; K7 preset `exit_keep_one_at_spawn`/`exit_enabled` (ship OFF);
+the worst-case ~112-body (R1 64 + new 48) headless tick-time check → RG1 verify checklist.
+
+**M1.4 Waves 2 & 3 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 4 — the re-gate (RG1
+build+verify → Director playtest → RG2 → RG3).** *Build HELD after Wave 3 at the Director's request (2026-06-21) — resume
+by dispatching RG1 on the Director's go.*

@@ -131,7 +131,8 @@ func _case_commit_then_fatal(gs: Node, failures: Array[String]) -> void:
 	if _pulse_started.size() != 1:
 		failures.append("c1: bomb_pulse_started fired %d times (expected exactly 1)" % _pulse_started.size())
 
-	bomb.queue_free()
+	if is_instance_valid(bomb):   # W3-F1: a detonated bomb self-frees; guard the cleanup
+		bomb.queue_free()
 	player.queue_free()
 
 
@@ -158,7 +159,8 @@ func _case_fizzle_survives(gs: Node, failures: Array[String]) -> void:
 	if not gs.run_active:
 		failures.append("c2: run is no longer active after a fizzle")
 
-	bomb.queue_free()
+	if is_instance_valid(bomb):   # W3-F1: a detonated bomb self-frees; guard the cleanup
+		bomb.queue_free()
 	player.queue_free()
 
 
@@ -191,7 +193,8 @@ func _case_committed_no_defuse(gs: Node, failures: Array[String]) -> void:
 	if not gs.run_active:
 		failures.append("c3: run ended despite the player escaping the blast")
 
-	bomb.queue_free()
+	if is_instance_valid(bomb):   # W3-F1: a detonated bomb self-frees; guard the cleanup
+		bomb.queue_free()
 	player.queue_free()
 
 
