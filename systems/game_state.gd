@@ -14,6 +14,12 @@ const RUN_RULES_PATH := "res://data/economy/run_rules.tres"  # E3: pockets-drop 
 # for the `random` pockets policy (B3 sub-stream pattern). Never reseed the global
 # RNG autoload mid-run — that would perturb layout/placement determinism.
 const POCKETS_RNG_SALT := 0x50434B54  # "PCKT"
+# K7 (M1.4) exits RNG salt: combined with run_seed to seed a LOCAL RandomNumberGenerator
+# for the random exit-gate placement (B3/E3 sub-stream pattern, like POCKETS/JUNK). Exit
+# placement is pure run-state at materialisation time, downstream of generation, so it
+# NEVER feeds fingerprint(); the local sub-stream keeps it reproducible per run without
+# ever touching the global RNG autoload. "EXIT" = 0x45584954.
+const EXITS_RNG_SALT := 0x45584954  # "EXIT"
 const JUNK_CATALOG_PATH := "res://data/junk/junk_catalog.tres"  # E1: rehydrate banked_junk ids on load
 # M1.1 R0: the all-off default run config. Used when a run starts without an
 # explicit config so an unconfigured run reproduces the M1.0 baseline exactly.
