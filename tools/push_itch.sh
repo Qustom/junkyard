@@ -73,6 +73,12 @@ if [ -z "${BUTLER_API_KEY:-}" ]; then
     ' APIKEYS.md)"
   fi
 fi
+# Sanitise the key: strip ALL whitespace incl. CR/LF. APIKEYS.md on a Windows/WSL (/mnt/c)
+# mount is usually CRLF, so awk's $NF keeps a trailing \r; a CR or newline in the value makes
+# butler's HTTP Authorization header invalid ("net/http: invalid header field value for
+# Authorization"). An itch wharf key has no internal whitespace, so dropping all whitespace is
+# safe and fixes both the APIKEYS.md and the env-var sources.
+BUTLER_API_KEY="$(printf '%s' "${BUTLER_API_KEY:-}" | tr -d '[:space:]')"
 [ -n "${BUTLER_API_KEY:-}" ] || {
   echo "ERROR: no itch key — set BUTLER_API_KEY in the env or add an '# Itch.io' entry to APIKEYS.md." >&2
   exit 1
