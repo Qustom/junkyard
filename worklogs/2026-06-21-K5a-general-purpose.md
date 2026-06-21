@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.4 (Wave 3)
 - **Branch:** general-purpose/K5a-pingpong
-- **Commit:** c60a4e93e06d612073b50b301acdc8b9ab10579c
+- **Commit:** 77eeb78f3e9c6e7483b156286f2395fe6895d472
 
 ## What changed
 Built the new **PingPongHazard** greybox entity (script + scene) + a headless test. A
