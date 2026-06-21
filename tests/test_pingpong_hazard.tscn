@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c5a1pingpongtest1"]
+
+[ext_resource type="Script" path="res://tests/test_pingpong_hazard.gd" id="1"]
+
+[node name="TestPingPongHazard" type="Node"]
+script = ExtResource("1")
