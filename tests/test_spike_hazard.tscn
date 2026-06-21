@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bk5cspiketest01"]
+
+[ext_resource type="Script" path="res://tests/test_spike_hazard.gd" id="1"]
+
+[node name="TestSpikeHazard" type="Node"]
+script = ExtResource("1")
