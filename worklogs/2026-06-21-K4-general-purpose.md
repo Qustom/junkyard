@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.4
 - **Branch:** worktree-agent-a133cf32ad390df51
-- **Commit:** 0924be6cdbd1464da983824b0d9d85e1c603091f   ← required
+- **Commit:** 878fe1f7aa39c1d758afb71458b9ef621d1a1915   ← required
 
 ## What changed
 Wired the M1.4 K4 timer knobs (landed by K0) into the live dive clock and HUD, per the
