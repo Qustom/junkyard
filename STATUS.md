@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 → M1.2 (DONE → ITERATE) → **M1.3 (Legibility & Density) — Wave 1 DONE; Wave 2 DONE (J2+J3+J4 on `main`); next = Wave-2 close-out sweep (Director) → Wave 3 re-gate.**
-**Last updated:** 2026-06-20 (M1.3 **Wave 2 COMPLETE** — J2+J3+J4 on `main` (`4140d9f`, `4d54487`, `200f38c`; signal pre-decl `12e8932`). Hazards across depth (J2) + per-room cell-area density (J3) + corridor-rarity generator lever & corridor-time telemetry (J4). All-off fp byte-identical (`e943ac9c8bc1`); 46/46 knobs; schema v1. Next: **Wave-2 close-out deviation sweep (Director dispositions)** → Wave 3 RG1. Breakdown: `design/M1_3_Tasks/M1.3_Breakdown.md`.)
+**Current milestone:** M1.0 → M1.1 → M1.2 → M1.3 (DONE → ITERATE) → **M1.4 (Stakes, Variety & Legibility) — design LOCKED (Phases 0–4 done); build NOT started; next = dispatch Wave 1 (K0 first).**
+**Last updated:** 2026-06-21 (M1.3 re-gated → **ITERATE → M1.4**. M1.4 authored via the full four-phase process: breakdown + 10 per-task designs + fresh-eyes resolution + Director dispositions, all in `design/M1_4_Tasks/`. Design LOCKED. Next: **dispatch M1.4 Wave 1 — K0 foundation first (alone), then K3+K6 ∥ K4.** Breakdown + locks: `design/M1_4_Tasks/M1.4_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock".)
 
 ---
 
@@ -37,32 +37,37 @@ All 5 on `main`, verified, pushed, board=Done; all-off fp byte-identical (e943ac
 - **DLV1** itch HTML5 delivery (Web preset + `push_itch.sh` + web templates + nightly slugs) — `02ad951`. ⚠ **real butler push human-gated** (sandbox can't reach `broth.itch.ovh`; run `tools/push_itch.sh` per SETUP §1a).
 - **J1** `make_default_play_preset()` (19 rooms, size 4.0, R1 on, **R4 maze-only / occlusion OFF = match-played**, R2/R3 off) + `RANGE_MULT=[4.0,40.0]` — `3159aac` (+ `25072f6`).
 
-## ▶ Next action (start here on a cold restart) — **M1.3 Wave 3: RG1 DONE → HUMAN-GATED (itch publish + Director playtest)**
+## ▶ Next action (start here on a cold restart) — **M1.4 Wave 1: dispatch K0 (foundation) FIRST, alone**
 
-RG1 is integrated on `main` (`d9138c7`), verified, pushed, board=Done. `test_rg1_m13_verify` prints **RG1 M1.3 VERIFY OK** (all-off fp `e943ac9c8bc1`; default preset boots trap-free; J2 spread / J3 density / J4 corridor-lever each take effect; `corridor_summary` row clean; 46-knob snapshot; schema v1 + `run_ended` arity intact; **16 headless / 6 human-deferred; NO integration bugs**). Doc: `design/M1_3_Tasks/RG1_playtest_build.md` (verify matrix + Director config-sweep plan). tester_readme has the M1.3 human-deferred items + `m13-` tag note.
+M1.4 design is **LOCKED** (Phases 0–4 complete; breakdown + 10 per-task designs + fresh-eyes resolution + Director
+dispositions in `design/M1_4_Tasks/`). **No build code written yet.** Begin the build:
 
-**The build is ready for the Director's playtest. Remaining steps are HUMAN-GATED:**
-1. **Publish to itch** — `bash tools/push_itch.sh` with `BUTLER=/mnt/c/wsl-libraries/butler/butler` (run on a real network — sandbox can't reach `broth.itch.ovh`; SETUP §1a; **Chromium/Edge only** on itch). Live: `https://qusto.itch.io/the-far-yard`.
-2. **Director playtest (RG2 input):** sweep the `m13-…` configs per the RG1 doc §5 — incl. the **J3 wake-cadence tuning** (`r1_depth_threshold`/`r1_linger_seconds` so deep big rooms aren't instant-death) and the **mult-40 "void feel" window pass**; export telemetry (in-game button on web / `user://telemetry/run_log.jsonl` on desktop).
-3. **RG2** (`qa-playtest-coordinator`): analyse the returned telemetry vs M1.0/M1.1/M1.2 baselines (run-length, end-causes, `corridor_frac` for F3a, hazard depth spread for F2, density). 
-4. **RG3** (Director): record go (→ M2) / iterate (→ M1.4) / pivot in `design/M1_3_Tasks/G4_findings_M1.3.md`.
+1. **Dispatch K0 — Foundation** (`general-purpose`, `isolation: worktree`): single-writer pass on `run_config.gd` +
+   `event_bus.gd` + `config_menu.gd` per `design/M1_4_Tasks/K0_foundation_knobs_signals.md` §"Resolved Decisions": declare
+   the 35 new knobs (off/neutral) + extend `to_flat_dict()` + declare the new signals (incl. `meta_wiped(prev_run_number)`,
+   `dive_clock_warning(seconds_remaining, maximum)`, `bomb_pulse_started`, `new_hazard_killed`, `quota_evaluated/advanced`) +
+   **remove dead `light_low()`** + CFG rows/CSV stubs (knob-count test 46→81) + the **K1 retune** (`r1_speed_per_depth→3.0`,
+   `r1_catch_radius_per_depth→1.0`). **K0 lands ALONE** (it owns the shared files for the whole milestone). Verify: import
+   clean, all-off fp `e943ac9c8bc1` byte-identical, CFG boots, knob-count tests green.
+2. **After K0 on `main`** → dispatch Wave 1 parallel: **K3+K6** (one combined `project.godot`+camera change — single writer) ∥
+   **K4** (timer + HUD warning). Then Wave 2 (**K2 → K7** sequential), Wave 3 (**K5a ∥ K5b ∥ K5c → K5i**), Wave 4 (re-gate).
 
-> Minor open follow-up (non-blocking): RG1's qa recommended wiring `tests/test_rg1_m13_verify.tscn` into the CI test set alongside the M1.2 driver so the M1.3 matrix gates merges. Do when convenient.
+> **Contracts (M1.4):** all-off `RunConfig` default = permanent baseline (fp=e943ac9c8bc1); fun values ship in
+> `make_default_play_preset()`; quota = every-run-end × cumulative-money, miss = full wipe (Director FINAL); config-marked
+> telemetry (every knob → `to_flat_dict()` + test counts); `run_ended` arity locked; K0 pre-declares ALL new signals up front;
+> single-writer-per-`.gd`-file per wave; parallel agents `isolation: worktree`; **verify branch topology before every merge**
+> (qa-agent `git switch` leak — memory); push after every merge; board mirror; wave close-out deviation sweep.
 
-- **J3** (general-purpose) — ✅ **DONE (2026-06-20, merge `4d54487`, board=Done, worklog `worklogs/2026-06-19-J3-general-purpose.md`).** Additive `_populate_room_density`/`_density_spawn_positions` on J2's seam; cell-area default (px-area capped option), per-room cap 3 + band ceiling 64; hazards primary, `lvl_loot_density_per_area` built OFF (never preset-on, disjoint `junk_placer.gd`). 44/44 knobs; all-off fp `e943ac9c8bc1` byte-identical. Perf: preset=14 density hazards, px-area@40×=42, worst-case clamped to 64. **Deviation: none functional** (`_density_sorted_cells` per-room stable y,x sort instead of calling `_hazard_spawn_position` directly — within spec allowance); **Q F observation surfaced for Director** (density hazards in deep rooms may wake immediately → R1 threshold/linger tuning at RG1, not a J3 change) → Wave-2 close-out.
-- **J4** (general-purpose) — 🔄 **IN PROGRESS (claimed 2026-06-20, board=In Progress, worktree branch).** Configurable hallway length via **generator down-weight/drop** (NOT materialise re-pack; config-keyed → moves fp for non-default config, all-off byte-identical) + **per-frame corridor-time telemetry**. `corridor_time_summary` pre-declared on `main` (`12e8932`); hoist `_player_piece_index` out of the R4 gate; emit → additive `corridor_summary` JSONL row (no schema bump, no `run_ended` arity change); hardcoded corridor piece-id classification (no aspect-ratio fallback; L-bend just a corridor for classification). Adds its own `run_config.gd` knob(s) + preset wiring. Telemetry-only `main_game.gd` footprint. Spec `J4_hallway_length.md`.
+> **Carry-over (non-blocking):** wire `tests/test_rg1_m13_verify.tscn` into the CI test set when convenient; butler push
+> stays human-gated on a real network (SETUP §1a, Chromium-only) — relevant again at M1.4 RG1.
 
-Wave 2 is **sequential on the shared spawn seam + `main_game.gd`** (single-writer):
-- **J2** (general-purpose) — ✅ **DONE (2026-06-19, merge `4140d9f`, board=Done, worklog `worklogs/2026-06-19-J2-general-purpose.md`).** N hazards distributed across depth_index (single_gate/even_spread/curve); owns `_spawn_r1_hazards`/`_hazard_spawn_position(band, depth, index)` (the stable helper J3 reuses); added `r1_spawn_distribution`+`r1_spread_min_depth`, preset = even_spread/count 5/min-depth 1; 38/38 knobs; all-off fp `e943ac9c8bc1` byte-identical. **1 deviation logged (curve `pow(t,1.6)` biases shallower not deeper — harmless, preset-OFF) → for Wave-2 close-out sweep.**
-- **J3** (general-purpose) — **after J2 on `main`**: additive per-room **cell-area** density (`r1_per_room_density` + cap; px-area swept option; loot off-by-default) reusing J2's per-depth helper; adds its own knobs + preset wiring. Spec `J3_per_room_density.md`.
-- **J4** (general-purpose) — **after J3 (or parallel iff main_game.gd disjoint)**: hallway-length via **generator down-weight** (NOT materialise re-pack); corridor-time telemetry (per-frame piece-keyed accumulator; **pre-declare `corridor_time_summary` on `main`** first; hoist `_player_piece_index` out of the R4 gate). Spec `J4_hallway_length.md`.
-- Then **Wave 3** re-gate: RG1 build+verify → Director playtest → RG2 → RG3 (`G4_findings_M1.3.md`).
+---
 
-> **Each Wave-2 task adds its own `run_config.gd` knobs + wires them into `make_default_play_preset()`** (the breakdown's "J1 pre-declares" was superseded — Wave 2 is sequential, no parallel run_config collision). Update `test_run_config.gd`/`test_config_menu.gd` knob counts per task.
+## ✓ M1.3 — Legibility & Density — DONE 2026-06-21 (re-gated → ITERATE → M1.4)
 
-> **Contracts:** all-off default = permanent baseline (fp=e943ac9c8bc1); fun preset = `make_default_play_preset()`; warn-only traps (maze-only R4 is blessed); cell-area density; J4 = generator down-weight; web carries data (DLV2). Parallel agents `isolation: worktree`; **verify branch topology before every merge** (qa-agent `git switch` leak — memory); single-writer-per-`.gd`; push after every merge; board mirror; wave close-out deviation sweep.
-
-> **Human action queued (before the itch playtest, not before Wave 2):** install butler + run `tools/push_itch.sh` once on a real network (SETUP §1a). itch web build is **Chromium-only**. Director-confirmed: itch project/password page + SAB toggle + GH `BUTLER_API_KEY` already set up.
+Waves 1/2 (J1·J2·J3·J4·J5·BUG6·DLV1·DLV2) + RG1 all on `main`; all-off fp byte-identical (e943ac9c8bc1). RG1 (`d9138c7`)
+verified (`test_rg1_m13_verify` → **RG1 M1.3 VERIFY OK**), published-gate human. Director playtested → **RG3 verdict ITERATE**;
+feedback work-order → M1.4 (`design/M1_3_Tasks/G4_findings_M1.3.md`). Detailed Wave-1/2 in-progress notes archived → `STATUS_ARCHIVE.md`.
 
 ---
 
