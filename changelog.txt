@@ -18,8 +18,8 @@ STAKES
   is fully WIPED (a 9-field reset) — back to a fresh start. Save format bumped meta v2 -> v3
   with a migration (old saves load).
 * NEW — Configurable dive timer + near-end warning (K4). The dive now runs on a real,
-  legible clock (default 60s) with a ~10s near-end visual warning cue on the HUD.
-  (Timeout is a proper run-end cause alongside extract/death.)
+  legible clock (default 600s / 10 min) with a near-end visual warning cue on the HUD at
+  60s left. (Timeout is a proper run-end cause alongside extract/death.)
 
 
 DANGER VARIETY — three new greybox hazard types
