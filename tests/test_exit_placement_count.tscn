@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://c7fb5exitcount0"]
+[gd_scene format=3 uid="uid://bqn8r1e4pk8b"]
 
 [ext_resource type="Script" path="res://tests/test_exit_placement_count.gd" id="1"]
 
