@@ -49,6 +49,14 @@ const NAV_LOST_PROXY: String = "nav_lost_proxy"              # R4: lost-proxy me
 # ADDITIVE event-type string (like NAV_BRANCH_TAKEN / JUNK_LOST) — SCHEMA_VERSION STAYS 1.
 const CORRIDOR_SUMMARY: String = "corridor_summary"          # J4: per-run corridor vs. room time
 
+# --- Debug/dev events --------------------------------------------------------
+# The debug-only `debug_kill` action (key K, game_state.gd:_unhandled_input) emits
+# player_died(&"death"), which otherwise ends the run as a bare `cause=death` with NO
+# preceding hazard row — indistinguishable in the log from a phantom/unexplained death.
+# This row makes a K-press kill self-identifying (it precedes the death run_ended, like
+# HAZARD_CAUGHT). ADDITIVE event-type string — SCHEMA_VERSION STAYS 1.
+const DEBUG_KILL: String = "debug_kill"                      # debug_kill action → player_died
+
 ## Every event-type string, for tests/validators that want to assert a row's
 ## `type` is known.
 const ALL_TYPES: Array[String] = [
@@ -70,6 +78,8 @@ const ALL_TYPES: Array[String] = [
 	NAV_LOST_PROXY,
 	# J4 (M1.3) corridor-time summary row
 	CORRIDOR_SUMMARY,
+	# Debug/dev rows
+	DEBUG_KILL,
 ]
 
 ## The envelope keys every row carries (used by tests to assert structure).
