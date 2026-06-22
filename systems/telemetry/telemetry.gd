@@ -76,6 +76,10 @@ func _ready() -> void:
 	EventBus.nav_lost_proxy.connect(_on_nav_lost_proxy)
 	# J4 (M1.3): per-run corridor-time summary (additive row; no schema/arity change).
 	EventBus.corridor_time_summary.connect(_on_corridor_time_summary)
+	# Debug/dev: the K-key debug_kill emits player_died(&"death"). Log it so a debug
+	# kill is self-identifying in the log instead of a bare, reasonless cause=death
+	# run_ended (additive row; no schema/arity change). Only fires from debug_kill.
+	EventBus.player_died.connect(_on_player_died)
 
 
 ## Public toggle entry point for the settings UI. Persists the flag and applies it
@@ -207,6 +211,16 @@ func _on_hazard_caught(depth: int, _run_t_ms: int) -> void:
 	_emit_row(Schema.HAZARD_CAUGHT, {"depth": depth, "run_t_ms": _elapsed_ms()})
 	if _writer != null:
 		_writer.flush()  # high-value: precedes a death run_ended
+
+
+func _on_player_died(cause: StringName) -> void:
+	# Debug-only: player_died is emitted ONLY by the K-key debug_kill action
+	# (game_state.gd). Log a self-identifying row so the resulting cause=death
+	# run_ended is no longer a reasonless death in the log. Like HAZARD_CAUGHT this
+	# precedes the death run_ended and stamps run-elapsed itself; flush for crash safety.
+	_emit_row(Schema.DEBUG_KILL, {"cause": String(cause), "depth": _current_depth(), "run_t_ms": _elapsed_ms()})
+	if _writer != null:
+		_writer.flush()
 
 
 # --- R2 ----------------------------------------------------------------------

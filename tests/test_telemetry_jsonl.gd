@@ -100,6 +100,18 @@ func _run() -> int:
 		if not (ld.has("value") and ld.has("cause") and ld.has("depth")):
 			failures.append("junk_lost.data missing value/cause/depth")
 
+	# debug_kill row: the K-key kill is self-identifying (precedes the death run_ended)
+	if not by_type.has(Schema.DEBUG_KILL):
+		failures.append("expected a debug_kill row on a player_died run, found none")
+	else:
+		var dk: Dictionary = (by_type[Schema.DEBUG_KILL] as Array)[0]
+		var dkd: Dictionary = dk.get("data", {})
+		for f in ["cause", "depth", "run_t_ms"]:
+			if not dkd.has(f):
+				failures.append("debug_kill.data missing '%s'" % f)
+		if String(dkd.get("cause", "")) != "death":
+			failures.append("debug_kill.cause == %s, expected 'death'" % str(dkd.get("cause")))
+
 	# band_depth_reached carries a depth
 	if by_type.has(Schema.BAND_DEPTH_REACHED):
 		var depth_row: Dictionary = (by_type[Schema.BAND_DEPTH_REACHED] as Array)[0]
@@ -126,6 +138,10 @@ func _drive_run(bus: Node, cause: StringName) -> void:
 	bus.junk_picked_up.emit(&"scrap_coil", 12, 1, Vector2.ZERO, true)
 	bus.band_entered.emit(&"deep", 2)
 	bus.junk_picked_up.emit(&"engine_block", 40, 6, Vector2.ZERO, true)
+	# The K-key debug_kill fires player_died(&"death") just before the run ends; emit it
+	# here so the death run mirrors the real flow (debug_kill → player_died → fail_run).
+	if cause == &"death":
+		bus.player_died.emit(&"death")
 	# A failed run keeps a "pockets" subset; haul_banked carries the KEPT value.
 	bus.haul_banked.emit(10)
 	bus.currency_changed.emit(&"money", 10, &"pockets")
