@@ -46,11 +46,13 @@ func _run() -> int:
 	_test_all_off_single_gate(failures)            # (c)
 
 	if failures.is_empty():
-		print("FB5 OK — exits are NOT broken. Director's config "
+		print("FB5/EXIT-COUNT OK — exit placement MATH is correct: Director's config "
 			+ "(exit_enabled, base=2, per_depth=2.0, keep_one_at_spawn) places the "
 			+ "depth-scaled count of DISTINCT gates scattered across multiple pieces "
 			+ "(>1 at depth>=1); all-off places exactly ONE gate at the spawn offset. "
-			+ "Feedback #5 is an artifact of the #7 instant-death runs (which never left depth 1).")
+			+ "NOTE: the LIVE 'exits never spawn' report was BUG10 (a wiring bug — _place_gate "
+			+ "read the cleared GameState.active_run_config instead of the run's resolved config), "
+			+ "NOT a placement-math defect; fixed + regression-guarded in test_exit_placement (f).")
 		return 0
 	for f in failures:
 		printerr("FB5 FAIL: ", f)
@@ -76,7 +78,7 @@ func _test_directors_config_multi_exit(failures: Array[String]) -> void:
 	var depth: int = band.max_depth
 	var expected: int = mg._exit_count_for_depth(rc, depth)
 	var spawn_pos := Vector2(8, 8)
-	mg._place_gate(band, spawn_pos)
+	mg._place_gate(band, spawn_pos, rc)
 
 	var n: int = mg._gates.size()
 
@@ -135,7 +137,7 @@ func _test_directors_config_multi_exit(failures: Array[String]) -> void:
 	var mg2 := _make_mg()
 	var band2 := _make_band([40, 40])   # max_depth = 1
 	var exp2: int = mg2._exit_count_for_depth(rc, band2.max_depth)
-	mg2._place_gate(band2, Vector2(8, 8))
+	mg2._place_gate(band2, Vector2(8, 8), rc)
 	if exp2 <= 1 or mg2._gates.size() != exp2:
 		failures.append("(a) shallow band depth %d: placed %d, expected %d (should be > 1)"
 			% [band2.max_depth, mg2._gates.size(), exp2])
@@ -145,11 +147,11 @@ func _test_directors_config_multi_exit(failures: Array[String]) -> void:
 
 ## (c): the all-off control (exit_enabled = false) places EXACTLY ONE gate at the offset.
 func _test_all_off_single_gate(failures: Array[String]) -> void:
-	GameState.active_run_config = RunConfigScript.new()   # exit_enabled defaults false
+	var rc := RunConfigScript.new()   # exit_enabled defaults false
 	var mg := _make_mg()
 	var band := _make_band([40, 40, 40, 40])
 	var spawn_pos := Vector2(8, 8)
-	mg._place_gate(band, spawn_pos)
+	mg._place_gate(band, spawn_pos, rc)
 	if mg._gates.size() != 1:
 		failures.append("(c) all-off produced %d gates, expected exactly 1" % mg._gates.size())
 	elif mg._gates[0].global_position != spawn_pos + GameState.GATE_SPAWN_OFFSET:

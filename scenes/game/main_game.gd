@@ -263,7 +263,10 @@ func start_new_run() -> void:
 	# 4. Place the exit gate(s). All-off (exit_enabled=false) = today's single fixed gate
 	#    at the offset from spawn (E1 decision #8); K7 passes `band` for the candidate pool.
 	var spawn_pos := _entry_spawn_position(band)
-	_place_gate(band, spawn_pos)
+	# BUG10: pass the freshly-resolved run_cfg, NOT GameState.active_run_config — the latter
+	# is still null here (end_run() cleared it; start_run() doesn't re-stage it until step 6
+	# below), so reading it placed a single all-off gate REGARDLESS of the exit config.
+	_place_gate(band, spawn_pos, run_cfg)
 
 	# 5. Put the player at the entry and let the camera find it.
 	_player.global_position = spawn_pos
@@ -964,8 +967,9 @@ func _entry_spawn_position(band: Band) -> Vector2:
 ## placed across the band's floor cells via a LOCAL sub-stream (run-state, no global RNG →
 ## fingerprint() is untouched). `band` supplies the floor-cell candidate pool. The gate is
 ## dumb: each instance just calls extract_and_end_run on interact (first-to-resolve wins).
-func _place_gate(band: Band, spawn_pos: Vector2) -> void:
-	var rc := GameState.active_run_config
+func _place_gate(band: Band, spawn_pos: Vector2, rc: RunConfig) -> void:
+	# rc is passed in (BUG10) — caller hands the run's resolved config, since
+	# GameState.active_run_config is not staged yet when this runs during start_new_run.
 
 	# --- All-off control: exactly today's single fixed gate (no RNG, no candidate pool). ---
 	if rc == null or not rc.exit_enabled:
