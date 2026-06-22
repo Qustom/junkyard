@@ -1,0 +1,67 @@
+THE FAR YARD — CHANGELOG
+========================
+
+M1.4 — "Stakes, Variety & Legibility"   (changes since M1.3)
+------------------------------------------------------------
+
+This version is the M1.4 re-gate build. Headline goal: give the dive real STAKES,
+more DANGER VARIETY, and better LEGIBILITY. Everything below ships ON in the default
+play preset; the all-off baseline is unchanged (byte-for-byte identical to M1.3) so
+every new system can be toggled/tuned from the in-game config menu.
+
+
+STAKES
+------
+* NEW — Quota + roguelite wipe (K2). Each run now has a money quota. It is checked at
+  EVERY run end (extract, death, or timeout) against your cumulative money. Run 1's bar
+  is $50 and it rises by $50 each time you meet it. MISS the quota and your meta-progress
+  is fully WIPED (a 9-field reset) — back to a fresh start. Save format bumped meta v2 -> v3
+  with a migration (old saves load).
+* NEW — Configurable dive timer + near-end warning (K4). The dive now runs on a real,
+  legible clock (default 60s) with a ~10s near-end visual warning cue on the HUD.
+  (Timeout is a proper run-end cause alongside extract/death.)
+
+
+DANGER VARIETY — three new greybox hazard types
+-----------------------------------------------
+* NEW — Ping-pong bouncer (K5a). Travels in a straight line at constant speed, bounces
+  off room walls, and kills on contact. Amber tell. Stays confined to its room.
+* NEW — Proximity bomb (K5b). Arms when you get close (no defuse), pulses ~2s, then
+  detonates in a blast radius. Idle / amber / orange-red tells as it escalates.
+* NEW — Anchored rotating spikes (K5c). Three rotating arms with an analytic kill along
+  each blade; deterministic phase per instance. Steel/cyan tell.
+  All three scale in number with depth, share a combined per-band budget (max 48), and
+  each respects a per-room cap. The pursuing hazard from earlier milestones is unchanged.
+
+
+LEGIBILITY / PRESENTATION
+-------------------------
+* NEW — Resolution-independent camera (K3). The camera now holds a fixed visible-world
+  width instead of a window-resolution-dependent zoom, so "how far can I see" is constant.
+  Default visible width is 1000 px (fit-width).
+* NEW — Movement jitter fix (K6). Physics interpolation is on and the camera is now a
+  level-owned rig (no longer a child of the player), removing per-frame jitter on
+  high-refresh displays.
+* Depth readout shows "Depth N / max".
+
+
+SPATIAL
+-------
+* NEW — Multiple exits (K7). Instead of one fixed gate, a band places several exit gates,
+  the count scaling with depth (base 1, +1 every ~10 within-band depths, capped at 7),
+  scattered across the level with one always pinned near spawn. Enabled in the default
+  preset; fully tunable in the config menu.
+
+
+NOT YET IN THIS BUILD
+---------------------
+* A "spawn-room-only" mode for the pursuing hazard (slow-patrol — it patrols its spawn
+  room but won't chase you out of it) is queued for M1.5.
+
+
+NOTES FOR PLAYTESTING
+---------------------
+* All new systems are data-driven knobs reachable from the in-game config menu (81 total).
+  "Reset" returns the all-off M1.3-equivalent baseline as a control.
+* On the web build, use the in-game "Export telemetry" button; on desktop the log is at
+  user://telemetry/run_log.jsonl.
