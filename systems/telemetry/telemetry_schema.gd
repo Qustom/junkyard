@@ -49,6 +49,13 @@ const NAV_LOST_PROXY: String = "nav_lost_proxy"              # R4: lost-proxy me
 # ADDITIVE event-type string (like NAV_BRANCH_TAKEN / JUNK_LOST) — SCHEMA_VERSION STAYS 1.
 const CORRIDOR_SUMMARY: String = "corridor_summary"          # J4: per-run corridor vs. room time
 
+# --- M1.4 new-hazard kill (K5a/K5b/K5c) --------------------------------------
+# The three new M1.4 hazards (ping-pong / bomb / spike) emit EventBus.new_hazard_killed
+# on a fatal hit, then route death through the same GameState.fail_run(&"death"). Logging
+# it (parallel to HAZARD_CAUGHT for R1) makes a new-hazard death attributable by `kind`
+# instead of a bare cause=death run_ended. ADDITIVE event-type string — SCHEMA_VERSION STAYS 1.
+const NEW_HAZARD_KILLED: String = "new_hazard_killed"        # K5a/b/c: fatal hit by kind
+
 # --- Debug/dev events --------------------------------------------------------
 # The debug-only `debug_kill` action (key K, game_state.gd:_unhandled_input) emits
 # player_died(&"death"), which otherwise ends the run as a bare `cause=death` with NO
@@ -78,6 +85,8 @@ const ALL_TYPES: Array[String] = [
 	NAV_LOST_PROXY,
 	# J4 (M1.3) corridor-time summary row
 	CORRIDOR_SUMMARY,
+	# M1.4 new-hazard kill row
+	NEW_HAZARD_KILLED,
 	# Debug/dev rows
 	DEBUG_KILL,
 ]

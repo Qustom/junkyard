@@ -100,6 +100,16 @@ func _run() -> int:
 		if not (ld.has("value") and ld.has("cause") and ld.has("depth")):
 			failures.append("junk_lost.data missing value/cause/depth")
 
+	# new_hazard_killed row: a K5a/b/c fatal hit is attributable by kind
+	if not by_type.has(Schema.NEW_HAZARD_KILLED):
+		failures.append("expected a new_hazard_killed row on a hazard-death run, found none")
+	else:
+		var nhk: Dictionary = (by_type[Schema.NEW_HAZARD_KILLED] as Array)[0]
+		var nhkd: Dictionary = nhk.get("data", {})
+		for f in ["kind", "depth", "run_t_ms"]:
+			if not nhkd.has(f):
+				failures.append("new_hazard_killed.data missing '%s'" % f)
+
 	# debug_kill row: the K-key kill is self-identifying (precedes the death run_ended)
 	if not by_type.has(Schema.DEBUG_KILL):
 		failures.append("expected a debug_kill row on a player_died run, found none")
@@ -138,6 +148,9 @@ func _drive_run(bus: Node, cause: StringName) -> void:
 	bus.junk_picked_up.emit(&"scrap_coil", 12, 1, Vector2.ZERO, true)
 	bus.band_entered.emit(&"deep", 2)
 	bus.junk_picked_up.emit(&"engine_block", 40, 6, Vector2.ZERO, true)
+	# A new-hazard (K5a/b/c) fatal hit emits new_hazard_killed before death; mirror it.
+	if cause == &"death":
+		bus.new_hazard_killed.emit(&"spike", 2, 0)
 	# The K-key debug_kill fires player_died(&"death") just before the run ends; emit it
 	# here so the death run mirrors the real flow (debug_kill → player_died → fail_run).
 	if cause == &"death":
