@@ -763,9 +763,15 @@ static func make_default_play_preset() -> RunConfig:
 	c.hspike_arm_length = 48.0                # sweep start lethal arm reach (px)
 	c.hspike_per_room_cap = 1                  # RG1 #3: one spike per room (MANDATORY > 0 — K5i perf guard); bounds the band total
 
-	# --- K7 (M1.4): exits SHIP OFF for a clean re-gate (Director Phase-3 lock: "preset ships
-	# exits OFF"). exit_enabled stays false (the all-off default) → today's single fixed gate at
-	# GATE_SPAWN_OFFSET, fingerprint byte-unmoved. Do NOT enable exit_* in the preset.
+	# --- K7 (M1.4): exits ON for this playtest (Director pre-playtest tweak, supersedes the
+	# earlier Phase-3 "ship exits OFF" lock). Multiple depth-scaled exits scattered across the
+	# band, with one gate pinned at spawn. Pure run-state (local run_seed ^ EXITS_RNG_SALT — never
+	# the global RNG), so the all-off control fingerprint stays byte-unmoved (e943ac9c8bc1).
+	c.exit_enabled = true
+	c.exit_base_count = 1                       # Director: 1 at depth 0
+	c.exit_count_per_depth = 0.1               # Director: +1 exit every ~10 within-band depths
+	c.exit_keep_one_at_spawn = true            # Director: always pin one gate at the spawn offset
+	c.exit_max_count = 7                        # Director: cap the band at 7 exits
 
 	# Provably trap-free: every enabled opposition's load-bearing magnitude is non-inert,
 	# so the M1.3 re-gate measures R1+R4 for real (no silent dead-config like M1.2).
