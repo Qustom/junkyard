@@ -76,6 +76,10 @@ func _ready() -> void:
 	EventBus.nav_lost_proxy.connect(_on_nav_lost_proxy)
 	# J4 (M1.3): per-run corridor-time summary (additive row; no schema/arity change).
 	EventBus.corridor_time_summary.connect(_on_corridor_time_summary)
+	# M1.4: the three new hazards (ping-pong/bomb/spike) emit new_hazard_killed on a
+	# fatal hit (parallels R1's hazard_caught). Log it so a new-hazard death is
+	# attributable by kind (additive row; no schema/arity change).
+	EventBus.new_hazard_killed.connect(_on_new_hazard_killed)
 	# Debug/dev: the K-key debug_kill emits player_died(&"death"). Log it so a debug
 	# kill is self-identifying in the log instead of a bare, reasonless cause=death
 	# run_ended (additive row; no schema/arity change). Only fires from debug_kill.
@@ -209,6 +213,14 @@ func _on_hazard_caught(depth: int, _run_t_ms: int) -> void:
 	# TEL stamps run-elapsed itself for consistency with the envelope t_ms; the
 	# signal's run_t_ms arg is emitter-convenience only (R1 may pass 0).
 	_emit_row(Schema.HAZARD_CAUGHT, {"depth": depth, "run_t_ms": _elapsed_ms()})
+	if _writer != null:
+		_writer.flush()  # high-value: precedes a death run_ended
+
+
+func _on_new_hazard_killed(kind: StringName, depth: int, _run_t_ms: int) -> void:
+	# K5a/b/c fatal hit. Like HAZARD_CAUGHT this precedes the death run_ended; TEL stamps
+	# run-elapsed itself (the signal's run_t_ms is emitter-convenience). Flush for crash safety.
+	_emit_row(Schema.NEW_HAZARD_KILLED, {"kind": String(kind), "depth": depth, "run_t_ms": _elapsed_ms()})
 	if _writer != null:
 		_writer.flush()  # high-value: precedes a death run_ended
 
