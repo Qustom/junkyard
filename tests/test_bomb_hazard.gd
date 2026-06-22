@@ -50,6 +50,7 @@ func _run() -> void:
 	await _case_fizzle_survives(gs, failures)
 	await _case_committed_no_defuse(gs, failures)
 	_case_all_off_inert(failures)
+	_case_tell_renders(failures)
 
 	if failures.is_empty():
 		print("BOMB HAZARD OK — crossing the proximity radius commits the bomb (bomb_pulse_started "
@@ -62,6 +63,23 @@ func _run() -> void:
 		for f in failures:
 			printerr("BOMB HAZARD FAIL: ", f)
 		get_tree().quit(1)
+
+
+## The bomb's visible tells (Core diamond + the proximity IdleRing built at setup) must
+## ACTUALLY RENDER — guards the invisible-blade class of bug (a self-intersecting polygon
+## triangulates to 0 triangles and renders nothing, like the K5c spike Tell did).
+func _case_tell_renders(failures: Array[String]) -> void:
+	var rc := _bomb_config()
+	var player := _make_player(Vector2(9999, 9999))   # far away — stays idle
+	var bomb := _make_bomb(Vector2.ZERO, rc, player)
+	for child_name in ["Core", "IdleRing"]:
+		var poly: Polygon2D = bomb.get_node(child_name)
+		if poly == null:
+			failures.append("(tell) BombHazard has no %s node" % child_name)
+		elif Geometry2D.triangulate_polygon(poly.polygon).is_empty():
+			failures.append("(tell) %s triangulates to 0 triangles — it would render NOTHING" % child_name)
+	bomb.queue_free()
+	player.queue_free()
 
 
 ## A bomb-on config; caller overrides specifics. proximity >= blast (the Q3 invariant).
