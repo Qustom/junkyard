@@ -111,16 +111,27 @@ func _is_player_on_any_arm(point: Vector2) -> bool:
 	return false
 
 
-## Build the greybox star: ARM_COUNT thin bars radiating from the hub, as ONE Polygon2D
-## (a single star polygon) in COLOR_SPIKE. Drawn in LOCAL space (the node's rotation spins
-## it). Pure presentation — the lethal test above uses _angle math, not this polygon.
+## Build the greybox blades: ARM_COUNT solid constant-width bars radiating from the hub.
+## Each arm is its OWN convex quad, registered as a separate island in Polygon2D.polygons
+## so each is triangulated INDEPENDENTLY. The previous version traced all three arms as a
+## SINGLE outline weaving through the hub, which is self-intersecting — Geometry2D's
+## ear-clipping returns ZERO triangles for it, so the whole Tell rendered NOTHING (the
+## blades were invisible while the analytic kill still fired). Per-arm quads can't
+## self-intersect, so each blade always renders. Drawn in LOCAL space (the node's rotation
+## spins it); pure presentation — the lethal test above uses _angle math, not this polygon.
 func _rebuild_tell() -> void:
-	var pts := PackedVector2Array()
+	var verts := PackedVector2Array()
+	var islands: Array = []
 	for i in ARM_COUNT:
 		var a: float = float(i) * (TAU / float(ARM_COUNT))
 		var dir := Vector2(cos(a), sin(a))
 		var perp := Vector2(-dir.y, dir.x) * ARM_HALF_WIDTH
-		pts.append(perp)                                   # base, one side of the hub
-		pts.append(dir * _arm_length)                      # tip
-		pts.append(-perp)                                  # base, other side
-	_tell.polygon = pts
+		var tip := dir * _arm_length
+		var base: int = i * 4
+		verts.append(perp)             # hub, one side
+		verts.append(tip + perp)       # tip, same side
+		verts.append(tip - perp)       # tip, other side
+		verts.append(-perp)            # hub, other side
+		islands.append(PackedInt32Array([base, base + 1, base + 2, base + 3]))
+	_tell.polygon = verts
+	_tell.polygons = islands

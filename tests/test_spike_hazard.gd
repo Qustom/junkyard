@@ -56,6 +56,29 @@ func _run() -> int:
 	if not is_equal_approx(angle_empty, 0.0):
 		failures.append("(a) empty spawn_ctx gave _angle %f, expected 0.0 (phase_salt 0)" % angle_empty)
 
+	# --- (f) the Tell ACTUALLY RENDERS: each arm island must triangulate to >0 tris.
+	# Guards the invisible-blade bug — a self-intersecting single-outline star triangulated
+	# to ZERO triangles (rendered nothing) while the kill still fired.
+	var tell: Polygon2D = hz_empty.get_node("Tell")
+	if tell == null:
+		failures.append("(f) SpikeHazard has no Tell node")
+	elif tell.polygons.is_empty():
+		failures.append("(f) Tell.polygons is empty — arms not registered as islands")
+	else:
+		var drawn_tris := 0
+		for island in tell.polygons:
+			var sub := PackedVector2Array()
+			for idx in island:
+				sub.append(tell.polygon[idx])
+			var tris := Geometry2D.triangulate_polygon(sub)
+			if tris.is_empty():
+				failures.append("(f) an arm island triangulated to 0 triangles — it would render NOTHING")
+			drawn_tris += tris.size() / 3
+		if tell.polygons.size() != SpikeHazard.ARM_COUNT:
+			failures.append("(f) expected %d arm islands, got %d" % [SpikeHazard.ARM_COUNT, tell.polygons.size()])
+		if drawn_tris <= 0:
+			failures.append("(f) Tell triangulates to 0 triangles total (invisible blades)")
+
 	# --- (b) deterministic phase: same salt → same angle, reproducible -------------
 	var hz_s7a: SpikeHazard = scene.instantiate()
 	var hz_s7b: SpikeHazard = scene.instantiate()
