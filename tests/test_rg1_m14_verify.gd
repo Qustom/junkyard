@@ -13,7 +13,7 @@ extends Node
 ##   - RG1 default play-preset: make_default_play_preset() is the M1.4 fun stack
 ##         (M1.3 base: LVL+R1+quota+camera on, R4 maze-only, R2/R3 off; PLUS K4 timer ON
 ##         (60s / 10s warning / visual_only), all three K5 hazards ON with per_room_cap>0
-##         and non-inert magnitudes, K7 exits OFF), is trap-free
+##         and non-inert magnitudes, K7 exits ON: base 1 / per_depth 0.1 / keep-one / cap 7), is trap-free
 ##         (inert_enabled_oppositions empty), loops end-to-end, and does NOT leak into the
 ##         all-off control (RunConfig.new() stays the byte-identical baseline).
 ##   - all-off control byte-identical: the all-off RunConfig band fp == e943ac9c8bc1 (the
@@ -124,7 +124,7 @@ func _run() -> int:
 		print("RG1 M1.4 VERIFY OK -- assembled M1.4 build runs the full loop. All-off control is ",
 			"byte-identical to the locked baseline (fp=%s); the default play-preset is the M1.4 " % BASELINE_FP,
 			"fun stack (M1.3 base + K4 timer 60s/10s/visual-only + all three K5 hazards on with ",
-			"per_room_cap>0 + K7 exits OFF), is trap-free (inert_enabled_oppositions empty), and ",
+			"per_room_cap>0 + K7 exits ON: base1/per_depth0.1/keep-one/cap7), is trap-free (inert_enabled_oppositions empty), and ",
 			"does NOT leak into the all-off control; to_flat_dict() carries every knob incl. the ",
 			"K4/K5/K7 keys; the K5i spawn helper spawns >=1 of each new hazard kind bounded by the ",
 			"per-room cap + the 48 band ceiling; extract/timeout end-causes reachable; the run_config ",
@@ -213,9 +213,14 @@ func _verify_default_preset_shape() -> void:
 	if preset.hspike_arm_length <= 0.0 or is_zero_approx(preset.hspike_rotation_speed):
 		_failures.append("RG1/K5c: default preset spike arm_length/rotation_speed inert")
 
-	# --- K7 exits OFF (clean re-gate). ---
-	if preset.exit_enabled:
-		_failures.append("RG1/K7: default preset exit_enabled is true (the preset must ship exits OFF)")
+	# --- K7 exits ON (Director pre-playtest tweak): enabled, base 1 / per_depth 0.1 /
+	# keep-one-at-spawn / cap 7. ---
+	if not preset.exit_enabled:
+		_failures.append("RG1/K7: default preset exit_enabled is false (the preset must ship exits ON)")
+	if preset.exit_base_count != 1 or not is_equal_approx(preset.exit_count_per_depth, 0.1) \
+			or not preset.exit_keep_one_at_spawn or preset.exit_max_count != 7:
+		_failures.append("RG1/K7: preset exit knobs != base 1 / per_depth 0.1 / keep_one true / max 7 (got %d/%f/%s/%d)"
+			% [preset.exit_base_count, preset.exit_count_per_depth, str(preset.exit_keep_one_at_spawn), preset.exit_max_count])
 
 	# --- Trap-free: every enabled R-opposition's load-bearing magnitude is non-inert. ---
 	var inert := preset.inert_enabled_oppositions()
@@ -358,7 +363,7 @@ func _verify_cfg_boots_default_preset() -> void:
 		_human_deferred.append("RG1: CFG booted all-off rather than the default play-preset -- confirm config_menu seeds make_default_play_preset() (deferred: may be a fixture-mode boot)")
 	elif not (working.lvl_enabled and working.r1_enabled and working.r4_enabled
 			and working.timer_enabled and working.hpp_enabled and working.hbomb_enabled
-			and working.hspike_enabled and not working.exit_enabled):
+			and working.hspike_enabled and working.exit_enabled):
 		_failures.append("RG1: CFG boot config is not the M1.4 fun stack (lvl=%s r1=%s r4=%s timer=%s hpp=%s hbomb=%s hspike=%s exit=%s)"
 			% [str(working.lvl_enabled), str(working.r1_enabled), str(working.r4_enabled),
 				str(working.timer_enabled), str(working.hpp_enabled), str(working.hbomb_enabled),
@@ -566,7 +571,7 @@ func _note_human_deferred() -> void:
 	_human_deferred.append("K4: the ~10s near-end timer warning fires VISUALLY on a 60s dive -- checklist")
 	_human_deferred.append("K5a/b/c: ping-pong / bomb-pulse / rotating-spikes read distinctly + kill -- checklist")
 	_human_deferred.append("K6: motion is smooth (physics_interpolation), no camera jitter -- checklist")
-	_human_deferred.append("K7: exits ship OFF (single fixed gate) for this re-gate build -- checklist")
+	_human_deferred.append("K7: exits ON (base 1 / per_depth 0.1 / keep-one-at-spawn / cap 7) -- confirm multiple gates spawn + extract works -- checklist")
 	_human_deferred.append("OQ-3 perf: worst-case ~112-body band (R1 64 + new 48) holds frame rate -- Director playtest")
 	print("RG1 M1.4 human-deferred (manual playtest checklist): ")
 	for h in _human_deferred:
