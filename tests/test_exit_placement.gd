@@ -61,6 +61,12 @@ func _run() -> int:
 	# --- (e) MULTI-GATE EXTRACT SAFETY ---------------------------------------------
 	_test_multi_gate_extract(failures)
 
+	# --- (f) BUG10: placement honours the PASSED config even when active_run_config is
+	# null (the live post-end_run() state when start_new_run calls _place_gate). Regression
+	# for "exits never spawn no matter the setting" — _place_gate used to read the cleared
+	# global and always fell through to the single all-off gate. -----------------------
+	_test_ignores_stale_active_config(failures)
+
 	if failures.is_empty():
 		print("K7 OK — exit placement verified: all-off → exactly 1 gate at GATE_SPAWN_OFFSET "
 			+ "(M1.3 control, fp untouched), enabled count = clamp(maxi(base,1)+floor(per_depth*depth),"
@@ -88,10 +94,10 @@ func _make_mg() -> Node:
 
 func _test_all_off(mg_script: GDScript, failures: Array[String]) -> void:
 	var mg := _make_mg()
-	GameState.active_run_config = RunConfigScript.new()   # exit_enabled defaults false
+	var rc := RunConfigScript.new()   # exit_enabled defaults false
 	var band := _make_band([4, 4, 4])
 	var spawn_pos := Vector2(8, 8)
-	mg._place_gate(band, spawn_pos)
+	mg._place_gate(band, spawn_pos, rc)
 	if mg._gates.size() != 1:
 		failures.append("(a) all-off produced %d gates, expected exactly 1" % mg._gates.size())
 	elif mg._gates[0].global_position != spawn_pos + GameState.GATE_SPAWN_OFFSET:
@@ -103,10 +109,9 @@ func _test_all_off(mg_script: GDScript, failures: Array[String]) -> void:
 
 func _test_no_config(mg_script: GDScript, failures: Array[String]) -> void:
 	var mg := _make_mg()
-	GameState.active_run_config = null
 	var band := _make_band([4, 4])
 	var spawn_pos := Vector2(8, 8)
-	mg._place_gate(band, spawn_pos)
+	mg._place_gate(band, spawn_pos, null)   # nil config → single fixed gate
 	if mg._gates.size() != 1:
 		failures.append("(a) nil-config produced %d gates, expected exactly 1" % mg._gates.size())
 	elif mg._gates[0].global_position != spawn_pos + GameState.GATE_SPAWN_OFFSET:
@@ -203,7 +208,7 @@ func _test_keep_at_spawn(mg_script: GDScript, failures: Array[String]) -> void:
 	var spawn_pos := Vector2(8, 8)
 	var mg := _make_mg()
 	var band := _make_band([60, 60, 60])
-	mg._place_gate(band, spawn_pos)
+	mg._place_gate(band, spawn_pos, rc)
 
 	var n: int = mg._gates.size()
 	if n != 3:
@@ -283,10 +288,31 @@ func _interactable_child(gate: Node) -> Node:
 
 
 ## Build the placed gate world positions for the current GameState config/seed.
+## BUG10 regression: simulate the live start_new_run state — active_run_config is null
+## (end_run cleared it; start_run hasn't re-staged) — and confirm _place_gate still places
+## the configured multi-gate count from the rc it is HANDED, not the cleared global.
+func _test_ignores_stale_active_config(failures: Array[String]) -> void:
+	GameState.active_run_config = null                  # post-end_run() live state
+	GameState.run_seed = 0x5EED
+	var rc := RunConfigScript.new()
+	rc.exit_enabled = true
+	rc.exit_base_count = 4
+	rc.exit_count_per_depth = 0.0
+	rc.exit_keep_one_at_spawn = false
+	var mg := _make_mg()
+	var band := _make_band([60, 60, 60])
+	mg._place_gate(band, Vector2(8, 8), rc)             # hand rc explicitly
+	if mg._gates.size() != 4:
+		failures.append("(f) BUG10: with active_run_config null, passing exits-on rc produced "
+			+ "%d gates, expected 4 — exit config ignored (the live bug)" % mg._gates.size())
+	_free_band(band)
+	mg.free()
+
+
 func _build_positions(mg_script: GDScript, areas: Array, spawn_pos: Vector2) -> Array[Vector2]:
 	var mg := _make_mg()
 	var band := _make_band(areas)
-	mg._place_gate(band, spawn_pos)
+	mg._place_gate(band, spawn_pos, GameState.active_run_config)
 	var out: Array[Vector2] = []
 	for g in mg._gates:
 		out.append(g.global_position)

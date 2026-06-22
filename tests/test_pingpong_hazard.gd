@@ -55,6 +55,14 @@ func _run() -> int:
 	if not hz_a.velocity.is_equal_approx(Vector2.RIGHT * 100.0):
 		failures.append("(a) empty spawn_ctx: velocity %s != default RIGHT * speed" % str(hz_a.velocity))
 
+	# --- (a2) the Tell ACTUALLY RENDERS (guards the invisible-blade class of bug:
+	# a self-intersecting Tell triangulates to 0 triangles and renders nothing). ---
+	var pp_tell: Polygon2D = hz_a.get_node("Tell")
+	if pp_tell == null:
+		failures.append("(a2) PingPongHazard has no Tell node")
+	elif Geometry2D.triangulate_polygon(pp_tell.polygon).is_empty():
+		failures.append("(a2) Tell triangulates to 0 triangles — it would render NOTHING")
+
 	# --- (b) INITIAL HEADING from spawn_ctx ---------------------------------
 	var hz_b := scene.instantiate() as PingPongHazard
 	add_child(hz_b)
