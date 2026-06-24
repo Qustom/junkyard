@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → … → M1.4 (DONE → re-gated → ITERATE) → **M1.5 (Agency & Legibility) — AUTHORING: Phase 0+1 done (breakdown), Phase 2 fan-out NOT started; design NOT locked.**
-**Last updated:** 2026-06-24 (M1.4 re-gated post-Wave-5 → **ITERATE → M1.5**, verdict recorded in `design/M1_4_Tasks/G4_findings_M1.4.md` §RG3. M1.5 scope: throw mechanic + spawn-room pursuer #6 + money-text reposition + grab-prompt fix. Phase 1 breakdown authored → `design/M1_5_Tasks/M1.5_Breakdown.md`. **Next: Director dispositions the open Wave-5 deviations + RG1-F1 + board back-fill (deviation-sweep-before-dispatch), then Phase 2 per-task design fan-out (L0,L1,L2,L3,L4).**)
+**Current milestone:** M1.0 → … → M1.4 (DONE → re-gated → ITERATE) → **M1.5 (Agency & Legibility) — design LOCKED (Phases 0–4 done); build NOT started; next = dispatch Wave 1 (L0 ∥ L3 ∥ L4).**
+**Last updated:** 2026-06-24 (M1.4 re-gated post-Wave-5 → **ITERATE → M1.5**. M1.5 authored via the full four-phase process: breakdown + 6 per-task designs (L0–L5) + fresh-eyes resolution + Director dispositions, all in `design/M1_5_Tasks/`. Design **LOCKED** (throw kills pursuer + ping-pong, no scope knob; pursuer paces between two points; knob count 81→88). M1.4 Wave-5 deviation sweep closed (RG1-F1 Reviewed, TUNE2→L5, UID drift Reviewed); board back-filled. **Next: dispatch M1.5 Wave 1 — L0 ∥ L3 ∥ L4 (file-disjoint, parallel worktrees), then Wave 2 L1→L2 sequenced + L5 parallel.** Breakdown + locks: `design/M1_5_Tasks/M1.5_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock".)
 
 ---
 

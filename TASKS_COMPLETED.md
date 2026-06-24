@@ -324,3 +324,17 @@ Web export preset (threaded, COI), `tools/push_itch.sh` → `qusto/the-far-yard:
 
 ### J1 — Default play-preset + size-slider re-range — **Done** (merged `3159aac`, refined `25072f6`)
 `RunConfig.make_default_play_preset()` (the game/CFG boots into it): lvl on, 19 rooms, size 4.0, R1 on (catch radius floored 23.3→24.0), **R4 maze-only / occlusion OFF (match-played, Director close-out)**, R2/R3 off; trap-free. `RANGE_MULT=[4.0,40.0]` (mult-40 headless smoke playable, 640 px/cell exact). All-off `RunConfig.new()` stays the permanent baseline (Reset=all-off); fp byte-identical. CFG warn-line folds BUG6's traps. Worklog `worklogs/2026-06-19-J1-general-purpose.md`.
+
+---
+
+## M1.4 — Stakes, Variety & Legibility — ✓ DONE 2026-06-21..24 (re-gated → ITERATE → M1.5)
+
+All waves built + integrated on `main`, board=Done; all-off fp byte-identical (`e943ac9c8bc1`). Re-gated post-Wave-5 →
+**RG3 verdict ITERATE → M1.5** (`design/M1_4_Tasks/G4_findings_M1.4.md` §RG3). Specs: `design/M1_4_Tasks/`. Completion
+proof: `STATUS.md` §Done tables + `worklogs/2026-06-21-*` + `2026-06-21-RG1-*`. Tasks (all Done):
+
+- **Wave 1:** K0 (foundation: 46→81 knobs + signals + K1 retune) · K3+K6 (resolution-independent camera + jitter fix) · K4 (configurable timer + near-end warning).
+- **Wave 2:** K2 (quota + roguelite wipe, save META v2→v3 + migration + fixture) · K7 (exit placement rework, exits ship OFF).
+- **Wave 3:** K5a (ping-pong hazard) · K5b (bomb hazard) · K5c (rotating-spikes hazard) · K5i (new-hazard spawn-seam integration).
+- **Wave 4 (RG1):** M1.4 playtest build + verify (`test_rg1_m14_verify`) + itch publish.
+- **Wave 5 (RG1-feedback bug-wave):** BUG7 (spawn-room instant-death fix) · BUG8 (ping-pong wall-stick fix) · TUNE2 (camera 1000 + spike spawn) · FB5 (multi-exit regression test; #5 NOT-a-bug). Re-gate after Wave 5 → ITERATE → M1.5.

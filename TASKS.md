@@ -33,94 +33,83 @@ Findings + the Director feedback work-order: `design/M1_3_Tasks/G4_findings_M1.3
 
 ---
 
-## M1.4 — Stakes, Variety & Legibility (ACTIVE — iterating on the M1.3 ITERATE verdict)
+## M1.4 — Stakes, Variety & Legibility — ✓ **DONE 2026-06-21..24** (re-gated → ITERATE → M1.5)
 
-Give the run real stakes (a per-run quota whose miss wipes you), triple the danger vocabulary (ping-pong, bomb, rotating
-spikes), make the camera's visible area + the timer controlled-and-configurable, randomize/multiply the exit, and fix the
-movement jitter — then re-gate for a possible "go." Breakdown + dependency map + wave order + locked decisions:
-`design/M1_4_Tasks/M1.4_Breakdown.md` (§"Phase 3 Dispositions & Phase 4 Lock"). Provenance: `G4_findings_M1.3.md`.
+All waves built + re-gated: Waves 1–3 (K0–K7, K5a/b/c/i) + RG1 + Wave-5 bug-wave (BUG7/BUG8/TUNE2/FB5) → Director
+playtest → **RG3 verdict ITERATE → M1.5** (`design/M1_4_Tasks/G4_findings_M1.4.md` §RG3). Tasks archived →
+`TASKS_COMPLETED.md`.
+
+---
+
+## M1.5 — Agency & Legibility (ACTIVE — iterating on the M1.4 ITERATE verdict)
+
+Give the player agency against danger (throw a highlighted inventory item to kill a pursuer), make the pursuer a
+comprehensible room-bound slow patrol, and fix two legibility bugs (money text hidden behind inventory; grab prompt
+always on) — then re-gate. Breakdown + dependency map + wave order + locked decisions:
+`design/M1_5_Tasks/M1.5_Breakdown.md` (§"Phase 3 Dispositions & Phase 4 Lock"). Provenance: `G4_findings_M1.4.md` §RG3.
 **Design is LOCKED** — every task doc carries a "Resolved Decisions (Phase 3)" section; Director dispositioned the fun
-calls (full wipe; quota = every-run-end × cumulative-money). Greybox; all-off `RunConfig` stays the permanent baseline
-(fp=e943ac9c8bc1); the fun values ship in `make_default_play_preset()`.
+calls (throw kills pursuer + ping-pong, no scope knob; pursuer paces between two points). Greybox; all-off `RunConfig`
+stays the permanent baseline (fp=e943ac9c8bc1); throw/highlight/pursuer behaviour are pure run-state (no save change);
+the fun values ship in `make_default_play_preset()`. Knob count 81 → **88**.
 
-### Wave 1 — Foundation + low-risk  *(K0 first & alone, then K3+K6 ∥ K4)*
+### Wave 1 — Foundation + legibility fixes  *(L0 ∥ L3 ∥ L4 — all file-disjoint, parallel)*
 
-### K0 — Foundation: knob + signal pre-declare (+ K1 retune)
-- Milestone: M1.4 (Wave 1)   Assignee: general-purpose   BlockedBy: none
-- Spec: `design/M1_4_Tasks/K0_foundation_knobs_signals.md`
-- Goal: single-writer pass on `run_config.gd` + `event_bus.gd` + `config_menu.gd`: declare all 35 M1.4 knobs (off/neutral) + extend `to_flat_dict()` + declare the new signals + CFG rows/CSV stubs; apply the **K1** preset retune (`r1_speed_per_depth→3.0`, `r1_catch_radius_per_depth→1.0`); remove dead `light_low()`. Unblocks the parallel build.
-- Done when: project imports clean; all-off fp byte-identical (e943ac9c8bc1); CFG menu boots; knob-count tests green (46→81); every new knob in `to_flat_dict()`.
+### L0 — Foundation: knob + signal pre-declare
+- Milestone: M1.5 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_5_Tasks/L0_foundation_knobs_signals.md`
+- Goal: single-writer pass on `run_config.gd` + `event_bus.gd` + `config_menu.gd`: declare the 8 M1.5 knobs (`throw_enabled`/`throw_speed`/`throw_max_range`; `r1_spawn_room_only`/`r1_patrol_speed`; `hpp_kills`/`hbomb_kills`/`hspike_kills`) at off/neutral (`*_kills`=true) + extend `to_flat_dict()` + declare the 4 new signals (`item_thrown`, `throw_missed`, `throw_killed_hazard`, `hazard_pursuer_state`) + CFG rows/CSV stubs. Unblocks the parallel build.
+- Done when: project imports clean; all-off fp byte-identical (e943ac9c8bc1); CFG menu boots; knob-count tests green (81→88); every new knob in `to_flat_dict()`; every new signal declared.
 
-### K3+K6 — Resolution-independent camera + jitter fix
-- Milestone: M1.4 (Wave 1)   Assignee: general-purpose (+ character-animator for K6 feel)   BlockedBy: K0
-- Spec: `design/M1_4_Tasks/K3_resolution_independent_camera.md` + `design/M1_4_Tasks/K6_movement_jitter.md`
-- Goal: ONE combined `project.godot` (`[display]` `canvas_items`/integer/`expand` + `[physics]` `physics_interpolation=true`) + camera change (reparent off the body to a level-owned rig; `CameraView` driving fixed visible world-units from `cam_*` knobs). Default-off reproduces today's FOV + framing; render-time only (fp unaffected).
-- Done when: visible world-units are window-resolution-invariant; jitter gone; default-off = byte-identical M1.3 look; all-off fp unmoved.
+### L3 — Money-text reposition (#8)
+- Milestone: M1.5 (Wave 1)   Assignee: ui-ux-designer   BlockedBy: none
+- Spec: `design/M1_5_Tasks/L3_money_text_reposition.md`
+- Goal: move `HaulValueLabel` from top-left (hidden behind the bottom-right inventory) to below the dive timer (top-right, right-aligned) — pure `.tscn` anchor/offset edit; `_refresh_haul()` untouched. Bug-fix, not knob-gated.
+- Done when: money readout sits below the timer, not behind the inventory; import clean; no logic/fp change.
 
-### K4 — Configurable timer + near-end warning
-- Milestone: M1.4 (Wave 1)   Assignee: general-purpose (+ ui-ux for HUD cue)   BlockedBy: K0
-- Spec: `design/M1_4_Tasks/K4_configurable_timer_warning.md`
-- Goal: `timer_length_s` RunConfig override (`0.0`⇒`DiveClockConfig.max_light`); a one-shot near-end `dive_clock_warning(seconds_remaining, maximum)` (latched like `_fired_timeout`) + a HUD visual cue (~10s default, audio gated/M2-stub). Drop dead `light_low()` connect.
-- Done when: timer length is configurable; the warning fires once near the end with a HUD cue; all-off = today's clock; fp unmoved.
+### L4 — Grab-prompt visibility fix (#9)
+- Milestone: M1.5 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_5_Tasks/L4_grab_prompt_fix.md`
+- Goal: drive `_prompt.visible` as a per-frame invariant of `_current != null && is_instance_valid(_current) && _current.can_interact()`; default `interaction_prompt.tscn` hidden + clear baked text; add a hide-invariant regression test. Don't refactor the selection/hysteresis loop. Bug-fix, not knob-gated.
+- Done when: the grab prompt shows iff a valid grabbable is in focus/range; regression test green; no knob/signal/save/fp change.
 
-### Wave 2 — Stakes & spatial  *(K2 → K7 sequential; both touch main_game/game_state)*
+### Wave 2 — Agency & threat  *(L1 → L2 sequenced on main_game.gd; L5 parallel)*
 
-### K2 — Quota system + roguelite wipe
-- Milestone: M1.4 (Wave 2)   Assignee: general-purpose (+ game-director-designer economy, ui-ux HUD/Game-Over, qa fixture)   BlockedBy: K0
-- Spec: `design/M1_4_Tasks/K2_quota_system.md`
-- Goal: per-run quota (start $50, +$50/run, configurable); meet → run-number++ + quota++; **miss = full meta wipe** (Director FINAL). Checked **every run end**, met by **cumulative money** (both swept knobs, these defaults). Save META v2→v3 + migration + `meta_v2.sav` fixture; HUD quota readout; Game-Over → wipe → fresh start.
-- Done when: quota gates every run end; miss wipes meta (verified); run-number/quota escalate + reset-on-wipe; migration + fixture green; all-off (`quota_enabled=false`) = M1.3 byte-identical; fp unmoved.
+### L1 — Throwing mechanic
+- Milestone: M1.5 (Wave 2)   Assignee: general-purpose (+ ui-ux-designer highlight selector)   BlockedBy: L0
+- Spec: `design/M1_5_Tasks/L1_throwing_mechanic.md`
+- Goal: input remap (F=grab/interact incl. gate; Q/E=highlight L/R; Space=throw); a navigable inventory highlight (`highlighted_index()`/`highlighted_item()`, border, clampi-revalidate); Space removes the highlighted item + spawns an `entities/thrown_item` Area2D (mask world|hazard) in `player.facing`; hit a hazard-layer body (pursuer or ping-pong) → kill it + destroy the item; miss → `EventBus.junk_dropped` re-drop. Knob-gated (`throw_enabled` off default, preset on). Pure run-state.
+- Done when: Q/E cycle a visible highlight; Space throws in facing dir; hitting pursuer/ping-pong kills it + destroys the item; miss re-drops as grabbable; all-off fp byte-identical; config-marked telemetry clean.
 
-### K7 — Exit placement rework
-- Milestone: M1.4 (Wave 2)   Assignee: general-purpose (+ game-director-designer)   BlockedBy: K0 (sequence after K2 on `main_game.gd`)
-- Spec: `design/M1_4_Tasks/K7_exit_placement.md`
-- Goal: random local-sub-stream (`run_seed ^ EXITS_RNG_SALT`) exit placement; multiple exits; configurable count + depth-scaling; `exit_keep_one_at_spawn` toggle. Default = today's single fixed gate (byte-identical). Preset ships exits OFF.
-- Done when: exits place randomly/multiply per config; default = single fixed gate; multi-gate extract safe; all-off fp byte-identical.
+### L2 — Spawn-room pursuer (#6)
+- Milestone: M1.5 (Wave 2)   Assignee: general-purpose (+ game-director-designer)   BlockedBy: L0, L1 (single-writer on `main_game.gd`)
+- Spec: `design/M1_5_Tasks/L2_spawn_room_pursuer.md`
+- Goal: the `HazardEntity` pursuer becomes a room-bound slow patrol (paces between two endpoints at `r1_patrol_speed`), chases only while the player is in its spawn room (`_room_bounds.has_point`), catch only while chasing, immediate re-entry resume. Widen `setup` to the K5 3-arg family + thread `_piece_floor_bounds_world` through both R1 spawn helpers. Knob-gated (`r1_spawn_room_only` off default = today's chase-everywhere). Emits `hazard_pursuer_state`.
+- Done when: pursuer patrols + stays room-bound + chases only in-room + catches only while chasing; off = byte-identical today's pursuer; all-off fp unmoved.
 
-### Wave 3 — Danger variety  *(K5a ∥ K5b ∥ K5c → K5i)*
+### L5 — K5 per-hazard `*_kills` toggles *(M1.4 Wave-5 "Addressed" carry-in)*
+- Milestone: M1.5 (Wave 2)   Assignee: general-purpose (+ game-director-designer)   BlockedBy: L0
+- Spec: `design/M1_5_Tasks/L5_hazard_kills_toggles.md`
+- Goal: guard each K5 hazard's `fail_run(&"death")` with `if cfg.<prefix>_kills:` (mirroring R1's `r1_catch_kills`); default `true` = today's lethal behaviour; emit-always (non-lethal still emits `new_hazard_killed`). Retire `_driven_default_preset()` — the M1.5 verify runs the real preset with the three `*_kills`=false.
+- Done when: each K5 hazard is non-lethal iff its `*_kills`=false (kept lethal by default); `_driven_default_preset()` removed; existing K5 tests green + one kills-off case each; all-off fp byte-identical.
 
-### K5a — Ping-pong hazard
-- Milestone: M1.4 (Wave 3)   Assignee: general-purpose (+ character-animator tell)   BlockedBy: K0
-- Spec: `design/M1_4_Tasks/K5a_pingpong_hazard.md`
-- Goal: greybox bouncer confined to its room (rect-clamp + wall-bounce via `velocity.bounce(n)`), lethal on contact (`fail_run(&"death")`); `hpp_*` config; depth-scaled count (K5i). `setup(cfg, player, spawn_ctx)`.
-- Done when: bounces + stays in room + kills on contact; off=M1.0; placement run-state (fp unmoved).
+### Wave 3 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
 
-### K5b — Bomb hazard
-- Milestone: M1.4 (Wave 3)   Assignee: general-purpose (+ character-animator FX)   BlockedBy: K0
-- Spec: `design/M1_4_Tasks/K5b_bomb_hazard.md`
-- Goal: `Node2D` proximity bomb: enter `hbomb_trigger_radius` → pulse ~2s (committed) → explode, kills if inside `hbomb_blast_radius`; one-shot; emits `bomb_pulse_started` + shared `new_hazard_killed(&"bomb",…)`; `hbomb_*` config; depth-scaled count (K5i).
-- Done when: IDLE→PULSE→EXPLODE works; kills only if inside blast at detonation; off=M1.0; placement run-state (fp unmoved).
+### RG1 — M1.5 playtest build + verify
+- Milestone: M1.5 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: L0,L1,L2,L3,L4,L5
+- Spec: author from `design/M1_4_Tasks/RG1_playtest_build.md` template
+- Goal: assemble + verify the M1.5 loop (preset boots, throw highlights+throws+kills+re-drops, pursuer patrols/room-bounds, money readable below timer, grab prompt context-correct, all-off fp byte-identical, config-marked telemetry clean); **publish to itch** via `bash tools/push_itch.sh`; update `changelog.txt`.
+- Done when: a fresh build runs the full loop with the new mechanic + fixes; per-run config works; telemetry clean; build live on `qusto/the-far-yard:html5`.
 
-### K5c — Rotating-spikes hazard
-- Milestone: M1.4 (Wave 3)   Assignee: general-purpose (+ character-animator rotation)   BlockedBy: K0
-- Spec: `design/M1_4_Tasks/K5c_rotating_spikes_hazard.md`
-- Goal: `Node2D` rotating spikes (3 arms const), analytic distance-to-arm lethal test (`fail_run(&"death")`); steel/cyan tell; `hspike_*` config; deterministic per-instance phase; depth-scaled count (K5i).
-- Done when: rotates + kills on arm contact; off=M1.0; placement+phase run-state deterministic (fp unmoved).
-
-### K5i — New-hazard spawn-seam integration
-- Milestone: M1.4 (Wave 3)   Assignee: general-purpose   BlockedBy: K5a,K5b,K5c
-- Spec: `design/M1_4_Tasks/K5i_hazard_spawn_integration.md`
-- Goal: single-writer on the `main_game.gd` spawn seam: descriptor-table dispatch spawning each enabled hazard at a per-room depth-scaled count, reusing the J3 cell helpers; one shared `NEW_HAZARD_BAND_CEILING` (perf). Pure run-state.
-- Done when: all 3 hazards spawn depth-scaled per config; combined perf ceiling holds; off=M1.0; all-off fp byte-identical; spawn-seam tests updated.
-
-### Wave 4 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
-
-### RG1 — M1.4 playtest build + verify
-- Milestone: M1.4 (Wave 4)   Assignee: qa-playtest-coordinator   BlockedBy: K0,K2,K3,K4,K5a,K5b,K5c,K5i,K6,K7
-- Spec: author from `design/M1_3_Tasks/RG1_playtest_build.md` template
-- Goal: assemble + verify the M1.4 loop (preset boots, quota+wipe works, 3 new hazards spawn+kill, exits place, camera fixed, jitter gone, timer warning, config-marked telemetry clean, combined-hazard perf check); **publish to itch** via `bash tools/push_itch.sh`.
-- Done when: a fresh build runs the full loop with the fixes; per-run config works; telemetry clean; build live on `qusto/the-far-yard:html5`.
-
-### RG2 — M1.4 telemetry analysis vs M1.0–M1.3
-- Milestone: M1.4 (Wave 4)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data
+### RG2 — M1.5 telemetry analysis vs M1.0–M1.4
+- Milestone: M1.5 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data
 - Spec: template `design/M1_1_Tasks/RG2_telemetry_analysis.md`
-- Goal: end-cause / run-length / depth / quota-fail-rate / hazard-kind distributions per config, side-by-side vs all four prior baselines; did stakes + variety + the fixes land?
-- Done when: an analysis artifact comparing distributions across configs + all four baselines, with a clear read.
+- Goal: end-cause / run-length / depth / throw-kill / throw-miss / pursuer-state distributions per config, side-by-side vs all five prior baselines; did agency + the room-bound pursuer + the legibility fixes land?
+- Done when: an analysis artifact comparing distributions across configs + all five baselines, with a clear read.
 
-### RG3 — M1.4 re-gate verdict (Director decides)
-- Milestone: M1.4 (Wave 4)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
+### RG3 — M1.5 re-gate verdict (Director decides)
+- Milestone: M1.5 (Wave 3)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
 - Spec: template `design/M1_1_Tasks/RG3_regate_verdict.md`
-- Goal: record go/iterate/pivot in `design/M1_4_Tasks/G4_findings_M1.4.md`. go → M2; iterate → M1.5; pivot → design rework.
+- Goal: record go/iterate/pivot in `design/M1_5_Tasks/G4_findings_M1.5.md`. go → M2; iterate → M1.6; pivot → design rework.
 - Done when: a recorded go/iterate/pivot verdict backed by config-marked telemetry, comparable to the prior findings.
 
 ---
