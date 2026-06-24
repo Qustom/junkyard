@@ -4,7 +4,7 @@
 - **Subagent:** ui-ux-designer
 - **Milestone:** M1.5
 - **Branch:** ui-ux-designer/L3
-- **Commit:** a6c082471811c9e54b785b96493ac126670d08c3
+- **Commit:** 468ca78c7ad7317fdbb574c0331bf53c4c09fabf (worklog SHA recorded by a trailing commit; the .tscn change lands in this commit)
 
 ## What changed
 Repositioned the run-haul money readout (`HaulValueLabel`) in `ui/hud/decision_hud.tscn`
