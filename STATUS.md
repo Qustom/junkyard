@@ -19,12 +19,15 @@ L0 + L3 + L4 all on `main` (merges `fa7cdb9`/`5c9cd6c`/`b8520be`), pushed, board
 - **L4** grab-prompt (`50646d8`): per-frame `_prompt.visible` invariant + `.tscn` default-hidden + cleared baked "[E]" text + 3 hide-invariant regression cases.
 - *qa git-switch leak recurred on L3 (stray branch in the shared checkout); agent self-cleaned; topology verified clean before merge (qa-agent-git-switch-leak memory).*
 
-### ▶ Next action (start here on a cold restart) — Wave-1 close-out sweep, then Wave 2
+> **Wave-1 close-out DONE (2026-06-24).** L0-F1 (88→89 knob count) → Director **Reviewed**; docs corrected, archived → `DESIGN_DEVIATIONS_HISTORY.md`. `DESIGN_DEVIATIONS.md` empty between waves.
 
-1. **Wave-1 close-out deviation sweep** (below) — Director dispositions the 88→89 count note before Wave 2 dispatch.
-2. **Dispatch Wave 2 — L1 → L2 SEQUENCED** (both write `main_game.gd`: L1 throw seam first, then L2 rebases + adds the R1-spawn bounds plumbing) **+ L5 parallel** (disjoint K5 entity files). L1 owns the `project.godot` `[input]` remap. BlockedBy: L0 (done). Locks: `design/M1_5_Tasks/M1.5_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock".
+### ▶ M1.5 Wave 2 — IN PROGRESS (2026-06-24)
 
-> **Wave-1 close-out — for Director disposition:** **L0-F1** — the M1.5 final knob count is **89**, not the breakdown's stated 88 (81 + 8 = 89; my arithmetic slip). The knob set/names/types/defaults + all 4 signals match the Phase-4 lock exactly; only the sum digit was wrong. Docs (breakdown lock, TASKS.md, STATUS.md) corrected to 89; tests assert 89; all-off fp unmoved. Recommend **Reviewed** (no design change — derived-count typo). `DESIGN_DEVIATIONS.md` carries it.
+**L1 ∥ L5 dispatched** as parallel worktrees (file-disjoint); **L2 is HELD until L1 lands** (both write `main_game.gd` → single-writer sequencing). Board: L1/L5 In Progress, L2 Todo.
+- **L1** throwing mechanic (general-purpose) — `project.godot` input remap + inventory highlight + `entities/thrown_item` Area2D + throw seam in `main_game.gd` + preset `throw_enabled=true`. Kills any hazard-body (pursuer + ping-pong); miss → `junk_dropped` re-drop.
+- **L5** K5 `*_kills` toggles (general-purpose) — guard each K5 `fail_run` with `if cfg.<prefix>_kills` (emit-always); retire `_driven_default_preset()`.
+
+On L1 return: verify topology + gate, merge to `main`, push, board=Done → **then dispatch L2** (off updated `main`, builds on L1's `main_game.gd`). On L5 return: same. Then Wave-2 close-out sweep → Wave 3 (RG1 build+verify+itch). Locks: `design/M1_5_Tasks/M1.5_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock".
 
 ---
 

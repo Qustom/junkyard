@@ -344,3 +344,16 @@ dispatched to `producer`.
 
 **M1.4 Wave 5 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: M1.5 Phase 2 — per-task design
 fan-out (L0–L5).**
+
+## M1.5 Wave 1 close-out (2026-06-24) — Director dispositioned
+
+1 deviation, dispositioned by the Director:
+
+- **L0-F1 — M1.5 final knob count is 89, not the breakdown's stated 88 → REVIEWED.** 81 + 8 = 89; the Phase-4 lock's
+  "final 88" was an orchestrator arithmetic slip. L0 declared exactly the locked knob SET (names/types/defaults) + all 4
+  signals; only the sum digit was wrong. Director: **Reviewed** — a derived-count typo, not a design change. Reapply
+  (DONE): corrected 88→89 in the breakdown lock, `TASKS.md`, `STATUS.md`; knob-count tests assert 89 (`test_run_config`
+  R0 OK / `test_config_menu` 89/89); all-off fp unmoved (`e943ac9c8bc1`).
+
+**M1.5 Wave 1 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 2 — L1 → L2 sequenced
+(both write `main_game.gd`) + L5 parallel.**
