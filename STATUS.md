@@ -11,6 +11,23 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
+## ✓ M1.5 Wave 1 (Foundation + legibility) — DONE (2026-06-24)
+
+L0 + L3 + L4 all on `main` (merges `fa7cdb9`/`5c9cd6c`/`b8520be`), pushed, board=Done; ran as clean parallel worktrees (disjoint files, topology verified before each merge). Full gate green: import · smoke · run_config · config_menu · interaction · determinism. **All-off fp byte-identical `e943ac9c8bc1`** (corridor_lever BASELINE_FP + bandgen).
+- **L0** foundation (`a937df7`): 8 new knobs (`throw_enabled`/`throw_speed=180`/`throw_max_range=320`; `r1_spawn_room_only`/`r1_patrol_speed`; `hpp_kills`/`hbomb_kills`/`hspike_kills`=true) + 4 signals (`item_thrown`/`throw_missed`/`throw_killed_hazard`/`hazard_pursuer_state`) + CFG rows/CSV; `to_flat_dict()` + knob-count tests. **As-built count = 89, not 88** (the breakdown's "81+8=88" was an arithmetic slip; knob SET matches the lock exactly) → docs corrected to 89. Worklog `worklogs/2026-06-24-L0-general-purpose.md`.
+- **L3** money-text (`468ca78`): `HaulValueLabel` → top-right below the timer (frozen offsets); pure `.tscn`, `_refresh_haul()` untouched.
+- **L4** grab-prompt (`50646d8`): per-frame `_prompt.visible` invariant + `.tscn` default-hidden + cleared baked "[E]" text + 3 hide-invariant regression cases.
+- *qa git-switch leak recurred on L3 (stray branch in the shared checkout); agent self-cleaned; topology verified clean before merge (qa-agent-git-switch-leak memory).*
+
+### ▶ Next action (start here on a cold restart) — Wave-1 close-out sweep, then Wave 2
+
+1. **Wave-1 close-out deviation sweep** (below) — Director dispositions the 88→89 count note before Wave 2 dispatch.
+2. **Dispatch Wave 2 — L1 → L2 SEQUENCED** (both write `main_game.gd`: L1 throw seam first, then L2 rebases + adds the R1-spawn bounds plumbing) **+ L5 parallel** (disjoint K5 entity files). L1 owns the `project.godot` `[input]` remap. BlockedBy: L0 (done). Locks: `design/M1_5_Tasks/M1.5_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock".
+
+> **Wave-1 close-out — for Director disposition:** **L0-F1** — the M1.5 final knob count is **89**, not the breakdown's stated 88 (81 + 8 = 89; my arithmetic slip). The knob set/names/types/defaults + all 4 signals match the Phase-4 lock exactly; only the sum digit was wrong. Docs (breakdown lock, TASKS.md, STATUS.md) corrected to 89; tests assert 89; all-off fp unmoved. Recommend **Reviewed** (no design change — derived-count typo). `DESIGN_DEVIATIONS.md` carries it.
+
+---
+
 ## ✓ Wave 2 (Oppositions retuned to the new canvas) — DONE (2026-06-19)
 
 All three integrated on `main`, verified, pushed, board = Done. Determinism unmoved (fp=e943ac9c8bc1); none touched `main_game.gd`.

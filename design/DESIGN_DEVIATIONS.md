@@ -22,4 +22,7 @@ all archived to `DESIGN_DEVIATIONS_HISTORY.md`.*
 
 ---
 
-_Empty between waves. Next entries: M1.5 build waves._
+**[2026-06-24] L0-F1 — M1.5 final knob count is 89, not the breakdown's stated 88.**
+*What vs. the doc:* the M1.5 Phase-4 lock states "current 81 + 8 new = final 88," but 81 + 8 = **89**. The as-built schema is verifiably 80 `@export var` + 9 `@export_enum` = 89 exported fields (was 72 var + 9 enum = 81 pre-L0). L0 declared exactly the locked knob SET (names/types/defaults) and all 4 signals — only the breakdown's *sum digit* was wrong.
+*Why:* arithmetic slip in the orchestrator-authored breakdown lock; the knob list itself was correct. L0 set the knob-count tests to the load-bearing reality (89); `test_run_config` (R0 OK, 89) + `test_config_menu` (89/89) green; all-off fp unmoved (`e943ac9c8bc1`).
+*Claude's recommendation:* **Reviewed** — a derived-count typo, not a design change. Docs (breakdown lock, TASKS.md, STATUS.md) already corrected to 89; nothing to reapply beyond that.

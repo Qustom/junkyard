@@ -50,7 +50,7 @@ always on) — then re-gate. Breakdown + dependency map + wave order + locked de
 **Design is LOCKED** — every task doc carries a "Resolved Decisions (Phase 3)" section; Director dispositioned the fun
 calls (throw kills pursuer + ping-pong, no scope knob; pursuer paces between two points). Greybox; all-off `RunConfig`
 stays the permanent baseline (fp=e943ac9c8bc1); throw/highlight/pursuer behaviour are pure run-state (no save change);
-the fun values ship in `make_default_play_preset()`. Knob count 81 → **88**.
+the fun values ship in `make_default_play_preset()`. Knob count 81 → **89**.
 
 ### Wave 1 — Foundation + legibility fixes  *(L0 ∥ L3 ∥ L4 — all file-disjoint, parallel)*
 
@@ -58,7 +58,7 @@ the fun values ship in `make_default_play_preset()`. Knob count 81 → **88**.
 - Milestone: M1.5 (Wave 1)   Assignee: general-purpose   BlockedBy: none
 - Spec: `design/M1_5_Tasks/L0_foundation_knobs_signals.md`
 - Goal: single-writer pass on `run_config.gd` + `event_bus.gd` + `config_menu.gd`: declare the 8 M1.5 knobs (`throw_enabled`/`throw_speed`/`throw_max_range`; `r1_spawn_room_only`/`r1_patrol_speed`; `hpp_kills`/`hbomb_kills`/`hspike_kills`) at off/neutral (`*_kills`=true) + extend `to_flat_dict()` + declare the 4 new signals (`item_thrown`, `throw_missed`, `throw_killed_hazard`, `hazard_pursuer_state`) + CFG rows/CSV stubs. Unblocks the parallel build.
-- Done when: project imports clean; all-off fp byte-identical (e943ac9c8bc1); CFG menu boots; knob-count tests green (81→88); every new knob in `to_flat_dict()`; every new signal declared.
+- Done when: project imports clean; all-off fp byte-identical (e943ac9c8bc1); CFG menu boots; knob-count tests green (81→89); every new knob in `to_flat_dict()`; every new signal declared.
 
 ### L3 — Money-text reposition (#8)
 - Milestone: M1.5 (Wave 1)   Assignee: ui-ux-designer   BlockedBy: none
