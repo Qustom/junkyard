@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.0 → M1.1 → M1.2 → M1.3 (DONE → ITERATE) → **M1.4 (Stakes, Variety & Legibility) — design LOCKED (Phases 0–4 done); build NOT started; next = dispatch Wave 1 (K0 first).**
-**Last updated:** 2026-06-21 (M1.3 re-gated → **ITERATE → M1.4**. M1.4 authored via the full four-phase process: breakdown + 10 per-task designs + fresh-eyes resolution + Director dispositions, all in `design/M1_4_Tasks/`. Design LOCKED. Next: **dispatch M1.4 Wave 1 — K0 foundation first (alone), then K3+K6 ∥ K4.** Breakdown + locks: `design/M1_4_Tasks/M1.4_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock".)
+**Current milestone:** M1.0 → … → M1.4 (DONE → re-gated → ITERATE) → **M1.5 (Agency & Legibility) — AUTHORING: Phase 0+1 done (breakdown), Phase 2 fan-out NOT started; design NOT locked.**
+**Last updated:** 2026-06-24 (M1.4 re-gated post-Wave-5 → **ITERATE → M1.5**, verdict recorded in `design/M1_4_Tasks/G4_findings_M1.4.md` §RG3. M1.5 scope: throw mechanic + spawn-room pursuer #6 + money-text reposition + grab-prompt fix. Phase 1 breakdown authored → `design/M1_5_Tasks/M1.5_Breakdown.md`. **Next: Director dispositions the open Wave-5 deviations + RG1-F1 + board back-fill (deviation-sweep-before-dispatch), then Phase 2 per-task design fan-out (L0,L1,L2,L3,L4).**)
 
 ---
 

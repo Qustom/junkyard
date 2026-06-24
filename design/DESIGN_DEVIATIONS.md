@@ -15,13 +15,11 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*Last close-out: **M1.4 Wave 3** (2026-06-21) — 1 deviation **W3-F1** (K5b test `queue_free`-on-freed stderr noise) →
-Director: **Addressed** (guarded with `is_instance_valid`; test now clean), archived to `DESIGN_DEVIATIONS_HISTORY.md`.*
-*Prior close-outs: **Wave 2** (0 deviations), **Wave 1** (2 Reviewed + 1 Addressed) — both in `DESIGN_DEVIATIONS_HISTORY.md`.*
+*Last close-out: **M1.4 Wave 5** (2026-06-24, at the M1.5 re-gate) — 3 items: RG1-F1 (**Reviewed**), TUNE2
+`_driven_default_preset()` (**Addressed** → new task M1.5 `L5`), stale `.tscn` UID drift (**Reviewed**/no action) —
+all archived to `DESIGN_DEVIATIONS_HISTORY.md`.*
+*Prior close-outs: **Wave 3** (1 Addressed), **Wave 2** (0), **Wave 1** (2 Reviewed + 1 Addressed) — all in `DESIGN_DEVIATIONS_HISTORY.md`.*
 
 ---
 
-**[2026-06-21] RG1-F1 — K5 hazard sweep-start magnitudes in `make_default_play_preset()`.**
-*What vs. the doc:* the M1.4 breakdown/Phase-3 lock delegated K5 hazard magnitudes to RG1 ("magnitudes are RG1 sweeps") but did not fix values. The three new hazards (hpp/hbomb/hspike) share a single `NEW_HAZARD_BAND_CEILING=48` in starvation order (pingpong → bomb → spike), so an aggressive sweep-start (e.g. base 1 / per_depth 0.5 / cap 2) lets **pingpong alone saturate the 48 ceiling and starve spikes to ZERO** on the deep default band — the Director couldn't evaluate spikes at all. The build agent therefore chose **modest** starts (each: `base_count=0`, `count_per_depth=0.15`, `per_room_cap=2`; type knobs hpp_speed 70 / hbomb proximity 64·pulse 2.0·blast 48 / hspike rot 90·arm 48), giving a balanced **≈9/9/9** so all three spawn (≈27 combined, well under 48).
-*Why:* the load-bearing constraint is "every enabled hazard type must actually spawn in the shipped default" (else the re-gate measures a dead type, the M1.2 trap). All other contracts intact — all-off fp unmoved (`e943ac9c8bc1`), 81 knobs, preset trap-free, no leak into the control. Pushing the magnitudes up is a valid RG1/RG2 sweep, just not the shipped default.
-*Claude's recommendation:* **Reviewed** (a magnitude call the Director explicitly delegated to RG1; no design-doc change needed — the breakdown already says magnitudes are RG1 sweeps). If the Director wants a documented "shipped sweep-start" of record, that's a one-line note in `G4_findings_M1.4.md`, not a contract change.
+_Empty between waves. Next entries: M1.5 build waves._

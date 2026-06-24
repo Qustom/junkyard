@@ -1,7 +1,7 @@
 # G4 Findings — M1.4 re-gate (RG2 analysis + RG3 verdict)
 
 **Status:** RG2 telemetry analysis + playtest-feedback triage assembled by Claude (orchestrator).
-**RG3 verdict (go / iterate / pivot): _PENDING Director._** Claude assembles + recommends; the Director plays + decides.
+**RG3 verdict (go / iterate / pivot): ITERATE → M1.5** (Director, 2026-06-24, post-Wave-5 re-gate — see §RG3 below). Claude assembles + recommends; the Director plays + decides.
 **Build played:** `m1-20260621-fc932c4` (RG1 M1.4 fun stack). Telemetry: `user://telemetry/run_log.jsonl`
 (local: `…/THE FAR YARD/telemetry/run_log.jsonl`), 14 133 events, 256 runs across all builds; **111 runs** on `fc932c4`.
 
@@ -88,3 +88,28 @@ alongside this doc):
 
 _RG1-F1 (the K5 sweep-start magnitudes) and the GitHub board back-fill remain open for Director disposition (see
 STATUS.md)._
+
+---
+
+## RG3 — post-Wave-5 re-gate verdict (Director, 2026-06-24)
+
+The Director playtested the **Wave-5 fixed build** (camera 1000, spikes visible, no instant-death auto-end, ping-pong
+unsticks — the BUG7/BUG8/TUNE2/FB5 fixes). The loop now holds; the spawn-kill (#7) is gone. Returning feedback:
+
+| # | Item | Class | Notes |
+|---|---|---|---|
+| 6 | Spawn-room-only pursuer | feature (carried) | Still pending. Semantics already **LOCKED** (Director): **slow patrol** — keeps patrolling its spawn room, never chases outside it, chases only while the player is in that room. |
+| 8 | Run money text hidden behind the bottom-right inventory | **bug** | Move the run-haul readout to sit **below the dive timer** (top-right). |
+| 9 | Grab prompt always shows | **bug** | Should be visible **iff** a grabbable interactable is in focus/range. |
+| 10 | **Throwing mechanic** (net-new) | **feature** | Inventory item is highlightable; **Q/E** cycle the highlight; **Space** throws the highlighted item in the player's facing direction. Hitting a pursuer **kills the pursuer + destroys the item**; a **miss** (wall / max-range) **re-drops the item as a grabbable pickup**. Controls locked by the Director: **F = grab/interact AND extract/descend**; **Q/E = highlight L/R**; **Space = throw**. |
+
+**Verdict: ITERATE → M1.5.** Rationale: this is past bug-wave territory — #10 is a **net-new mechanic** and #6 is a
+**deferred design feature**, both of which want a real per-task design (Phase 2) + fresh-eyes resolution (Phase 3), not a
+direct hand-code. The two HUD bugs (#8, #9) ride along inside M1.5. The core loop is sound (Wave-5 confirmed), so this is
+*iterate*, not *pivot*. M1.5 is authored via the full four-phase process in `design/M1_5_Tasks/`.
+
+**Scope (Director-confirmed):** throw mechanic (#10) · spawn-room pursuer (#6) · money-text reposition (#8) · grab-prompt
+fix (#9).
+
+_Still open for Director disposition before the Phase-2 fan-out (standing deviation-sweep-before-dispatch rule):
+Wave-5 deviations (TUNE2 `_driven_default_preset`, stale `.tscn` UID drift), RG1-F1, and the GitHub board back-fill._

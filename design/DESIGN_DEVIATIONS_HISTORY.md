@@ -312,3 +312,35 @@ the worst-case ~112-body (R1 64 + new 48) headless tick-time check → RG1 verif
 **M1.4 Waves 2 & 3 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 4 — the re-gate (RG1
 build+verify → Director playtest → RG2 → RG3).** *Build HELD after Wave 3 at the Director's request (2026-06-21) — resume
 by dispatching RG1 on the Director's go.*
+
+---
+
+## M1.4 Wave 5 close-out (2026-06-24) — Director dispositioned (at the M1.5 re-gate)
+
+Three items, dispositioned by the Director alongside the RG3 verdict (ITERATE → M1.5):
+
+- **RG1-F1 — K5 hazard sweep-start magnitudes in `make_default_play_preset()` → REVIEWED.** The build agent chose modest
+  starts (each `base_count` low, `count_per_depth=0.15`, `per_room_cap=2`) so all three new hazards spawn ≈9/9/9 under the
+  shared `NEW_HAZARD_BAND_CEILING=48` rather than letting pingpong starve spikes. The load-bearing constraint ("every
+  enabled hazard type must actually spawn in the shipped default") held; all-off fp unmoved (`e943ac9c8bc1`); 81 knobs.
+  Director: **Reviewed** — a magnitude call explicitly delegated to RG1; no design-doc change (the breakdown already says
+  magnitudes are RG1 sweeps). No reapply needed.
+
+- **TUNE2 `_driven_default_preset()` — verify driver disables the 3 K5 hazards for its scripted end-cause matrix → ADDRESSED.**
+  The TUNE2 fix added a driver-only preset variant that turns the K5 hazards off, because shallow spikes kill the
+  driven player before the scripted extract/timeout/death matrix can run — there was no per-hazard `*_kills` toggle (R1 has
+  `r1_catch_kills`; the K5 family did not). Director: **Addressed** — add `*_kills` toggles to the K5 family so the driver
+  can exercise the *real* preset with kills off. Larger than an edit → **planned as a new task: M1.5 `L5` (K5 per-hazard
+  `*_kills` toggles)**, with the three knobs (`hpp_kills`, `hbomb_kills`, `hspike_kills`, default `true` = today's lethal
+  behaviour) pre-declared in M1.5 `L0`. Reapply lands when L5/L0 build; `_driven_default_preset()` is retired then.
+
+- **Stale `.tscn` UID drift (11 files set aside) → REVIEWED / no action.** Disposition was "drop the stash," but
+  `git stash list` is empty in the current clone (the set-aside churn is no longer present) and HEAD builds/tests clean
+  (`--import` does not reproduce the UID regen). Nothing to drop; no design impact. Closed.
+
+**Board back-fill (separate from the deviation sweep):** Director: **DO back-fill.** The ~20 missing M1.2–M1.4 GitHub
+Project items (never added despite STATUS marking them board=Done) are to be created (marked Done), plus the M1.5 items —
+dispatched to `producer`.
+
+**M1.4 Wave 5 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: M1.5 Phase 2 — per-task design
+fan-out (L0–L5).**
