@@ -829,6 +829,14 @@ static func make_default_play_preset() -> RunConfig:
 	c.exit_keep_one_at_spawn = true            # Director: always pin one gate at the spawn offset
 	c.exit_max_count = 7                        # Director: cap the band at 7 exits
 
+	# --- L1 (M1.5): throwing mechanic ON — ship the agency verb live for RG1. Highlight
+	# an inventory item (Q/E), Space throws it in the facing direction; a hit on a
+	# hazard-layer body (the R1 pursuer or the K5 ping-pong) kills it + consumes the item,
+	# a miss re-drops it as a grabbable pickup. throw_speed/throw_max_range keep their L0
+	# code defaults (180 px/s, 320 px) — sweepable in RG1. Pure run-state: throw_* never
+	# feed fingerprint(), so the all-off control (throw_enabled=false) stays byte-identical.
+	c.throw_enabled = true
+
 	# Provably trap-free: every enabled opposition's load-bearing magnitude is non-inert,
 	# so the M1.3 re-gate measures R1+R4 for real (no silent dead-config like M1.2).
 	assert(c.inert_enabled_oppositions().is_empty(),
