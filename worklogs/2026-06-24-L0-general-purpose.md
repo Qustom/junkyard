@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.5
 - **Branch:** general-purpose/L0
-- **Commit:** 00e29c57265133f27c795131dfdcf9871e6c4fcd
+- **Commit:** a937df7a74b45d18594d67d95d550ef89977cc28
 
 ## What changed
 Single-writer foundation pass for M1.5: pre-declared the 8 new lever knobs, 4 new EventBus
