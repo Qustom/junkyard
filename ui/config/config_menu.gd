@@ -72,6 +72,9 @@ const SECTIONS := [
 	{"prefix": "hbomb_", "title_key": "CFG_SEC_HBOMB", "gloss_key": "CFG_GLOSS_HBOMB", "master": "hbomb_enabled", "collapsible": true},
 	{"prefix": "hspike_", "title_key": "CFG_SEC_HSPIKE", "gloss_key": "CFG_GLOSS_HSPIKE", "master": "hspike_enabled", "collapsible": true},
 	{"prefix": "exit_", "title_key": "CFG_SEC_EXIT", "gloss_key": "CFG_GLOSS_EXIT", "master": "exit_enabled", "collapsible": true},
+	# M1.5 (L0) — ONE new section (throw_). The L2 pursuer knobs + the L5 *_kills
+	# toggles join EXISTING sections (r1_ / hpp_ / hbomb_ / hspike_), no new section.
+	{"prefix": "throw_", "title_key": "CFG_SEC_THROW", "gloss_key": "CFG_GLOSS_THROW", "master": "throw_enabled", "collapsible": true},
 ]
 
 ## HAND-AUTHORED field manifest (§3.6 — NOT reflection). Each section's ordered field
@@ -89,6 +92,8 @@ const MANIFEST := {
 		# J3 (M1.3) — per-room density: a float, an enum (OptionButton), a bool, and two ints.
 		"r1_per_room_density", "r1_density_metric", "r1_density_rooms_only",
 		"r1_density_min_area", "r1_density_per_room_cap",
+		# L2 (M1.5) — spawn-room pursuer: a behaviour bool + a patrol-speed float.
+		"r1_spawn_room_only", "r1_patrol_speed",
 	],
 	"r2_": [
 		"r2_enabled", "r2_mechanism", "r2_cost_magnitude", "r2_cost_per_depth",
@@ -125,20 +130,30 @@ const MANIFEST := {
 	"hpp_": [
 		# K5a — ping-pong hazard: spawn-seam ints/float + the type-specific speed float.
 		"hpp_enabled", "hpp_base_count", "hpp_count_per_depth", "hpp_speed", "hpp_per_room_cap",
+		# L5 (M1.5) — lethality toggle (default true = M1.4 lethal).
+		"hpp_kills",
 	],
 	"hbomb_": [
 		# K5b — bomb hazard: spawn-seam + proximity/pulse/blast type-specific floats.
 		"hbomb_enabled", "hbomb_base_count", "hbomb_count_per_depth",
 		"hbomb_proximity_radius", "hbomb_pulse_seconds", "hbomb_blast_radius", "hbomb_per_room_cap",
+		# L5 (M1.5) — lethality toggle (default true = M1.4 lethal).
+		"hbomb_kills",
 	],
 	"hspike_": [
 		# K5c — rotating spikes: spawn-seam + rotation (signed deg/s) + arm-length floats.
 		"hspike_enabled", "hspike_base_count", "hspike_count_per_depth",
 		"hspike_rotation_speed", "hspike_arm_length", "hspike_per_room_cap",
+		# L5 (M1.5) — lethality toggle (default true = M1.4 lethal).
+		"hspike_kills",
 	],
 	"exit_": [
 		# K7 — exit placement: master + base/per-depth count + keep-at-spawn bool + max cap.
 		"exit_enabled", "exit_base_count", "exit_count_per_depth", "exit_keep_one_at_spawn", "exit_max_count",
+	],
+	# M1.5 (L0) — L1 throwing: master + a speed float + a max-range float.
+	"throw_": [
+		"throw_enabled", "throw_speed", "throw_max_range",
 	],
 }
 
@@ -213,6 +228,13 @@ const FIELD_RANGE := {
 	"exit_base_count": RANGE_COUNT_SMALL,
 	"exit_count_per_depth": RANGE_PER_DEPTH,
 	"exit_max_count": RANGE_ROOM_CAP,
+	# M1.5 (L0) — numeric scalars only. The bools (throw_enabled, r1_spawn_room_only,
+	# hpp_kills/hbomb_kills/hspike_kills) render as CheckButtons, no range.
+	# L1 throwing.
+	"throw_speed": RANGE_SPEED,        # px/s travel speed
+	"throw_max_range": RANGE_VIEW,     # px max travel before a miss → re-drop
+	# L2 spawn-room pursuer.
+	"r1_patrol_speed": RANGE_SPEED,    # px/s slow-patrol pace
 }
 
 ## I1 (M1.2): per-field SpinBox/slider STEP override. lvl_size_mult is snapped to 0.25
@@ -831,7 +853,9 @@ func _prefix_of(field: String) -> String:
 	for p in ["r1_", "r2_", "r3_", "r4_", "lvl_",
 			# M1.4 (K0): the 7 new section prefixes — without these a new knob's live
 			# chip/summary refresh would mis-route to the Meta section.
-			"quota_", "cam_", "timer_", "hpp_", "hbomb_", "hspike_", "exit_"]:
+			"quota_", "cam_", "timer_", "hpp_", "hbomb_", "hspike_", "exit_",
+			# M1.5 (L0): the new throw_ section prefix (r1_/hpp_/hbomb_/hspike_ already listed).
+			"throw_"]:
 		if field.begins_with(p):
 			return p
 	return ""

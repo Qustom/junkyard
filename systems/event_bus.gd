@@ -153,3 +153,29 @@ signal bomb_pulse_started(depth: int, run_t_ms: int)
 # --- K7 Exits ----------------------------------------------------------------
 ## Emitted once per band after exits are placed (telemetry: exit count + depth). Owner: K7.
 signal exits_placed(count: int, depth: int)
+
+# === M1.5 signals (sole event_bus.gd edit this milestone, owner = L0) =========
+# Pre-declared up front so L1/L2 only EMIT — they never edit this file (the M1.1
+# pre-declare rule, M1.5 Breakdown §6/Phase-4 Lock). Telemetry-row payloads are
+# PRIMITIVES ONLY (straight to JSONL). The miss re-drop reuses the existing
+# junk_dropped(item, world_pos) gameplay event above (the ref-carrying path).
+# L5 declares NO signal: a non-lethal K5 hazard still emits new_hazard_killed; only
+# the fail_run call is gated by the *_kills knobs.
+
+# --- L1 Throwing (telemetry rows) --------------------------------------------
+## A throw was launched (telemetry: how often the player uses agency). Owner: L1.
+signal item_thrown(item_id: StringName, depth: int, run_t_ms: int)
+## A thrown item MISSED (wall / max-range / lifetime) and was re-dropped. Telemetry
+## row; the actual re-spawn flows through junk_dropped(item, world_pos). Owner: L1.
+signal throw_missed(item_id: StringName, depth: int, run_t_ms: int)
+## A thrown item KILLED a hazard-layer body. kind = &"pursuer" (R1) or a K5 kind
+## (e.g. &"pingpong"). DEDICATED (not new_hazard_killed, whose kill direction is the
+## OPPOSITE — hazard-kills-player — so reusing it would poison RG2's death counts).
+## Owner: L1.
+signal throw_killed_hazard(item_id: StringName, kind: StringName, depth: int, run_t_ms: int)
+
+# --- L2 Spawn-room pursuer (telemetry row, rising-edge) ----------------------
+## The pursuer changed chase/patrol state. state = &"patrol" (player outside the
+## spawn room) or &"chase" (player inside). Rising-edge-latched (no per-frame storm).
+## Owner: L2.
+signal hazard_pursuer_state(state: StringName, depth: int, run_t_ms: int)
