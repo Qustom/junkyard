@@ -709,6 +709,16 @@ static func make_default_play_preset() -> RunConfig:
 	c.r1_density_min_area = 64                  # floor-cell area gate: corridors/small boxes earn none
 	c.r1_density_per_room_cap = 3               # MANDATORY > 0 (Q E perf guard); sweepable in RG1
 
+	# --- L2 (M1.5): spawn-room-bound pursuer (Director-LOCKED #6 — legibility). ---
+	# Turn the chase-everywhere pursuer into a room-bound slow patrol: it paces within its
+	# spawn room and chases ONLY while the player is inside that room (else keeps patrolling).
+	# Makes the threat PLACE-BOUND and answerable (leave the room = safe; turn and throw an
+	# item — L1 — to kill it). Patrol speed ≈ half of r1_chase_speed (56) so out-manoeuvring
+	# it inside one room is plausible. The CODE-LEVEL defaults stay off/0.0 (all-off control
+	# reproduces today's chase-everywhere pursuer); only this named preset turns it on.
+	c.r1_spawn_room_only = true                 # ON = room-bound patrol + gated chase (DR-L2-1)
+	c.r1_patrol_speed = 28.0                    # slow pace (≈half of chase 56); sweepable in RG1 (DR-L2-2)
+
 	# --- J4 (M1.3): bias toward FEWER/SHORTER corridors (Director Q-F: big rooms + short halls). ---
 	# F3a's thesis is "huge rooms good, long hallways boring." The preset down-weights the corridor
 	# family so the spine spends less time in dead hallways (sweep start 0.5 — corridors at half their
