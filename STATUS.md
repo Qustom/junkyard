@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.5 (Agency & Legibility) — Waves 1 & 2 DONE + pushed + closed out; **Wave 3 (RG1 build+verify+publish) IN FLIGHT** (dispatched 2026-06-24).
-**Last updated:** 2026-06-24 (M1.5 Wave 2 pushed — origin synced to `155b9cf` after network recovery; board L0–L5 back-filled=Done + RG1=In Progress; Wave-2 close-out done (L1-F1 → Reviewed); **Wave 3 RG1 dispatched** to `qa-playtest-coordinator` in a worktree. Knob count = **89**. Next: integrate RG1 → re-gate → Director playtest.)
+**Current milestone:** M1.5 (Agency & Legibility) — Waves 1, 2 & 3 DONE + pushed + closed out. **Build complete; published to itch. Next = Director playtest → RG2 → RG3 re-gate.**
+**Last updated:** 2026-06-24 (M1.5 **Wave 3 RG1 integrated** — `main`@`408ec94`, pushed, board RG1=Done. Full gate green (smoke · run_config 89 · config_menu 89/89 · `RG1 M1.5 VERIFY OK` exit 0 · throw · pursuer · no regressions); all-off fp `e943ac9c8bc1`. **Published to itch** (`m1-20260624-408ec94`). Changelog updated (M1.4→M1.5 delta). git-switch leak cleaned (checkout back on `main`). Next: **Director playtest the M1.5 build** → RG2 telemetry analysis → RG3 verdict.)
 
 ---
 
@@ -28,21 +28,24 @@ L1 + L5 + L2 all integrated on `main` (merges `f336995`/`fc355c4`/`e353780`); fu
 - **L5** K5 `*_kills` toggles (`a2fe301`): guarded each K5 `fail_run` with `if cfg.<prefix>_kills` (emit-always); retired `_driven_default_preset()` (verify runs the real preset, kills off). Worklog `…-L5-…`.
 - **L2** spawn-room pursuer (`1f4f67d`): `HazardEntity` room-bound slow patrol (paces 2 endpoints @ `r1_patrol_speed=28`, chases iff `_room_bounds.has_point`); `setup` widened to 3-arg + `room_bounds` threaded via J2 `_piece_bounds_at_world` + a parallel J3 `_density_spawn_bounds` (golden byte-frozen); preset `r1_spawn_room_only=true`. New L2 cases in `test_pursuing_hazard`. Worklog `…-L2-…`.
 
-### ▶ Next action (start here on a cold restart) — Wave 3 (RG1) IN FLIGHT → integrate, then re-gate
+### ▶ Next action (start here on a cold restart) — M1.5 build DONE → DIRECTOR PLAYTEST → RG2/RG3 re-gate
 
-**Wave 3 — RG1 DISPATCHED (2026-06-24, in background)** to `qa-playtest-coordinator` in an isolated worktree (bases off
-origin `155b9cf` = all M1.5 work). Board item RG1 created + set **In Progress** (`PVTI_lAHOAAXnOs4BasyMzgwwe-E`).
-Deliverables: author `design/M1_5_Tasks/RG1_playtest_build.md` (mirror M1.4 template); author `tests/test_rg1_m15_verify`
-(89 knobs, preset = M1.4 stack + throw_enabled + r1_spawn_room_only + r1_patrol_speed=28, all-off fp `e943ac9c8bc1`);
-update `changelog.txt` (M1.4→M1.5 feature delta); **publish to itch** via `tools/push_itch.sh`. Note: preset levers
-(`throw_enabled=true`, `r1_spawn_room_only=true`, `r1_patrol_speed=28.0`) were ALREADY set by L1/L2 — RG1 verifies, not sets.
+**M1.5 Wave 3 (RG1) integrated 2026-06-24** — `main`@`408ec94`, pushed, board RG1=Done. The M1.5 build is complete +
+**published to itch** (`qusto/the-far-yard:html5 @ m1-20260624-408ec94`, Chrome/Edge only, password-gated:
+https://qusto.itch.io/the-far-yard). Wave-3 close-out: **0 formal deviations** (agent reported none; the only observation
+is harmless engine shutdown RID-leak noise printed *after* `RG1 M1.5 VERIFY OK`, exit 0 — same class as K5b W3-F1, no action).
 
-**When the agent returns:**
-1. **Verify topology before merge** (qa git-switch leak — memory); run the gate yourself (import · smoke · run_config 89 ·
-   config_menu 89/89 · rg1_m15_verify → `RG1 M1.5 VERIFY OK` · throw · pursuer); confirm all-off fp `e943ac9c8bc1`.
-2. **Integrate** to `main`, push, set RG1 board item → **Done**; run the Wave-3 mini close-out deviation sweep (Director dispositions).
-3. **Confirm itch publish** (outward-facing — verify the agent's result; if export-only/human-gated, run `BUTLER=/mnt/c/wsl-libraries/butler/butler bash tools/push_itch.sh` myself or surface to Director).
-4. **Hand off to Director** → playtest the M1.5 build → RG2 (telemetry analysis vs M1.0–M1.4) → RG3 verdict (go → M2 / iterate → M1.6 / pivot) in `design/M1_5_Tasks/G4_findings_M1.5.md`.
+**The re-gate now hands off to the Director (human plays + decides; Claude assembles + recommends):**
+1. **Director playtest** the M1.5 itch/desktop build across the fun stack + config sweeps (throw/highlight agency,
+   room-bound slow-patrol pursuer, money-below-timer, context-correct grab prompt). Export telemetry (web: in-game
+   "Export telemetry" button; desktop: `user://telemetry/run_log.jsonl`). Sweep guidance in `design/M1_5_Tasks/RG1_playtest_build.md`.
+2. **RG2 (`qa`)** — analyse returned telemetry: distributions per config side-by-side across M1.0–M1.5; did agency
+   (throw-kills), the room-bound pursuer (pursuer-state counts), and the legibility fixes land? throw-kill / miss-redrop counts.
+3. **RG3 (Director)** — record **go → M2 / iterate → M1.6 / pivot** in `design/M1_5_Tasks/G4_findings_M1.5.md`.
+
+> **Standing contracts (M1.5):** all-off `RunConfig` default = permanent baseline (fp `e943ac9c8bc1`); fun values only in
+> `make_default_play_preset()`; config-marked telemetry; `run_ended` arity locked; verify branch topology before every merge
+> (qa git-switch leak — recurred again on RG1, cleaned); push + board mirror after every merge; wave close-out deviation sweep.
 
 ---
 
