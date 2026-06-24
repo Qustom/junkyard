@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c4rg1m15verify7"]
+
+[ext_resource type="Script" path="res://tests/test_rg1_m15_verify.gd" id="1"]
+
+[node name="TestRG1M15Verify" type="Node"]
+script = ExtResource("1")

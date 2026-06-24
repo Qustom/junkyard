@@ -1,6 +1,71 @@
 THE FAR YARD — CHANGELOG
 ========================
 
+M1.5 — "Agency & Legibility"   (changes since M1.4)
+---------------------------------------------------
+
+This version is the M1.5 re-gate build. Headline goal: give the player AGENCY against
+danger (you can fight back now), make the pursuing hazard a COMPREHENSIBLE, place-bound
+threat, and fix two LEGIBILITY nags. Everything below ships ON in the default play preset;
+the all-off baseline is unchanged (byte-for-byte identical to M1.0–M1.4) so every new
+system can be toggled/tuned from the in-game config menu.
+
+
+AGENCY
+------
+* NEW — Throwing mechanic. You can now fight back. Highlight an inventory item with Q / E
+  (the selector wraps around your bag and re-validates if the bag changes), then press
+  Space to throw the highlighted item in the direction you're facing. A hit on a hazard
+  (the pursuer, or a ping-pong bouncer) KILLS it and consumes the item; a MISS (it hits a
+  wall or flies out of range) drops the item back into the world as a grabbable pickup, so
+  a thrown item is never simply lost.
+
+
+THREAT LEGIBILITY
+-----------------
+* NEW — Room-bound slow-patrol pursuer. The pursuing hazard is no longer an incomprehensible
+  always-on chaser. It now PATROLS its spawn room at a slow pace and chases you ONLY while
+  you are inside that room — step out of the room and it goes back to patrolling. The threat
+  is place-bound and answerable: leave the room, or turn and throw an item to kill it.
+  (Patrol speed is ≈ half of its chase speed, so out-manoeuvring it inside one room is
+  plausible.) This was the "spawn-room-only" mode noted as queued in the M1.4 build.
+
+
+LEGIBILITY FIXES
+----------------
+* Money readout moved. Your run-haul money now sits BELOW the dive timer (top-right,
+  right-aligned) instead of hiding behind the bottom-right inventory grid.
+* Grab prompt is context-correct. The grab/interaction prompt now appears ONLY when a
+  grabbable interactable is actually in focus/range, instead of being on screen the whole
+  time.
+
+
+CONTROLS (updated)
+------------------
+* F — grab / interact AND extract / descend (a single contextual action button).
+* Q / E — highlight the previous / next inventory item.
+* Space — throw the highlighted item.
+* (Move with the usual movement keys; the dive timer and money read top-right.)
+
+
+NOT YET IN THIS BUILD
+---------------------
+* A thrown item only kills the pursuer and the ping-pong bouncer; the anchored bomb and
+  rotating-spike hazards are not throw-killable (out of scope for this build).
+* Audio for the throw / kill / near-end-timer cues is still visual-only (audio is M2-gated).
+
+
+NOTES FOR PLAYTESTING
+---------------------
+* All new systems are data-driven knobs reachable from the in-game config menu (89 total).
+  "Reset" returns the all-off baseline (byte-identical to M1.0–M1.4) as a control.
+* On the web build, use the in-game "Export telemetry" button; on desktop the log is at
+  user://telemetry/run_log.jsonl.
+
+
+====================================================================================
+
+
 M1.4 — "Stakes, Variety & Legibility"   (changes since M1.3)
 ------------------------------------------------------------
 
@@ -51,17 +116,3 @@ SPATIAL
   the count scaling with depth (base 1, +1 every ~10 within-band depths, capped at 7),
   scattered across the level with one always pinned near spawn. Enabled in the default
   preset; fully tunable in the config menu.
-
-
-NOT YET IN THIS BUILD
----------------------
-* A "spawn-room-only" mode for the pursuing hazard (slow-patrol — it patrols its spawn
-  room but won't chase you out of it) is queued for M1.5.
-
-
-NOTES FOR PLAYTESTING
----------------------
-* All new systems are data-driven knobs reachable from the in-game config menu (81 total).
-  "Reset" returns the all-off M1.3-equivalent baseline as a control.
-* On the web build, use the in-game "Export telemetry" button; on desktop the log is at
-  user://telemetry/run_log.jsonl.
