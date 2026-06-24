@@ -15,14 +15,11 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*Last close-out: **M1.4 Wave 5** (2026-06-24, at the M1.5 re-gate) — 3 items: RG1-F1 (**Reviewed**), TUNE2
-`_driven_default_preset()` (**Addressed** → new task M1.5 `L5`), stale `.tscn` UID drift (**Reviewed**/no action) —
-all archived to `DESIGN_DEVIATIONS_HISTORY.md`.*
-*Prior close-outs: **Wave 3** (1 Addressed), **Wave 2** (0), **Wave 1** (2 Reviewed + 1 Addressed) — all in `DESIGN_DEVIATIONS_HISTORY.md`.*
+*Last close-out: **M1.5 Wave 2** (2026-06-24) — 1 item: L1-F1 throw telemetry `run_t_ms` uses monotonic clock
+(**Reviewed**/no action) — archived to `DESIGN_DEVIATIONS_HISTORY.md`.*
+*Prior close-outs: **M1.5 Wave 1** (1 Reviewed), **M1.4 Wave 5** (3 items), **Wave 3** (1 Addressed), **Wave 2** (0),
+**Wave 1** (2 Reviewed + 1 Addressed) — all in `DESIGN_DEVIATIONS_HISTORY.md`.*
 
 ---
 
-**[2026-06-24] L1-F1 — throw telemetry `run_t_ms` uses `Time.get_ticks_msec()`, not a run-elapsed base.**
-*What vs. the doc:* the L0/L1 contract declares the throw signals with a `run_t_ms: int` field. `GameState` exposes no public run-elapsed accessor (`_elapsed_s()` is private) and `game_state.gd` was outside L1's single-writer touch set, so L1 stamped `item_thrown`/`throw_missed`/`throw_killed_hazard` with the monotonic `Time.get_ticks_msec()` (shared between `main_game` and the projectile) instead of true run-elapsed ms.
-*Why:* avoids widening L1's file scope mid-wave; RG2's use of these rows is in-run ordering, which a monotonic clock preserves. All-off fp unmoved; tests green.
-*Claude's recommendation:* **Reviewed** — low-risk telemetry detail, no contract/arity change. If a true run-elapsed base is wanted, file a small follow-up to expose `GameState.run_elapsed_ms()` and switch the three stamps.
+*(empty — no un-assessed deviations between waves)*

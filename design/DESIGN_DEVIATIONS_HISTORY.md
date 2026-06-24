@@ -357,3 +357,19 @@ fan-out (L0–L5).**
 
 **M1.5 Wave 1 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 2 — L1 → L2 sequenced
 (both write `main_game.gd`) + L5 parallel.**
+
+## M1.5 Wave 2 close-out (2026-06-24) — Director dispositioned
+
+1 deviation, dispositioned by the Director:
+
+- **L1-F1 — throw telemetry `run_t_ms` uses `Time.get_ticks_msec()`, not a run-elapsed base → REVIEWED.** The L0/L1
+  contract declares the throw signals with a `run_t_ms: int` field; `GameState` exposes no public run-elapsed accessor
+  (`_elapsed_s()` is private) and `game_state.gd` was outside L1's single-writer touch set, so L1 stamped
+  `item_thrown`/`throw_missed`/`throw_killed_hazard` with the monotonic `Time.get_ticks_msec()` (shared between
+  `main_game` and the projectile). RG2's use of these rows is in-run ordering, which a monotonic clock preserves;
+  all-off fp unmoved (`e943ac9c8bc1`), tests green. Director: **Reviewed** — low-risk telemetry detail, no contract/arity
+  change. No reapply needed (no design change). If a true run-elapsed base is later wanted, file a small follow-up to
+  expose `GameState.run_elapsed_ms()` and switch the three stamps.
+
+**M1.5 Wave 2 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 3 — RG1 build + verify +
+itch publish + changelog.**
