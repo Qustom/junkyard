@@ -18,6 +18,7 @@ var _awoke_depths: Array[int] = []
 var _awoke_triggers: Array[StringName] = []
 var _caught: Array[Vector2i] = []          # (depth, run_t_ms) per hazard_caught
 var _run_ended_reasons: Array[StringName] = []
+var _pursuer_states: Array[StringName] = []   # L2 (M1.5): hazard_pursuer_state marks (rising-edge)
 
 
 func _ready() -> void:
@@ -37,6 +38,7 @@ func _run() -> void:
 	eb.hazard_awoke.connect(_on_hazard_awoke)
 	eb.hazard_caught.connect(_on_hazard_caught)
 	eb.run_ended.connect(_on_run_ended)
+	eb.hazard_pursuer_state.connect(_on_pursuer_state)   # L2 (M1.5)
 
 	await _case_depth_awaken_chase_catch(gs, failures)
 	await _case_linger_awaken(gs, failures)
@@ -45,13 +47,21 @@ func _run() -> void:
 	await _case_fatal_sustained_one_emit(gs, failures)
 	await _case_nonfatal_escape_recatch(gs, failures)
 	_case_all_off_spawns_nothing(failures)
+	# L2 (M1.5): spawn-room-bound pursuer.
+	await _case_l2_in_room_chases_and_catches(gs, failures)
+	await _case_l2_out_of_room_patrols_no_catch(gs, failures)
+	await _case_l2_room_only_off_chases_everywhere(gs, failures)
+	await _case_l2_empty_bounds_fallback(gs, failures)
+	await _case_l2_idle_pivot_zero_speed(gs, failures)
 
 	if failures.is_empty():
 		print("PURSUING HAZARD OK — awakens at depth threshold (once, trigger=depth) and "
 			+ "on linger (trigger=linger), chases toward the player, fatal catch emits "
 			+ "hazard_caught + routes through fail_run(&\"death\"), awake latches with no "
-			+ "re-sleep on retreat, non-fatal catch does NOT end the run, and all-off "
-			+ "spawns no hazard.")
+			+ "re-sleep on retreat, non-fatal catch does NOT end the run, all-off "
+			+ "spawns no hazard, AND (L2) room-bound pursuer chases+catches in-room, "
+			+ "slow-patrols (no catch) out-of-room, falls back to chase-everywhere with "
+			+ "r1_spawn_room_only off OR empty bounds, and idle-pivots at patrol_speed 0.")
 		get_tree().quit(0)
 	else:
 		for f in failures:
@@ -90,6 +100,19 @@ func _make_hazard(pos: Vector2, rc: RunConfig, player: Node2D) -> HazardEntity:
 	hz.global_position = pos
 	add_child(hz)
 	hz.setup(rc, player)
+	return hz
+
+
+## L2 (M1.5): like _make_hazard but threads spawn_ctx (the 3-arg family signature) so the
+## room-bound patrol/chase gate can be exercised.
+func _make_hazard_ctx(pos: Vector2, rc: RunConfig, player: Node2D, spawn_ctx: Dictionary) -> HazardEntity:
+	var hz := HazardEntity.new()
+	var tell := Polygon2D.new()
+	tell.name = "Tell"
+	hz.add_child(tell)
+	hz.global_position = pos
+	add_child(hz)
+	hz.setup(rc, player, spawn_ctx)
 	return hz
 
 
@@ -319,12 +342,179 @@ func _case_all_off_spawns_nothing(failures: Array[String]) -> void:
 		failures.append("c5: enabled+count0 would spawn (must be a no-op)")
 
 
+# === L2 (M1.5): spawn-room-bound pursuer =====================================
+## A room rect well away from the origin so "in" vs "out" is unambiguous. The hazard
+## spawns at the rect centre; the player is placed inside or outside as the case needs.
+const L2_ROOM := Rect2(Vector2(1000, 1000), Vector2(400, 400))   # x:[1000..1400], y:[1000..1400]
+
+
+## L2-on config: room-bound, slow patrol, fatal catch. depth_threshold 0 so it wakes
+## immediately at depth 0 (we don't want the awaken beat to confound the chase/patrol test).
+func _l2_config() -> RunConfig:
+	var rc := _r1_config()
+	rc.r1_depth_threshold = 0       # wake immediately
+	rc.r1_spawn_room_only = true
+	rc.r1_patrol_speed = 28.0
+	rc.r1_chase_speed = 600.0       # fast chase so the closing test is unambiguous
+	rc.r1_catch_radius = 24.0
+	return rc
+
+
+# === Case L2a: player IN room → chase + catch ================================
+func _case_l2_in_room_chases_and_catches(gs: Node, failures: Array[String]) -> void:
+	_reset_signal_logs()
+	gs.start_run(&"test_band", 101)
+	gs.set_current_depth(3, 3)
+
+	var center := L2_ROOM.get_center()
+	var player := _make_player(center + Vector2(150, 0))   # INSIDE the room
+	var rc := _l2_config()
+	var hz := _make_hazard_ctx(center, rc, player, { "room_bounds": L2_ROOM })
+
+	await _frames(1)   # awaken (depth 3 >= threshold 0)
+	# Player in-room → the hazard must CHASE (close distance) and emit a "chase" state mark.
+	var dist_before := hz.global_position.distance_to(player.global_position)
+	await _frames(10)
+	var dist_after := hz.global_position.distance_to(player.global_position)
+	if dist_after >= dist_before:
+		failures.append("L2a: in-room hazard did not chase the player (%.1f -> %.1f)" % [dist_before, dist_after])
+	if not _pursuer_states.has(&"chase"):
+		failures.append("L2a: no 'chase' pursuer-state mark while player in room (got %s)" % str(_pursuer_states))
+	# Catch: snap the player onto the hazard → fatal catch.
+	player.global_position = hz.global_position
+	await _frames(1)
+	if _caught.size() < 1:
+		failures.append("L2a: in-room catch did not emit hazard_caught")
+	if not _run_ended_reasons.has(&"death"):
+		failures.append("L2a: in-room fatal catch did not route through fail_run(&\"death\")")
+
+	hz.queue_free()
+	player.queue_free()
+
+
+# === Case L2b: player OUT of room → patrol, NO catch =========================
+func _case_l2_out_of_room_patrols_no_catch(gs: Node, failures: Array[String]) -> void:
+	_reset_signal_logs()
+	gs.start_run(&"test_band", 102)
+	gs.set_current_depth(3, 3)
+
+	# Player FAR outside the room rect. The hazard must NOT chase toward it.
+	var center := L2_ROOM.get_center()
+	var player := _make_player(Vector2(5000, 5000))
+	var rc := _l2_config()
+	var hz := _make_hazard_ctx(center, rc, player, { "room_bounds": L2_ROOM })
+
+	await _frames(1)   # awaken (DORMANT branch returns this frame — AWAKE runs next frame)
+	# Run many frames: the patroller must STAY inside the room rect (never leak toward the
+	# distant player) and never catch. The 'patrol' state mark fires on the first AWAKE frame.
+	await _frames(40)
+	if not _pursuer_states.has(&"patrol"):
+		failures.append("L2b: no 'patrol' pursuer-state mark while player out of room (got %s)" % str(_pursuer_states))
+	if not L2_ROOM.has_point(hz.global_position):
+		failures.append("L2b: patrolling hazard left its room rect (pos %s not in %s)"
+			% [str(hz.global_position), str(L2_ROOM)])
+	if not _caught.is_empty():
+		failures.append("L2b: patrolling hazard caught the player (must NOT — %d catches)" % _caught.size())
+	if _run_ended_reasons.has(&"death"):
+		failures.append("L2b: patrolling hazard ended the run (death) — must NOT")
+
+	# CRITICAL: even with the patrol path skimming the rect edge, a player standing JUST
+	# outside the rect must NOT be caught (RD-2: catch only while chasing).
+	player.global_position = L2_ROOM.position - Vector2(1, 1)   # just outside the top-left corner
+	hz.global_position = L2_ROOM.position + Vector2(2, 2)        # patroller near that corner, in-rect
+	await _frames(2)
+	if not _caught.is_empty():
+		failures.append("L2b: caught a player just OUTSIDE the rect while patrolling (RD-2 violated)")
+
+	hz.queue_free()
+	player.queue_free()
+
+
+# === Case L2c: r1_spawn_room_only OFF → chase-everywhere unchanged ============
+func _case_l2_room_only_off_chases_everywhere(gs: Node, failures: Array[String]) -> void:
+	_reset_signal_logs()
+	gs.start_run(&"test_band", 103)
+	gs.set_current_depth(3, 3)
+
+	# Player far outside the room rect, but room-bound mode is OFF → today's chase-everywhere:
+	# the hazard chases the distant player and never emits a pursuer-state mark.
+	var center := L2_ROOM.get_center()
+	var player := _make_player(Vector2(5000, 5000))
+	var rc := _l2_config()
+	rc.r1_spawn_room_only = false       # OFF → chase-everywhere
+	var hz := _make_hazard_ctx(center, rc, player, { "room_bounds": L2_ROOM })
+
+	await _frames(1)   # awaken
+	var dist_before := hz.global_position.distance_to(player.global_position)
+	await _frames(10)
+	var dist_after := hz.global_position.distance_to(player.global_position)
+	if dist_after >= dist_before:
+		failures.append("L2c: room_only OFF did not chase the distant player (%.1f -> %.1f)" % [dist_before, dist_after])
+	if not _pursuer_states.is_empty():
+		failures.append("L2c: room_only OFF emitted a pursuer-state mark (must NOT — %s)" % str(_pursuer_states))
+
+	hz.queue_free()
+	player.queue_free()
+
+
+# === Case L2d: r1_spawn_room_only ON but EMPTY bounds → chase-everywhere ======
+## RD-4 fail-safe: a mis-wired instance with no room bounds must behave like the all-off
+## chase-everywhere pursuer (never freeze, never crash, no pursuer-state mark).
+func _case_l2_empty_bounds_fallback(gs: Node, failures: Array[String]) -> void:
+	_reset_signal_logs()
+	gs.start_run(&"test_band", 104)
+	gs.set_current_depth(3, 3)
+
+	var player := _make_player(Vector2(5000, 5000))
+	var rc := _l2_config()              # r1_spawn_room_only = true
+	var hz := _make_hazard_ctx(Vector2(1000, 1000), rc, player, {})   # NO room_bounds
+
+	await _frames(1)   # awaken
+	var dist_before := hz.global_position.distance_to(player.global_position)
+	await _frames(10)
+	var dist_after := hz.global_position.distance_to(player.global_position)
+	if dist_after >= dist_before:
+		failures.append("L2d: empty-bounds fallback did not chase the distant player (%.1f -> %.1f)"
+			% [dist_before, dist_after])
+	if not _pursuer_states.is_empty():
+		failures.append("L2d: empty-bounds fallback emitted a pursuer-state mark (must NOT — %s)" % str(_pursuer_states))
+
+	hz.queue_free()
+	player.queue_free()
+
+
+# === Case L2e: r1_patrol_speed 0 → idle-pivot (no translation while patrolling) ===
+func _case_l2_idle_pivot_zero_speed(gs: Node, failures: Array[String]) -> void:
+	_reset_signal_logs()
+	gs.start_run(&"test_band", 105)
+	gs.set_current_depth(3, 3)
+
+	var center := L2_ROOM.get_center()
+	var player := _make_player(Vector2(5000, 5000))   # OUT of room → patrol
+	var rc := _l2_config()
+	rc.r1_patrol_speed = 0.0            # idle-pivot: no roaming
+	var hz := _make_hazard_ctx(center, rc, player, { "room_bounds": L2_ROOM })
+
+	await _frames(1)   # awaken
+	var pos_before := hz.global_position
+	await _frames(20)
+	if hz.global_position.distance_to(pos_before) > 1.0:
+		failures.append("L2e: patrol_speed 0 idle-pivot translated (%s -> %s)"
+			% [str(pos_before), str(hz.global_position)])
+	if not _pursuer_states.has(&"patrol"):
+		failures.append("L2e: patrol_speed 0 did not emit a 'patrol' state mark (got %s)" % str(_pursuer_states))
+
+	hz.queue_free()
+	player.queue_free()
+
+
 # --- signal sinks ------------------------------------------------------------
 func _reset_signal_logs() -> void:
 	_awoke_depths.clear()
 	_awoke_triggers.clear()
 	_caught.clear()
 	_run_ended_reasons.clear()
+	_pursuer_states.clear()
 
 
 func _on_hazard_awoke(depth: int, trigger: StringName) -> void:
@@ -338,3 +528,7 @@ func _on_hazard_caught(depth: int, run_t_ms: int) -> void:
 
 func _on_run_ended(reason: StringName, _duration_s: float, _depth_reached: int) -> void:
 	_run_ended_reasons.append(reason)
+
+
+func _on_pursuer_state(state: StringName, _depth: int, _run_t_ms: int) -> void:
+	_pursuer_states.append(state)

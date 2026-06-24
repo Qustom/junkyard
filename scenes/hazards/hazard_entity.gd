@@ -56,6 +56,22 @@ const NONFATAL_COOLDOWN_SECONDS := 1.0    # min seconds between catches (also st
 # false de-pins in open rooms; too low → never de-pins (§2.2, Phase-3 correction 2).
 const STALL_FRACTION := 0.35
 
+# --- L2 (M1.5): spawn-room-bound patrol (Director-LOCKED) ----------------------
+# When r1_spawn_room_only is ON and the entity learned its spawn-room bounds (via
+# spawn_ctx["room_bounds"]), the AWAKE behaviour splits: CHASE only while the player
+# is inside that room (_room_bounds.has_point), else SLOW PATROL — pace between two
+# deterministic endpoints inside the room at r1_patrol_speed. Catch fires ONLY inside
+# _chase() (no catch while patrolling). Empty/unknown bounds OR r1_spawn_room_only OFF
+# ⇒ today's chase-everywhere behaviour, byte-identical. RNG-FREE endpoints (pure run-
+# state determinism, like pingpong_hazard.gd:16-19). Knob default off = baseline parity.
+
+## Inset (px) from the room rect's left/right edge for the patrol endpoints, so the
+## pacer doesn't grind the wall it would otherwise reach. Greybox-internal constant
+## (NOT a RunConfig knob — like the NONFATAL_* / STALL_FRACTION constants above).
+const PATROL_EDGE_MARGIN := 12.0
+## Arrival epsilon (px): within this of the current endpoint, flip to the other leg.
+const PATROL_ARRIVE_EPS := 6.0
+
 var _cfg: RunConfig                  # snapshot of GameState.active_run_config at setup
 var _state: int = State.DORMANT
 var _time_in_band: float = 0.0       # seconds since setup (≈ band entry ≈ run start in M1)
@@ -74,21 +90,65 @@ var _caught_latched: bool = false    # BUG6 (M1.3): true while the player is CON
                                           # GameState._run_ended run-end idempotency: that de-dupes the
                                           # run-end, this de-dupes the telemetry emit.
 
+# L2 (M1.5): the spawn-room rect in WORLD space, set from spawn_ctx["room_bounds"]
+# (mirrors pingpong_hazard.gd:52). Empty Rect2 (no area) == "no room known" → the
+# r1_spawn_room_only gate falls back to chase-everywhere (RD-4, never freeze/crash).
+var _room_bounds: Rect2 = Rect2()
+# L2: the two RNG-free patrol endpoints (left-mid ↔ right-mid of _room_bounds, inset
+# by PATROL_EDGE_MARGIN), derived once at setup from the bounds; _patrol_leg picks the
+# active target. Pure deterministic function of _room_bounds (RD-7).
+var _patrol_endpoints: Array[Vector2] = []
+var _patrol_leg: int = 0
+# L2: rising-edge latch for the hazard_pursuer_state telemetry mark (BUG6 pattern —
+# emit once per patrol↔chase transition, no per-frame storm). Empty == no state emitted
+# yet; the first AWAKE frame in room-bound mode emits the initial state.
+var _last_pursuer_state: StringName = &""
+
 @onready var _tell: Polygon2D = $Tell
 
 
 ## Bind the run config + player and seat the dormant tell. Called by the spawn seam
 ## (MainGame.start_new_run) right after add_child. Snapshots the config so a later
 ## active_run_config clear on run-end can't null it mid-frame.
-func setup(cfg: RunConfig, player: Node2D) -> void:
+##
+## L2 (M1.5): widened to the K5 3-arg family signature setup(cfg, player, spawn_ctx)
+## — back-compatible (an empty dict / a 2-arg call still works exactly as before). The
+## entity reads spawn_ctx["room_bounds"] (a Rect2, default empty) to learn its spawn
+## room, exactly as pingpong_hazard.gd:67 does. Empty bounds OR r1_spawn_room_only=false
+## ⇒ today's chase-everywhere behaviour, byte-identical (the AWAKE branch falls through).
+func setup(cfg: RunConfig, player: Node2D, spawn_ctx: Dictionary = {}) -> void:
 	_cfg = cfg
 	_player = player
 	_state = State.DORMANT
 	_time_in_band = 0.0
 	_depin_dir = Vector2.ZERO
 	_caught_latched = false   # BUG6: a pooled/respawned hazard starts un-latched.
+	_room_bounds = spawn_ctx.get("room_bounds", Rect2())
+	_last_pursuer_state = &""
+	_build_patrol_endpoints()
 	if _tell != null:
 		_set_tell_dormant()
+
+
+## L2 (M1.5): derive the two patrol endpoints from _room_bounds — left-mid ↔ right-mid,
+## inset PATROL_EDGE_MARGIN from each side. PURE deterministic function of the rect (NO
+## RNG — RD-7), recomputed at setup. Empty rect → no endpoints (patrol collapses to the
+## idle-pivot fallback in _patrol). The margin is clamped so a thin room never inverts
+## the endpoints (left stays ≤ right).
+func _build_patrol_endpoints() -> void:
+	_patrol_endpoints.clear()
+	_patrol_leg = 0
+	if not _room_bounds.has_area():
+		return
+	var cy := _room_bounds.get_center().y
+	var margin := minf(PATROL_EDGE_MARGIN, _room_bounds.size.x * 0.5)
+	var left := Vector2(_room_bounds.position.x + margin, cy)
+	var right := Vector2(_room_bounds.end.x - margin, cy)
+	_patrol_endpoints = [left, right]
+	# Start toward whichever endpoint is farther, so a hazard spawned near one edge
+	# walks the full beat (purely cosmetic; deterministic — no RNG).
+	if global_position.distance_to(left) < global_position.distance_to(right):
+		_patrol_leg = 1
 
 
 func _physics_process(delta: float) -> void:
@@ -111,6 +171,28 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 
+	# L2 (M1.5): spawn-room-bound mode. ON only when r1_spawn_room_only AND we learned a
+	# real room rect (RD-4: empty bounds fall back to chase-everywhere — never freeze). The
+	# player IN the room → chase (today's exact chase+catch); OUT → slow patrol, no catch.
+	# Immediate re-entry resume (RD-3). The rising-edge state mark (RD-5) tracks the flip.
+	if _cfg.r1_spawn_room_only and _room_bounds.has_area():
+		var in_room: bool = _room_bounds.has_point(_player.global_position)
+		_emit_pursuer_state(&"chase" if in_room else &"patrol")
+		if in_room:
+			_chase(delta)
+		else:
+			_patrol(delta)
+		return
+
+	# r1_spawn_room_only OFF (or no bounds) → today's exact chase-everywhere code,
+	# byte-identical to the M1.4 baseline (the all-off control + every prior cohort).
+	_chase(delta)
+
+
+## L2 (M1.5): today's chase+catch behaviour, factored out unchanged so the room-bound
+## mode can gate it. CATCH lives ONLY here (RD-2) — a patrolling pursuer never runs the
+## distance/latch test, so a player just outside the room rect is never caught.
+func _chase(delta: float) -> void:
 	var depth: int = GameState.current_depth_index   # BUG2 live within-band depth
 	var speed: float = _cfg.r1_chase_speed + _cfg.r1_speed_per_depth * float(depth)
 
@@ -156,6 +238,54 @@ func _physics_process(delta: float) -> void:
 		_on_catch(depth)
 	elif not in_range:
 		_caught_latched = false   # re-arm only after the player has left the radius
+
+
+## L2 (M1.5): slow patrol while the player is OUTSIDE the spawn room. Paces between the
+## two RNG-free endpoints (left-mid ↔ right-mid of _room_bounds) at r1_patrol_speed. NO
+## catch test runs here (RD-2) — patrol is pure locomotion. r1_patrol_speed == 0 (or no
+## endpoints) ⇒ idle-pivot: stand still, no translation (still gates chase, just doesn't
+## wander). Walls (layer `world`) still stop it via move_and_slide; a _confine_to_room
+## clamp (RD-7) is belt-and-braces against move_and_slide drift past the rect edges.
+func _patrol(_delta: float) -> void:
+	# Patrolling re-arms the catch latch so a re-entry's first in-room frame can catch
+	# cleanly (no stale latch carried out of the room).
+	_caught_latched = false
+	if _cfg.r1_patrol_speed <= 0.0 or _patrol_endpoints.size() < 2:
+		velocity = Vector2.ZERO   # idle-pivot fallback — no roaming, still gates chase.
+		move_and_slide()
+		return
+	var target: Vector2 = _patrol_endpoints[_patrol_leg]
+	if global_position.distance_to(target) <= PATROL_ARRIVE_EPS:
+		_patrol_leg = 1 - _patrol_leg            # flip to the other endpoint
+		target = _patrol_endpoints[_patrol_leg]
+	var to_t: Vector2 = target - global_position
+	var dir: Vector2 = to_t.normalized() if to_t.length() > 0.001 else Vector2.ZERO
+	velocity = dir * _cfg.r1_patrol_speed
+	move_and_slide()
+	_confine_to_room()                           # belt-and-braces clamp (RD-7)
+
+
+## L2 (M1.5): clamp the body back inside _room_bounds if move_and_slide drifted it past
+## an edge (mirrors pingpong_hazard.gd:148-157, minus the heading reflect — the pacer's
+## heading is recomputed each frame from the endpoint, so a position clamp suffices).
+func _confine_to_room() -> void:
+	if not _room_bounds.has_area():
+		return
+	global_position = Vector2(
+		clampf(global_position.x, _room_bounds.position.x, _room_bounds.end.x),
+		clampf(global_position.y, _room_bounds.position.y, _room_bounds.end.y))
+
+
+## L2 (M1.5): rising-edge-only telemetry mark for the patrol↔chase flip (RD-5, BUG6
+## latch pattern — no per-frame storm). Self-times run_t_ms from _time_in_band exactly
+## as _on_catch does (hazard_entity.gd self-clock — never invents a new clock). Only
+## emitted in room-bound mode (the caller); the chase-everywhere path never marks state.
+func _emit_pursuer_state(state: StringName) -> void:
+	if state == _last_pursuer_state:
+		return
+	_last_pursuer_state = state
+	var run_t_ms: int = int(_time_in_band * 1000.0)
+	EventBus.hazard_pursuer_state.emit(state, GameState.current_depth_index, run_t_ms)
 
 
 ## Awaken when depth threshold is reached OR linger time elapses — first to fire.

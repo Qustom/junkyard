@@ -539,8 +539,13 @@ func _spawn_r1_hazards(rc: RunConfig, band: Band) -> void:
 		for i in spawn_count:
 			var hz := hazard_scene.instantiate() as HazardEntity
 			_band_container.add_child(hz)
-			hz.global_position = _hazard_spawn_position(band, depths[i], i)
-			hz.setup(rc, player)
+			var pos: Vector2 = _hazard_spawn_position(band, depths[i], i)
+			hz.global_position = pos
+			# L2 (M1.5): thread the pursuer's spawn-room bounds (the owning piece's floor-cell
+			# bbox in world space) so r1_spawn_room_only can confine its patrol + gate its chase.
+			# Resolved from the placed position (the J2 path discards the chosen cell). Empty
+			# Rect2 when no owning piece is found → the entity falls back to chase-everywhere.
+			hz.setup(rc, player, { "room_bounds": _piece_bounds_at_world(band, pos) })
 
 	# J3 — the per-room density budget: extra hazards seeded per room, scaled by room size.
 	# Additive on top of J2's population. Skipped entirely (no node) when density is off.
@@ -562,11 +567,74 @@ func _populate_room_density(band: Band, rc: RunConfig, hazard_scene: PackedScene
 	# Instantiate one HazardEntity per planned world position. The PLAN is a pure,
 	# deterministic function of (band, rc) (see _density_spawn_positions) — this loop is the
 	# only impure half (scene-tree mutation), so the budget/placement logic stays unit-testable.
-	for pos in _density_spawn_positions(band, rc):
+	# L2 (M1.5): _density_spawn_bounds returns the owning piece's room bounds PARALLEL to the
+	# position plan (same iteration / order / length) so the J3 golden-position contract
+	# (test_per_room_density.gd (f2)) stays byte-identical — the positions list is untouched.
+	var positions: Array[Vector2] = _density_spawn_positions(band, rc)
+	var bounds: Array[Rect2] = _density_spawn_bounds(band, rc)
+	for i in positions.size():
 		var hz := hazard_scene.instantiate() as HazardEntity
 		_band_container.add_child(hz)
-		hz.global_position = pos
-		hz.setup(rc, player)
+		hz.global_position = positions[i]
+		# L2: thread this density hazard's spawn-room bounds (empty Rect2 if the parallel
+		# plan came up short → entity falls back to chase-everywhere — never crashes).
+		var rb: Rect2 = bounds[i] if i < bounds.size() else Rect2()
+		hz.setup(rc, player, { "room_bounds": rb })
+
+
+## L2 (M1.5): the per-room density room-bounds PLAN — one Rect2 (the owning piece's floor-
+## cell bbox in world space) PARALLEL to _density_spawn_positions (same iteration order +
+## length), so position[i] and bounds[i] describe the same hazard. Kept SEPARATE from
+## _density_spawn_positions (rather than merging the return) so that helper's byte-frozen
+## Array[Vector2] golden contract (test_per_room_density.gd) is untouched. Pure run-state,
+## NO RNG (mirrors the position plan exactly). Re-walks the same loop; each room contributes
+## its single _piece_floor_bounds_world(cells) once per hazard it spawns.
+func _density_spawn_bounds(band: Band, rc: RunConfig) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if rc == null or rc.r1_per_room_density <= 0.0:
+		return out
+	var per_room_cap: int = rc.r1_density_per_room_cap
+	var min_area: int = maxi(rc.r1_density_min_area, 0)
+	var spawned_total: int = 0
+	for p in _density_pieces_sorted(band):
+		if spawned_total >= RunConfig.R1_DENSITY_BAND_CEILING:
+			break
+		if rc.r1_density_rooms_only and _is_corridor(p.piece_id):
+			continue
+		var cell_area: int = p.floor_cells.size()
+		if cell_area <= min_area:
+			continue
+		var area: float = _density_area(p, rc)
+		var n: int = int(floor(rc.r1_per_room_density * area / float(RunConfig.R1_DENSITY_AREA_UNIT)))
+		if per_room_cap > 0:
+			n = mini(n, per_room_cap)
+		n = mini(n, RunConfig.R1_DENSITY_BAND_CEILING - spawned_total)
+		if n <= 0:
+			continue
+		# The whole room's bbox (one value, repeated for each of this room's n hazards) —
+		# every density hazard in this room shares its room's bounds. Computed from the SAME
+		# sorted cells the position plan strides, so it is the real room rect in world space.
+		var room_bounds: Rect2 = _piece_floor_bounds_world(_density_sorted_cells(p))
+		for _k in n:
+			out.append(room_bounds)
+			spawned_total += 1
+	return out
+
+
+## L2 (M1.5): resolve the spawn-room bounds for a hazard placed at `world_pos` (the J2
+## spread path, which discards the chosen cell). Finds the piece whose floor_cells contain
+## the band-global cell under `world_pos` and returns its floor-cell bbox in world space
+## (the SAME _piece_floor_bounds_world projection the J3 + K5i seams use). Returns an empty
+## Rect2 if no owning piece is found → the entity falls back to chase-everywhere (RD-4).
+## Pure topology, NO RNG (never feeds fingerprint()).
+func _piece_bounds_at_world(band: Band, world_pos: Vector2) -> Rect2:
+	var cell := Vector2i((world_pos / float(_band_cell_size_px)).floor())
+	for p in band.pieces:
+		if p.depth_index < 0:
+			continue
+		if p.floor_cells.has(cell):
+			return _piece_floor_bounds_world(_density_sorted_cells(p))
+	return Rect2()
 
 
 ## The deterministic per-room density PLAN: the ordered world positions of every density
