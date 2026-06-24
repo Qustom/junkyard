@@ -22,4 +22,7 @@ all archived to `DESIGN_DEVIATIONS_HISTORY.md`.*
 
 ---
 
-_Empty between waves. Next entries: M1.5 Wave 2 (L1/L2/L5)._
+**[2026-06-24] L1-F1 — throw telemetry `run_t_ms` uses `Time.get_ticks_msec()`, not a run-elapsed base.**
+*What vs. the doc:* the L0/L1 contract declares the throw signals with a `run_t_ms: int` field. `GameState` exposes no public run-elapsed accessor (`_elapsed_s()` is private) and `game_state.gd` was outside L1's single-writer touch set, so L1 stamped `item_thrown`/`throw_missed`/`throw_killed_hazard` with the monotonic `Time.get_ticks_msec()` (shared between `main_game` and the projectile) instead of true run-elapsed ms.
+*Why:* avoids widening L1's file scope mid-wave; RG2's use of these rows is in-run ordering, which a monotonic clock preserves. All-off fp unmoved; tests green.
+*Claude's recommendation:* **Reviewed** — low-risk telemetry detail, no contract/arity change. If a true run-elapsed base is wanted, file a small follow-up to expose `GameState.run_elapsed_ms()` and switch the three stamps.

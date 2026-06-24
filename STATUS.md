@@ -21,13 +21,20 @@ L0 + L3 + L4 all on `main` (merges `fa7cdb9`/`5c9cd6c`/`b8520be`), pushed, board
 
 > **Wave-1 close-out DONE (2026-06-24).** L0-F1 (88→89 knob count) → Director **Reviewed**; docs corrected, archived → `DESIGN_DEVIATIONS_HISTORY.md`. `DESIGN_DEVIATIONS.md` empty between waves.
 
-### ▶ M1.5 Wave 2 — IN PROGRESS (2026-06-24)
+## ✓ M1.5 Wave 2 (Agency & threat) — DONE (2026-06-24, local; push queued on network)
 
-**L1 ∥ L5 dispatched** as parallel worktrees (file-disjoint); **L2 is HELD until L1 lands** (both write `main_game.gd` → single-writer sequencing). Board: L1/L5 In Progress, L2 Todo.
-- **L1** throwing mechanic (general-purpose) — `project.godot` input remap + inventory highlight + `entities/thrown_item` Area2D + throw seam in `main_game.gd` + preset `throw_enabled=true`. Kills any hazard-body (pursuer + ping-pong); miss → `junk_dropped` re-drop.
-- **L5** K5 `*_kills` toggles (general-purpose) — guard each K5 `fail_run` with `if cfg.<prefix>_kills` (emit-always); retire `_driven_default_preset()`.
+L1 + L5 + L2 all integrated on `main` (merges `f336995`/`fc355c4`/`e353780`); full gate green; **all-off fp byte-identical `e943ac9c8bc1`**. ⚠ **Unpushed** — GitHub network outage during the wave; origin stuck at `f3b6c9c`; push + board sync (L1/L5/L2 → Done) queued. *(Side effect: worktrees based off origin, so L1/L5/L2 didn't see each other — git 3-way auto-merged the shared `main_game.gd`/`run_config.gd` cleanly; verified semantically: throw test + pursuer test + preset both-knobs-present all green post-merge.)*
+- **L1** throwing mechanic (`873a062`): input remap (F=grab/extract, Q/E=highlight, Space=throw) + inventory highlight selector + `entities/thrown_item` Area2D (mask world|hazard) + throw seam in `main_game.gd`; kills pursuer/ping-pong + destroys item, miss → `junk_dropped` re-drop; preset `throw_enabled=true`. New `test_throw_mechanic`. Worklog `worklogs/2026-06-24-L1-general-purpose.md`.
+- **L5** K5 `*_kills` toggles (`a2fe301`): guarded each K5 `fail_run` with `if cfg.<prefix>_kills` (emit-always); retired `_driven_default_preset()` (verify runs the real preset, kills off). Worklog `…-L5-…`.
+- **L2** spawn-room pursuer (`1f4f67d`): `HazardEntity` room-bound slow patrol (paces 2 endpoints @ `r1_patrol_speed=28`, chases iff `_room_bounds.has_point`); `setup` widened to 3-arg + `room_bounds` threaded via J2 `_piece_bounds_at_world` + a parallel J3 `_density_spawn_bounds` (golden byte-frozen); preset `r1_spawn_room_only=true`. New L2 cases in `test_pursuing_hazard`. Worklog `…-L2-…`.
 
-On L1 return: verify topology + gate, merge to `main`, push, board=Done → **then dispatch L2** (off updated `main`, builds on L1's `main_game.gd`). On L5 return: same. Then Wave-2 close-out sweep → Wave 3 (RG1 build+verify+itch). Locks: `design/M1_5_Tasks/M1.5_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock".
+### ▶ Next action (start here on a cold restart) — push, then Wave-2 close-out → Wave 3 (RG1)
+
+1. **PUSH `main` to origin** (queued — network was down): `git push origin main`. **Blocking for Wave 3 worktrees** (they base off origin); if still down, dispatch RG1 **non-isolated** (single sequential task, runs in the main checkout on local HEAD which has all M1.5 work). Then board sync: L1/L5/L2 → Done.
+2. **Wave-2 close-out deviation sweep** (below) — Director dispositions L1-F1 before Wave 3.
+3. **Dispatch Wave 3 — RG1** (qa-playtest-coordinator): author the M1.5 RG1 build+verify doc from `design/M1_4_Tasks/RG1_playtest_build.md`; assemble + verify the M1.5 loop (throw/highlight, room-bound pursuer, money-below-timer, grab-prompt, all-off fp); author `test_rg1_m15_verify` (89 knobs); **publish to itch** + update `changelog.txt`. Then Director playtest → RG2 → RG3.
+
+> **Wave-2 close-out — for Director disposition:** **L1-F1** — throw telemetry rows (`item_thrown`/`throw_missed`/`throw_killed_hazard`) use `Time.get_ticks_msec()` for `run_t_ms` because `GameState` exposes no public run-elapsed accessor (and `game_state.gd` wasn't in L1's touch set). RG2 needs only in-run ordering, which this preserves. Recommend **Reviewed** (low-risk telemetry detail; if a true run-elapsed base is wanted, file a small follow-up to expose a `GameState.run_elapsed_ms()` and switch the 3 rows). `DESIGN_DEVIATIONS.md` carries it.
 
 ---
 
