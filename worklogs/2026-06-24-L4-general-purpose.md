@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.5 · Wave 1
 - **Branch:** general-purpose/L4
-- **Commit:** <full SHA>   ← see git log
+- **Commit:** 50646d842fa441c380cc8b408e8549a7f36398b0
 
 ## What changed
 Fixed the "grab prompt always shows" bug (Director #9). The interaction prompt's
