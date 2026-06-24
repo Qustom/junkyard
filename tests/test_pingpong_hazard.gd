@@ -114,6 +114,31 @@ func _run() -> int:
 		failures.append("(d) kill: new_hazard_killed kind %s != &\"pingpong\"" % str(_killed_events[0][0]))
 	EventBus.new_hazard_killed.disconnect(_on_new_hazard_killed)
 
+	# --- (g) KILLS-OFF (L5): hpp_kills=false => contact does NOT end the run, but still emits --
+	# Mirrors (d) but with the L5 toggle off: the bouncer behaves identically (emits the contact
+	# row) yet fail_run is gated, so the run stays active. Proves the *_kills knob.
+	_killed_events.clear()
+	EventBus.new_hazard_killed.connect(_on_new_hazard_killed)
+	GameState.start_run(&"test_band", 12345)
+	var cfg_g := RunConfig.new()
+	cfg_g.hpp_enabled = true
+	cfg_g.hpp_speed = 100.0
+	cfg_g.hpp_kills = false
+	var hz_g := scene.instantiate() as PingPongHazard
+	add_child(hz_g)
+	hz_g.global_position = Vector2(700, 700)
+	player.global_position = Vector2(700, 700)   # ON TOP — within CONTACT_RADIUS
+	hz_g.setup(cfg_g, player, {})
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	if not GameState.run_active:
+		failures.append("(g) kills-off: run ended despite hpp_kills=false (fail_run was not gated)")
+	if _killed_events.size() != 1:
+		failures.append("(g) kills-off: new_hazard_killed fired %d times, expected exactly 1 (emit-always)" % _killed_events.size())
+	EventBus.new_hazard_killed.disconnect(_on_new_hazard_killed)
+	hz_g.queue_free()
+	GameState.fail_run(&"death")   # tidy: end the still-active run before the next case
+
 	# --- (f) WALL/CORNER ANTI-STALL (BUG8) ----------------------------------
 	# Build an L-corner of static walls on the `world` layer (bit 2 = value 2, the only
 	# layer the bouncer masks) and aim a bouncer diagonally INTO the inside corner. The old

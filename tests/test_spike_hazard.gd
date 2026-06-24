@@ -154,8 +154,31 @@ func _run() -> int:
 	if not GameState._run_ended:
 		failures.append("(d) GameState.fail_run did not end the run (player not killed)")
 
+	# --- (g) KILLS-OFF (L5): hspike_kills=false → contact does NOT kill, but still emits ---
+	# A fresh run (the (d) case ended the prior one). The spike still emits new_hazard_killed
+	# (emit-always) but fail_run is gated, so the run stays active. Proves the hspike_kills knob.
+	var killed_g: Array = []
+	var sink_g := func(kind: StringName, _depth: int, _run_t_ms: int) -> void:
+		killed_g.append(kind)
+	EventBus.new_hazard_killed.connect(sink_g)
+	GameState.start_run(&"test_band", 54321)
+	var rc_off := _rc(0.0, 64.0)
+	rc_off.hspike_kills = false
+	var hz_g: SpikeHazard = scene.instantiate()
+	add_child(hz_g)
+	hz_g.global_position = Vector2(3000, 3000)
+	hz_g.setup(rc_off, player, {"phase_salt": 0})
+	player.global_position = hz_g.global_position + Vector2(40, 0)   # on arm 0
+	hz_g._physics_process(0.016)
+	hz_g._physics_process(0.016)
+	EventBus.new_hazard_killed.disconnect(sink_g)
+	if killed_g.size() != 1:
+		failures.append("(g) kills-off: new_hazard_killed emitted %d times, expected 1 (emit-always)" % killed_g.size())
+	if not GameState.run_active:
+		failures.append("(g) kills-off: run ended despite hspike_kills=false (fail_run not gated)")
+
 	# --- cleanup -------------------------------------------------------------------
-	for n in [hz_empty, hz_s7a, hz_s7b, hz_s8, hz, hz_kill, player]:
+	for n in [hz_empty, hz_s7a, hz_s7b, hz_s8, hz, hz_kill, hz_g, player]:
 		if is_instance_valid(n):
 			n.queue_free()
 

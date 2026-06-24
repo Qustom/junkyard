@@ -114,8 +114,12 @@ func _detonate() -> void:
 	var hit: bool = _cfg.hbomb_blast_radius > 0.0 and d <= _cfg.hbomb_blast_radius
 	_flash_blast()                                # brief explode flash (juice; runs even if fatal)
 	if hit:
-		EventBus.new_hazard_killed.emit(&"bomb", GameState.current_depth_index, _run_t_ms())
-		GameState.fail_run(&"death")              # existing end path; _run_ended owns idempotency
+		EventBus.new_hazard_killed.emit(&"bomb", GameState.current_depth_index, _run_t_ms())  # emit-always
+		# L5: only the kill is gated (mirrors hazard_entity.gd's r1_catch_kills). Default true =
+		# today's lethal behaviour; false = the bomb still arms/pulses/flashes (the _flash_blast +
+		# queue_free below sit outside this guard) but a blast-radius hit does NOT end the run.
+		if _cfg.hbomb_kills:
+			GameState.fail_run(&"death")          # existing end path; _run_ended owns idempotency
 	# One-shot (Q4): free after the flash (~0.2s) so the node leaves no lingering ring.
 	# Run-state — _clear_band() would also free it on run-end.
 	get_tree().create_timer(0.2).timeout.connect(queue_free)

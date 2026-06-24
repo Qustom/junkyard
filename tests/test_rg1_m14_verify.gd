@@ -109,7 +109,7 @@ func _run() -> int:
 
 	# ---- Drive the M1.4 verify matrix through the assembled loop -----------------
 	await _drive_run(_all_off(), &"extract", "M0-all-off")            # control + snapshot
-	await _drive_run(_driven_default_preset(), &"extract", "M1-default-preset")  # the M1.4 boot stack
+	await _drive_run(_default_preset(), &"extract", "M1-default-preset")  # real preset, K5 kills off (L5)
 	await _drive_run(_all_off(), &"timeout", "M2-timeout")            # timeout end-cause reachable
 
 	_tel.set_enabled(false)
@@ -212,6 +212,14 @@ func _verify_default_preset_shape() -> void:
 		_failures.append("RG1/K5b: default preset bomb proximity/pulse/blast not all > 0 (bomb inert)")
 	if preset.hspike_arm_length <= 0.0 or is_zero_approx(preset.hspike_rotation_speed):
 		_failures.append("RG1/K5c: default preset spike arm_length/rotation_speed inert")
+	# L5: the shipped preset is LETHAL — the three K5 *_kills toggles must default true. Only the
+	# driven copy (_default_preset) turns them off; the real make_default_play_preset() never does.
+	if not preset.hpp_kills:
+		_failures.append("RG1/K5a: default preset hpp_kills is false (the shipped preset must kill)")
+	if not preset.hbomb_kills:
+		_failures.append("RG1/K5b: default preset hbomb_kills is false (the shipped preset must kill)")
+	if not preset.hspike_kills:
+		_failures.append("RG1/K5c: default preset hspike_kills is false (the shipped preset must kill)")
 
 	# --- K7 exits ON (Director pre-playtest tweak): enabled, base 1 / per_depth 0.1 /
 	# keep-one-at-spawn / cap 7. ---
@@ -440,25 +448,15 @@ func _default_preset() -> RunConfig:
 	c.seed_override = 12345
 	# Keep R1 non-fatal for the driven run so the hazard can't pre-empt our chosen end-cause.
 	c.r1_catch_kills = false
-	return c
-
-
-## The default preset for the DRIVEN end-cause matrix. Same fun stack as _default_preset(),
-## but the three K5 hazards are switched OFF: unlike R1 (whose lethality is the r1_catch_kills
-## knob), the new hazards have no per-hazard "kills" toggle — a fatal contact always routes
-## through GameState.fail_run(&"death"). Now that the preset ships a SHALLOW rotating spike
-## (hspike_base_count=1, RG1 Feedback #3), the player would be killed by a spike during the
-## depth-stepping loop before reaching our chosen `extract` end-cause. The driven matrix only
-## needs to prove the preset's run_config SNAPSHOT + end-cause gating, so we disable the K5
-## entities here (the run_config snapshot still records them ON — that is captured at the
-## make_default_play_preset() level by _verify_default_preset_shape, and the real spawn is
-## proven by _verify_new_hazards_spawn_assembled / _verify_new_hazard_spawn_plan which keep
-## the full preset). This mirrors the existing r1_catch_kills=false intent.
-func _driven_default_preset() -> RunConfig:
-	var c := _default_preset()
-	c.hpp_enabled = false
-	c.hbomb_enabled = false
-	c.hspike_enabled = false
+	# L5: keep the three K5 hazards non-lethal for the driven end-cause matrix. The entities
+	# now SPAWN and behave (hpp/hbomb/hspike_enabled stay TRUE — the real preset), they just
+	# cannot end the run, so the scripted extract/timeout cause wins. This retires the old
+	# _driven_default_preset() which disabled the entities entirely; the driven run now
+	# exercises the REAL K5 spawn. The lethal-preset guarantee is asserted by
+	# _verify_default_preset_shape (the shipped make_default_play_preset() keeps *_kills TRUE).
+	c.hpp_kills = false
+	c.hbomb_kills = false
+	c.hspike_kills = false
 	return c
 
 
