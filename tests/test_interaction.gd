@@ -124,12 +124,73 @@ func _initialize() -> void:
 	if detector._current != near_it:
 		failures.append("guard: disabling Far did not move focus to valid Near (%s)" % [detector._current])
 
+	# --- L4 HIDE INVARIANT: disable the ONLY valid target -> prompt hidden ---
+	# Focus is on Near. Disabling it leaves NO valid target; the prompt must go
+	# invisible the same frame (best == null transition).
+	near_it.enabled = false
+	_focused.clear()
+	_unfocused.clear()
+	detector._refresh_current()
+	if detector._current != null:
+		failures.append("hide(disable): focus did not clear when all targets disabled (%s)" % [detector._current])
+	if detector._prompt == null:
+		failures.append("hide(disable): prompt unexpectedly null")
+	elif detector._prompt.visible:
+		failures.append("hide(disable): prompt still visible with no valid target")
+
+	# Re-enable Near and re-focus so the next cases start from a VISIBLE prompt.
+	near_it.enabled = true
+	detector._refresh_current()
+	if detector._current != near_it or detector._prompt == null or not detector._prompt.visible:
+		failures.append("hide: failed to re-establish visible focus on Near before free/exit cases")
+
+	# --- L4 HIDE INVARIANT: range-exit the focused target -> prompt hidden ---
+	# The clean steady-state path: area_exited removes Near from _in_range, next
+	# refresh finds best == null, the invariant hides the prompt.
+	detector._on_area_exited(near_it)
+	_focused.clear()
+	_unfocused.clear()
+	detector._refresh_current()
+	if detector._current != null:
+		failures.append("hide(range-exit): focus did not clear after area_exited (%s)" % [detector._current])
+	if detector._prompt != null and detector._prompt.visible:
+		failures.append("hide(range-exit): prompt still visible after focused target left range")
+
+	# --- L4 HIDE INVARIANT: deferred queue_free ordering --------------------
+	# Reproduce root-cause #1: the focused target is queue_free()'d (deferred),
+	# so for one frame it is still in _in_range but is_instance_valid() is about
+	# to go false; area_exited has not yet fired. The per-frame invariant must
+	# hide the prompt the moment the node becomes invalid, WITHOUT relying on a
+	# focus-change edge.
+	# Re-establish a fresh, visible focus on a brand-new target first.
+	var doomed_it: Variant = it_packed.instantiate()
+	doomed_it.display_name = "Doomed"
+	doomed_it.interactable_id = &"junk"
+	doomed_it.prompt_text = "Grab"
+	root.add_child(doomed_it)
+	doomed_it.global_position = detector.global_position  # 0px -> nearest
+	detector._on_area_entered(doomed_it)
+	detector._refresh_current()
+	if detector._current != doomed_it or detector._prompt == null or not detector._prompt.visible:
+		failures.append("hide(deferred-free): failed to focus+show on Doomed target")
+	# queue_free is deferred: the node is still in _in_range and still == _current
+	# this instant, but free it for real (synchronous, mimicking the post-defer
+	# state) and refresh WITHOUT calling area_exited -- the invariant must hide.
+	doomed_it.free()
+	_focused.clear()
+	_unfocused.clear()
+	detector._refresh_current()
+	if detector._current != null:
+		failures.append("hide(deferred-free): _current not cleared after focused target freed (%s)" % [detector._current])
+	if detector._prompt != null and detector._prompt.visible:
+		failures.append("hide(deferred-free): prompt stranded visible after focused target was freed")
+
 	detector.free()
 	near_it.free()
 	far_it.free()
 
 	if failures.is_empty():
-		print("INTERACT OK — focus(nearest), interaction_requested(target), hysteresis, and enabled-guard verified")
+		print("INTERACT OK — focus(nearest), interaction_requested(target), hysteresis, enabled-guard, and prompt hide-invariant (disable/range-exit/deferred-free) verified")
 		quit(0)
 	else:
 		for f in failures:

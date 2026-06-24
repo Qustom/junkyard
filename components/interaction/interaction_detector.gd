@@ -71,6 +71,16 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Recompute the nearest valid target with hysteresis and update focus/prompt.
 func _refresh_current() -> void:
+	# Defensive: if the focused target was freed (deferred queue_free on pickup)
+	# before its area_exited fired, drop the dangling reference to null up front.
+	# A freed Object reference compares `!= null` as false in Godot 4, so a plain
+	# `is_instance_valid` check is the only reliable guard. This keeps a freed
+	# instance out of the typed comparisons/calls below (passing a freed instance
+	# to a typed Interactable arg throws) and lets the visibility invariant hide
+	# the prompt cleanly this same frame. (null stays null -- harmless.)
+	if not is_instance_valid(_current):
+		_current = null
+
 	var origin: Vector2 = global_position
 	var best: Interactable = null
 	var best_d: float = INF
@@ -102,21 +112,31 @@ func _refresh_current() -> void:
 			if best == null or best_d >= cur_d * SWITCH_RATIO:
 				best = _current
 
-	if best == _current:
+	# Focus changed -> notify consumers on the edge (audio/telemetry rely on it).
+	if best != _current:
+		if _current != null and is_instance_valid(_current):
+			EventBus.interactable_unfocused.emit(_current)
+		_current = best
+		if _current != null:
+			EventBus.interactable_focused.emit(_current)
+
+	# Visibility INVARIANT (asserted EVERY frame, transition or not): the prompt
+	# is visible iff there is a valid, interactable focus. Driving this off the
+	# `_current` invariant -- not off the focus-change edge above -- is the
+	# load-bearing fix: an early-out or a deferred queue_free can no longer
+	# strand the reused, world-space prompt "on" pointing at a vanished target.
+	_update_prompt(_current)
+
+
+## Single owner of the prompt's visibility. Visible IFF `it` is a valid,
+## interactable focus; hidden (and cleared) otherwise. Called every frame.
+func _update_prompt(it: Interactable) -> void:
+	var valid: bool = it != null and is_instance_valid(it) and it.can_interact()
+	if not valid:
+		if _prompt != null:
+			_prompt.set_target(null)
+			_prompt.visible = false
 		return
-
-	# Focus changed -> update prompt + notify consumers.
-	if _current != null:
-		EventBus.interactable_unfocused.emit(_current)
-	_current = best
-	if _current != null:
-		EventBus.interactable_focused.emit(_current)
-		_show_prompt(_current)
-	else:
-		_hide_prompt()
-
-
-func _show_prompt(it: Interactable) -> void:
 	if _prompt == null and prompt_scene != null:
 		_prompt = prompt_scene.instantiate()
 		# Parent to the detector so it lives in world space; the prompt itself
@@ -125,9 +145,3 @@ func _show_prompt(it: Interactable) -> void:
 	if _prompt != null:
 		_prompt.set_target(it)
 		_prompt.visible = true
-
-
-func _hide_prompt() -> void:
-	if _prompt != null:
-		_prompt.set_target(null)
-		_prompt.visible = false
