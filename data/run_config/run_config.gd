@@ -114,6 +114,16 @@ const LVL_LOOT_AREA_UNIT: int = 96
 ## preset MUST set this > 0 (mandatory per Q E) — combined with the global band ceiling it
 ## bounds the worst case (px_area × size 40× × high density) so a sweep can't explode.
 @export var r1_density_per_room_cap: int = 0
+## L2 (M1.5): spawn-room-bound pursuer behaviour. When ON, the pursuing HazardEntity
+## paces within its spawn room and chases ONLY while the player is in that room;
+## outside, it slow-patrols (Director-locked: SLOW PATROL, not despawn/idle-freeze).
+## false = today's chase-everywhere behaviour (M1.4). Lives under r1_enabled. Pure
+## run-state behaviour branch; never feeds fingerprint(). L0 declares; L2 reads/emits.
+@export var r1_spawn_room_only: bool = false
+## L2 (M1.5): patrol speed (px/s) while the player is OUTSIDE the spawn room (the slow-
+## patrol pace, preset ≈ half of chase). 0.0 = idle-pivot (stand still when not chasing);
+## the preset sets a slow walk. All-off-neutral default; never feeds fingerprint().
+@export var r1_patrol_speed: float = 0.0
 
 # =============================================================================
 # R2 — Costlier return trip
@@ -296,6 +306,10 @@ const LVL_LOOT_AREA_UNIT: int = 96
 @export var hpp_speed: float = 0.0
 ## Hard cap on count per room (perf guard). 0 = uncapped (preset MUST set > 0).
 @export var hpp_per_room_cap: int = 0
+## L5 (M1.5): whether a contact KILLS (true = today's lethal behaviour) or is non-lethal.
+## Default true = preserves M1.4 (the all-off-equivalent for an already-lethal hazard);
+## false expresses a non-lethal preset (mirrors r1_catch_kills). L0 declares; L5 reads.
+@export var hpp_kills: bool = true
 
 # =============================================================================
 # K5b (M1.4) — Bomb hazard (proximity pulse ~2s then explode; kills in radius).
@@ -317,6 +331,10 @@ const LVL_LOOT_AREA_UNIT: int = 96
 @export var hbomb_blast_radius: float = 0.0
 ## Hard cap on count per room (perf guard). 0 = uncapped (preset MUST set > 0).
 @export var hbomb_per_room_cap: int = 0
+## L5 (M1.5): whether a detonation in-radius KILLS (true = M1.4 lethal) or is non-lethal.
+## Default true = preserves today's behaviour; false expresses a non-lethal preset. L0
+## declares; L5 reads.
+@export var hbomb_kills: bool = true
 
 # =============================================================================
 # K5c (M1.4) — Rotating-spikes hazard (rotates in place, lethal on contact).
@@ -337,6 +355,10 @@ const LVL_LOOT_AREA_UNIT: int = 96
 @export var hspike_arm_length: float = 0.0
 ## Hard cap on count per room (perf guard). 0 = uncapped (preset MUST set > 0).
 @export var hspike_per_room_cap: int = 0
+## L5 (M1.5): whether arm contact KILLS (true = M1.4 lethal) or is non-lethal. Default
+## true = preserves today's behaviour; false expresses a non-lethal preset. L0 declares;
+## L5 reads.
+@export var hspike_kills: bool = true
 
 # =============================================================================
 # K7 (M1.4) — Exit placement rework (random/multiple exits, run-config-keyed for
@@ -355,6 +377,29 @@ const LVL_LOOT_AREA_UNIT: int = 96
 @export var exit_keep_one_at_spawn: bool = false
 ## Hard cap on total exits per band (perf/legibility guard). 0 = uncapped.
 @export var exit_max_count: int = 0
+
+# =============================================================================
+# L1 (M1.5) — Throwing mechanic. Highlight an inventory item (Q/E), then Space
+# throws it in the player's facing direction; a hit on a hazard-layer body (the
+# R1 pursuer or the K5 ping-pong) kills it + destroys the item; a miss (wall /
+# max-range / an in-script lifetime fallback) re-drops the item via the existing
+# EventBus.junk_dropped path. All-off default = no throwing (M1.4 behaviour).
+# Pure run-state (remove from run_inventory + a transient projectile) — never
+# feeds fingerprint(), never persists. L0 only DECLARES these; L1 reads/emits.
+# The throw kill-scope is FIXED (any hazard-layer body) — NO scope knob (Phase-4
+# lock); the miss-lifetime is an in-script constant, NOT a knob (RD-2).
+# =============================================================================
+@export_group("L1 Throwing", "throw_")
+## Master toggle. OFF = no highlight selector, no throw (M1.4 behaviour).
+@export var throw_enabled: bool = false
+## Projectile travel speed (px/s, greybox). Entity-read by the thrown projectile.
+## Magnitude default is inert while throw_enabled=false (no projectile spawns); the
+## preset sets the swept value in L1. Does NOT move the all-off fingerprint.
+@export var throw_speed: float = 180.0
+## Max travel distance (px) before the throw MISSES and the item re-drops. A hidden
+## in-script lifetime is the belt-and-braces fallback (NOT a knob — RD-2). Magnitude
+## default is inert while throw_enabled=false; the preset sets the swept value in L1.
+@export var throw_max_range: float = 320.0
 
 
 ## The hardcoded corridor piece-id set (J4) the corridor-rarity lever down-weights and the
@@ -507,6 +552,17 @@ func to_flat_dict() -> Dictionary:
 		"exit_count_per_depth": exit_count_per_depth,
 		"exit_keep_one_at_spawn": exit_keep_one_at_spawn,
 		"exit_max_count": exit_max_count,
+		# L1 (M1.5) — throwing config knobs (additive payload; RG2 segments throw cohorts)
+		"throw_enabled": throw_enabled,
+		"throw_speed": throw_speed,
+		"throw_max_range": throw_max_range,
+		# L2 (M1.5) — spawn-room pursuer behaviour knobs (additive payload)
+		"r1_spawn_room_only": r1_spawn_room_only,
+		"r1_patrol_speed": r1_patrol_speed,
+		# L5 (M1.5) — per-hazard lethality toggles (default true = M1.4 lethal behaviour)
+		"hpp_kills": hpp_kills,
+		"hbomb_kills": hbomb_kills,
+		"hspike_kills": hspike_kills,
 	}
 
 

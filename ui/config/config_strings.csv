@@ -114,3 +114,12 @@ CFG_FIELD_EXIT_BASE_COUNT,base count
 CFG_FIELD_EXIT_COUNT_PER_DEPTH,count / depth
 CFG_FIELD_EXIT_KEEP_ONE_AT_SPAWN,keep one at spawn
 CFG_FIELD_EXIT_MAX_COUNT,max count
+CFG_SEC_THROW,L1 · Throwing
+CFG_GLOSS_THROW,highlight an inventory item (Q/E) and throw it (Space) to kill a hazard
+CFG_FIELD_THROW_SPEED,speed (px/s)
+CFG_FIELD_THROW_MAX_RANGE,max range (px)
+CFG_FIELD_R1_SPAWN_ROOM_ONLY,spawn-room patrol
+CFG_FIELD_R1_PATROL_SPEED,patrol speed (px/s)
+CFG_FIELD_HPP_KILLS,kills on contact
+CFG_FIELD_HBOMB_KILLS,kills on contact
+CFG_FIELD_HSPIKE_KILLS,kills on contact

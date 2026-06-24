@@ -45,9 +45,13 @@ func _run() -> int:
 	# + J3's 5 r1_density_* + J3's 1 lvl_loot_density_per_area + J4's 2 lvl_corridor_* = 46;
 	# + M1.4's K2 5 quota_ (enabled/base/step/check_timing/basis — the two enums KEPT per the
 	# Phase-4 Lock) + K3 3 cam_ + K4 4 timer_ + K5a 5 hpp_ + K5b 7 hbomb_ + K5c 6 hspike_
-	# + K7 5 exit_ = 35 → 46 + 35 = 81).
-	if exported.size() != 81:
-		failures.append("expected 81 exported RunConfig fields, schema has %d" % exported.size())
+	# + K7 5 exit_ = 35 → 46 + 35 = 81;
+	# + M1.5's L1 3 throw_ (throw_enabled/throw_speed/throw_max_range) + L2 2 r1_
+	# (r1_spawn_room_only/r1_patrol_speed) + L5 3 *_kills (hpp_kills/hbomb_kills/hspike_kills)
+	# = 8 → 81 + 8 = 89. (The M1.5 lock's "88" was an off-by-one: 81 + 8 = 89; the actual
+	# pre-L0 schema is 72 @export var + 9 @export_enum = 81, +8 new @export var = 80+9 = 89.)
+	if exported.size() != 89:
+		failures.append("expected 89 exported RunConfig fields, schema has %d" % exported.size())
 
 	var bound := menu._rows.keys()   # bound controls; masters are included as CheckButtons
 	for f in exported:

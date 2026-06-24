@@ -108,6 +108,12 @@ func _ready() -> void:
 		"hspike_rotation_speed", "hspike_arm_length", "hspike_per_room_cap",
 		# K7 (M1.4) — exit-placement config knobs.
 		"exit_enabled", "exit_base_count", "exit_count_per_depth", "exit_keep_one_at_spawn", "exit_max_count",
+		# L1 (M1.5) — throwing config knobs.
+		"throw_enabled", "throw_speed", "throw_max_range",
+		# L2 (M1.5) — spawn-room pursuer behaviour knobs.
+		"r1_spawn_room_only", "r1_patrol_speed",
+		# L5 (M1.5) — per-hazard lethality toggles (default true = M1.4 lethal behaviour).
+		"hpp_kills", "hbomb_kills", "hspike_kills",
 	]
 	for k in expected_keys:
 		if not flat.has(k):
