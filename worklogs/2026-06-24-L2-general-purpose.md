@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (the programmer)
 - **Milestone:** M1.5
 - **Branch:** general-purpose/L2
-- **Commit:** bb4f8232ddc10b58973a3513367bc4ad0ec7980b
+- **Commit:** 1f4f67d02ede2d2f81e9bbdb4951c713d120dcd3
 
 ## What changed
 The pursuing `HazardEntity` becomes a **room-bound slow patrol** (Director-LOCKED #6): when
