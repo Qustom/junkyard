@@ -255,3 +255,63 @@ node name, `unique_name_in_owner`, and all theme/font overrides (the legibility 
 change, no string change, no knob, no fingerprint impact.** Only items 1 (cost-indicator overlap, ui
 self-resolves) and 2 (optional money glyph/"$" prefix — **Director taste**) carry any judgment; the
 rest are resolved by the proposed offsets.
+
+---
+
+## Resolved Decisions (Phase 3)
+
+**Resolver:** fresh-eyes pass (NOT the L3 author), 2026-06-24. Verified every offset and competitor
+claim against the live `ui/hud/decision_hud.tscn`, `ui/dive_clock_meter.tscn`,
+`ui/inventory/inventory_panel.tscn`, and `decision_hud.gd`'s `_refresh_haul()` / `_process` pulse.
+All findings confirm the author's design; the offsets are **frozen** as proposed.
+
+### Verification (against real code)
+- **`HaulValueLabel` as-built** (`decision_hud.tscn:20-32`): top-left, `anchors_preset = 0`, offsets
+  `16 / 16 / 256 / 44`, **no `horizontal_alignment`** → left-aligned. Matches the doc exactly. ✓
+- **Timer band x-range** is real and consistent: `ClockTopRight` (`:34-44`) and the `dive_clock_meter`
+  ProgressBar (`dive_clock_meter.tscn:16-25`) both occupy `offset_left = -228 … offset_right = -16`,
+  both `offset_top = 16`. The meter bar ends y≈40; the in-HUD clock VBox (bar 22px + 2px sep + 16px
+  label) ends y≈64. ✓ So "below the timer" = the `[-228, -16]` band at `offset_top ≈ 70`, clear of both.
+- **`CostIndicatorAnchor`** (`:170-181`) is the existing y=70 "below-timer" baseline in the identical
+  band. ✓ Adopting `offset_top = 70` aligns the haul label to an established anchor.
+- **No competitor for the top-right band below the timer** (Open Question 3, confirmed independently):
+  - `QuotaLabel` (`:81-101`) is **bottom-right** (`anchors_preset = 3`, y `-44…-16`) — no conflict. ✓
+  - `DepthLabel` (`:64-79`) is **bottom-left** — no conflict. ✓
+  - `ExposureReadout` (`:103-153`) is **top-LEFT** (`offset_left = 16`, y 52→116) — it does NOT enter
+    the right band; no conflict. ✓ (Additional node the author did not individually clear; verified clear.)
+  - The only other top-right occupant is the transient `CostIndicatorAnchor` (Open Question 1).
+- **`_refresh_haul()` is untouched and must stay untouched** (`decision_hud.gd:193-194`): it sets only
+  `.text` via `tr("HUD_HOLDING")`. The `_process` urgency pulse (`:142-151`) writes only `.modulate`.
+  Neither reads `anchors`/`offsets`/`horizontal_alignment`. ✓ **CONFIRMED: L3 is a pure `.tscn` edit;
+  `_refresh_haul()` and the pulse code stay byte-for-byte unchanged.** `unique_name_in_owner = true` +
+  node name `HaulValueLabel` preserved so `%HaulValueLabel` (`:88` `@onready`) keeps resolving.
+
+### Frozen offsets for `HaulValueLabel` (decision_hud.tscn:20-32) — LOCKED
+| property | from | **to (frozen)** |
+|---|---|---|
+| `anchors_preset` | `0` | **`1`** (top-right) |
+| `anchor_left` | (0.0 implicit) | **`1.0`** |
+| `anchor_right` | (0.0 implicit) | **`1.0`** |
+| `offset_left` | `16.0` | **`-228.0`** |
+| `offset_top` | `16.0` | **`70.0`** |
+| `offset_right` | `256.0` | **`-16.0`** |
+| `offset_bottom` | `44.0` | **`98.0`** |
+| `grow_horizontal` | (2 default) | **`0`** (grow left) |
+| `horizontal_alignment` | (unset → LEFT) | **`2`** (RIGHT) |
+| theme/font overrides | white/black/outline 5/size 22 | **UNCHANGED** (legibility layer preserved) |
+
+- **Open Question 1 (cost-indicator overlap at y=70):** RESOLVED — ship `offset_top = 70` as the
+  default; the cost indicator rises-and-fades quickly off y=70 and renders near band-centre while the
+  haul label is right-edge-docked, so overlap is brief and partial. If RG1 verify shows a clash, nudge
+  to `78-84`. Technical/layout call, no Director input needed.
+- **Open Questions 3, 4, 5, 6:** RESOLVED on technical merit per the doc (no competitor; 212px band fits
+  realistic greybox haul values with leftward growth; right edges align by construction; the pulse reads
+  better under the timer). No action.
+
+### Needs Director review
+- **Optional money glyph / "$" prefix on the haul label (Open Question 2).** The readout text is
+  `tr("HUD_HOLDING")` → "Holding: N". Whether to switch to a "$"/coin-glyph "money" presentation is a
+  content/taste call that would touch `ui/hud/hud_strings.csv`. **Recommendation: DEFER out of L3** — L3
+  is a layout-only bug-fix; keep the existing `tr("HUD_HOLDING")` string verbatim. Surface the glyph
+  decision separately if the Director wants the readout to read as *money* specifically. Do NOT bundle
+  it into the reposition.

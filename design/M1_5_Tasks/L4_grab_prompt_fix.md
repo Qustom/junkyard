@@ -245,3 +245,79 @@ slot frees; hiding the prompt mid-flash would mislead). Flagged below.
 - **Fix:** make `_prompt.visible` a hard invariant of `_current` (`visible == _current != null && is_instance_valid &&
   can_interact()`) asserted **every frame** via a single `_update_prompt()` writer; default the `.tscn` prompt hidden + drop
   baked text. No knob, no signal/arity/save change. Add a regression test for the hide invariant.
+
+---
+
+## Resolved Decisions (Phase 3)
+
+**Resolver:** fresh-eyes pass (NOT the L4 author), 2026-06-24. Independently read
+`interaction_detector.gd`, `interactable.gd`, `interaction_prompt.gd`, `interaction_prompt.tscn`, and
+`tests/test_interaction.gd` to verify the root-cause diagnosis from scratch.
+
+### Root-cause diagnosis — VERIFIED (confirmed, with line evidence)
+The author's diagnosis holds line-for-line:
+
+1. **Visibility is transition-driven, never an invariant. CONFIRMED.** In `interaction_detector.gd`,
+   `_show_prompt()` (`:114`) and `_hide_prompt()` (`:116`) are reached **only** inside the focus-change
+   block (`:108-116`), which is itself reached only after the `if best == _current: return` early-out at
+   `:105-106`. So whenever `best == _current`, the function returns before any visibility write.
+   `_prompt.visible` is set in exactly two places (`_show_prompt` `:127`, `_hide_prompt` `:133`) — both
+   on the transition path only. There is no per-frame assertion of visibility from `_current`. ✓
+2. **The hysteresis re-pin can strand a dying/invalid `_current`. CONFIRMED.** The hysteresis block
+   (`:98-103`) sets `best := _current` when the current target is still guard-passing, so `best ==
+   _current` → early-out (`:105`) → hide never runs. The guard (`:98-99`) checks
+   `is_instance_valid(_current) and _current.can_interact() and _in_range.has(_current)`; during the
+   deferred-`queue_free` window a freed-but-not-yet-`area_exited` node can still pass long enough to
+   strand the prompt. ✓
+3. **`.tscn` ships visible-by-default with baked text. CONFIRMED.** `interaction_prompt.tscn` has **no
+   `visible = false`** on the root `InteractionPrompt` Node2D (`:5-6`) and the Label bakes
+   `text = "[E] Grab"` (`:16`). Latent hazard, not the spawn-time trigger (prompt is lazily instanced on
+   first focus, `:120-121`) — the author's correction is accurate. ✓
+4. **Test gap. CONFIRMED.** `tests/test_interaction.gd` asserts shown-on-focus (`:78-79`,
+   `elif not detector._prompt.visible: failures.append(...)`), focus-switch, and the enabled-guard
+   *focus* drop (`:118-122`) — but **never asserts `_prompt.visible == false`** after a free/range-exit,
+   and never exercises the deferred-`queue_free` next-frame ordering. The hide invariant is untested. ✓
+
+**Verdict: the root cause is correct as written.** No correction needed.
+
+### Frozen fix — LOCKED
+1. **Drive `_prompt.visible` as a per-frame invariant of `_current`.** Replace the transition-only
+   `_show_prompt`/`_hide_prompt` pair with a single `_update_prompt(_current)` writer called at the END
+   of **every** `_refresh_current()` (after the existing selection + hysteresis + focus-edge emits,
+   which stay verbatim). Invariant:
+   `visible == (_current != null && is_instance_valid(_current) && _current.can_interact())`.
+   - Keep emitting `interactable_focused` / `interactable_unfocused` on the `best != _current`
+     transition (audio/telemetry consumers rely on the edge — unchanged contract). Guard the unfocus
+     emit with `is_instance_valid(_current)`.
+   - **Do NOT refactor the selection/hysteresis loop** (`:73-103`) — only the visibility *assertion*
+     moves. (Open Question 2: single `_current` focus is correct and preserved.)
+2. **Default the `.tscn` prompt hidden.** Set `visible = false` on the `InteractionPrompt` root in
+   `interaction_prompt.tscn`; clear the baked Label `text` to `""` (let `_render()` own it — it already
+   emits `""` for a null target). Add the belt-and-suspenders `if _target == null: visible = false` in
+   `interaction_prompt.gd::_ready()`. (Open Question 4: ship the flip — confirmed pure correctness.)
+3. **Add the regression test** (definition of done, Open Question 6): focus a stub → assert
+   `_prompt.visible == true`; then **free / range-exit / disable** the focused target and assert
+   `_prompt.visible == false` on the next `_refresh_current()`, including the deferred-`queue_free`
+   next-frame ordering that exposed root-cause #1. Extend `tests/test_interaction.gd`.
+
+**Scope confirmed: pure bug-fix.** Touches `interaction_detector.gd` + `interaction_prompt.tscn` +
+`interaction_prompt.gd` + `tests/test_interaction.gd` only. **No new knob, no EventBus signal, no
+arity change** (`interaction_requested` / focus / unfocus signals unchanged), **no save touch**, no
+generation touch → does not move the all-off fingerprint. File-disjoint from L0's three shared files
+and L3's `decision_hud.*`. ✓
+
+### Needs Director review
+- **Suppress the prompt during a rejected-pickup flash? (Open Question 1.)** When the bag is full,
+  `junk_pickup.gd::_flash_rejected()` pulses the junk but it stays grabbable (`can_interact()` still
+  true), so the prompt stays up. **Recommendation: leave the prompt up for RG1** (you *can* still try;
+  the item is grabbable the moment a slot frees — hiding mid-flash would mislead). If the Director wants
+  it suppressed, do it via an overridden `can_interact()` returning false for the flash window — the new
+  invariant then hides it automatically, no extra code path. Tone/feel call — defer to Director, do not
+  bundle into the L4 fix.
+
+### Cross-wave note (NOT an L4 blocker — do not act in L4)
+- After L1's input remap (`interact` rebound to **F** in `project.godot`), the prompt key-hint should
+  read **"[F]"**, not "[E]". `interaction_prompt.gd::_derive_key_hint()` (`:55-65`) reads the live
+  `interact` binding via `InputMap`, so a fresh (lazy) prompt instance picks up "[F]" automatically once
+  L1 lands — no code change needed. **Verify after L1 in RG1** (Open Questions 3 & 5). The baked-text
+  flip in this fix removes the only place "[E]" is hardcoded, which actually helps the L1 transition.

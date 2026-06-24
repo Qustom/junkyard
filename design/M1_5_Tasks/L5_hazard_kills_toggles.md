@@ -194,3 +194,118 @@ if not _killed_emitted:
 - **OQ-6 (do existing tests assert lethality? will they break?).** Audited: `tests/test_pingpong_hazard.gd`, `tests/test_bomb_hazard.gd`, `tests/test_spike_hazard.gd` all build their `RunConfig` via `RunConfig.new()` (the all-off default) and set only the magnitude knobs — so with the kills knobs defaulting **`true`**, every "kill ends the run / emits `new_hazard_killed`" assertion (ping-pong case (d) `test_pingpong_hazard.gd:109–114`; bomb case 1 `test_bomb_hazard.gd:143–146`; spike case (d) `test_spike_hazard.gd:149–155`) **still passes unchanged** — they get `*_kills=true` for free. **No existing test breaks.** Optional additive coverage (recommend, one per family): a case that sets `<prefix>_kills=false`, drives a contact, and asserts `GameState.run_active` stays true while `new_hazard_killed` still fires (OQ-3) — proving the toggle. This is the verifiable proof-of-done for L5 beyond the verify-driver retirement. **The verify driver itself** is the other place lethality is implicitly asserted (`_driven_default_preset` worked around it) — retiring it is the core deliverable.
 
 - **OQ-7 (which verify file owns the retirement — `test_rg1_m14_verify.gd` regression vs new `test_rg1_m15_verify.gd`?).** Per the iteration loop, RG1 spins a new `tests/test_rg1_m15_verify.gd` from the M1.4 file. **Question:** does the M1.4 verify stay as a frozen regression (in which case `_driven_default_preset()` lives on there, harmlessly) or is it superseded? **Recommendation:** L5 specifies the change against the M1.5 verify (RG1 applies it); if the team keeps `test_rg1_m14_verify.gd` runnable as a regression, retire `_driven_default_preset()` there too (it is now dead weight and the toggle makes the cleaner form available everywhere). Confirm with RG1's owner during Wave 3. *Coordination note, not a design call.*
+
+---
+
+## Resolved Decisions (Phase 3)
+
+_Fresh-eyes pass, 2026-06-24. Reviewer is NOT the L5 author. Resolved against the verified as-built code: the three K5
+guard sites (`pingpong_hazard.gd` `_on_contact()`, `bomb_hazard.gd` `_detonate()` `if hit:` block, `spike_hazard.gd`
+`_physics_process` `if not _killed_emitted:` block — all confirmed to emit `new_hazard_killed` then call
+`GameState.fail_run(&"death")` **unconditionally**), the `r1_catch_kills` mirror (`run_config.gd:79`,
+`hazard_entity.gd:189`), and the verify driver `_driven_default_preset()` / `_default_preset()`
+(`tests/test_rg1_m14_verify.gd:431-462`, used at `:112`). All three K5 setups snapshot `_cfg` so a `_cfg.<prefix>_kills`
+read is zero-friction. The knob declarations are owned by L0 (frozen in `L0` RD-1/RD-7: `hpp_kills`/`hbomb_kills`/
+`hspike_kills`, `bool`, default `true`, +3 to the count)._
+
+### RD-1 — OQ-3 (does a non-lethal hazard still emit `new_hazard_killed`?): YES, emit-always — RESOLVED on telemetry-cleanliness merit
+
+**Locked: a non-lethal hazard STILL emits `new_hazard_killed` on contact; only `fail_run` is gated by `*_kills`.** The guard
+wraps **only** the `fail_run` call, leaving the `new_hazard_killed.emit(...)` line above it untouched:
+
+```gdscript
+EventBus.new_hazard_killed.emit(&"<kind>", depth, run_t_ms)   # ALWAYS — contact occurred
+if _cfg.<prefix>_kills:
+    GameState.fail_run(&"death")                              # gated — only the kill is conditional
+```
+
+This is the **exact R1 mirror**: `hazard_entity.gd` always emits `hazard_caught` and only the `fail_run` is behind
+`r1_catch_kills` (`:188-193`). Three reasons it is the clean resolution:
+
+1. **Telemetry comparability.** `new_hazard_killed` already means "a lethal contact occurred." Contact counts stay
+   independent of the lethality toggle, so RG2 can compare contact frequency across lethal and non-lethal cohorts on the
+   same metric — the whole point of config-marked telemetry.
+2. **It is what the verify driver needs.** The driver runs the real preset with `*_kills=false`; emit-always means the
+   driven run still logs the contact rows (proving the entities spawn and behave), it just doesn't end the run.
+3. **No existing test breaks.** Audited (matches L5 OQ-6): `test_pingpong_hazard.gd`, `test_bomb_hazard.gd`,
+   `test_spike_hazard.gd` build `RunConfig` via `RunConfig.new()` and set only magnitude knobs → they inherit `*_kills=true`
+   and every "kill ends the run / emits `new_hazard_killed`" assertion **passes unchanged** (the default `true` gives them
+   today's lethal behaviour for free). Emit-*only-when-lethal* (the rejected option b) would instead **break** those
+   `new_hazard_killed`-fired assertions on any future non-lethal test and lose the contact signal — so emit-always is also
+   the lower-risk choice.
+
+**The one cosmetic cost** (the row name `new_hazard_killed` is a slight misnomer on a non-lethal contact) is identical to
+R1's pre-existing `hazard_caught`-on-non-fatal-catch and is **not** a Director call — it is a documented house convention.
+*Flag to RG2 only* that on a `*_kills=false` cohort, a `new_hazard_killed` row means "would-have-killed contact," not a
+death — RG2 segments deaths by the run-end cause, not by this row, so the death metric stays clean. **No Director review
+needed.**
+
+### RD-2 — OQ-1 / OQ-2 (non-lethal motion/tell): behaves fully, only `fail_run` skipped — RESOLVED (technical)
+
+A `*_kills=false` hazard keeps its **full state machine and tell** — the bomb arms→pulses→flashes, the bouncer keeps
+travelling/bouncing, the spike keeps spinning — it simply does not end the run. This is forced by the as-built structure and
+is the minimal change:
+
+- **Bomb:** `_flash_blast()` and the `queue_free` timer already sit OUTSIDE the `if hit:` guard (`bomb_hazard.gd`), so
+  "detonate visually, don't kill" is the natural shape — only the two lines inside `if hit:` (`emit` stays, `fail_run`
+  gated) change.
+- **Ping-pong / spike:** motion/tell are independent of the contact branch; wrapping `fail_run` changes nothing about
+  travel/rotation.
+
+Mirrors R1 (a non-lethal R1 still chases). Makes the driven verify a faithful real-preset run. *No Director review needed.*
+
+### RD-3 — OQ-4 (non-lethal re-fire / latch): leave latches AS-IS for L5 scope — RESOLVED (technical)
+
+L5's purpose is to make the verify driver work (entities spawn + behave but cannot end the run), NOT to ship a non-lethal
+preset for telemetry. So leave the one-shot latches unchanged: ping-pong re-arms on its falling edge (re-tests cleanly);
+spike's `_killed_emitted` latches permanently (emits once ever per entity, then never again); bomb is one-shot terminal.
+A non-lethal spike that should re-log every re-touch is a **follow-up** if a future sweep ships a non-lethal K5 preset —
+note it in the worklog, do not build it now. *No Director review needed.*
+
+### RD-4 — OQ-5 (does the preset set the kills knobs?): do NOT set them; assert in the shape-check — RESOLVED (minor design)
+
+`make_default_play_preset()` does **not** set `hpp_kills`/`hbomb_kills`/`hspike_kills` (default `true` already yields the
+lethal preset — minimal diff). Instead, the verify shape-check (`_verify_default_preset_shape`) **adds assertions that the
+real preset's three `*_kills` are `true`**, so the lethal-preset guarantee is test-enforced rather than restated in the
+preset body. *No Director review needed.*
+
+### RD-5 — The `_driven_default_preset()` retirement (the core L5 deliverable), SPEC LOCKED against the verified driver
+
+Verified the driver shape (`tests/test_rg1_m14_verify.gd`):
+- `_default_preset()` (`:437-444`): builds the real `make_default_play_preset()`, sets `build_tag`, `seed_override=12345`,
+  and `c.r1_catch_kills = false` (so R1 can't pre-empt the scripted end-cause).
+- `_driven_default_preset()` (`:457-462`): clones `_default_preset()` and sets `hpp_enabled=false` / `hbomb_enabled=false` /
+  `hspike_enabled=false` — **disabling the K5 entities entirely** so the unconditionally-lethal shallow spike
+  (`hspike_base_count=1`) can't kill the driven player before the scripted `extract`/`timeout` cause wins.
+- Used once, at `:112`: `await _drive_run(_driven_default_preset(), &"extract", "M1-default-preset")`.
+
+**Locked retirement (RG1 carries this into `tests/test_rg1_m15_verify.gd`; L5 specifies it):**
+
+1. **Delete `_driven_default_preset()` (`:457-462`) and its doc-comment (`:446-456`).**
+2. In `_default_preset()` (`:437-444`), add the three K5 kills-off lines alongside the existing `r1_catch_kills = false`:
+   ```gdscript
+   c.r1_catch_kills = false      # existing
+   c.hpp_kills = false           # L5: K5 non-lethal so the driven end-cause matrix wins
+   c.hbomb_kills = false
+   c.hspike_kills = false
+   # hpp_enabled / hbomb_enabled / hspike_enabled stay TRUE — entities now SPAWN and behave;
+   # they just cannot end the run, so the scripted end-cause is reached.
+   ```
+3. The call at `:112` becomes `await _drive_run(_default_preset(), &"extract", "M1-default-preset")`.
+4. **Shape-checks unchanged + strengthened:** `_verify_default_preset_shape()` keeps calling the **real**
+   `make_default_play_preset()` and continues to assert the K5 hazards ship `_enabled = true`, and **adds** the RD-4
+   assertions that the real preset's `hpp_kills`/`hbomb_kills`/`hspike_kills` are `true`. This is the safety the toggle buys:
+   the driven matrix now exercises the **real** K5 spawn (the entities instantiate + behave), and the shape-check proves the
+   shipped preset is lethal — the `_driven_default_preset()` workaround that hid the K5 spawn from the driven run is gone.
+
+> **OQ-7 (which file owns it):** L5 specifies the change against the M1.5 verify; if `test_rg1_m14_verify.gd` is kept runnable
+> as a frozen regression, the same retirement should be applied there too (it is now dead weight). This is a Wave-3
+> coordination note with RG1's owner, **not a design call** — no Director review needed.
+
+### Needs Director review
+
+**None.** Every L5 open question resolves on technical/design merit (emit-always mirrors R1; non-lethal-but-behaving is the
+minimal structural change; latches stay as-is for L5 scope; the preset relies on the `true` default; the driver retirement is
+mechanical). The one item that *touches* the Director — whether to ship a non-lethal K5 preset for telemetry — is explicitly
+**out of L5 scope** (RD-3) and is a future-sweep follow-up, not an L5 decision. The `*_kills` default-`true` polarity is the
+contract-preserving all-off-equivalent (L0 RD-1/OQ-8), not a fun call.

@@ -453,6 +453,195 @@ a fresh-eyes reviewer will flag it.)
 
 ## Resolved Decisions (Phase 3)
 
-_Pending. Filled after the L1 + L2 Phase-2 designs are written and cite the exact knob names/signals they read/emit, a
-fresh-eyes pass resolves OQ-1…OQ-8, and the Director dispositions OQ-3 (throw kill scope, fun/scope). Until then the knob set +
-the final count (provisional 91) are NOT locked, and L0's code task is not dispatched (the four-phase gate, `CLAUDE.md`)._
+_Fresh-eyes pass, 2026-06-24. Reviewer is NOT the author of L0/L1/L2/L5. Resolved against the verified as-built code
+(`run_config.gd`, `config_menu.gd`, `event_bus.gd`, `tests/test_run_config.gd`, `tests/test_config_menu.gd`,
+the three K5 entity scripts, `tests/test_rg1_m14_verify.gd`). Director-judgment calls are flagged under "Needs Director
+review" with a recommendation; everything else is resolved on technical/design merit and is now LOCKED for L0's code task._
+
+### RD-0 — The contested knob count, reconciled DEFINITIVELY (the @export-vs-CFG-row confusion)
+
+There is **one count, and it is 81 — there is no second number.** The L1 doc's "72 `@export var` vs the CFG menu's 81 rows"
+was a miscount, not a real discrepancy. Verified directly:
+
+- `data/run_config/run_config.gd` declares **81** editor knobs: **72** plain `@export var` **+ 9** `@export_enum` (the 9
+  enums, verified: `r1_spawn_distribution`, `r1_density_metric`, `r2_mechanism`, `r2_toll_resource`, `r3_penalty_kind`,
+  `quota_check_timing`, `quota_basis`, `cam_zoom_policy`, `timer_warning_channel`). The L1 doc counted only `@export var`
+  (72) and silently dropped the 9 `@export_enum` knobs — but an `@export_enum var x: int` **is** a stored+editor property and
+  **is** a CFG row (rendered as an `OptionButton`). So `72 + 9 = 81`.
+- `RunConfig.to_flat_dict()` returns **81 keys** — one per knob (verified: `grep -cE '^\s*"[a-z0-9_]+":'` on the return
+  literal = 81). `tests/test_run_config.gd` `expected_keys` lists all 81 and asserts **presence + flatness + JSON
+  round-trip** (NOT an exact count — `Case 5`, `:112-126`).
+- `tests/test_config_menu.gd:49` is the **hard exact count**: `if exported.size() != 81`. `_exported_fields()` (`:106-114`)
+  reflects every property with `STORAGE|EDITOR` usage (minus `script`/`resource_*`) — i.e. **all 81 `@export`/`@export_enum`
+  fields**. The CFG menu's `_assert_full_coverage()` (`config_menu.gd:254`) separately cross-checks that every exported
+  field has a bound MANIFEST control (crashes `_ready` if not). So the count and coverage are two distinct guards, both
+  keyed to the same 81.
+
+**There is no "@export-row vs CFG-row" gap.** The CFG MANIFEST has exactly one entry per exported field (the coverage
+assertion enforces this). `@export var` and `@export_enum var` both count as one knob, one flat-dict key, one MANIFEST row,
+one CFG widget. **Authoritative current count = 81.** L0's doc body (81→91) used the right baseline; the L1 doc's "72" is
+retired here.
+
+### RD-1 — The frozen M1.5 knob set, names, types, defaults (LOCKED, pending only the OQ-3 Director branch)
+
+L0 declares the following knobs. Contiguous-prefix house style; every new LEVER knob defaults off/neutral; `*_kills` default
+`true`. Resolutions of the soft OQs are folded in:
+
+**Throw group (`throw_`) — NEW `@export_group("L1 Throwing", "throw_")`, appended after the `exit_` group:**
+
+| knob | type | default | resolution |
+|---|---|---|---|
+| `throw_enabled` | `bool` | `false` | master gate; preset sets `true` (L1) |
+| `throw_speed` | `float` | `0.0` | px/s; preset value Director-swept |
+| `throw_max_range` | `float` | `0.0` | px before a miss → re-drop. **KEEP** (RD-2) |
+| ~~`throw_lifetime_s`~~ | — | — | **DROPPED** (RD-2): L1 uses an in-script lifetime fallback constant, not a knob |
+| `throw_kill_scope` | `@export_enum("pursuer_only","all_hazards") int` | `0` | **CONDITIONAL on the Director's OQ-3 call** (RD-3 + Needs-Director) |
+
+**Spawn-room pursuer — into the EXISTING `r1_` group/CFG section (OQ-1 resolved: existing `r1_`):**
+
+| knob | type | default | resolution |
+|---|---|---|---|
+| `r1_spawn_room_only` | `bool` | `false` | master-adjacent behaviour toggle; preset on (L2) |
+| `r1_patrol_speed` | `float` | `0.0` | px/s patrol pace; 0 = idle-pivot. preset Director-swept |
+
+L2's OQ-5/OQ-8 optional knobs `r1_patrol_pattern` and `r1_patrol_radius` are **NOT declared** (RD-4): L2's locked design uses
+Option A bounds (real room rect from `main_game.gd`) → no `r1_patrol_radius`; and pace-endpoints is the single recommended
+pattern → no `r1_patrol_pattern` enum. If the Director's OQ-2 (patrol pattern, fun call) picks a *selectable* pattern, L0
+adds `r1_patrol_pattern: int = 0` then (+1 knob) — see Needs-Director. Default scope is the 2-knob minimal set.
+
+**K5 lethality — one `bool` into EACH existing K5 group, default `true`:**
+
+| knob | type | default | group |
+|---|---|---|---|
+| `hpp_kills` | `bool` | `true` | `hpp_` (after `hpp_per_room_cap`) |
+| `hbomb_kills` | `bool` | `true` | `hbomb_` (after `hbomb_per_room_cap`) |
+| `hspike_kills` | `bool` | `true` | `hspike_` (after `hspike_per_room_cap`) |
+
+OQ-8 confirmed: `*_kills = true` is the all-off-*equivalent* for an already-lethal hazard (defaulting `false` would change
+today's behaviour and break the baseline contract). No Director call needed on the default polarity.
+
+### RD-2 — OQ-2 (throw miss condition): max-range knob ONLY; lifetime is an in-script constant (NOT a knob)
+
+L1's own OQ-4 recommends "max-range as the design rule (`throw_max_range`), plus a hidden generous lifetime fallback
+**constant in the script** (not a knob)" — mirroring how `hazard_entity.gd` keeps feel constants in-script. This is the
+right resolution and it is **consistent with L1's pseudocode** (`thrown_item.gd` integrates position and calls `_miss()` on
+`distance_to(_start) >= _max_range`; the lifetime is a belt-and-braces `SceneTreeTimer`, not a `RunConfig` field). So:
+**declare `throw_max_range` only; do NOT declare `throw_lifetime_s`.** This drops L0's provisional `throw_lifetime_s` knob.
+Net throw-group count: 4 knobs if OQ-3 keeps the enum, 3 if pursuer-only is hard-coded.
+
+> Note: L0's Phase-2 body (B.1) drew `throw_lifetime_s` as a knob; the L1 design (the consumer that actually reads it) does
+> NOT read a lifetime knob. The consumer wins — L0 follows L1. **`throw_lifetime_s` is retired.**
+
+### RD-3 — OQ-4 (throw-kill signal): dedicated `throw_killed_hazard`, do NOT reuse `new_hazard_killed` — RESOLVED on telemetry-cleanliness merit
+
+`new_hazard_killed(kind, depth, run_t_ms)` means **"a hazard killed the player"** — every existing emit (`pingpong_hazard.gd`,
+`bomb_hazard.gd`, `spike_hazard.gd`) fires it immediately before `GameState.fail_run(&"death")`, and `Telemetry` consumes it
+as a death-cause row. A throw-kill is the **opposite direction** ("the player killed a hazard"). Reusing `new_hazard_killed`
+for a throw-kill would inflate the death-by-hazard metric with player-initiated kills and **corrupt RG2's death analysis**.
+Therefore: **declare a dedicated signal.** This is L0's OQ-4 recommendation (b) and is now LOCKED.
+
+### RD-4 — OQ-5 (the frozen new-signal set + arities), RECONCILING the L0/L1/L2 naming disagreement
+
+The three Phase-2 docs used **inconsistent signal names** (L0: `item_thrown`/`throw_missed`/`throw_killed_hazard`/
+`pursuer_state_changed`; L1: `item_thrown`/`thrown_item_hit`/`thrown_item_missed`; L2: `hazard_pursuer_state`). L0 is the
+single-writer and must freeze ONE set. Frozen set, with arities (all telemetry rows → PRIMITIVES ONLY, per `event_bus.gd`
+discipline; the re-drop reuses the existing `junk_dropped(item, world_pos)`):
+
+```gdscript
+# === M1.5 signals (sole event_bus.gd edit this milestone, owner = L0) ===
+# --- L1 Throwing (telemetry rows; the re-drop reuses junk_dropped) ---
+signal item_thrown(item_id: StringName, depth: int, run_t_ms: int)
+signal throw_missed(item_id: StringName, depth: int, run_t_ms: int)
+signal throw_killed_hazard(item_id: StringName, kind: StringName, depth: int, run_t_ms: int)
+# --- L2 Spawn-room pursuer (telemetry row, rising-edge) ---
+signal hazard_pursuer_state(state: StringName, depth: int, run_t_ms: int)
+```
+
+Naming + arity resolutions (the points the docs disagreed on):
+- **`item_thrown(item_id, depth, run_t_ms)`** — agreed by both L0 and L1. LOCKED as-is.
+- **Miss signal: `throw_missed`** (L0's name), NOT L1's `thrown_item_missed`. Shorter, parallels `item_thrown`. Arity
+  `(item_id, depth, run_t_ms)` — no `world_pos` (the re-drop carries position on `junk_dropped`). LOCKED.
+- **Kill signal: `throw_killed_hazard`** (L0's name), NOT L1's `thrown_item_hit`. **Arity widened to include `item_id`**:
+  `(item_id, kind, depth, run_t_ms)` — L1's pseudocode emits `(_item.id, &"pursuer", …)`, so the item id is available and
+  RG2 may want "which items get spent as weapons." `kind` = `&"pursuer"` (R1) or a K5 kind (`&"pingpong"` etc.) if OQ-3
+  scopes wider. LOCKED.
+- **Pursuer-state: `hazard_pursuer_state(state: StringName, depth, run_t_ms)`** (L2's name + arity), NOT L0's
+  `pursuer_state_changed(state: int, …)`. **Resolved to L2's `StringName` state (`&"patrol"`/`&"chase"`)**, not L0's `int`
+  enum: L2 is the emitter and its pseudocode emits `&"patrol"`/`&"chase"`; a `StringName` is self-describing in the JSONL
+  (RG2 reads `&"chase"` directly, no enum decode), matching the `new_hazard_killed` `kind`-as-StringName house style.
+  Rising-edge-latched (no per-frame storm). LOCKED.
+
+No K5/L5 signal: the `*_kills` toggles only gate the *existing* `new_hazard_killed` emit + `fail_run` — see L5's RD.
+
+### RD-5 — OQ-1 (pursuer knobs go in the existing `r1_` group): RESOLVED — existing `r1_` group/section
+
+The spawn-room pursuer IS the R1 HazardEntity; `r1_spawn_room_only` + `r1_patrol_speed` join the existing `@export_group("R1
+Pursuing Hazard", "r1_")` and the existing `r1_` CFG section. **No new CFG section for the pursuer.** Confirms L0's OQ-1
+recommendation. The only NEW CFG `SECTIONS` entry L0 creates is the **`throw_`** section.
+
+### RD-6 — OQ-6 (BUG6 inert-trap): L0 does NOT add a `throw_no_speed` trap
+
+L0 leaves `inert_enabled_oppositions()` to its consumers, as K0 did. L1 may add `throw_no_speed` as a one-line append in its
+own task if it wants the trap; L0 only leaves the comment seam. Confirms L0's OQ-6 recommendation.
+
+### RD-7 — FINAL KNOB COUNT + the exact delta L0 must produce
+
+**Current authoritative count: 81** (RD-0). M1.5 additions:
+
+| group | knobs | count |
+|---|---|---|
+| L1 `throw_` | `throw_enabled`, `throw_speed`, `throw_max_range` (RD-2 dropped `throw_lifetime_s`) | 3 |
+| L1 `throw_` — conditional | `throw_kill_scope` enum | +0 or +1 (OQ-3 Director branch, RD-3/Needs-Director) |
+| L2 `r1_` | `r1_spawn_room_only`, `r1_patrol_speed` | 2 |
+| L5 `*_kills` | `hpp_kills`, `hbomb_kills`, `hspike_kills` | 3 |
+
+**Two final numbers map directly to the one open Director call (OQ-3 throw kill scope):**
+- **If the Director keeps `throw_kill_scope` as an enum** (recommended — see Needs-Director): **8 new → 81 → 89.**
+- **If the Director hard-codes pursuer-only** (drop the enum): **7 new → 81 → 88.**
+
+L0's code task **bumps `tests/test_config_menu.gd:49` from `81` to the frozen number (88 or 89)** once the Director picks,
+extends the `:44-48` arithmetic comment with `+ L1's 3 (or 4) throw_ + L2's 2 r1_ + L5's 3 *_kills`, and adds the matching
+keys to `tests/test_run_config.gd` `expected_keys`. **This is the only count L0 must produce; the 91/89 provisional spread in
+L0's body is superseded by 89/88 here** (the difference is RD-2 retiring `throw_lifetime_s`, which the L0 body still counted).
+
+### RD-8 — CFG structural rows (unchanged from L0 body, with RD-2 applied)
+
+- `SECTIONS`: **one** new entry — `{"prefix": "throw_", "title_key": "CFG_SEC_THROW", "gloss_key": "CFG_GLOSS_THROW",
+  "master": "throw_enabled", "collapsible": true}`. Pursuer + `*_kills` knobs join existing sections.
+- `MANIFEST["throw_"]` = `["throw_enabled", "throw_speed", "throw_max_range"]` (+`"throw_kill_scope"` iff OQ-3 enum). Append
+  `r1_spawn_room_only`, `r1_patrol_speed` to `MANIFEST["r1_"]`; append `hpp_kills`/`hbomb_kills`/`hspike_kills` to their
+  groups.
+- `FIELD_RANGE` (numeric scalars only; verified the consts exist): `"throw_speed": RANGE_SPEED` (`Vector2(0,120)`),
+  `"throw_max_range": RANGE_VIEW` (`Vector2(0,1920)`, px distance), `"r1_patrol_speed": RANGE_SPEED`. **`throw_lifetime_s` row
+  removed** (RD-2). `throw_kill_scope` (enum → OptionButton), `throw_enabled`/`r1_spawn_room_only`/`*_kills` (bools →
+  CheckButton) need no FIELD_RANGE. No new FIELD_STEP.
+- Stub CSV keys `CFG_SEC_THROW`, `CFG_GLOSS_THROW` in `ui/config/config_strings.csv` (menu falls back to raw keys for
+  per-row labels).
+
+### Needs Director review
+
+- **OQ-3 — Throw kill scope (fun/scope, owned by the agency cluster).** *"For RG1, should a thrown item kill ONLY the R1
+  pursuer, or also the ping-pong / bomb / spike K5 hazards?"* The L1 design surfaces a load-bearing **architectural** fact:
+  the R1 pursuer **and** the K5 ping-pong are CharacterBody2D bodies on the `hazard` layer (mask-hittable for free), but the
+  **K5 bomb and spike are plain Node2D with no physics body** (un-hittable by an overlap projectile without bespoke code).
+  So the natural fall lines are:
+    - **(a) pursuer-only** — projectile filters `if body is HazardEntity`. **Count: drop `throw_kill_scope` → 81 → 88.**
+    - **(b) "any `hazard`-group body" (= pursuer + ping-pong for free; bomb/spike out of scope, no body)** — keep
+      `throw_kill_scope` enum (`pursuer_only` default / `all_hazards`). **Count: 81 → 89.**
+  **Recommendation: keep the `throw_kill_scope` enum, default `pursuer_only` (→ count 89).** It matches the Director's named
+  RG1 scope (pursuer), keeps the sweep open with zero re-edit of the three shared files later, and the enum knob is free on
+  the EventBus/test side. The Director's pick maps directly: **pursuer-only-forever → 88; enum (recommended) → 89.** *(This
+  is the ONE count-affecting Director call.)*
+
+- **OQ-2 (L2) — Patrol pattern (fun/feel, owned by L2/Director).** L2 recommends pace-between-two-endpoints (with
+  `r1_patrol_speed=0` collapsing to idle). If the Director wants a *selectable* pattern (pace vs deterministic
+  random-walk vs idle), L0 must add `r1_patrol_pattern: int = 0` (+1 knob → 89/90). **Recommendation: single pace-endpoint
+  pattern, NO `r1_patrol_pattern` knob** (best legibility-per-line; `r1_patrol_speed=0` already gives the idle control).
+  *Defaults assume this; flag only if the Director wants the selector.*
+
+- **OQ-3 (L2) — Patrol/chase speed values (fun sweep, NOT a count question).** Preset values only (`make_default_play_preset`),
+  not a knob/count decision — noted for completeness; the Director sweeps these in RG1.
+
+**Lock status:** the knob *set*, *names*, *types*, *defaults*, *signal set + arities*, and the CFG structural rows are
+FROZEN. The single remaining variable is OQ-3 (throw kill scope), which toggles the final count between **88 and 89** and
+whether `throw_kill_scope` is declared. L0's code task is dispatched once the Director picks; everything else is locked.
