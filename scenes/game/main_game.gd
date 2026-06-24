@@ -73,6 +73,15 @@ const DEFAULT_CELL_SIZE_PX := 16
 ## working config (ratified shape (a)); if the node is absent we fall back to the
 ## all-off default at RUN_CONFIG_PATH so the loop still reaches the M1.0 baseline.
 @onready var _config_menu: ConfigMenu = %ConfigMenu
+## L1 (M1.5): the HUD inventory panel — the throw seam reads its highlighted_index()
+## as a PURE GETTER (the panel stays a view; main_game owns the model mutation + the
+## projectile spawn). Resolved by path off the DecisionHUD instance.
+@onready var _inventory_panel: InventoryPanel = get_node_or_null("DecisionHUD/Root/InventoryPanel")
+
+## L1 (M1.5): the thrown-item projectile scene. load()ed lazily on the first throw so
+## an all-off run (throw_enabled=false → _try_throw early-returns) never loads it and
+## stays byte-identical to M1.4.
+const THROWN_ITEM_SCENE_PATH := "res://entities/thrown_item/thrown_item.tscn"
 
 # Loaded fixtures (loaded once; pure data, never mutated here).
 var _piece_catalog: Array[ZonePieceData] = []          # baseline catalog (lvl OFF)
@@ -1081,6 +1090,70 @@ func _clear_band() -> void:
 	_spawner = null
 	for child in _band_container.get_children():
 		child.queue_free()
+
+
+# --- L1 (M1.5): throwing mechanic --------------------------------------------
+
+## Read the `throw` action (Space). main_game owns the input + the model mutation +
+## the projectile spawn so InventoryPanel stays a pure view (it exposes only the
+## highlighted_index()/highlighted_item() getters). Inert unless a run is active.
+func _unhandled_input(event: InputEvent) -> void:
+	if not GameState.run_active:
+		return
+	if event.is_action_pressed(&"throw"):
+		_try_throw()
+		get_viewport().set_input_as_handled()
+
+
+## Throw the highlighted inventory item in the player's facing direction. Knob-gated:
+## with throw_enabled=false this early-returns BEFORE loading the projectile scene, so
+## the all-off control is byte-identical to M1.4 (no scene load, no behaviour). Removes
+## the item from RunInventory (run-state) — which fires run_inventory_changed → the panel
+## re-validates its selector — and spawns a transient projectile under _band_container.
+func _try_throw() -> void:
+	var cfg: RunConfig = GameState.active_run_config
+	if cfg == null or not cfg.throw_enabled:
+		return
+	if _inventory_panel == null:
+		return
+	var idx: int = _inventory_panel.highlighted_index()
+	if idx < 0:
+		return   # empty bag: nothing highlighted → nothing to throw
+	var inv: RunInventory = GameState.run_inventory
+	if inv == null:
+		return
+	var item: JunkItem = inv.remove_at(idx)   # fires run_inventory_changed → panel re-validates
+	if item == null:
+		return   # raced/stale index — abort cleanly (nothing removed)
+	var player := get_tree().get_first_node_in_group(&"player") as Node2D
+	if player == null:
+		# No player in the tree → re-drop nothing exists to throw from; put the item back.
+		inv.try_add(item)
+		return
+	_spawn_thrown_item(item, player.global_position, player.facing, cfg)
+	EventBus.item_thrown.emit(item.id, GameState.current_depth_index, _throw_run_t_ms())
+
+
+## Instantiate the thrown-item projectile under _band_container (cleared with the band,
+## so it's run-state and never leaks). The projectile owns its own travel + hit/miss
+## resolution; main_game only spawns + positions it.
+func _spawn_thrown_item(item: JunkItem, origin: Vector2, dir: Vector2, cfg: RunConfig) -> void:
+	var scene := load(THROWN_ITEM_SCENE_PATH) as PackedScene
+	if scene == null:
+		push_error("MainGame: thrown-item scene missing at %s." % THROWN_ITEM_SCENE_PATH)
+		# Scene missing — don't lose the item: re-drop it where the player stands.
+		EventBus.junk_dropped.emit(item, origin)
+		return
+	var proj := scene.instantiate() as ThrownItem
+	_band_container.add_child(proj)
+	proj.global_position = origin
+	proj.setup(item, dir, cfg.throw_speed, cfg.throw_max_range, GameState.current_depth_index)
+
+
+## Monotonic ms for the item_thrown telemetry row (same engine clock the projectile
+## uses for its kill/miss rows, so the three rows of one throw share a time base).
+func _throw_run_t_ms() -> int:
+	return Time.get_ticks_msec()
 
 
 # --- Menu --------------------------------------------------------------------

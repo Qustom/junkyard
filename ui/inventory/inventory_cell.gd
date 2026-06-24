@@ -29,6 +29,19 @@ signal drop_requested(index: int)
 var _index: int = -1
 var _item: JunkItem = null
 
+## L1 (M1.5): the throw-selector highlight. PURE VIEW state (the panel owns which
+## index is highlighted; this cell only renders the on/off). Rendered as a bright
+## whole-cell StyleBoxFlat border (a non-colour FRAME channel, distinct from the
+## fill hue and the reject-flash red — readability rule). The theme-stylebox
+## override is added/removed on toggle so an un-highlighted cell keeps the default
+## PanelContainer look exactly.
+var _highlighted: bool = false
+## Border treatment for the highlighted cell (2px bright frame, transparent fill so
+## the cell's existing greybox/value content shows through unchanged).
+const _HIGHLIGHT_BORDER_PX := 2
+const _HIGHLIGHT_BORDER_COLOR := Color(1.0, 0.95, 0.4)   # bright amber frame
+var _highlight_stylebox: StyleBoxFlat = null
+
 
 func _ready() -> void:
 	# The Greybox child draws via this cell's _draw_greybox (no second script).
@@ -36,6 +49,25 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	per_slot_label.visible = false
 	greybox.queue_redraw()
+
+
+## L1 (M1.5): toggle the throw-selector highlight border on this cell. Pure view —
+## holds no truth (the panel decides which index is highlighted and calls this). A
+## bright whole-cell frame so the selected slot reads at a glance; removing the
+## override restores the default PanelContainer styling exactly (no leak).
+func set_highlighted(on: bool) -> void:
+	if _highlighted == on:
+		return
+	_highlighted = on
+	if on:
+		if _highlight_stylebox == null:
+			_highlight_stylebox = StyleBoxFlat.new()
+			_highlight_stylebox.bg_color = Color(0, 0, 0, 0)   # transparent fill: content shows through
+			_highlight_stylebox.set_border_width_all(_HIGHLIGHT_BORDER_PX)
+			_highlight_stylebox.border_color = _HIGHLIGHT_BORDER_COLOR
+		add_theme_stylebox_override("panel", _highlight_stylebox)
+	else:
+		remove_theme_stylebox_override("panel")
 
 
 ## Populate this cell as an occupied slot showing one carried item.
