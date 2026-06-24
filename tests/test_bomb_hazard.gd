@@ -47,6 +47,7 @@ func _run() -> void:
 	eb.run_ended.connect(_on_run_ended)
 
 	await _case_commit_then_fatal(gs, failures)
+	await _case_kills_off_survives(gs, failures)
 	await _case_fizzle_survives(gs, failures)
 	await _case_committed_no_defuse(gs, failures)
 	_case_all_off_inert(failures)
@@ -150,6 +151,39 @@ func _case_commit_then_fatal(gs: Node, failures: Array[String]) -> void:
 		failures.append("c1: bomb_pulse_started fired %d times (expected exactly 1)" % _pulse_started.size())
 
 	if is_instance_valid(bomb):   # W3-F1: a detonated bomb self-frees; guard the cleanup
+		bomb.queue_free()
+	player.queue_free()
+
+
+# === Case 1b (L5): hbomb_kills=false → fatal blast does NOT kill, but still emits ===
+## Identical geometry to case 1 (player inside the blast at detonation) but with the L5
+## kills toggle off: the bomb still arms/pulses/detonates and emits new_hazard_killed (emit-
+## always), but fail_run is gated so the run stays active. Proves the hbomb_kills knob.
+func _case_kills_off_survives(gs: Node, failures: Array[String]) -> void:
+	_reset_signal_logs()
+	gs.start_run(&"test_band", 44)
+	gs.set_current_depth(2, 2)
+
+	var rc := _bomb_config()
+	rc.hbomb_kills = false
+	var player := _make_player(Vector2.ZERO)   # ON the bomb → arms + inside blast
+	var bomb := _make_bomb(Vector2.ZERO, rc, player)
+
+	await _frames(1)
+	if _pulse_started.size() != 1:
+		failures.append("c1b: bomb did not arm when the player started inside the ring")
+
+	await _frames(40)   # let the fuse expire → detonation frame with player inside blast
+	# emit-always: the contact row STILL fires even though the kill is gated.
+	if not _killed_kinds.has(&"bomb"):
+		failures.append("c1b: kills-off bomb did not emit new_hazard_killed (emit-always expected)")
+	# But the run must NOT have ended (fail_run gated by hbomb_kills=false).
+	if _run_ended_reasons.has(&"death"):
+		failures.append("c1b: kills-off bomb ended the run despite hbomb_kills=false")
+	if not gs.run_active:
+		failures.append("c1b: run is no longer active despite hbomb_kills=false")
+
+	if is_instance_valid(bomb):
 		bomb.queue_free()
 	player.queue_free()
 

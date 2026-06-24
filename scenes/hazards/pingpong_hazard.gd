@@ -134,8 +134,13 @@ func _physics_process(delta: float) -> void:
 func _on_contact() -> void:
 	var run_t_ms: int = int(_spawn_time * 1000.0)
 	var depth: int = GameState.current_depth_index   # live within-band depth (BUG2)
-	EventBus.new_hazard_killed.emit(&"pingpong", depth, run_t_ms)
-	GameState.fail_run(&"death")   # existing end path; its _run_ended guard de-dupes.
+	EventBus.new_hazard_killed.emit(&"pingpong", depth, run_t_ms)   # emit-always: contact occurred
+	# L5: only the kill is gated (mirrors hazard_entity.gd's r1_catch_kills). Default true =
+	# today's lethal behaviour; false = the bouncer keeps travelling/bouncing but does NOT end
+	# the run (the non-lethal preset the verify driver uses). _killed_latched still de-dupes the
+	# emit on the rising edge and re-arms on the falling edge, so re-entry re-tests cleanly.
+	if _cfg.hpp_kills:
+		GameState.fail_run(&"death")   # existing end path; its _run_ended guard de-dupes.
 
 
 ## OQ-1 clamp: if the body crossed a room-rect edge this frame, snap it back inside and

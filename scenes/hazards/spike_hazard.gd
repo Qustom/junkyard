@@ -92,8 +92,13 @@ func _physics_process(delta: float) -> void:
 			_killed_emitted = true
 			var depth: int = GameState.current_depth_index
 			var run_t_ms: int = int(_alive_time * 1000.0)
-			EventBus.new_hazard_killed.emit(&"spike", depth, run_t_ms)
-			GameState.fail_run(&"death")   # single source of run-end truth; no local guard
+			EventBus.new_hazard_killed.emit(&"spike", depth, run_t_ms)   # emit-always: contact occurred
+			# L5: only the kill is gated (mirrors hazard_entity.gd's r1_catch_kills). Default true =
+			# today's lethal behaviour; false = the spike keeps spinning but a contact does NOT end
+			# the run. _killed_emitted latches permanently, so a non-lethal spike emits once per
+			# entity (RD-3: re-arming on re-touch is a deferred follow-up, out of L5 scope).
+			if _cfg.hspike_kills:
+				GameState.fail_run(&"death")   # single source of run-end truth; no local guard
 
 
 ## Pure hit test (deterministic, no physics): true iff `point` is within the lethal capsule
