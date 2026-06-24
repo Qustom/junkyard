@@ -24,6 +24,10 @@ var _key_hint: String = "[E]"
 
 func _ready() -> void:
 	_key_hint = _derive_key_hint()
+	# Resting state is OFF: never visible without a target, even if the scene
+	# default is ever lost. The detector's _update_prompt invariant turns it on.
+	if _target == null:
+		visible = false
 	# Render whatever target was set before _ready (set_target may run first).
 	_render()
 
