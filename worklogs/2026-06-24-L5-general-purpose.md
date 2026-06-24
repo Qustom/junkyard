@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (the programmer)
 - **Milestone:** M1.5 (Wave 2)
 - **Branch:** general-purpose/L5
-- **Commit:** ccc63c48ad7abd9003c76cc707139fb0e6317dad (worklog SHA self-references the prior amend; tree content otherwise final)
+- **Commit:** aa3634cbd72e49b6b41e54e2e388c9942079207e (the code+test+worklog L5 commit; a trailing one-line commit corrects this recorded SHA)
 
 ## What changed
 
