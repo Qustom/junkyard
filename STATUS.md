@@ -45,10 +45,19 @@ Wave-5 precedent). **L6** built + integrated on `main` (`302d2bd`, ff-merge), pu
 > controller (primary) unaffected. Recommend **Reviewed** (mouse is the primary KB/M device; fallback is secondary) — or a
 > small follow-up to track movement when neither mouse nor stick is active. `DESIGN_DEVIATIONS.md` carries it.
 
-### ▶ Next action (start here on a cold restart) — RE-PUBLISH L6 → DIRECTOR RE-TEST → re-gate verdict
+### Post-RG3 tuning round (2026-06-25) — applied direct, gate green
+
+Director-requested tweaks after the L6 build (details in `design/M1_5_Tasks/G4_findings_M1.5.md`): **dive timer 600→300s**;
+**controller throw fires on press edge only** (`_throw_held` latch — analog RT was burst-firing the whole bag); **hazard
+fair-share allocation** (the 30-room preset starved spikes to 0 under the shared 48 ceiling → Director "interleave" → each
+enabled type gets an equal slice, ≈16/16/16; low-density bands unchanged). All-off fp `e943ac9c8bc1` unmoved; full gate green
+(smoke · run_config 89 · config_menu 89/89 · new_hazard_spawn · rg1_m14 · rg1_m15 · throw · pursuer · dive_clock). On `main`.
+
+### ▶ Next action (start here on a cold restart) — RE-PUBLISH → DIRECTOR RE-TEST → re-gate verdict
 
 1. **Re-publish to itch** (standing playtest-gate step): `BUTLER=/mnt/c/wsl-libraries/butler/butler bash tools/push_itch.sh`
-   (Chrome/Edge, password-gated: https://qusto.itch.io/the-far-yard). Carries the L6 control rework + the tuned preset.
+   (Chrome/Edge, password-gated: https://qusto.itch.io/the-far-yard). Carries the L6 control rework + the tuned preset +
+   the post-RG3 tweaks (300s timer, trigger latch, hazard fair-share).
 2. **Director re-test** the reworked controls on desktop (mouse) + a controller: aim/throw/cycle feel, player points
    correctly, twin-stick comfort. The felt experience is human-deferred (headless can't inject mouse/gamepad).
 3. **RG3 verdict** — record **go → M2 / iterate → M1.6 / pivot** in `design/M1_5_Tasks/G4_findings_M1.5.md`. Also disposition

@@ -12,7 +12,7 @@ extends Node
 ## fp / build-id / duration / end-cause / no-leak / 81-knob snapshot):
 ##   - RG1 default play-preset: make_default_play_preset() is the M1.4 fun stack
 ##         (M1.3 base: LVL+R1+quota+camera on, R4 maze-only, R2/R3 off; PLUS K4 timer ON
-##         (600s / 60s-left warning / visual_only), all three K5 hazards ON with per_room_cap>0
+##         (300s / 60s-left warning / visual_only), all three K5 hazards ON with per_room_cap>0
 ##         and non-inert magnitudes, K7 exits ON: base 1 / per_depth 0.1 / keep-one / cap 7), is trap-free
 ##         (inert_enabled_oppositions empty), loops end-to-end, and does NOT leak into the
 ##         all-off control (RunConfig.new() stays the byte-identical baseline).
@@ -123,7 +123,7 @@ func _run() -> int:
 	if _failures.is_empty():
 		print("RG1 M1.4 VERIFY OK -- assembled M1.4 build runs the full loop. All-off control is ",
 			"byte-identical to the locked baseline (fp=%s); the default play-preset is the M1.4 " % BASELINE_FP,
-			"fun stack (M1.3 base + K4 timer 600s/60s-left/visual-only + all three K5 hazards on with ",
+			"fun stack (M1.3 base + K4 timer 300s/60s-left/visual-only + all three K5 hazards on with ",
 			"per_room_cap>0 + K7 exits ON: base1/per_depth0.1/keep-one/cap7), is trap-free (inert_enabled_oppositions empty), and ",
 			"does NOT leak into the all-off control; to_flat_dict() carries every knob incl. the ",
 			"K4/K5/K7 keys; the K5i spawn helper spawns >=1 of each new hazard kind bounded by the ",
@@ -186,11 +186,11 @@ func _verify_default_preset_shape() -> void:
 	if not preset.cam_enabled:
 		_failures.append("RG1/K3: default preset cam_enabled is false (camera must be ON)")
 
-	# --- K4 timer ON: 600s dive, 60s-left warning, visual_only. ---
+	# --- K4 timer ON: 300s dive, 60s-left warning, visual_only. ---
 	if not preset.timer_enabled:
 		_failures.append("RG1/K4: default preset timer_enabled is false (the dive timer must be ON)")
-	if not is_equal_approx(preset.timer_length_s, 600.0):
-		_failures.append("RG1/K4: default preset timer_length_s=%f, expected 600.0" % preset.timer_length_s)
+	if not is_equal_approx(preset.timer_length_s, 300.0):
+		_failures.append("RG1/K4: default preset timer_length_s=%f, expected 300.0" % preset.timer_length_s)
 	if not is_equal_approx(preset.timer_warning_threshold_s, 60.0):
 		_failures.append("RG1/K4: default preset timer_warning_threshold_s=%f, expected 60.0"
 			% preset.timer_warning_threshold_s)
@@ -566,7 +566,7 @@ func _inspect_log() -> void:
 func _note_human_deferred() -> void:
 	_human_deferred.append("K2: a missed quota WIPES meta (run resets) -- the headline stake -- checklist")
 	_human_deferred.append("K3: the camera shows a fixed FOV regardless of window size -- checklist")
-	_human_deferred.append("K4: the 60s-left timer warning fires VISUALLY on a 600s dive -- checklist")
+	_human_deferred.append("K4: the 60s-left timer warning fires VISUALLY on a 300s dive -- checklist")
 	_human_deferred.append("K5a/b/c: ping-pong / bomb-pulse / rotating-spikes read distinctly + kill -- checklist")
 	_human_deferred.append("K6: motion is smooth (physics_interpolation), no camera jitter -- checklist")
 	_human_deferred.append("K7: exits ON (base 1 / per_depth 0.1 / keep-one-at-spawn / cap 7) -- confirm multiple gates spawn + extract works -- checklist")

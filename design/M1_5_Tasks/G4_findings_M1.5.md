@@ -34,6 +34,18 @@ throw fires on LMB/RT in the aim direction; cycle on wheel/bumpers; Q/E + Space 
 `e943ac9c8bc1` unmoved, knob count 89, no save change.** Full headless gate green; the *felt* mouse/controller experience is
 **human-deferred to a Director re-test** (headless can't inject real mouse/gamepad hardware).
 
+### Post-RG3 tuning round (2026-06-25, Director-requested, applied direct)
+- **Dive timer 600s → 300s** (preset `timer_length_s`; the 60s-left warning is unchanged — now the last fifth).
+- **Controller throw fires on the press edge only** (`main_game._unhandled_input` `_throw_held` latch). Without it the analog
+  RT bound to the `throw` action emitted a stream of motion events that each read as `is_action_pressed`, burst-firing the whole
+  bag on one held trigger. Digital LMB/Space were already single-event, so this is a no-op for them.
+- **Hazard fair-share allocation** (`main_game._spawn_new_hazards`): the earlier **30-room** preset tuning starved the rotating
+  spike to ZERO — all three new hazards share one 48-body ceiling, previously filled in the type order pingpong→bomb→spike, so at
+  30 rooms pingpong+bomb consumed all 48 first. **Director disposition: interleave.** The ceiling is now split fair-share across
+  the enabled types (≈16/16/16 at 30 rooms; the slice never binds when a type's demand is under it, so low-density bands are
+  unchanged). Caught because `test_rg1_m14_verify`'s ≥1-spike spawn-plan assertion was not re-run after the 30-room change.
+  All-off fp `e943ac9c8bc1` unmoved; `test_new_hazard_spawn` (ceiling-saturation + determinism) + both RG1 verifies green.
+
 ### Carry-forward for the re-test
 - **Keyboard-only-no-mouse aim edge (L6-F1, awaiting Director disposition):** because `aim` initialises to `DOWN` and the
   resolver holds the last aim before falling back to movement, a player using the **pure-keyboard fallback** (Space/Q-E, never

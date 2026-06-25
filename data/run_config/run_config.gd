@@ -764,7 +764,7 @@ static func make_default_play_preset() -> RunConfig:
 	# in the re-gate instead of the implicit DiveClockConfig default. Pure run-state: timer_*
 	# never feed fingerprint(), so the all-off control (timer_enabled=false) is untouched.
 	c.timer_enabled = true
-	c.timer_length_s = 600.0                    # Director pre-playtest tweak: 600s (10 min) dive
+	c.timer_length_s = 300.0                    # Director sweep (M1.5, was 600): 300s (5 min) dive
 	c.timer_warning_threshold_s = 60.0          # Director pre-playtest tweak: warn with 60s left
 	c.timer_warning_channel = 0                 # visual_only (audio gated to M2 — Phase-3 lock)
 

@@ -347,9 +347,11 @@ const HSPIKE_SCENE_PATH := "res://scenes/hazards/spike_hazard.tscn"      # K5c S
 ## K5i: band-wide ceiling across ALL THREE new hazard types COMBINED (OQ-3, Director-flagged
 ## value 48; RG1 must measure the worst-case combined tick time). SEPARATE from R1's
 ## R1_DENSITY_BAND_CEILING (R1 keeps its own 64 budget); this bounds K5a+K5b+K5c together so
-## three stacked per-depth budgets can't flood the band with _physics_process nodes. The
-## descriptor order (pingpong → bomb → spikes) is the INTENTIONAL shared-ceiling STARVATION
-## order: when the budget runs low, later types in the list get fewer/none.
+## three stacked per-depth budgets can't flood the band with _physics_process nodes. L6-followup
+## (M1.5): the ceiling is now split FAIR-SHARE across the enabled types (each gets an equal slice;
+## the descriptor order only decides who absorbs the integer remainder), so a dense early type can
+## no longer starve a later one — see _spawn_new_hazards. When a type's demand is under its slice
+## the split never binds, so low-density bands are unaffected.
 const NEW_HAZARD_BAND_CEILING: int = 48
 
 ## K5i: per-instance angular stride for the ping-pong's deterministic initial direction —
@@ -368,7 +370,8 @@ const NEW_HAZARD_SPAWN_SAFE_CELLS: float = 2.5
 
 ## K5i: one descriptor per new hazard type — its telemetry kind, scene path, and the FOUR
 ## spawn-seam knobs read off rc. This is the ONLY per-type data; the spawn loop is written
-## ONCE and dispatched over this table. Order is the documented starvation order (above).
+## ONCE and dispatched over this table. Order now only sets remainder priority for the fair-share
+## ceiling split (L6-followup); it is no longer a starvation order.
 func _new_hazard_descriptors(rc: RunConfig) -> Array[Dictionary]:
 	return [
 		{ "kind": &"pingpong", "path": HPP_SCENE_PATH, "enabled": rc.hpp_enabled,
@@ -411,29 +414,57 @@ func _spawn_new_hazards(rc: RunConfig, band: Band, spawn_pos: Vector2 = Vector2.
 	var tree := _band_container.get_tree()
 	var player: Node2D = tree.get_first_node_in_group(&"player") as Node2D if tree != null else null
 	var pieces := _density_pieces_sorted(band)   # depth asc, then (y,x) — the J3 stable order
-	var spawned_total: int = 0                   # band-wide accumulator ACROSS all new types
 
+	# L6-followup (M1.5): FAIR-SHARE the shared band ceiling across the enabled types instead of
+	# the old type-ordered starvation (pingpong→bomb→spike, where a dense early type ate the whole
+	# ceiling). Pre-filter to the types that will actually spawn (enabled + non-neutral + scene
+	# loads), then give each an equal slice of NEW_HAZARD_BAND_CEILING (earlier types in the
+	# descriptor order take the integer remainder, so the slices sum to exactly the ceiling). No
+	# early type can starve a later one when the combined per-depth demand exceeds the ceiling
+	# (the 30-room spike-starvation fix). When each type's demand is UNDER its slice (e.g. the
+	# ~9/9/9 the 19-room preset produced) the slice never binds → placement unchanged. PURE
+	# run-state, NO RNG: all-off has no enabled type → `active` empty → no nodes → fp UNMOVED.
+	var active: Array[Dictionary] = []
 	for desc in _new_hazard_descriptors(rc):
 		if not desc["enabled"]:
 			continue   # type off → never load its scene (all-off-equivalent for that type)
-		if spawned_total >= NEW_HAZARD_BAND_CEILING:
-			break
-		var base: int = desc["base"]
-		var per_depth: float = desc["per_depth"]
-		var per_room_cap: int = desc["cap"]
-		if base <= 0 and per_depth <= 0.0:
+		if desc["base"] <= 0 and desc["per_depth"] <= 0.0:
 			continue   # neutral knobs → no node for this type (all-off-equivalent)
 		var scene := load(desc["path"]) as PackedScene
 		if scene == null:
 			push_error("MainGame: new-hazard scene missing at %s." % desc["path"])
 			continue
-		var kind: StringName = desc["kind"]
+		active.append({ "kind": desc["kind"], "scene": scene, "base": desc["base"],
+			"per_depth": desc["per_depth"], "cap": desc["cap"] })
+	if active.is_empty():
+		return
 
-		# Walk pieces in the J3 stable depth-sorted order so the band-ceiling truncation is
-		# reproducible (later/deeper pieces are starved first when the budget runs out).
+	var n_active: int = active.size()
+	var base_share: int = NEW_HAZARD_BAND_CEILING / n_active
+	var remainder: int = NEW_HAZARD_BAND_CEILING % n_active
+	var spawned_total: int = 0                   # band-wide accumulator ACROSS all new types
+
+	for ti in n_active:
+		if spawned_total >= NEW_HAZARD_BAND_CEILING:
+			break
+		var d: Dictionary = active[ti]
+		# This type's fair slice of the ceiling; earlier descriptor-order types absorb the
+		# remainder so the per-type slices sum to exactly NEW_HAZARD_BAND_CEILING.
+		var type_budget: int = base_share + (1 if ti < remainder else 0)
+		var type_spawned: int = 0
+		var base: int = d["base"]
+		var per_depth: float = d["per_depth"]
+		var per_room_cap: int = d["cap"]
+		var scene: PackedScene = d["scene"]
+		var kind: StringName = d["kind"]
+
+		# Walk pieces in the J3 stable depth-sorted order so the truncation is reproducible
+		# (deeper pieces are starved first within a type when its slice or the ceiling runs out).
 		for p in pieces:
 			if spawned_total >= NEW_HAZARD_BAND_CEILING:
 				break
+			if type_spawned >= type_budget:
+				break   # this type has used its fair slice — leave the rest for the others
 			var depth: int = p.depth_index
 			# BUG7: never place a new hazard in the depth-0 entry piece — that's where the player
 			# spawns, so a base_count >= 1 hazard there is a frame-0 spawn-kill. Skipping it keeps
@@ -444,6 +475,7 @@ func _spawn_new_hazards(rc: RunConfig, band: Band, spawn_pos: Vector2 = Vector2.
 			var n: int = base + int(floor(per_depth * float(depth)))
 			if per_room_cap > 0:
 				n = mini(n, per_room_cap)
+			n = mini(n, type_budget - type_spawned)                # this type's fair slice
 			n = mini(n, NEW_HAZARD_BAND_CEILING - spawned_total)   # shared remaining budget
 			if n <= 0:
 				continue
@@ -465,6 +497,7 @@ func _spawn_new_hazards(rc: RunConfig, band: Band, spawn_pos: Vector2 = Vector2.
 				hz.global_position = pos
 				hz.setup(rc, player, _new_hazard_spawn_ctx(kind, p, k, spawned_total, room_bounds))
 				spawned_total += 1
+				type_spawned += 1
 
 
 ## K5i (M1.4): build the per-kind spawn_ctx Dictionary for one placed instance (the LOCKED
@@ -1162,15 +1195,26 @@ func _clear_band() -> void:
 
 # --- L1 (M1.5): throwing mechanic --------------------------------------------
 
-## Read the `throw` action (Space). main_game owns the input + the model mutation +
-## the projectile spawn so InventoryPanel stays a pure view (it exposes only the
-## highlighted_index()/highlighted_item() getters). Inert unless a run is active.
+## Edge-latch for the `throw` action. An analog trigger (RT, L6) bound to the action
+## emits a STREAM of InputEventJoypadMotion events while held, each of which reads as
+## is_action_pressed — without this latch a single held trigger throws the whole bag in
+## a burst. We throw only on the rising edge (press) and re-arm on release. Digital
+## inputs (LMB, Space) already fire one press event, so this is a no-op for them.
+var _throw_held: bool = false
+
+## Read the `throw` action (Space / LMB / RT — L6). main_game owns the input + the model
+## mutation + the projectile spawn so InventoryPanel stays a pure view (it exposes only
+## the highlighted_index()/highlighted_item() getters). Inert unless a run is active.
 func _unhandled_input(event: InputEvent) -> void:
 	if not GameState.run_active:
 		return
 	if event.is_action_pressed(&"throw"):
-		_try_throw()
+		if not _throw_held:
+			_throw_held = true
+			_try_throw()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_released(&"throw"):
+		_throw_held = false
 
 
 ## Throw the highlighted inventory item in the player's aim direction (L6: where the
