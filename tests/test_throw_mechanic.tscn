@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://l1throwtest0001"]
+[gd_scene format=3 uid="uid://dbknpx5c5mlcy"]
 
 [ext_resource type="Script" path="res://tests/test_throw_mechanic.gd" id="1"]
 
