@@ -662,9 +662,9 @@ func inert_enabled_oppositions() -> PackedStringArray:
 static func make_default_play_preset() -> RunConfig:
 	var c := RunConfig.new()                  # starts from the all-off control (NEVER mutated)
 
-	# --- Level scale: ON, ~19 rooms, big rooms (the new slider floor 4.0). ---
+	# --- Level scale: ON, 30 rooms, big rooms (the new slider floor 4.0). ---
 	c.lvl_enabled = true
-	c.lvl_room_count = 19                      # disposition B: 19 (sweepable)
+	c.lvl_room_count = 30                      # Director sweep (M1.5, was 19): longer dives
 	c.lvl_size_mult = 4.0                       # the new RANGE_MULT floor / most-fun cell size
 
 	# --- K2 quota (M1.4): the headline stakes — a per-run quota whose miss is a full
@@ -683,7 +683,7 @@ static func make_default_play_preset() -> RunConfig:
 	c.r1_depth_threshold = 1
 	c.r1_linger_seconds = 8.1
 	c.r1_chase_speed = 56.0
-	c.r1_speed_per_depth = 3.0                  # K1 (M1.4, was 18.9): flatten the per-depth chase-speed ramp (Director "catch_speed_per_depth → 3.0" maps to this, the only chase-speed-per-depth ramp on R1 — RD-3)
+	c.r1_speed_per_depth = 5.0                  # Director sweep (M1.5, was 3.0): steeper per-depth chase-speed ramp (the only chase-speed-per-depth ramp on R1 — RD-3)
 	c.r1_catch_radius = 24.0                    # unchanged — stays at the 24px collision floor so the catch test can trip and the BUG6 r1_catch_radius_too_small trap stays clear
 	c.r1_catch_radius_per_depth = 1.0           # K1 (M1.4, was 10.5): flatten the per-depth catch-radius lunge
 	c.r1_catch_kills = true

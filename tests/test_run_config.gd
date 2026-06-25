@@ -203,9 +203,9 @@ func _ready() -> void:
 		failures.append("preset: r4_enabled must be true")
 	if preset.r2_enabled or preset.r3_enabled:
 		failures.append("preset: R2/R3 must be OFF (Director F1)")
-	# Disposition B/C: 19 rooms, size 4.0 (the new slider floor).
-	if preset.lvl_room_count != 19:
-		failures.append("preset: lvl_room_count == %d, expected 19" % preset.lvl_room_count)
+	# M1.5 Director sweep: 30 rooms, size 4.0 (the new slider floor).
+	if preset.lvl_room_count != 30:
+		failures.append("preset: lvl_room_count == %d, expected 30" % preset.lvl_room_count)
 	if not is_equal_approx(preset.lvl_size_mult, 4.0):
 		failures.append("preset: lvl_size_mult == %f, expected 4.0" % preset.lvl_size_mult)
 	# Match-played shape (M1.3 close-out "occlusion off"): R4 maze ON, vision/fog/lost OFF.
@@ -286,7 +286,7 @@ func _ready() -> void:
 
 	# === Verdict ============================================================
 	if failures.is_empty():
-		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs, BUG6 inert_enabled_oppositions() detects all 4 traps (r3_no_thresholds/r4_no_effect/r1_no_spawn/r1_catch_radius_too_small), blesses maze-only R4, and []-clean for all-off + populated, J1 make_default_play_preset() is the F1 stack (LVL/R1 on, R4 maze-only/occlusion-off, R2/R3 off, 19 rooms, size 4.0), trap-free, and does NOT leak into the all-off control." % expected_keys.size())
+		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs, BUG6 inert_enabled_oppositions() detects all 4 traps (r3_no_thresholds/r4_no_effect/r1_no_spawn/r1_catch_radius_too_small), blesses maze-only R4, and []-clean for all-off + populated, J1 make_default_play_preset() is the F1 stack (LVL/R1 on, R4 maze-only/occlusion-off, R2/R3 off, 30 rooms, size 4.0), trap-free, and does NOT leak into the all-off control." % expected_keys.size())
 		get_tree().quit(0)
 	else:
 		for f in failures:
