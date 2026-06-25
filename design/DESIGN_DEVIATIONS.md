@@ -22,4 +22,14 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*(empty — no un-assessed deviations between waves)*
+**[2026-06-25] L6-F1 — pure-keyboard-no-mouse aim defaults to DOWN (the kept fallback degrades).**
+*What vs. the doc:* L6 §1 says aim falls back to the movement direction when no device has been used. As built, `aim`
+initialises to `DOWN` (non-zero) and `resolve_aim()` checks "hold last aim" (prev) *before* "movement direction", so a player
+using the **pure-keyboard fallback** (Space throw / Q-E cycle, never moving the mouse) aims permanently DOWN — the movement
+branch is unreachable once `prev` is the DOWN default.
+*Why:* the chosen priority (stick → mouse-after-motion → hold-last → move → DOWN) keeps controller aim stable on stick release
+(twin-stick convention) and never lets a stale cursor hijack aim; the side effect is the keyboard-only fallback never tracks
+movement. Mouse + controller (the **primary** schemes) are unaffected; all-off fp unmoved; gate green.
+*Claude's recommendation:* **Reviewed** — mouse is the primary KB/M device and the Director kept Q/E+Space as a *fallback*, not
+the main scheme. If a usable keyboard-only aim is wanted, file a small follow-up to track movement direction when neither
+mouse (`_mouse_active`) nor stick is active. Surfaced for the re-test in `design/M1_5_Tasks/G4_findings_M1.5.md`.

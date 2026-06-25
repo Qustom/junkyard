@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.5 (Agency & Legibility) — Waves 1, 2 & 3 DONE + pushed + closed out. **Build complete; published to itch. Next = Director playtest → RG2 → RG3 re-gate.**
-**Last updated:** 2026-06-24 (M1.5 **Wave 3 RG1 integrated** — `main`@`408ec94`, pushed, board RG1=Done. Full gate green (smoke · run_config 89 · config_menu 89/89 · `RG1 M1.5 VERIFY OK` exit 0 · throw · pursuer · no regressions); all-off fp `e943ac9c8bc1`. **Published to itch** (`m1-20260624-408ec94`). Changelog updated (M1.4→M1.5 delta). git-switch leak cleaned (checkout back on `main`). Next: **Director playtest the M1.5 build** → RG2 telemetry analysis → RG3 verdict.)
+**Current milestone:** M1.5 (Agency & Legibility) — Waves 1–3 + **Wave 4 (L6 control rework) DONE**. Director playtested (RG3) → ITERATE on controls → L6 built + integrated. **Next = re-publish to itch → Director re-test mouse/controller.**
+**Last updated:** 2026-06-25 (M1.5 **Wave 4 L6 integrated** — `main`@`302d2bd`, pushed, board L6=Done. Mouse-aim throw (player points at cursor, left-click throws, scroll cycles) + twin-stick controller (right-stick aim, RT throw, LB/RB cycle); Q/E+Space kept. Input-only: all-off fp `e943ac9c8bc1` unmoved, 89 knobs, no save change. Full gate green incl. new `resolve_aim` cases. RG3 feedback recorded in `design/M1_5_Tasks/G4_findings_M1.5.md`; close-out L6-F1 (keyboard-only aim→DOWN) awaiting Director disposition. Next: re-publish + Director re-test.)
 
 ---
 
@@ -28,24 +28,35 @@ L1 + L5 + L2 all integrated on `main` (merges `f336995`/`fc355c4`/`e353780`); fu
 - **L5** K5 `*_kills` toggles (`a2fe301`): guarded each K5 `fail_run` with `if cfg.<prefix>_kills` (emit-always); retired `_driven_default_preset()` (verify runs the real preset, kills off). Worklog `…-L5-…`.
 - **L2** spawn-room pursuer (`1f4f67d`): `HazardEntity` room-bound slow patrol (paces 2 endpoints @ `r1_patrol_speed=28`, chases iff `_room_bounds.has_point`); `setup` widened to 3-arg + `room_bounds` threaded via J2 `_piece_bounds_at_world` + a parallel J3 `_density_spawn_bounds` (golden byte-frozen); preset `r1_spawn_room_only=true`. New L2 cases in `test_pursuing_hazard`. Worklog `…-L2-…`.
 
-### ▶ Next action (start here on a cold restart) — M1.5 build DONE → DIRECTOR PLAYTEST → RG2/RG3 re-gate
+## ✓ M1.5 Wave 4 (L6 — control rework) — DONE (2026-06-25)
 
-**M1.5 Wave 3 (RG1) integrated 2026-06-24** — `main`@`408ec94`, pushed, board RG1=Done. The M1.5 build is complete +
-**published to itch** (`qusto/the-far-yard:html5 @ m1-20260624-408ec94`, Chrome/Edge only, password-gated:
-https://qusto.itch.io/the-far-yard). Wave-3 close-out: **0 formal deviations** (agent reported none; the only observation
-is harmless engine shutdown RID-leak noise printed *after* `RG1 M1.5 VERIFY OK`, exit 0 — same class as K5b W3-F1, no action).
+Director playtested the M1.5 build (RG3) → "controls are clunky" → **ITERATE on controls** (packaged as a wave, M1.4
+Wave-5 precedent). **L6** built + integrated on `main` (`302d2bd`, ff-merge), pushed, board=Done; ran in a clean worktree
+(`.claude/worktrees/L6`, removed). Full gate green: smoke · run_config 89 · config_menu 89/89 · `RG1 M1.5 VERIFY OK` exit 0
+· throw (L1+L6, flies along `player.aim`) · new `resolve_aim` cases · player_movement (no regression). **All-off fp
+`e943ac9c8bc1` unmoved; 89 knobs; no save change** (input is global, not run-config).
+- **L6** (`302d2bd`): decoupled `aim` from movement via pure `resolve_aim()` (right-stick>deadzone → mouse-after-motion →
+  hold-last → movement default); player turns to point at aim (nose+`facing` follow `aim`); throw on **LMB/RT** in the aim
+  direction; cycle on **wheel/LB-RB**; new `aim_*` right-stick actions; Q/E+Space+wheel/bumper all bound. `project.godot`
+  input + `player.gd` + `main_game.gd` throw seam. Worklog `worklogs/2026-06-25-L6-general-purpose.md`.
 
-**The re-gate now hands off to the Director (human plays + decides; Claude assembles + recommends):**
-1. **Director playtest** the M1.5 itch/desktop build across the fun stack + config sweeps (throw/highlight agency,
-   room-bound slow-patrol pursuer, money-below-timer, context-correct grab prompt). Export telemetry (web: in-game
-   "Export telemetry" button; desktop: `user://telemetry/run_log.jsonl`). Sweep guidance in `design/M1_5_Tasks/RG1_playtest_build.md`.
-2. **RG2 (`qa`)** — analyse returned telemetry: distributions per config side-by-side across M1.0–M1.5; did agency
-   (throw-kills), the room-bound pursuer (pursuer-state counts), and the legibility fixes land? throw-kill / miss-redrop counts.
-3. **RG3 (Director)** — record **go → M2 / iterate → M1.6 / pivot** in `design/M1_5_Tasks/G4_findings_M1.5.md`.
+> **Wave-4 close-out — for Director disposition:** **L6-F1** — pure-keyboard-no-mouse aim defaults to DOWN (the resolver
+> holds last-aim, init DOWN, before the movement fallback, so the Space/Q-E keyboard fallback never tracks movement). Mouse +
+> controller (primary) unaffected. Recommend **Reviewed** (mouse is the primary KB/M device; fallback is secondary) — or a
+> small follow-up to track movement when neither mouse nor stick is active. `DESIGN_DEVIATIONS.md` carries it.
+
+### ▶ Next action (start here on a cold restart) — RE-PUBLISH L6 → DIRECTOR RE-TEST → re-gate verdict
+
+1. **Re-publish to itch** (standing playtest-gate step): `BUTLER=/mnt/c/wsl-libraries/butler/butler bash tools/push_itch.sh`
+   (Chrome/Edge, password-gated: https://qusto.itch.io/the-far-yard). Carries the L6 control rework + the tuned preset.
+2. **Director re-test** the reworked controls on desktop (mouse) + a controller: aim/throw/cycle feel, player points
+   correctly, twin-stick comfort. The felt experience is human-deferred (headless can't inject mouse/gamepad).
+3. **RG3 verdict** — record **go → M2 / iterate → M1.6 / pivot** in `design/M1_5_Tasks/G4_findings_M1.5.md`. Also disposition
+   the L6-F1 close-out item.
 
 > **Standing contracts (M1.5):** all-off `RunConfig` default = permanent baseline (fp `e943ac9c8bc1`); fun values only in
-> `make_default_play_preset()`; config-marked telemetry; `run_ended` arity locked; verify branch topology before every merge
-> (qa git-switch leak — recurred again on RG1, cleaned); push + board mirror after every merge; wave close-out deviation sweep.
+> `make_default_play_preset()`; input changes are global (never touch the fp / knob count); `run_ended` arity locked; verify
+> branch topology before every merge (qa git-switch leak); push + board mirror after every merge; wave close-out deviation sweep.
 
 ---
 

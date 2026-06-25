@@ -13,12 +13,14 @@ system can be toggled/tuned from the in-game config menu.
 
 AGENCY
 ------
-* NEW — Throwing mechanic. You can now fight back. Highlight an inventory item with Q / E
-  (the selector wraps around your bag and re-validates if the bag changes), then press
-  Space to throw the highlighted item in the direction you're facing. A hit on a hazard
-  (the pursuer, or a ping-pong bouncer) KILLS it and consumes the item; a MISS (it hits a
-  wall or flies out of range) drops the item back into the world as a grabbable pickup, so
-  a thrown item is never simply lost.
+* NEW — Throwing mechanic. You can now fight back. The selector cycles a highlighted
+  inventory item (scroll wheel, or Q/E; wraps around your bag and re-validates if the bag
+  changes). You AIM with the mouse (the player turns to point at the cursor) and THROW with
+  a left-click — the item flies toward where you point. A hit on a hazard (the pursuer, or a
+  ping-pong bouncer) KILLS it and consumes the item; a MISS (it hits a wall or flies out of
+  range) drops the item back into the world as a grabbable pickup, so a thrown item is never
+  simply lost. On a controller it's twin-stick: the right stick aims and turns the player,
+  the right trigger throws, the bumpers cycle the highlight.
 
 
 THREAT LEGIBILITY
@@ -40,12 +42,23 @@ LEGIBILITY FIXES
   time.
 
 
-CONTROLS (updated)
-------------------
+CONTROLS (reworked)
+-------------------
+Mouse + keyboard:
+* Move — WASD / arrow keys.
+* Aim — the mouse; the player turns to point at the cursor.
+* Throw — left-click (throws the highlighted item toward the cursor). Space still works.
+* Cycle highlight — scroll wheel (Q / E still work).
 * F — grab / interact AND extract / descend (a single contextual action button).
-* Q / E — highlight the previous / next inventory item.
-* Space — throw the highlighted item.
-* (Move with the usual movement keys; the dive timer and money read top-right.)
+
+Controller (NEW — twin-stick):
+* Move — left stick / d-pad.
+* Aim — right stick (the player turns to point that way).
+* Throw — right trigger (RT).
+* Cycle highlight — left / right bumpers (LB / RB).
+* A — grab / interact / extract.  B — extract.  Start — pause.
+
+(The dive timer and money read top-right.)
 
 
 NOT YET IN THIS BUILD
