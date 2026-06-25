@@ -119,8 +119,35 @@ func _ready() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
+	# === CASE 4 (L6): the throw uses the player's AIM direction, not facing =======
+	# The throw seam (main_game._try_throw) passes player.aim to setup(); a thrown
+	# item must fly along that aim. Drive a known non-cardinal aim and assert _dir
+	# matches it (proving the seam reads aim, and the projectile honours that vector).
+	# Untyped (Variant) so we can read the Player's `aim` member + call resolve_aim
+	# without cross-file class-member resolution quirks (matches test_player_movement).
+	# Instantiated but NOT added to the tree: we only exercise the aim plumbing (a
+	# member + a pure method), so it needs no _physics_process / collision space.
+	var player: Variant = load("res://entities/player/player.tscn").instantiate()
+	# A deliberately non-cardinal aim that differs from any movement direction, so a
+	# stale "facing" source could not coincidentally produce it.
+	player.aim = Vector2(0.6, -0.8)   # already unit-length, up-and-right
+	var proj4 := THROWN_ITEM_SCENE.instantiate() as ThrownItem
+	add_child(proj4)
+	proj4.setup(_make_item(&"bolt"), player.aim, 180.0, 320.0, 2)
+	# resolve_aim should also surface this aim when the mouse is the active device.
+	var resolved: Vector2 = player.resolve_aim(
+		Vector2.ZERO, player.aim, true, Vector2.ZERO, Vector2.DOWN)
+	if not proj4._dir.is_equal_approx(player.aim):
+		failures.append("CASE4: projectile _dir %s != player.aim %s (throw must use aim)"
+			% [proj4._dir, player.aim])
+	if not resolved.is_equal_approx(player.aim):
+		failures.append("CASE4: resolve_aim did not surface the mouse aim (%s)" % resolved)
+	proj4.queue_free()
+	player.free()
+	await get_tree().process_frame
+
 	if failures.is_empty():
-		print("L1 OK — throw projectile verified: hazard-hit kills body + consumes item (no re-drop) + emits throw_killed_hazard; miss emits throw_missed + junk_dropped re-drop; one-shot _spent guard resolves exactly once.")
+		print("L1+L6 OK — throw projectile verified: hazard-hit kills body + consumes item (no re-drop) + emits throw_killed_hazard; miss emits throw_missed + junk_dropped re-drop; one-shot _spent guard resolves exactly once; CASE4 throw flies along player.aim (L6).")
 		get_tree().quit(0)
 	else:
 		for f in failures:

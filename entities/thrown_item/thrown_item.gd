@@ -45,7 +45,7 @@ func _ready() -> void:
 		_greybox.queue_redraw()
 
 
-## Initialise the projectile. `dir` is the throw direction (player.facing), `speed`/
+## Initialise the projectile. `dir` is the throw direction (player.aim — L6), `speed`/
 ## `max_range` come from the throw_* knobs, `depth` is the current within-band depth
 ## stamped onto the telemetry rows. Called by MainGame right after add_child + setting
 ## global_position to the player's position.

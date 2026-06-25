@@ -1173,7 +1173,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## Throw the highlighted inventory item in the player's facing direction. Knob-gated:
+## Throw the highlighted inventory item in the player's aim direction (L6: where the
+## player points — mouse / right stick — not the movement direction). Knob-gated:
 ## with throw_enabled=false this early-returns BEFORE loading the projectile scene, so
 ## the all-off control is byte-identical to M1.4 (no scene load, no behaviour). Removes
 ## the item from RunInventory (run-state) — which fires run_inventory_changed → the panel
@@ -1198,7 +1199,9 @@ func _try_throw() -> void:
 		# No player in the tree → re-drop nothing exists to throw from; put the item back.
 		inv.try_add(item)
 		return
-	_spawn_thrown_item(item, player.global_position, player.facing, cfg)
+	# L6: throw in the AIM direction (where the player points — mouse / right stick),
+	# not the movement direction. player.aim is the decoupled aim vector.
+	_spawn_thrown_item(item, player.global_position, player.aim, cfg)
 	EventBus.item_thrown.emit(item.id, GameState.current_depth_index, _throw_run_t_ms())
 
 
