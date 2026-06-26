@@ -59,3 +59,27 @@ throw fires on LMB/RT in the aim direction; cycle on wheel/bumpers; Q/E + Space 
 1. **Director re-test** the re-published L6 build on desktop (mouse) + a controller: does the aim/throw/cycle feel right; does
    the player point correctly; is the twin-stick mapping comfortable?
 2. **Verdict:** **go → M2** / **iterate → M1.6** / **pivot** — recorded here.
+
+---
+
+## RG3 re-test verdict (2026-06-26): **ITERATE → M1.6 (Surface & Staging)**
+
+The Director re-tested the reworked controls (L6 + post-RG3 tuning) and the loop. The control rework landed — the verdict
+is **ITERATE**, packaged as a full sub-version bump **M1.6** (four-phase pass), focused on the **meta/surface layer** that has
+been a debug harness up to now. Director work-order (three tasks):
+
+1. **A real main menu** — a proper entry screen, not the Start button glued onto the debug rail.
+2. **A walkable hub** — a between-runs staging area / departure point (greybox room you walk around): a **shop** to **sell+buy**
+   items (replacing the auto-`SellScreen` sell path), a **departure portal** to start a dive. **The dive clock does NOT run in
+   the hub** (timer is dive-only).
+3. **Debug-menu rework** — move it OFF the first screen; open it with the **P** key. Restructure into **tabs** (Hazards / Level
+   Generation / Timer & Quota / Vision / …) with **Vision options pulled out of the maze section into their own section**.
+
+Director-ratified scope (asked + answered 2026-06-26):
+- **Hub = walkable greybox room** (not a menu-screen); reuse the Player + interactable pattern.
+- **Shop = sell + buy** (replaces `SellScreen`'s sell path; adds a new buy-economy this iteration).
+- **App flow = Main Menu → Hub ⇄ Dive**; a new `main_menu.tscn` becomes the app entry (`run/main_scene`); `main_game.tscn`
+  becomes the **dive-only** scene; runs return to the hub.
+
+**L6-F1 (keyboard-only-no-mouse aims DOWN)** carried into M1.6 backlog as a minor follow-up — mouse + controller (the primary
+schemes) are unaffected; not blocking. Full M1.6 breakdown → `design/M1_6_Tasks/M1.6_Breakdown.md`.
