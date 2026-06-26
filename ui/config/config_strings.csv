@@ -14,7 +14,7 @@ CFG_SEC_R4,R4 · Maze / Navigation
 CFG_GLOSS_R1,a thing that chases you the deeper/longer you go
 CFG_GLOSS_R2,the walk back out costs you
 CFG_GLOSS_R3,a rising meter that punishes lingering
-CFG_GLOSS_R4,branching layout + limited vision; getting lost
+CFG_GLOSS_R4,branching layout; how the maze forks with depth
 CFG_CHIP_R1_SUMMARY,awaken@d≥{depth}, speed {speed}
 CFG_CHIP_R2_SUMMARY,{mechanism}, cost {cost}
 CFG_CHIP_R3_SUMMARY,climb {rate}/s, {levels} levels
@@ -123,3 +123,16 @@ CFG_FIELD_R1_PATROL_SPEED,patrol speed (px/s)
 CFG_FIELD_HPP_KILLS,kills on contact
 CFG_FIELD_HBOMB_KILLS,kills on contact
 CFG_FIELD_HSPIKE_KILLS,kills on contact
+CFG_TAB_HAZARDS,Hazards
+CFG_TAB_LEVELGEN,Level Generation
+CFG_TAB_VISION,Vision
+CFG_TAB_TIMEQUOTA,Timer & Quota
+CFG_TAB_EXPRETURN,Exposure & Return
+CFG_TAB_THROWCAM,Throw & Camera
+CFG_TAB_META,Meta
+CFG_SEC_R4_VISION,R4 · Vision / Fog
+CFG_GLOSS_R4_VISION,limited sight + fog + getting-lost proxy (the navigation-pressure half of R4)
+CFG_R4_VISION_GATED,(gated by the R4 master — enable R4 in Level Generation)
+CFG_EXPORT_TELEMETRY,Export telemetry
+CFG_EXPORT_DONE,Downloaded {name}
+CFG_EXPORT_EMPTY,No telemetry to export yet

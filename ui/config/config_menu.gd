@@ -103,9 +103,13 @@ const MANIFEST := {
 		"r3_enabled", "r3_base_climb_rate", "r3_rate_per_depth", "r3_threshold_levels",
 		"r3_penalty_kind", "r3_penalty_magnitude", "r3_max_forces_loss", "r3_decay_on_retreat",
 	],
+	# M4 (M1.6) — r4_ now lists MAZE-branch rows only (master + 3 branch knobs). The 4
+	# vision/fog rows split out to R4_VISION_FIELDS (rendered under the Vision tab's
+	# master-less "r4_vision_" pseudo-section). NO field renamed — coverage's `bound` set
+	# is byte-identical (every r4_* field still gets exactly one _build_row → _rows entry;
+	# r4_enabled stays the lone r4 SECTIONS master). See RD-1.
 	"r4_": [
 		"r4_enabled", "r4_branch_chance_base", "r4_branch_per_depth", "r4_max_branch_depth",
-		"r4_vision_radius", "r4_vision_tighten_per_depth", "r4_fog_enabled", "r4_lost_proxy_threshold",
 	],
 	"lvl_": [
 		"lvl_enabled", "lvl_room_count", "lvl_size_mult",
@@ -156,6 +160,36 @@ const MANIFEST := {
 		"throw_enabled", "throw_speed", "throw_max_range",
 	],
 }
+
+## M4 (M1.6) — the body/dim key for the split-out Vision pseudo-section. NEVER a real
+## SECTIONS prefix and NEVER added to _prefix_of's scan list (RD-1): the vision rows
+## keep the "r4_" master + ON/OFF chip (their fields begin with "r4_", so _prefix_of
+## routes them to "r4_"); this key is used ONLY for the Vision header + body dimming.
+const R4_VISION_KEY := "r4_vision_"
+
+## M4 (M1.6) — the 4 vision/fog rows, split OUT of MANIFEST["r4_"] into their own
+## Vision tab. NOT renamed: these are the SAME r4_vision_radius / r4_vision_tighten_per_depth
+## / r4_fog_enabled / r4_lost_proxy_threshold @export fields, just rendered under a
+## master-less Vision header instead of inside the maze section's body. Each still gets
+## exactly one _build_row → one _rows entry, so coverage's bound set is byte-identical (RD-1).
+const R4_VISION_FIELDS := [
+	"r4_vision_radius", "r4_vision_tighten_per_depth", "r4_fog_enabled", "r4_lost_proxy_threshold",
+]
+
+## M4 (M1.6) — tab taxonomy (RD-2, LOCKED). Each tab is a CSV title-key + an ordered
+## list of SECTION KEYS to render inside its scroll. A section key is a SECTIONS prefix
+## EXCEPT R4_VISION_KEY ("r4_vision_") which is the split-out, master-less Vision
+## sub-group. PURE PRESENTATION: coverage is keyed off _rows + SECTIONS masters, never
+## off this table — regrouping into tabs cannot change the 89-field bound set.
+const TABS := [
+	{"title_key": "CFG_TAB_HAZARDS",   "sections": ["r1_", "hpp_", "hbomb_", "hspike_"]},
+	{"title_key": "CFG_TAB_LEVELGEN",  "sections": ["lvl_", "r4_"]},          # r4_ here = MAZE rows only
+	{"title_key": "CFG_TAB_VISION",    "sections": [R4_VISION_KEY]},          # the split-out vision rows
+	{"title_key": "CFG_TAB_TIMEQUOTA", "sections": ["timer_", "quota_"]},
+	{"title_key": "CFG_TAB_EXPRETURN", "sections": ["r2_", "r3_"]},
+	{"title_key": "CFG_TAB_THROWCAM",  "sections": ["throw_", "cam_", "exit_"]},
+	{"title_key": "CFG_TAB_META",      "sections": [""]},
+]
 
 ## Per-field slider range lookup (§3.4a). Only numeric (int/float) scalar fields appear;
 ## bools/enums/strings/arrays use their own widgets. seed_override is an unbounded SpinBox.
@@ -263,7 +297,11 @@ var _summary_label: Label = null
 var _trap_label: Label = null             # J1/BUG6: non-blocking inert-opposition warn line
 
 # Built UI roots (created in _build_ui).
-var _scroll_vbox: VBoxContainer = null
+var _tab_container: TabContainer = null   # M4 (M1.6): the 7-tab restructure root
+
+# M4 (M1.6): pause-in-dive bookkeeping (RD-3). Only restore a pause WE set so the
+# overlay never stomps a pre-existing pause (e.g. an Esc menu).
+var _paused_by_overlay: bool = false
 
 
 func _ready() -> void:
@@ -275,6 +313,50 @@ func _ready() -> void:
 	_build_ui()
 	_assert_full_coverage()               # build-time: no RunConfig knob left unreachable
 	_refresh_all()
+	# M4 (M1.6): the rail is no longer the first screen — it is a P-toggle overlay mounted
+	# once on App.DebugOverlay (RD-7), hidden until the debug_menu_toggle (P) action. It is
+	# the lone PROCESS_MODE_ALWAYS node so P still toggles it while a paused dive freezes
+	# behind it (RD-3). apply_and_get_config() is read at the NEXT dive launch (RD-4).
+	visible = false
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	if not InputMap.has_action(&"debug_menu_toggle"):
+		# M0 owns the [input] action; a soft warning makes a mis-merge fail loud, not silent.
+		push_warning("ConfigMenu: input action 'debug_menu_toggle' missing — P-toggle inert (M0 owns it).")
+
+
+## M4 (M1.6): the P-toggle. _unhandled_input so a focused control's keypresses still win;
+## ALWAYS process-mode keeps this live while a dive is paused behind the overlay.
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"debug_menu_toggle"):
+		_toggle_overlay()
+		get_viewport().set_input_as_handled()
+
+
+## Show/hide the overlay. In the dive (App.current_state == &"dive") it pauses the tree so
+## the world + the K4 DiveClock freeze behind the menu (the clock is PROCESS_MODE_PAUSABLE,
+## so it stops with the tree — debug time does NOT burn the dive timer). No-op in Menu/Hub
+## (nothing live to freeze). Restores ONLY a pause the overlay itself set (RD-3).
+func _toggle_overlay() -> void:
+	visible = not visible
+	if not _pauses_dive():
+		return
+	if visible:
+		if not get_tree().paused:
+			get_tree().paused = true
+			_paused_by_overlay = true
+	elif _paused_by_overlay:
+		get_tree().paused = false
+		_paused_by_overlay = false
+
+
+## True iff we are in the live dive (per M0's App router, the single state authority).
+## Falls back to checking for a live main_game dive node under StateHost if the router
+## doesn't expose current_state (defensive; M0 RD-3 confirms the accessor exists).
+func _pauses_dive() -> bool:
+	var router := get_tree().get_first_node_in_group(&"app_router")
+	if router != null and &"current_state" in router:
+		return router.current_state == &"dive"
+	return get_tree().get_first_node_in_group(&"dive") != null
 
 
 # --- Working config -----------------------------------------------------------
@@ -354,7 +436,8 @@ func _exported_config_fields() -> Dictionary:
 # --- UI construction ----------------------------------------------------------
 
 func _build_ui() -> void:
-	# Outer panel fills the rail; a scroll holds summary bar + the five sections.
+	# Outer panel fills the overlay; the summary bar + Reset stay DOCKED above a 7-tab
+	# TabContainer (M4 / RD-2). The summary line + Reset are thus answerable from any tab.
 	var panel := PanelContainer.new()
 	panel.name = "Panel"
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -367,20 +450,30 @@ func _build_ui() -> void:
 
 	_build_summary_bar(outer)
 
-	var scroll := ScrollContainer.new()
-	scroll.name = "Scroll"
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	outer.add_child(scroll)
+	# M4 (M1.6): one TabContainer replaces the single ScrollContainer. Each tab is its
+	# own ScrollContainer (long tabs still scroll). PURE PRESENTATION — coverage is keyed
+	# off _rows + SECTIONS masters, not tab grouping, so the 89-field bound set is unchanged.
+	var tabs := TabContainer.new()
+	tabs.name = "Tabs"
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer.add_child(tabs)
+	_tab_container = tabs
 
-	_scroll_vbox = VBoxContainer.new()
-	_scroll_vbox.name = "Sections"
-	_scroll_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll_vbox.add_theme_constant_override("separation", 10)
-	scroll.add_child(_scroll_vbox)
-
-	for sec in SECTIONS:
-		_build_section(sec)
+	for tab in TABS:
+		var page := ScrollContainer.new()
+		page.name = tr(tab.title_key)               # TabContainer uses the child's name as the tab label...
+		page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		page.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		var col := VBoxContainer.new()
+		col.name = "Sections"
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_theme_constant_override("separation", 10)
+		page.add_child(col)
+		tabs.add_child(page)
+		tabs.set_tab_title(tabs.get_tab_count() - 1, tr(tab.title_key))   # ...set the tr() label explicitly
+		for section_key in tab.sections:
+			_build_section_into(col, section_key)
 
 
 func _build_summary_bar(parent: Control) -> void:
@@ -417,11 +510,21 @@ func _build_summary_bar(parent: Control) -> void:
 	bar.add_child(HSeparator.new())
 
 
-func _build_section(sec: Dictionary) -> void:
+## M4 (M1.6): render one section into `parent` (a tab's column). A section key is either
+## a real SECTIONS prefix (look up the descriptor + MANIFEST[prefix], unchanged header/
+## master/body) or R4_VISION_KEY ("r4_vision_") — the master-less Vision pseudo-section
+## whose body is R4_VISION_FIELDS (the split-out vision rows, NOT renamed). Factored from
+## the old _build_section so the same builder serves both real prefixes and the pseudo-key.
+func _build_section_into(parent: Control, section_key: String) -> void:
+	if section_key == R4_VISION_KEY:
+		_build_vision_pseudo_section(parent)
+		return
+
+	var sec := _section_descriptor(section_key)
 	var prefix: String = sec.prefix
 	var box := PanelContainer.new()
 	box.name = "Section_%s" % (prefix if prefix != "" else "meta")
-	_scroll_vbox.add_child(box)
+	parent.add_child(box)
 
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 4)
@@ -472,6 +575,110 @@ func _build_section(sec: Dictionary) -> void:
 		if field == sec.master:
 			continue
 		_build_row(body, field)
+
+	# M4 (M1.6): the Meta tab's telemetry-export button (re-homed from the retiring
+	# SellScreen, RD-9 fallback slot). NOT a knob row — it never touches _rows/coverage.
+	if prefix == "":
+		_build_meta_export_button(col)
+
+
+## M4 (M1.6): the master-less Vision pseudo-section (RD-1/RD-5). Renders the Vision header
+## (no master CheckButton — R4 is gated by the single r4_enabled master over in Level Gen)
+## + a body of R4_VISION_FIELDS. Registers _section_bodies[R4_VISION_KEY] so it dims off the
+## SAME r4_enabled master (the dual-dim in _on_master_toggled / _refresh_all). It does NOT
+## register a chip and is NOT in _prefix_of — the vision rows' chip/summary route through
+## the existing "r4_" prefix, keeping the single R4 ON/OFF chip in Level Gen authoritative.
+func _build_vision_pseudo_section(parent: Control) -> void:
+	var box := PanelContainer.new()
+	box.name = "Section_r4_vision"
+	parent.add_child(box)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	box.add_child(col)
+
+	var header := HBoxContainer.new()
+	header.name = "Header"
+	header.add_theme_constant_override("separation", 8)
+	col.add_child(header)
+
+	var title := Label.new()
+	title.text = tr("CFG_SEC_R4_VISION")
+	title.add_theme_font_size_override("font_size", 16)
+	header.add_child(title)
+
+	# Gloss (the section blurb) + a redundant non-colour cross-tab cue: the dim channel
+	# alone isn't enough across a tab boundary, so the header states the R4-master gate.
+	var gloss := Label.new()
+	gloss.text = tr("CFG_GLOSS_R4_VISION")
+	gloss.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	gloss.modulate = Color(0.72, 0.76, 0.82)
+	gloss.add_theme_font_size_override("font_size", 11)
+	col.add_child(gloss)
+
+	var gate := Label.new()
+	gate.text = tr("CFG_R4_VISION_GATED")
+	gate.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	gate.modulate = Color(0.72, 0.76, 0.82)
+	gate.add_theme_font_size_override("font_size", 11)
+	col.add_child(gate)
+
+	var body := VBoxContainer.new()
+	body.name = "Body"
+	body.add_theme_constant_override("separation", 4)
+	col.add_child(body)
+	_section_bodies[R4_VISION_KEY] = body
+
+	for field in R4_VISION_FIELDS:
+		_build_row(body, field)
+
+
+## M4 (M1.6): look up the SECTIONS descriptor for a prefix (the TABS table references
+## prefixes, not array indices). Pushes an error + returns the Meta descriptor on a miss.
+func _section_descriptor(prefix: String) -> Dictionary:
+	for sec in SECTIONS:
+		if sec.prefix == prefix:
+			return sec
+	push_error("ConfigMenu: no SECTIONS descriptor for prefix '%s'" % prefix)
+	return SECTIONS[0]
+
+
+## M4 (M1.6) / RD-9: the web telemetry-export button, re-homed from the retiring
+## SellScreen into the Meta tab. Same JSONL export path (TelemetryExporter), web-guarded:
+## on desktop the button is hidden (the on-disk retrieval flow is unchanged there). It is
+## a docked button below the Meta section, NOT a knob row → never touches _rows/coverage.
+func _build_meta_export_button(parent: Control) -> void:
+	parent.add_child(HSeparator.new())
+	var export_btn := Button.new()
+	export_btn.name = "ExportTelemetryButton"
+	export_btn.text = tr("CFG_EXPORT_TELEMETRY")
+	var status := Label.new()
+	status.name = "ExportStatus"
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status.add_theme_font_size_override("font_size", 11)
+	status.text = ""
+	if not TelemetryExporter.is_supported():
+		# Web-only (RD-9): hide the control entirely on desktop, exactly as SellScreen did.
+		export_btn.hide()
+		status.hide()
+	else:
+		export_btn.pressed.connect(_on_export_telemetry_pressed.bind(status))
+	parent.add_child(export_btn)
+	parent.add_child(status)
+
+
+## M4 (M1.6) / RD-9: the export action (web-only; the signal is connected only there).
+## Pure read of the existing JSONL log, handed to the browser as a download — identical
+## to SellScreen's path (no schema/arity change). Must run inside the button-press gesture.
+func _on_export_telemetry_pressed(status: Label) -> void:
+	if not TelemetryExporter.has_log():
+		status.text = tr("CFG_EXPORT_EMPTY")
+		return
+	var filename := TelemetryExporter.download_filename()
+	if TelemetryExporter.export():
+		status.text = tr("CFG_EXPORT_DONE").format({"name": filename})
+	else:
+		status.text = tr("CFG_EXPORT_EMPTY")
 
 
 # --- Per-field rows -----------------------------------------------------------
@@ -699,9 +906,19 @@ func _set_field(field: String, value) -> void:
 
 func _on_master_toggled(on: bool, master_field: String, prefix: String) -> void:
 	_cfg.set(master_field, on)
-	_set_body_dimmed(prefix, not on)
+	_dim_bodies_for(prefix, not on)
 	_refresh_section_chip(prefix)
 	_refresh_summary()
+
+
+## M4 (M1.6) / RD-5: dim a section's body (or BODIES). For "r4_" this dims BOTH the
+## maze body ("r4_") and the split-out Vision body (R4_VISION_KEY) off the single
+## r4_enabled master — so toggling R4 off in Level Gen visibly dims the Vision tab too.
+## Every other prefix has exactly one body.
+func _dim_bodies_for(prefix: String, dimmed: bool) -> void:
+	_set_body_dimmed(prefix, dimmed)
+	if prefix == "r4_":
+		_set_body_dimmed(R4_VISION_KEY, dimmed)
 
 
 # --- Reset --------------------------------------------------------------------
@@ -721,7 +938,9 @@ func _refresh_all() -> void:
 	for sec in SECTIONS:
 		_refresh_section_chip(sec.prefix)
 		if sec.master != "":
-			_set_body_dimmed(sec.prefix, not bool(_cfg.get(sec.master)))
+			# M4 (M1.6) / RD-5: dual-dim so a Reset/boot projects R4's dim onto BOTH the
+			# maze body and the split-out Vision body (the "r4_" branch in _dim_bodies_for).
+			_dim_bodies_for(sec.prefix, not bool(_cfg.get(sec.master)))
 	_refresh_summary()
 
 
