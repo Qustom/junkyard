@@ -1,6 +1,71 @@
 THE FAR YARD — CHANGELOG
 ========================
 
+M1.6 — "Surface & Staging"   (changes since M1.5)
+-------------------------------------------------
+
+This version gives the game a SURFACE. Until now you booted straight into a debug
+harness — a Start button bolted onto the config rail, an auto sell-screen as the only
+between-runs beat, and the knob menu in your face on the first screen. M1.6 wraps the
+existing dive in a real game shell: you boot to a Main Menu, stage between runs in a
+walkable Hub, sell your haul and spend money at a Shop, and depart into dives from
+there. The dive itself is unchanged from M1.5 (the all-off baseline is still byte-for-
+byte identical to M1.0–M1.5).
+
+
+MAIN MENU (new)
+---------------
+* NEW — Real main menu. The game now boots to a proper Main Menu instead of a config
+  rail: NEW GAME (start a fresh save — if a save already exists, it asks you to confirm
+  before wiping it), CONTINUE (resume your saved game; greyed out when there is no save),
+  QUIT, and a SETTINGS button (a "coming soon" placeholder for now). The first-run
+  telemetry-consent prompt now lives here.
+
+
+THE HUB (new)
+-------------
+* NEW — Walkable hub between runs. You now return to a small staging room between dives
+  and walk around it, instead of dropping into a sell screen. The hub holds a DEPARTURE
+  PORTAL (walk into it to start a dive) and a SHOP terminal. The dive timer does NOT run
+  in the hub — the clock is dive-only. When a dive ends (extract, death, or timeout) you
+  are automatically returned here, and your quota is checked on arrival.
+
+
+THE SHOP — sell + buy (replaces the old sell screen)
+----------------------------------------------------
+* NEW — Shop you walk to. The hub's Shop terminal opens a shop with two sides:
+  - SELL: cash in the haul you banked on your last dive — your junk converts to Money.
+    (This replaces the old automatic sell screen; you now choose when to sell.)
+  - BUY: spend Money on a small catalog of upgrades that you OWN across runs. Owned
+    purchases persist through quit-and-relaunch (Continue restores them). Can't-afford
+    and already-owned buys are politely refused.
+  Your save format was bumped (meta v3 -> v4) to store owned purchases; older saves load
+  and migrate forward automatically.
+
+
+DEBUG / CONFIG MENU — now on P, now tabbed
+------------------------------------------
+* CHANGED — The config/debug menu is off the first screen. Open and close it any time
+  with the P key (in the menu, the hub, or mid-dive — in a dive it pauses the game while
+  open). It is now organized into tabs by theme — Hazards / Level Generation / Vision /
+  Timer & Quota / Exposure & Return / Throw & Camera / Meta — instead of one long scroll.
+  The vision/fog controls have their own Vision tab now. The web "Export telemetry"
+  button moved onto the Meta tab. All 89 tunable knobs are still there; "Reset" still
+  returns the all-off baseline (byte-identical to M1.0–M1.5) as a control.
+
+
+NOT YET IN THIS BUILD
+---------------------
+* Shop upgrade effects are stubbed for now — buying proves the spend-and-own loop, but
+  the in-dive effects of the upgrades are not wired up yet (that's a later milestone).
+* The Settings menu is a placeholder ("coming soon").
+* The dive itself is unchanged from M1.5 (same throwing, room-bound pursuer, hazards,
+  quota, and timer) — M1.6 is the surface around it, not new dive mechanics.
+
+
+====================================================================================
+
+
 M1.5 — "Agency & Legibility"   (changes since M1.4)
 ---------------------------------------------------
 
