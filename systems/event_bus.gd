@@ -179,3 +179,48 @@ signal throw_killed_hazard(item_id: StringName, kind: StringName, depth: int, ru
 ## spawn room) or &"chase" (player inside). Rising-edge-latched (no per-frame storm).
 ## Owner: L2.
 signal hazard_pursuer_state(state: StringName, depth: int, run_t_ms: int)
+
+# === M1.6 signals (sole event_bus.gd edit this milestone, owner = M0) =========
+# Pre-declared up front so M1/M2/M3/M4 only EMIT/CONNECT — they never edit this
+# file (the M1.1 pre-declare rule, M1.6 Breakdown §6/Phase-4 Lock). These are
+# FLOW + ECONOMY events that fire OUTSIDE a dive (Menu/Hub), so — unlike the dive
+# telemetry rows above — they carry NO run_t_ms/depth (there is no run clock in
+# the Menu/Hub). Primitives only (no Node refs — the App router resolves scenes by
+# PATH, not reference). run_ended (line 10) is UNCHANGED — the router OBSERVES it
+# to auto-return to the Hub, it never alters its arity. Final 8-signal set frozen
+# in M0_foundation_router_economy.md RD-2 (the Phase-2 9th, return_to_hub_requested,
+# was dropped: M1.6 only ever auto-returns).
+
+# --- App flow / scene router (M2 emits dive_requested; App emits the rest) -----
+## The player chose to depart on a dive (Hub departure-portal interact). The App
+## router swaps in the dive scene. band_id = which band to dive (M1.6 single &"near").
+signal dive_requested(band_id: StringName)
+## The Hub scene is now live in the tree (fired by the router AFTER the swap, so
+## HUD/audio/Telemetry observers read a settled Hub). Fires on every hub entry (from
+## menu OR after a dive). No payload — the Hub reads meta (money/banked_junk/
+## owned_items) directly.
+signal hub_entered()
+## A dive resolved and the player was returned to the Hub. reason = the run_ended
+## reason (&"extract"/&"death"/&"timeout") so the Hub-return beat can show the dive-
+## outcome readout (the quota line + sell tally re-homed from the retired SellScreen).
+## Fires AFTER run_ended settled (router defers one frame). Pairs with hub_entered on
+## the dive-return path.
+signal returned_to_hub(reason: StringName)
+
+# --- Hub shop (M3 emits; the Shop UI + GameState economy drive these) ---------
+## The Shop UI opened (Hub shop-interactable). Telemetry: shop-open rate (RG2). No payload.
+signal shop_opened()
+## The Shop UI closed (returns control to the Hub). Telemetry: shop dwell (RG2).
+signal shop_closed()
+## The whole banked-junk pile was sold at the Shop → Money. ROLL-UP (one emit per
+## sale, matching the single GameState.sell_banked_junk() call): item_count = how many
+## items sold, total_value = their summed base_sell_value, money = the post-sale balance.
+## Re-homes the SellScreen tally telemetry. Primitives only. (RD-2/OQ-4: roll-up, NOT per-item.)
+signal item_sold(item_count: int, total_value: int, money: int)
+## A purchase succeeded: item_id bought for `price`; money = post-debit balance.
+## Emitted by GameState.purchase(). RG2 reads buy rate / spend. Primitives only.
+signal item_purchased(item_id: StringName, price: int, money: int)
+## A purchase was attempted but failed ("can't afford" OR "already owned"). money =
+## current balance. Lets the Shop UI show the failure without GameState knowing about
+## the UI. Emitted by GameState.purchase() on the reject paths.
+signal purchase_failed(item_id: StringName, price: int, money: int)

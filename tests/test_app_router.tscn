@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bm0approuter0test"]
+
+[ext_resource type="Script" path="res://tests/test_app_router.gd" id="1"]
+
+[node name="TestAppRouter" type="Node"]
+script = ExtResource("1")
