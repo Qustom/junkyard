@@ -373,3 +373,22 @@ fan-out (L0–L5).**
 
 **M1.5 Wave 2 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 3 — RG1 build + verify +
 itch publish + changelog.**
+
+---
+
+## M1.6 Wave 2 close-out (2026-06-26) — 3 items, all **Reviewed** (Director dispositioned)
+
+- **W2-F1 — `test_rg1_m13_verify` stale/broken (pre-existing).** Fails (exit 1) on M5/all-on opposition-telemetry rows +
+  `timeout` end-cause; **verified it fails identically at the pre-Wave-2 commit `536c9ba`** (M0-era, before M2's `main_game`
+  refactor), so NOT M1.6 regression. m13 last green at M1.3 (`d9138c7`), not in the CI gate, never maintained through
+  M1.4/M1.5. The 4 sibling RG verifies pass with M2's identical staged-config plumbing. Director: **Reviewed** — pre-existing
+  tech debt. **Reapply:** filed `FU3` (qa: repair-or-retire m13) in `TASKS.md` backlog. Non-blocking for M1.6.
+- **W2-F2 — quota-MISS has no player-facing "QUOTA MISSED" banner yet.** M2 ships the integrity wipe routing (quota eval +
+  `wipe_meta()` on the Hub-return beat); the player-facing notice retired with `SellScreen` and its replacement lives in the
+  M3 hub-return/shop UI. Director: **Reviewed** — sequencing, not a design change. **Reapply:** folded into the M3 dispatch
+  brief (the Shop/hub-return shows a quota-MISS notice).
+- **L6-F1 (M1.5 carry-over) — pure-keyboard-no-mouse aim defaults to DOWN.** Mouse + controller (the primary schemes)
+  unaffected. Director: **Reviewed.** **Reapply:** filed `FU4` (keyboard fallback tracks movement when no mouse/stick active)
+  in `TASKS.md` backlog. Non-blocking.
+
+**M1.6 Wave 2 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 3 — M3 (Hub shop sell+buy + META v3→v4).**
