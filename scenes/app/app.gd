@@ -22,6 +22,12 @@ const MAIN_MENU_PATH := "res://scenes/menu/main_menu.tscn"   # M1 REPLACES this 
 const HUB_PATH := "res://scenes/hub/hub.tscn"                # M2 REPLACES this scene
 const DIVE_PATH := "res://scenes/game/main_game.tscn"        # M2 refactors to dive-only
 
+## M4 (M1.6): the P-toggle tabbed config/debug menu, mounted ONCE under DebugOverlay so
+## it survives every Menu↔Hub↔Dive swap (one instance, one working _cfg). It hides itself
+## until the debug_menu_toggle (P) action; the dive reads its apply_and_get_config() at
+## run start. Mount only — the overlay owns its own toggle/pause behaviour.
+const DEBUG_MENU_PATH := "res://ui/config/config_menu.tscn"
+
 @onready var _state_host: Node = $StateHost          # the swappable state scene lives here
 @onready var _overlay: CanvasLayer = $DebugOverlay   # persistent P-menu mount (M4 fills it)
 
@@ -48,7 +54,19 @@ func _ready() -> void:
 	# was). dive_requested is M2's portal; the menu stub emits dive_requested too (M0 stub).
 	EventBus.dive_requested.connect(_on_dive_requested)
 	EventBus.run_ended.connect(_on_run_ended)   # auto-return after a dive resolves (RD-2)
+	_mount_debug_overlay()                       # M4 (M1.6): the P-toggle menu, once, on DebugOverlay
 	_goto(MAIN_MENU_PATH, &"menu")              # boot → Main Menu (the new entry beat)
+
+
+## M4 (M1.6): instance the P-toggle tabbed config/debug menu ONCE under the persistent
+## DebugOverlay CanvasLayer, so it survives every state swap (the overlay self-hides and
+## owns its own P-toggle + pause-in-dive behaviour). This is the M4 mount seam (RD-7).
+func _mount_debug_overlay() -> void:
+	var packed := load(DEBUG_MENU_PATH) as PackedScene
+	if packed == null:
+		push_error("App: missing debug overlay scene %s" % DEBUG_MENU_PATH)
+		return
+	_overlay.add_child(packed.instantiate())
 
 
 ## M1.6 (M0): the Menu→Hub handoff (M1's Main Menu calls this — R-a in M1_main_menu.md).
