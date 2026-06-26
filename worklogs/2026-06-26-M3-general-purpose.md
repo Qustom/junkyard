@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.6 (Surface & Staging), Wave 3
 - **Branch:** general-purpose/M3
-- **Commit:** dd72c9d9b17ee3b59c056381b629d4ae4ff737d7
+- **Commit:** 7c44f0795439c6d9ed1feed131a56e98a0284c1f (this worklog folded in via the final `--amend`; HEAD of `general-purpose/M3`)
 
 ## What changed
 Built the Hub Shop — the first meta-spend in THE FAR YARD. A `ShopItem`/`ShopCatalog`
