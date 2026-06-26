@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.6 (Surface & Staging), Wave 2
 - **Branch:** general-purpose/M4
-- **Commit:** 3f1518770d8b04c54d3aacdca30e4fe8dde4f557
+- **Commit:** 1d0c0dc213d5bc9847a9335f3ec846d43d56a9c5 (worklog SHA noted post-amend; tree content final)
 
 ## What changed
 Re-homed the pre-run config rail (`ConfigMenu`) as a P-toggle, 7-tab debug overlay mounted
