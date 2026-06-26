@@ -6,66 +6,43 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.5 (Agency & Legibility) — Waves 1–3 + **Wave 4 (L6 control rework) DONE**. Director playtested (RG3) → ITERATE on controls → L6 built + integrated. **Next = re-publish to itch → Director re-test mouse/controller.**
-**Last updated:** 2026-06-25 (M1.5 **Wave 4 L6 integrated** — `main`@`302d2bd`, pushed, board L6=Done. Mouse-aim throw (player points at cursor, left-click throws, scroll cycles) + twin-stick controller (right-stick aim, RT throw, LB/RB cycle); Q/E+Space kept. Input-only: all-off fp `e943ac9c8bc1` unmoved, 89 knobs, no save change. Full gate green incl. new `resolve_aim` cases. RG3 feedback recorded in `design/M1_5_Tasks/G4_findings_M1.5.md`; close-out L6-F1 (keyboard-only aim→DOWN) awaiting Director disposition. Next: re-publish + Director re-test.)
+**Current milestone:** M1.6 (Surface & Staging) — **design LOCKED + wired; build NOT started.** Main menu + walkable hub (sell+buy shop replacing SellScreen) + P-key tabbed debug menu, under a Menu→Hub→Dive→Hub `App` router. **Next = dispatch Wave 1 (M0 foundation).**
+**Last updated:** 2026-06-26 (M1.5 re-test → **RG3 ITERATE → M1.6**; four-phase authoring DONE: breakdown + M0–M4 per-task designs + fresh-eyes Resolved Decisions on `main`, pushed. Director dispositioned the scope calls: buy = **persistent → META v3→v4 save bump**; telemetry-export → P-debug Meta tab; New-Game-over-save = wipe-with-confirm; Settings = placeholder. Router = persistent root `App` node; `main_game.tscn` → dive-only; clock dive-only; 89-knob count holds, fp `e943ac9c8bc1` unmoved. `TASKS.md`/board/`STATUS.md` wired for M1.6; M1.5 archived.)
 
 ---
 
-## ✓ M1.5 Wave 1 (Foundation + legibility) — DONE (2026-06-24)
+## ▶ Next action (start here on a cold restart) — DISPATCH M1.6 WAVE 1 (M0)
 
-L0 + L3 + L4 all on `main` (merges `fa7cdb9`/`5c9cd6c`/`b8520be`), pushed, board=Done; ran as clean parallel worktrees (disjoint files, topology verified before each merge). Full gate green: import · smoke · run_config · config_menu · interaction · determinism. **All-off fp byte-identical `e943ac9c8bc1`** (corridor_lever BASELINE_FP + bandgen).
-- **L0** foundation (`a937df7`): 8 new knobs (`throw_enabled`/`throw_speed=180`/`throw_max_range=320`; `r1_spawn_room_only`/`r1_patrol_speed`; `hpp_kills`/`hbomb_kills`/`hspike_kills`=true) + 4 signals (`item_thrown`/`throw_missed`/`throw_killed_hazard`/`hazard_pursuer_state`) + CFG rows/CSV; `to_flat_dict()` + knob-count tests. **As-built count = 89, not 88** (the breakdown's "81+8=88" was an arithmetic slip; knob SET matches the lock exactly) → docs corrected to 89. Worklog `worklogs/2026-06-24-L0-general-purpose.md`.
-- **L3** money-text (`468ca78`): `HaulValueLabel` → top-right below the timer (frozen offsets); pure `.tscn`, `_refresh_haul()` untouched.
-- **L4** grab-prompt (`50646d8`): per-frame `_prompt.visible` invariant + `.tscn` default-hidden + cleared baked "[E]" text + 3 hide-invariant regression cases.
-- *qa git-switch leak recurred on L3 (stray branch in the shared checkout); agent self-cleaned; topology verified clean before merge (qa-agent-git-switch-leak memory).*
+Design is **locked + wired** (breakdown `design/M1_6_Tasks/M1.6_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock"; every
+task doc carries a "Resolved Decisions (Phase 3)" section; Director verdicts folded in). `TASKS.md` carries the M1.6 queue;
+board items exist (Todo). Begin the build:
 
-> **Wave-1 close-out DONE (2026-06-24).** L0-F1 (88→89 knob count) → Director **Reviewed**; docs corrected, archived → `DESIGN_DEVIATIONS_HISTORY.md`. `DESIGN_DEVIATIONS.md` empty between waves.
+1. **Claim + dispatch M0** (`general-purpose`, Wave 1, solo — single-writer of `game_state.gd`/`event_bus.gd`/`project.godot`/
+   new `scenes/app/app.*`). Set M0 → **In Progress** on the board (`PVTI_lAHOAAXnOs4BasyMzgw7Dvk`). Spec:
+   `design/M1_6_Tasks/M0_foundation_router_economy.md`. Builds the persistent root `App` router (new `run/main_scene`), the 8
+   new EventBus signals, the neutral `GameState` economy surface + quota-decouple + staged-config accessor + `App.current_state`,
+   the `debug_menu_toggle`=P input, and throwaway greybox `main_menu`/`hub` stubs so `main` stays bootable. **No save bump in M0**
+   (M3 lands v3→v4). **No RunConfig knob** → fp `e943ac9c8bc1` + 89-knob count must stay intact.
+2. **Verify + integrate M0**, then **Wave 2 parallel** (file-disjoint worktrees): **M1** (`scenes/menu/*`) ∥ **M2**
+   (`scenes/hub/*` + `main_game.*` dive-only refactor + run-end→hub quota/wipe routing + test fallout) ∥ **M4**
+   (`ui/config/config_menu.*`: P-overlay + 7 tabs + r4_ vision split + telemetry-export Meta tab). Verify branch topology
+   before each merge (qa git-switch leak).
+3. **Wave 3** (sequential): **M3** (Shop sell+buy + `ShopItem`/`ShopCatalog` `.tres` + META v3→v4 bump/migration/fixture +
+   retire `ui/sell/*`, mounted into the Wave-2 Hub). Then **Wave 4 re-gate** (RG1 build+verify+publish → Director playtest →
+   RG2 → RG3).
 
-## ✓ M1.5 Wave 2 (Agency & threat) — DONE + PUSHED + closed out (2026-06-24)
+> **Standing contracts (M1.6):** all-off `RunConfig` default = permanent baseline (fp `e943ac9c8bc1`); **89-knob count holds**
+> (M1.6 adds no lever knob; M4 regroups only); Money/owned purchases are meta, in-dive haul is run-state; save bump v3→v4 lands
+> in M3 (migration + `meta_v3.sav` fixture); `run_ended` arity locked (the router observes it, never changes it); M0 is the sole
+> writer of `game_state.gd`/`event_bus.gd`/`project.godot`/`app.*`; clock is dive-only; verify branch topology before every merge
+> (qa git-switch leak); push + board mirror after every merge; wave close-out deviation sweep.
 
-L1 + L5 + L2 all integrated on `main` (merges `f336995`/`fc355c4`/`e353780`); full gate green; **all-off fp byte-identical `e943ac9c8bc1`**. **Pushed** — origin/main == local at `155b9cf` (synced when network recovered). **Board synced:** L0–L5 board items back-filled + set Done (board only carried through M1.1; M1.2–M1.4 J*/K* gap left per Director — back-fill L0–L5+RG1 only). **Wave-2 close-out DONE:** L1-F1 (throw `run_t_ms` monotonic clock) → Director **Reviewed** (no design change); archived → `DESIGN_DEVIATIONS_HISTORY.md`; `DESIGN_DEVIATIONS.md` empty between waves. *(Worktree side effect: L1/L5/L2 based off origin didn't see each other — git 3-way auto-merged shared `main_game.gd`/`run_config.gd` cleanly; verified semantically post-merge.)*
-- **L1** throwing mechanic (`873a062`): input remap (F=grab/extract, Q/E=highlight, Space=throw) + inventory highlight selector + `entities/thrown_item` Area2D (mask world|hazard) + throw seam in `main_game.gd`; kills pursuer/ping-pong + destroys item, miss → `junk_dropped` re-drop; preset `throw_enabled=true`. New `test_throw_mechanic`. Worklog `worklogs/2026-06-24-L1-general-purpose.md`.
-- **L5** K5 `*_kills` toggles (`a2fe301`): guarded each K5 `fail_run` with `if cfg.<prefix>_kills` (emit-always); retired `_driven_default_preset()` (verify runs the real preset, kills off). Worklog `…-L5-…`.
-- **L2** spawn-room pursuer (`1f4f67d`): `HazardEntity` room-bound slow patrol (paces 2 endpoints @ `r1_patrol_speed=28`, chases iff `_room_bounds.has_point`); `setup` widened to 3-arg + `room_bounds` threaded via J2 `_piece_bounds_at_world` + a parallel J3 `_density_spawn_bounds` (golden byte-frozen); preset `r1_spawn_room_only=true`. New L2 cases in `test_pursuing_hazard`. Worklog `…-L2-…`.
+## ✓ M1.5 — Agency & Legibility — DONE 2026-06-24..26 (re-gated → ITERATE → M1.6)
 
-## ✓ M1.5 Wave 4 (L6 — control rework) — DONE (2026-06-25)
-
-Director playtested the M1.5 build (RG3) → "controls are clunky" → **ITERATE on controls** (packaged as a wave, M1.4
-Wave-5 precedent). **L6** built + integrated on `main` (`302d2bd`, ff-merge), pushed, board=Done; ran in a clean worktree
-(`.claude/worktrees/L6`, removed). Full gate green: smoke · run_config 89 · config_menu 89/89 · `RG1 M1.5 VERIFY OK` exit 0
-· throw (L1+L6, flies along `player.aim`) · new `resolve_aim` cases · player_movement (no regression). **All-off fp
-`e943ac9c8bc1` unmoved; 89 knobs; no save change** (input is global, not run-config).
-- **L6** (`302d2bd`): decoupled `aim` from movement via pure `resolve_aim()` (right-stick>deadzone → mouse-after-motion →
-  hold-last → movement default); player turns to point at aim (nose+`facing` follow `aim`); throw on **LMB/RT** in the aim
-  direction; cycle on **wheel/LB-RB**; new `aim_*` right-stick actions; Q/E+Space+wheel/bumper all bound. `project.godot`
-  input + `player.gd` + `main_game.gd` throw seam. Worklog `worklogs/2026-06-25-L6-general-purpose.md`.
-
-> **Wave-4 close-out — for Director disposition:** **L6-F1** — pure-keyboard-no-mouse aim defaults to DOWN (the resolver
-> holds last-aim, init DOWN, before the movement fallback, so the Space/Q-E keyboard fallback never tracks movement). Mouse +
-> controller (primary) unaffected. Recommend **Reviewed** (mouse is the primary KB/M device; fallback is secondary) — or a
-> small follow-up to track movement when neither mouse nor stick is active. `DESIGN_DEVIATIONS.md` carries it.
-
-### Post-RG3 tuning round (2026-06-25) — applied direct, gate green
-
-Director-requested tweaks after the L6 build (details in `design/M1_5_Tasks/G4_findings_M1.5.md`): **dive timer 600→300s**;
-**controller throw fires on press edge only** (`_throw_held` latch — analog RT was burst-firing the whole bag); **hazard
-fair-share allocation** (the 30-room preset starved spikes to 0 under the shared 48 ceiling → Director "interleave" → each
-enabled type gets an equal slice, ≈16/16/16; low-density bands unchanged). All-off fp `e943ac9c8bc1` unmoved; full gate green
-(smoke · run_config 89 · config_menu 89/89 · new_hazard_spawn · rg1_m14 · rg1_m15 · throw · pursuer · dive_clock). On `main`.
-
-### ▶ Next action (start here on a cold restart) — RE-PUBLISH → DIRECTOR RE-TEST → re-gate verdict
-
-1. **Re-publish to itch** (standing playtest-gate step): `BUTLER=/mnt/c/wsl-libraries/butler/butler bash tools/push_itch.sh`
-   (Chrome/Edge, password-gated: https://qusto.itch.io/the-far-yard). Carries the L6 control rework + the tuned preset +
-   the post-RG3 tweaks (300s timer, trigger latch, hazard fair-share).
-2. **Director re-test** the reworked controls on desktop (mouse) + a controller: aim/throw/cycle feel, player points
-   correctly, twin-stick comfort. The felt experience is human-deferred (headless can't inject mouse/gamepad).
-3. **RG3 verdict** — record **go → M2 / iterate → M1.6 / pivot** in `design/M1_5_Tasks/G4_findings_M1.5.md`. Also disposition
-   the L6-F1 close-out item.
-
-> **Standing contracts (M1.5):** all-off `RunConfig` default = permanent baseline (fp `e943ac9c8bc1`); fun values only in
-> `make_default_play_preset()`; input changes are global (never touch the fp / knob count); `run_ended` arity locked; verify
-> branch topology before every merge (qa git-switch leak); push + board mirror after every merge; wave close-out deviation sweep.
+All waves built + re-gated (L0–L6 + RG1 + post-RG3 tuning): agency-throw + room-bound pursuer + legibility fixes + the L6
+mouse-aim/twin-stick control rework. Director re-test → **RG3 ITERATE → M1.6**. Detailed in-progress notes archived →
+`STATUS_ARCHIVE.md`; tasks → `TASKS_COMPLETED.md`; re-gate provenance → `design/M1_5_Tasks/G4_findings_M1.5.md`. **L6-F1**
+(keyboard-only-no-mouse aims DOWN) carried to the M1.6 backlog (mouse + controller unaffected; non-blocking).
 
 ---
 

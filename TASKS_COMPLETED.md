@@ -338,3 +338,16 @@ proof: `STATUS.md` §Done tables + `worklogs/2026-06-21-*` + `2026-06-21-RG1-*`.
 - **Wave 3:** K5a (ping-pong hazard) · K5b (bomb hazard) · K5c (rotating-spikes hazard) · K5i (new-hazard spawn-seam integration).
 - **Wave 4 (RG1):** M1.4 playtest build + verify (`test_rg1_m14_verify`) + itch publish.
 - **Wave 5 (RG1-feedback bug-wave):** BUG7 (spawn-room instant-death fix) · BUG8 (ping-pong wall-stick fix) · TUNE2 (camera 1000 + spike spawn) · FB5 (multi-exit regression test; #5 NOT-a-bug). Re-gate after Wave 5 → ITERATE → M1.5.
+
+---
+
+## M1.5 — Agency & Legibility — ✓ DONE 2026-06-24..26 (re-gated → ITERATE → M1.6)
+
+Give the player agency against danger + make the pursuer comprehensible + fix two legibility bugs, then re-gate.
+Breakdown + locked decisions: `design/M1_5_Tasks/M1.5_Breakdown.md`. Re-gate verdict + control-rework provenance:
+`design/M1_5_Tasks/G4_findings_M1.5.md`. Per-task specs: `design/M1_5_Tasks/L*.md`. All-off fp byte-identical
+(e943ac9c8bc1); knob count 81 → 89; throw/highlight/pursuer pure run-state (no save change); input changes global.
+- **Wave 1 (Foundation + legibility):** L0 (8 knobs + 4 signals + CFG rows, 81→89) · L3 (money text → below the timer) · L4 (grab-prompt per-frame visibility invariant).
+- **Wave 2 (Agency & threat):** L1 (throwing mechanic: highlight selector + `thrown_item` Area2D, kills pursuer/ping-pong, miss re-drops; input remap F/Q-E/Space) · L2 (spawn-room pursuer = room-bound slow patrol) · L5 (K5 `*_kills` toggles + retired `_driven_default_preset()`).
+- **Wave 3 (RG1):** M1.5 playtest build + verify + itch publish.
+- **Wave 4 (L6 control rework):** mouse-aim throw (point at cursor, LMB throw, wheel cycle) + twin-stick controller (right-stick aim, RT throw, LB/RB cycle); Q/E+Space kept. Post-RG3 tuning (timer 600→300, controller throw press-edge latch, hazard fair-share). Director re-test → **RG3 verdict ITERATE → M1.6**.

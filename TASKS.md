@@ -41,76 +41,81 @@ playtest → **RG3 verdict ITERATE → M1.5** (`design/M1_4_Tasks/G4_findings_M1
 
 ---
 
-## M1.5 — Agency & Legibility (ACTIVE — iterating on the M1.4 ITERATE verdict)
+## M1.5 — Agency & Legibility — ✓ **DONE 2026-06-24..26** (re-gated → ITERATE → M1.6)
 
-Give the player agency against danger (throw a highlighted inventory item to kill a pursuer), make the pursuer a
-comprehensible room-bound slow patrol, and fix two legibility bugs (money text hidden behind inventory; grab prompt
-always on) — then re-gate. Breakdown + dependency map + wave order + locked decisions:
-`design/M1_5_Tasks/M1.5_Breakdown.md` (§"Phase 3 Dispositions & Phase 4 Lock"). Provenance: `G4_findings_M1.4.md` §RG3.
-**Design is LOCKED** — every task doc carries a "Resolved Decisions (Phase 3)" section; Director dispositioned the fun
-calls (throw kills pursuer + ping-pong, no scope knob; pursuer paces between two points). Greybox; all-off `RunConfig`
-stays the permanent baseline (fp=e943ac9c8bc1); throw/highlight/pursuer behaviour are pure run-state (no save change);
-the fun values ship in `make_default_play_preset()`. Knob count 81 → **89**.
+All waves built + re-gated: Waves 1–3 (L0–L5 + RG1) + Wave 4 (L6 control rework) + post-RG3 tuning → Director re-test →
+**RG3 verdict ITERATE → M1.6** (`design/M1_5_Tasks/G4_findings_M1.5.md` §"RG3 re-test verdict"). Tasks archived →
+`TASKS_COMPLETED.md`.
 
-### Wave 1 — Foundation + legibility fixes  *(L0 ∥ L3 ∥ L4 — all file-disjoint, parallel)*
+---
 
-### L0 — Foundation: knob + signal pre-declare
-- Milestone: M1.5 (Wave 1)   Assignee: general-purpose   BlockedBy: none
-- Spec: `design/M1_5_Tasks/L0_foundation_knobs_signals.md`
-- Goal: single-writer pass on `run_config.gd` + `event_bus.gd` + `config_menu.gd`: declare the 8 M1.5 knobs (`throw_enabled`/`throw_speed`/`throw_max_range`; `r1_spawn_room_only`/`r1_patrol_speed`; `hpp_kills`/`hbomb_kills`/`hspike_kills`) at off/neutral (`*_kills`=true) + extend `to_flat_dict()` + declare the 4 new signals (`item_thrown`, `throw_missed`, `throw_killed_hazard`, `hazard_pursuer_state`) + CFG rows/CSV stubs. Unblocks the parallel build.
-- Done when: project imports clean; all-off fp byte-identical (e943ac9c8bc1); CFG menu boots; knob-count tests green (81→89); every new knob in `to_flat_dict()`; every new signal declared.
+## M1.6 — Surface & Staging (ACTIVE — iterating on the M1.5 ITERATE verdict)
 
-### L3 — Money-text reposition (#8)
-- Milestone: M1.5 (Wave 1)   Assignee: ui-ux-designer   BlockedBy: none
-- Spec: `design/M1_5_Tasks/L3_money_text_reposition.md`
-- Goal: move `HaulValueLabel` from top-left (hidden behind the bottom-right inventory) to below the dive timer (top-right, right-aligned) — pure `.tscn` anchor/offset edit; `_refresh_haul()` untouched. Bug-fix, not knob-gated.
-- Done when: money readout sits below the timer, not behind the inventory; import clean; no logic/fp change.
+Give the game a **surface**: boot to a real Main Menu, stage between runs in a **walkable greybox Hub** with a **Shop**
+that sells your haul AND lets you spend Money on greybox upgrades (replacing the auto-`SellScreen`), and **depart** into
+dives from there — and move the debug controls off the first screen into a **P-key tabbed** menu. Breakdown + dependency
+map + wave order + locked decisions: `design/M1_6_Tasks/M1.6_Breakdown.md` (§"Phase 3 Dispositions & Phase 4 Lock").
+Provenance: `G4_findings_M1.5.md` §RG3. **Design is LOCKED** — every task doc carries a "Resolved Decisions (Phase 3)"
+section; Director dispositioned the scope calls (buy = persistent → META v3→v4 save bump; telemetry-export → P-debug Meta
+tab; New-Game-over-save = wipe-with-confirm; Settings = placeholder). App flow **Menu → Hub ⇄ Dive** via a persistent root
+`App` router; `main_game.tscn` becomes dive-only; the clock is dive-only. All-off `RunConfig` stays the permanent baseline
+(fp=e943ac9c8bc1); **89-knob count holds** (no lever knob; M4 regroups only); Money/owned purchases are meta.
 
-### L4 — Grab-prompt visibility fix (#9)
-- Milestone: M1.5 (Wave 1)   Assignee: general-purpose   BlockedBy: none
-- Spec: `design/M1_5_Tasks/L4_grab_prompt_fix.md`
-- Goal: drive `_prompt.visible` as a per-frame invariant of `_current != null && is_instance_valid(_current) && _current.can_interact()`; default `interaction_prompt.tscn` hidden + clear baked text; add a hide-invariant regression test. Don't refactor the selection/hysteresis loop. Bug-fix, not knob-gated.
-- Done when: the grab prompt shows iff a valid grabbable is in focus/range; regression test green; no knob/signal/save/fp change.
+### Wave 1 — Foundation  *(M0 solo — single-writer on the shared flow/economy/config files)*
 
-### Wave 2 — Agency & threat  *(L1 → L2 sequenced on main_game.gd; L5 parallel)*
+### M0 — Foundation: app-flow router + economy + signals + P action
+- Milestone: M1.6 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_6_Tasks/M0_foundation_router_economy.md`
+- Goal: build the persistent root `App` router (`scenes/app/app.*` = new `run/main_scene`; `StateHost` swaps Menu/Hub/Dive; one persistent `DebugOverlay` `CanvasLayer`; auto-returns to Hub by observing the locked `run_ended`); declare the 8 new `EventBus` signals; add the neutral `GameState` economy surface (`purchase(item_id,price)`/`owns()`/`owned_items` + v3→v4 migration skeleton, NO schema bump) + the quota-decouple (`evaluate_quota_on_return()`) + the staged-config accessor + `App.current_state`; add the `debug_menu_toggle`=P input + the `run/main_scene` swap; ship throwaway greybox `main_menu.tscn`/`hub.tscn` STUBS + a router smoke test. Single-writer of `game_state.gd`/`event_bus.gd`/`project.godot`/`app.*`.
+- Done when: project imports clean + boots to the `App` router → menu stub; all-off fp byte-identical (e943ac9c8bc1); 89-knob count unchanged; smoke + router smoke test green; all 8 signals declared; economy surface present at neutral defaults (no save bump yet); CI smoke test still boots.
 
-### L1 — Throwing mechanic
-- Milestone: M1.5 (Wave 2)   Assignee: general-purpose (+ ui-ux-designer highlight selector)   BlockedBy: L0
-- Spec: `design/M1_5_Tasks/L1_throwing_mechanic.md`
-- Goal: input remap (F=grab/interact incl. gate; Q/E=highlight L/R; Space=throw); a navigable inventory highlight (`highlighted_index()`/`highlighted_item()`, border, clampi-revalidate); Space removes the highlighted item + spawns an `entities/thrown_item` Area2D (mask world|hazard) in `player.facing`; hit a hazard-layer body (pursuer or ping-pong) → kill it + destroy the item; miss → `EventBus.junk_dropped` re-drop. Knob-gated (`throw_enabled` off default, preset on). Pure run-state.
-- Done when: Q/E cycle a visible highlight; Space throws in facing dir; hitting pursuer/ping-pong kills it + destroys the item; miss re-drops as grabbable; all-off fp byte-identical; config-marked telemetry clean.
+### Wave 2 — Surface scenes  *(M1 ∥ M2 ∥ M4 — file-disjoint, parallel worktrees)*
 
-### L2 — Spawn-room pursuer (#6)
-- Milestone: M1.5 (Wave 2)   Assignee: general-purpose (+ game-director-designer)   BlockedBy: L0, L1 (single-writer on `main_game.gd`)
-- Spec: `design/M1_5_Tasks/L2_spawn_room_pursuer.md`
-- Goal: the `HazardEntity` pursuer becomes a room-bound slow patrol (paces between two endpoints at `r1_patrol_speed`), chases only while the player is in its spawn room (`_room_bounds.has_point`), catch only while chasing, immediate re-entry resume. Widen `setup` to the K5 3-arg family + thread `_piece_floor_bounds_world` through both R1 spawn helpers. Knob-gated (`r1_spawn_room_only` off default = today's chase-everywhere). Emits `hazard_pursuer_state`.
-- Done when: pursuer patrols + stays room-bound + chases only in-room + catches only while chasing; off = byte-identical today's pursuer; all-off fp unmoved.
+### M1 — Main menu scene
+- Milestone: M1.6 (Wave 2)   Assignee: ui-ux-designer (+ general-purpose)   BlockedBy: M0
+- Spec: `design/M1_6_Tasks/M1_main_menu.md`
+- Goal: new `scenes/menu/main_menu.tscn`+`.gd` (replaces the M0 stub) as the routed app entry: **New Game** (wipe-with-confirm on an existing save → `wipe_meta` → Hub) / **Continue** (enabled iff `SaveManager.has_save(0)`) / **Quit** (hidden on web) / **Settings** ("coming soon" placeholder); re-home the G6 first-run telemetry-consent here; version label; `menu_strings.csv`; greybox `Control`. Routes to Hub via the M0 router API.
+- Done when: boot lands on the Main Menu; New/Continue/Quit/Settings behave as locked; Continue gates on save presence; New Game confirms before wiping; G6 consent fires once on first run; routes into the Hub; greybox, all strings via `tr()`.
 
-### L5 — K5 per-hazard `*_kills` toggles *(M1.4 Wave-5 "Addressed" carry-in)*
-- Milestone: M1.5 (Wave 2)   Assignee: general-purpose (+ game-director-designer)   BlockedBy: L0
-- Spec: `design/M1_5_Tasks/L5_hazard_kills_toggles.md`
-- Goal: guard each K5 hazard's `fail_run(&"death")` with `if cfg.<prefix>_kills:` (mirroring R1's `r1_catch_kills`); default `true` = today's lethal behaviour; emit-always (non-lethal still emits `new_hazard_killed`). Retire `_driven_default_preset()` — the M1.5 verify runs the real preset with the three `*_kills`=false.
-- Done when: each K5 hazard is non-lethal iff its `*_kills`=false (kept lethal by default); `_driven_default_preset()` removed; existing K5 tests green + one kills-off case each; all-off fp byte-identical.
+### M2 — Hub scene + Menu→Hub→Dive→Hub flow
+- Milestone: M1.6 (Wave 2)   Assignee: general-purpose (+ qa-playtest-coordinator: test-fallout)   BlockedBy: M0
+- Spec: `design/M1_6_Tasks/M2_hub_scene_flow.md`
+- Goal: new walkable greybox `scenes/hub/hub.*` (replaces the M0 stub): bespoke room, Player spawn, a **departure-portal** interactable → `dive_requested` → router loads the dive; a **shop anchor** for M3; an interim "Held: N items ~$X" readout (deleted by M3). **Refactor `main_game.*` to dive-only** (strip the embedded MainMenu/ConfigMenu/Start/SellScreen; dive self-starts in `_ready`→`start_new_run` reading the staged config else preset). Route run-end → **Hub**, firing the **quota-eval + roguelite miss-wipe on the guaranteed hub-return beat** (decoupled from selling, before the portal re-arms). Fix the test fallout (`test_main_game_loop` + the 5 RG verify scenes lose `%ConfigMenu`/`SellScreen`). **No `DiveClock` in the hub.**
+- Done when: Menu→Hub→portal→Dive→return→Hub flows; the clock runs only in the dive; quota+wipe fire on hub-return without a shop visit; main_game is dive-only and self-starts; broken tests fixed + green; all-off fp byte-identical; no duplicate G6 consent path.
 
-### Wave 3 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
+### M4 — Debug-menu rework (P-key + tabs)
+- Milestone: M1.6 (Wave 2)   Assignee: ui-ux-designer (+ general-purpose)   BlockedBy: M0
+- Spec: `design/M1_6_Tasks/M4_debug_menu_rework.md`
+- Goal: move `config_menu` off the first screen → a **P-toggle overlay** (mounted on the M0 `App.DebugOverlay`, pauses the dive while open, no-op in Menu/Hub); restructure into a **7-tab `TabContainer`** (Hazards / Level Generation / **Vision** / Timer & Quota / Exposure & Return / Throw & Camera / Meta); **split the `r4_` vision/fog rows out of the maze section** via Option A (master-less `r4_vision_` pseudo-section — no field rename, no master) **preserving 89-knob coverage**; add the retiring web "Export telemetry" button to the **Meta tab**; new CSV title keys. Pure `ui/config/config_menu.*` (+ CSV).
+- Done when: P opens/closes the tabbed debug menu in all 3 states; Vision is its own tab/section, maze rows stay in Level Gen, no `r4_` field renamed; `has_full_coverage()` + both 89-count tests green; all-off fp byte-identical; telemetry-export works from the Meta tab on web; pause-in-dive doesn't burn the clock.
 
-### RG1 — M1.5 playtest build + verify
-- Milestone: M1.5 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: L0,L1,L2,L3,L4,L5
-- Spec: author from `design/M1_4_Tasks/RG1_playtest_build.md` template
-- Goal: assemble + verify the M1.5 loop (preset boots, throw highlights+throws+kills+re-drops, pursuer patrols/room-bounds, money readable below timer, grab prompt context-correct, all-off fp byte-identical, config-marked telemetry clean); **publish to itch** via `bash tools/push_itch.sh`; update `changelog.txt`.
-- Done when: a fresh build runs the full loop with the new mechanic + fixes; per-run config works; telemetry clean; build live on `qusto/the-far-yard:html5`.
+### Wave 3 — Shop + integrate  *(M3 sequential — mounts into the Wave-2 Hub)*
 
-### RG2 — M1.5 telemetry analysis vs M1.0–M1.4
-- Milestone: M1.5 (Wave 3)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data
+### M3 — Hub shop (sell + buy)
+- Milestone: M1.6 (Wave 3)   Assignee: general-purpose (+ game-director-designer: catalog `.tres`; + ui-ux-designer: shop UI)   BlockedBy: M0, M2
+- Spec: `design/M1_6_Tasks/M3_hub_shop_economy.md`
+- Goal: a Shop interactable in the Hub opens a Shop UI — **SELL** the banked haul → Money (reuses `sell_banked_junk`) + **BUY** a minimal greybox **persistent** catalog (3 owned-across-runs upgrades, `ShopItem`/`ShopCatalog` `.tres`, effects may stub) via M0's `purchase()`; land the **META save-schema bump v3→v4** (`owned_items`) + migration step + `meta_v3.sav` fixture + migration test; **retire `ui/sell/*`** (sell tally → Shop; quota/wipe already on the M2 hub-return beat; telemetry-export already on the M4 Meta tab). Mount into the Wave-2 Hub.
+- Done when: Shop sells the haul + buys persistent upgrades gated by Money; owned upgrades survive a save/load (v1→v4 & v3→v4 migrations green + fixture); SellScreen retired with nothing dropped; quota/wipe still correct; all-off fp byte-identical; 89-knob count unchanged.
+
+### Wave 4 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
+
+### RG1 — M1.6 playtest build + verify
+- Milestone: M1.6 (Wave 4)   Assignee: qa-playtest-coordinator   BlockedBy: M0,M1,M2,M3,M4
+- Spec: author from `design/M1_5_Tasks/RG1_playtest_build.md` template
+- Goal: assemble + verify the M1.6 loop (boot→Menu→New/Continue→Hub→portal→dive→return→Shop sell+buy; clock dive-only; P-toggle tabbed debug menu; save migration; all-off fp byte-identical; 89-knob coverage); **publish to itch** via `bash tools/push_itch.sh`; update `changelog.txt` (delta from M1.5).
+- Done when: a fresh build runs the full surface loop; Continue resumes a save; the shop sell+buy + owned upgrades persist; debug menu opens on P; build live on `qusto/the-far-yard:html5`.
+
+### RG2 — M1.6 telemetry / flow analysis vs M1.0–M1.5
+- Milestone: M1.6 (Wave 4)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data
 - Spec: template `design/M1_1_Tasks/RG2_telemetry_analysis.md`
-- Goal: end-cause / run-length / depth / throw-kill / throw-miss / pursuer-state distributions per config, side-by-side vs all five prior baselines; did agency + the room-bound pursuer + the legibility fixes land?
-- Done when: an analysis artifact comparing distributions across configs + all five baselines, with a clear read.
+- Goal: did the surface loop land — boot-to-menu, hub dwell, sell+buy usage, dive-launch from hub, debug-menu opt-in via P; distributions vs the M1.0–M1.5 baselines where comparable; surface flow dead-ends.
+- Done when: an analysis artifact reading the surface-loop adoption + any flow friction, comparable to the prior findings.
 
-### RG3 — M1.5 re-gate verdict (Director decides)
-- Milestone: M1.5 (Wave 3)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
+### RG3 — M1.6 re-gate verdict (Director decides)
+- Milestone: M1.6 (Wave 4)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
 - Spec: template `design/M1_1_Tasks/RG3_regate_verdict.md`
-- Goal: record go/iterate/pivot in `design/M1_5_Tasks/G4_findings_M1.5.md`. go → M2; iterate → M1.6; pivot → design rework.
-- Done when: a recorded go/iterate/pivot verdict backed by config-marked telemetry, comparable to the prior findings.
+- Goal: record go/iterate/pivot in `design/M1_6_Tasks/G4_findings_M1.6.md`. go → M2 (milestone); iterate → M1.7; pivot → design rework.
+- Done when: a recorded go/iterate/pivot verdict, comparable to the prior findings.
 
 ---
 

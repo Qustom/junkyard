@@ -93,3 +93,26 @@ _M1 open test-hygiene nit (QA): B2's determinism scene leaks "2 resources still 
 - **M1 wave 3 close-out (2026-06-17):** 24 deviations (21 Reviewed, 3 Addressed → translation gitignore, G5 save-migration fixture, D3 drop-to-swap). Wave 4 (E2/E3/F1/F2) → wave 5 (G1/G2/G3/G6) → G4.
 - **M1 design decisions (2026-06-15):** `design/M1_Tasks/M1_Design_Decisions.md` — `Item`→`JunkItem` merge; `max_light = 60` confirmed.
 - **M0 feedback gate:** internal tech review — architecture sound and iterable → human sign-off.
+
+---
+
+## M1.5 — Agency & Legibility — DONE 2026-06-24..26 (re-gated → ITERATE → M1.6)
+
+Superseded `STATUS.md` live sections, moved here at the M1.6 version boundary. Tasks also archived → `TASKS_COMPLETED.md`;
+re-gate provenance → `design/M1_5_Tasks/G4_findings_M1.5.md`; build detail → `design/M1_5_Tasks/`.
+
+- **Wave 1 (Foundation + legibility, 2026-06-24):** L0 (8 knobs + 4 signals + CFG rows; as-built count 81→**89**, the
+  breakdown's "88" was an arithmetic slip) · L3 (HaulValueLabel → below the timer, pure `.tscn`) · L4 (grab-prompt per-frame
+  visibility invariant). Merges `fa7cdb9`/`5c9cd6c`/`b8520be`. All-off fp byte-identical `e943ac9c8bc1`. Close-out: L0-F1
+  (88→89) → Director Reviewed.
+- **Wave 2 (Agency & threat, 2026-06-24):** L1 (throwing: highlight selector + `thrown_item` Area2D mask world|hazard, kills
+  pursuer/ping-pong, miss re-drops; input remap F/Q-E/Space) `873a062` · L5 (K5 `*_kills` toggles + retired
+  `_driven_default_preset()`) `a2fe301` · L2 (spawn-room pursuer = room-bound slow patrol, `setup` widened to 3-arg) `1f4f67d`.
+  Pushed (origin==local `155b9cf`); board L0–L5+RG1 back-filled. Close-out: L1-F1 (throw monotonic clock) → Reviewed.
+- **Wave 4 (L6 control rework, 2026-06-25):** RG3 "controls clunky" → ITERATE-as-wave. L6 `302d2bd`: `resolve_aim()` decouples
+  aim from movement (right-stick > deadzone → mouse-after-motion → hold-last → movement); player points at aim; throw on
+  LMB/RT; cycle on wheel/LB-RB; Q/E+Space kept. Input-only — fp `e943ac9c8bc1` unmoved, 89 knobs, no save change. Close-out
+  L6-F1 (keyboard-only-no-mouse aims DOWN) → carried to M1.6 backlog (mouse + controller unaffected).
+- **Post-RG3 tuning (2026-06-25):** dive timer 600→300s · controller throw fires on press edge only (`_throw_held` latch) ·
+  hazard fair-share allocation (30-room preset starved spikes → interleave ≈16/16/16). Gate green; fp unmoved. On `main`.
+- **▶ (closed) Next action was:** re-publish to itch → Director re-test mouse/controller → RG3 verdict. **DONE → ITERATE → M1.6.**
