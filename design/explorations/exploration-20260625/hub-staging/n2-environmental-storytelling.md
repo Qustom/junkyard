@@ -1,0 +1,33 @@
+# Environmental Storytelling
+**Category:** The hub as light narrative / texture
+
+## The idea
+The hub's **physical state IS the story**. Not "a quest log tells you the yard is failing" — the yard *looks* failing: dead floodlights, a tarp-patched roof, weeds through the concrete, Cyrus's chair still where he left it. Or, the other pole: rewired lights humming, the shopfront glass replaced, the sorting line turning, a fresh coat on the gate. The player reads "thriving" or "desperate" the instant they walk in — **no dialogue, no UI, no text**. Walk in, glance, *know*.
+
+This is the cheapest narrative that still lands, and it is uniquely strong for a **wordless graybox**: a swapped prop and a toggled light read as story before any writing exists. It is the GDD's tone pillar made into set-dressing — "the yard unsettles; the town heals" (Pillar 3) is told by the *room*, not a line. Bellweather Salvage is, in fiction, "an inherited run-down lot you clean up" (GDD §3); environmental storytelling is just letting that cleanup (or that decay) be *visible*.
+
+## What exists today (canon + build)
+Honest read: the **narrative hook is already canon, the surface is not.** The GDD gives the warm lived-in target ("golden-hour diner, cluttered cozy shop," §13), the arc ("clean it up, sell the land," §3), and three meta-axes the hub could reflect, all live in `systems/game_state.gd`: `money` (wealth → thriving), the roguelite wipe / `quota` miss path (`wipe_meta()`, K2 → desperate), and `exposure` 0–100 (visible wealth → trouble, GDD §9). The state *data* exists. What is missing is the **state → set-dressing vocabulary** — the mapping from "money/exposure/run_number" to "which prop, which light, which clutter." There is **no hub scene** yet, so this is greenfield: the vocabulary can be designed clean.
+
+This rides the **same hub-state** as the sibling explorations — `g1-visible-growth` (the thriving direction) and `v3-persistence-of-failure` (the desperate direction). Those propose the *system* (state drives the hub); n2 is the **artful reading** of that one system: not a progress bar made of props, but a *mood* the player feels without counting.
+
+## How it could fit in
+A **set-dressing vocabulary keyed to meta-state**, authored as discrete prop/light swaps the environment-artist owns:
+
+- **Repair vs. ruin** — `money`/`run_number` swap broken props (cracked window, dark sign, junk-piled bench) for repaired ones (glass, lit sign, clear workbench). Greybox = the *same* `ColorRect`/placeholder mesh in two tints.
+- **Light on/off** — dead floodlights → humming sodium glow. `audio_director.gd` can pair a thin hum to "lit." Cheapest, most legible single signal.
+- **Clutter vs. emptiness** — desperate reads as *both* (untouched mess) *and* its opposite (sold-everything bareness); thriving reads as *organized* abundance. Tone, not headcount.
+- **Cyrus's lingering traces** — his chair, a cold mug, a half-played tape on the bench. These don't change with state; they're the **warmth-under-dread** constant (GDD §3, Cyrus felt only through traces). They make even a thriving yard faintly haunted.
+- **Wealth that raises exposure** — the tension knob: visible signs of money (a new truck, a flashy sign) read as "thriving" *and* silently advance the `exposure` fiction. The set-dressing can literally show the thing the meter punishes (GDD §9, "visible wealth attracts trouble").
+
+**Wordless = perfect for graybox**: swap greybox props by state, ship the read, write copy never (or later). **Scope:** a cheap graybox win now (a few prop states + a light toggle land the mood), deep later (per-building decay, exposure-specific dressing, seasonal layers). Cross-ref `g1`/`v3` for the driving system; environment-artist owns final art per CLAUDE.md.
+
+## Research (cited)
+Prior art converges on "show the aftermath, let the player infer." Environmental storytelling **shows the final outcome of events and invites the player to reconstruct the cause**, telling story through space and objects with no exposition ([Game Developer](https://www.gamedeveloper.com/design/environmental-storytelling), [Medium / Mulholland](https://medium.com/@johnmulholland/game-design-environmental-storytelling-3574aff0ff2b)). **Gone Home** and **What Remains of Edith Finch** tell entire family histories through the *state of rooms* — objects, not narration ([The Gamer](https://www.thegamer.com/games-best-environmental-storytelling/)). **INSIDE/Limbo** prove a narrative can carry with *zero* text, mood doing all the work ([The Gamer](https://www.thegamer.com/games-best-environmental-storytelling/)). **Disco Elysium** uses *state-of-the-world* dressing (bullet holes, graffiti) to express decay and history directly ([Game Rant](https://gamerant.com/games-best-environmental-storytelling/)). Most on-point: **Darkest Dungeon's Hamlet** — each building shifts "from dark and run down to well-lit and welcoming" as you progress, the hub's *appearance* tracking the player's state ([Darkest Dungeon Wiki](https://darkestdungeon.wiki.gg/wiki/Hamlet)) — though players noted the changes are too **hidden behind menus to read in play** ([Steam discussion](https://steamcommunity.com/app/262060/discussions/2/1727575977589403044/)), a direct warning for us: the swap must be *walked-into and obvious*, not buried.
+
+## Open questions
+- **How many discrete hub states?** Two poles (thriving / desperate) graybox cleanest and read fastest; a 3–5 step gradient is richer but multiplies art and risks an illegible middle. Recommend **2–3 for graybox, gradient deferred.** Scope call — **Director + environment-artist.**
+- **Art-authoring cost.** Every prop in two-plus states is real per-asset work for the environment-artist. Which *few* props carry the whole read at lowest cost (the lights + sign + Cyrus's chair triad)? Asset-scope call — **environment-artist.**
+- **Reads clearly without text?** The Hamlet warning is real — a swap nobody notices is wasted. Does the mood land *on entry* in a graybox, or does it need a first-time camera framing / before-after beat? **Fun call — Director, best answered at a fun-gate playtest.**
+- **The exposure-vs-wealth visual tension.** Can a *single* dressing layer read as "you're doing great" and "you're in danger" at once (the GDD's core irony), or does that need a second, sinister vocabulary (men watching, a strange car) layered over the wealth dressing? Genuinely a **vision/tone call — Director.**
+- **Does desperate undercut warmth?** Pushed too far, a ruined hub stops being "cozy lived-in" and becomes grim — fighting Pillar 3. Where's the floor on decay before the town stops *healing*? **Tone call — Director.**
