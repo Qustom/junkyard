@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.6 (Surface & Staging), Wave 2
 - **Branch:** general-purpose/M2
-- **Commit:** bcf5f2f22c062914c173e9490a902d3cf2363949
+- **Commit:** 7c5391e3e54b4aa06875238e2d9faa7c88b3c285 (the M2 implementation commit; this worklog SHA-stamp is the immediate follow-up commit)
 
 ## What changed
 Built the walkable greybox **Hub** (`scenes/hub/hub.*` replacing the M0 stub) + a **departure-portal**
