@@ -36,7 +36,6 @@ var _game: MainGame = null
 var _tel: Node = null
 var _gs: Node = null
 var _bus: Node = null
-var _cfg_menu: ConfigMenu = null
 
 
 func _ready() -> void:
@@ -61,13 +60,11 @@ func _run() -> int:
 		return 1
 	_game = scene.instantiate() as MainGame
 	add_child(_game)
-	await get_tree().process_frame   # _ready: fixtures, menu, consent, R2/R3 connect
-
-	# The ConfigMenu rail is a %-unique child; grab the working config we mutate per V-row.
-	_cfg_menu = _game.get_node("%ConfigMenu") as ConfigMenu
-	if _cfg_menu == null:
-		printerr("RG1 BUILD VERIFY FAIL: ConfigMenu rail not found in assembled scene")
-		return 1
+	# M1.6 (M2): main_game is dive-only and self-starts a run on _ready. We do not grab a
+	# %ConfigMenu rail anymore (it moved to M4's P-overlay) — each V-row stages its RunConfig
+	# directly on GameState via _stage_menu_config (→ GameState.stage_dive_config), which the
+	# dive reads on the next start_new_run() through GameState.dive_config_or_default().
+	await get_tree().process_frame   # _ready: fixtures, self-start, R2/R3 connect
 
 	# Assert the persistent opposition nodes are wired (RG1's own assembly).
 	_verify_persistent_wiring()
@@ -145,25 +142,20 @@ func _verify_persistent_wiring() -> void:
 	# R3 HUD readout already mounted in decision_hud.tscn.
 	if _game.get_node_or_null("DecisionHUD/Root/ExposureReadout") == null:
 		_failures.append("R3 HUD ExposureReadout not present in the decision HUD tree")
-	# Back-to-Config button on the sell screen.
-	if _game.get_node_or_null("SellScreen/CenterContainer/Panel/Margin/VBox/BackToConfigButton") == null:
-		_failures.append("'Back to Config' button missing from the sell screen")
+	# M1.6 (M2): the SellScreen (and its "Back to Config" button) is retired — the dive is
+	# dive-only and run-end auto-returns to the Hub via the App router. The sell tally moves
+	# to M3's Shop; the old SellScreen-node assertion is dropped with the node.
 
 
-# --- Config factories (mutate the menu's working config in place) -------------
+# --- Config factories ---------------------------------------------------------
 
-## Set the ConfigMenu's working config to `cfg`'s field values. We mutate the live
-## working object the menu returns so start_new_run()'s apply_and_get_config() stages
-## exactly this. (We copy field-by-field rather than swap the ref so the menu keeps its
-## own instance.)
+## M1.6 (M2): stage `cfg` as the dive's RunConfig. The embedded ConfigMenu rail is gone
+## (dive-only refactor); the dive now resolves its config via GameState.dive_config_or_default()
+## on its self-start, which reads the GameState dive-staged slot. So we stage `cfg` directly
+## (GameState.stage_dive_config) and the next start_new_run() adopts it — more faithful to the
+## dive-only entry than poking a menu the dive no longer owns.
 func _stage_menu_config(cfg: RunConfig) -> void:
-	var working: RunConfig = _cfg_menu.apply_and_get_config()
-	for p in cfg.get_property_list():
-		if (int(p.usage) & PROPERTY_USAGE_STORAGE) != 0 and (int(p.usage) & PROPERTY_USAGE_EDITOR) != 0:
-			var n: String = p.name
-			if n == "script" or n.begins_with("resource_"):
-				continue
-			working.set(n, cfg.get(n))
+	GameState.stage_dive_config(cfg)
 
 
 func _all_off() -> RunConfig:
@@ -310,10 +302,8 @@ func _drive_run(cfg: RunConfig, cause: StringName, tag: String) -> void:
 	if _gs.run_active:
 		_failures.append("%s: run_active still true after end-cause %s" % [tag, str(cause)])
 
-	# The SellScreen pauses the tree on run_ended. Dismiss it WITHOUT firing
-	# continue_pressed — that signal is wired to start_new_run() in the build, so emitting
-	# it would kick off an extra unwanted run and leave two starts without an intervening
-	# end. Each V-row calls start_new_run() itself, so here we only unpause + hide.
+	# M1.6 (M2): run-end auto-returns to the Hub via the App router (no SellScreen overlay).
+	# Each V-row calls start_new_run() itself for the next run; the no-op dismiss just unpauses.
 	_dismiss_sell_screen()
 	await_idle()
 
@@ -370,14 +360,12 @@ func _teleport_player(player: Node2D, cell: Vector2i, cell_px: int) -> void:
 	player.global_position = Vector2(cell * cell_px) + Vector2(cell_px, cell_px) * 0.5
 
 
-## Unpause + hide the SellScreen between runs WITHOUT firing continue_pressed (which the
-## build wires to start_new_run — emitting it would start an extra run). Mirrors what
-## the production Continue does to the tree, minus the loop-restart signal.
+## M1.6 (M2): the SellScreen is retired — run-end auto-returns to the Hub via the App
+## router, no tree-pausing overlay to dismiss. Kept as a harmless no-op (belt-and-braces
+## unpause) so the V-row call sites need no churn. Each V-row already re-stages + re-starts,
+## so there is no extra-run hazard.
 func _dismiss_sell_screen() -> void:
 	get_tree().paused = false
-	var sell := _game.get_node_or_null("SellScreen") as CanvasLayer
-	if sell != null and sell.visible:
-		sell.hide()
 
 
 # --- JSONL inspection: V13/V14/V15 + per-opposition rows V1-V5 ----------------
@@ -537,19 +525,17 @@ func _verify_carry_forward() -> void:
 # --- V7: reset-to-baseline equals all-off ------------------------------------
 
 func _verify_reset_to_baseline() -> void:
-	# Mutate the menu config ON, then invoke the CFG reset; the working config must be
-	# all-off again, so a run launched after reset == V6.
-	var on := _all_on()
-	_stage_menu_config(on)
-	# The CFG reset action (its ResetButton handler).
-	if _cfg_menu.has_method("_on_reset_pressed"):
-		_cfg_menu._on_reset_pressed()
-	else:
-		_human_deferred.append("V7 reset-to-baseline (no headless reset entry — verify in UI)")
-		return
-	var after: RunConfig = _cfg_menu.apply_and_get_config()
-	if not after.all_oppositions_disabled():
-		_failures.append("V7: CFG reset did not return the working config to all-off")
+	# M1.6 (M2): the CFG rail (and its ResetButton) moved to M4's P-overlay, so this RG
+	# regression no longer pokes a menu the dive doesn't own. The CFG Reset→all-off behaviour
+	# is pinned by test_config_menu.tscn ("Reset returns the all-off baseline"). Here we keep
+	# V7's spirit — "the all-off control reproduces the baseline" — by staging a fresh all-off
+	# RunConfig as the dive config and confirming the dive adopts an all-off config: stage all-on,
+	# then stage all-off (the reset equivalent), and assert dive_config_or_default() is all-off.
+	_stage_menu_config(_all_on())
+	_stage_menu_config(_all_off())
+	var after: RunConfig = GameState.dive_config_or_default()
+	if after == null or not after.all_oppositions_disabled():
+		_failures.append("V7: staging an all-off config did not yield an all-off dive config")
 
 
 # --- Human-deferred rows -----------------------------------------------------
@@ -561,7 +547,7 @@ func _note_human_deferred() -> void:
 	_human_deferred.append("V3 greybox exposure readout legible while climbing — checklist")
 	_human_deferred.append("V4 fog/vision visibly tightens at depth — checklist")
 	_human_deferred.append("V17 build identity (m1-<date>-<sha>) + Director build_tag on a returned log — checklist")
-	_human_deferred.append("V18 no stuck SCREENS via real input (menu/consent/sell navigation) — checklist")
+	_human_deferred.append("V18 no stuck SCREENS via real input (Main Menu → Hub → Dive → Hub navigation) — checklist")
 	print("RG1 human-deferred (manual playtest checklist): ")
 	for h in _human_deferred:
 		print("  - ", h)

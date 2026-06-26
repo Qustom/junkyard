@@ -14,7 +14,8 @@ extends Node
 ##   1. start_new_run() builds a band (BandContainer has children: pieces + pickups + gate).
 ##   2. The player is registered in the "player" group (W4-6 drop-lookup fix).
 ##   3. A real interaction_requested(&"junk", ...) adds to the run bag (loop's first half).
-##   4. A real interaction_requested(&"gate", ...) extracts → run_ended(extract), run inactive.
+##   4. A real interaction_requested(&"gate", ...) extracts → run_ended(extract), run inactive,
+##      and the carried junk is HELD-banked in meta (M1.6 M2: no auto-sell; M3's Shop sells).
 ##   5. start_new_run() works AGAIN cleanly (fresh run-state, old band torn down).
 
 const MAIN_GAME_PATH := "res://scenes/game/main_game.tscn"
@@ -40,7 +41,10 @@ func _run() -> int:
 		return 1
 	var game: MainGame = scene.instantiate() as MainGame
 	add_child(game)
-	await get_tree().process_frame  # let _ready() load fixtures + show menu
+	# M1.6 (M2): main_game is dive-only and SELF-STARTS a run on _ready (the dive scene IS
+	# the dive). We let that settle, then call start_new_run() again to exercise the public
+	# loop entry the RG tests still drive — a fresh restart with the old band torn down.
+	await get_tree().process_frame  # let _ready() load fixtures + self-start the run
 
 	# --- 1. Start a run: world assembled ------------------------------------
 	game.start_new_run()
@@ -65,10 +69,8 @@ func _run() -> int:
 		failures.append("player not registered in the \"player\" group (W4-6)")
 
 	# --- 3. Real interaction-based pickup -----------------------------------
-	var picked_value: int = 0
 	if pickup != null:
 		var item: JunkItem = pickup.item
-		picked_value = item.base_sell_value
 		var before: int = GameState.run_inventory.items.size()
 		var interactable := pickup.get_node("Interactable")
 		EventBus.interaction_requested.emit(&"junk", interactable)
@@ -79,12 +81,13 @@ func _run() -> int:
 			failures.append("picked item missing from run bag")
 
 	# --- 4. Gate extract via interaction ------------------------------------
-	# Extract ends the run; the SellScreen (a sibling in MainGame) reacts to
-	# run_ended and synchronously sells banked_junk → Money, so by the time control
-	# returns the bank is already cashed out. We therefore assert the LOOP RESULT:
-	# Money increased by the carried haul (extract → bank → sell, all wired).
+	# M1.6 (M2): extract ends the run and BANKS the carried junk into meta (banked_junk) —
+	# it no longer auto-sells. The SellScreen is gone; the App router auto-returns to the
+	# Hub on run_ended, and M3's Shop converts the held bank to Money later. So we assert
+	# the M2 LOOP RESULT: extract → run_ended(extract) → run inactive → the carried item is
+	# HELD in banked_junk (not sold). Money is unchanged by extract alone.
 	if gate != null:
-		var money_before: int = GameState.money
+		var banked_before: int = GameState.banked_junk.size()
 		var gate_interactable := gate.get_node("Interactable")
 		var ended_before: int = ended.size()
 		EventBus.interaction_requested.emit(&"gate", gate_interactable)
@@ -93,11 +96,11 @@ func _run() -> int:
 			failures.append("gate interact did not end the run with cause extract")
 		if GameState.run_active:
 			failures.append("run_active still true after gate extract")
-		if GameState.money != money_before + picked_value:
-			failures.append("loop result: money %d -> %d, expected +%d (extract→bank→sell)"
-				% [money_before, GameState.money, picked_value])
+		if GameState.banked_junk.size() != banked_before + 1:
+			failures.append("loop result: banked_junk %d -> %d, expected +1 (extract → held bank, NOT sold)"
+				% [banked_before, GameState.banked_junk.size()])
 
-	# Unpause in case the SellScreen paused the tree on run_ended.
+	# M1.6 (M2): no SellScreen pauses the tree anymore; keep the unpause as a belt-and-braces.
 	get_tree().paused = false
 
 	# --- 5. Restart cleanly --------------------------------------------------
@@ -115,8 +118,9 @@ func _run() -> int:
 	game.queue_free()
 
 	if failures.is_empty():
-		print("MAIN GAME OK — assembled scene built a band (pieces+pickups+gate), player in group, "
-			+ "interaction pickup + gate extract drove run_ended(extract), and a second run restarted clean.")
+		print("MAIN GAME OK — assembled dive-only scene built a band (pieces+pickups+gate), player in group, "
+			+ "interaction pickup + gate extract drove run_ended(extract) with the haul held-banked (not sold), "
+			+ "and a second run restarted clean.")
 		return 0
 	for f in failures:
 		printerr("MAIN GAME FAIL: ", f)

@@ -55,7 +55,6 @@ var _game: MainGame = null
 var _tel: Node = null
 var _gs: Node = null
 var _bus: Node = null
-var _cfg_menu: ConfigMenu = null
 
 
 func _ready() -> void:
@@ -88,12 +87,9 @@ func _run() -> int:
 		return 1
 	_game = scene.instantiate() as MainGame
 	add_child(_game)
-	await get_tree().process_frame   # _ready: fixtures, menu, consent, R2/R3 connect
-
-	_cfg_menu = _game.get_node("%ConfigMenu") as ConfigMenu
-	if _cfg_menu == null:
-		printerr("RG1 M1.2 VERIFY FAIL: ConfigMenu rail not found in assembled scene")
-		return 1
+	# M1.6 (M2): main_game is dive-only and self-starts on _ready; no %ConfigMenu rail to grab
+	# (it moved to M4's P-overlay). Each V-row stages its RunConfig via GameState.stage_dive_config.
+	await get_tree().process_frame   # _ready: fixtures, self-start, R2/R3 connect
 
 	# Persistent-node wiring (carried over from M1.1 RG1 -- still required for M1.2).
 	_verify_persistent_wiring()
@@ -206,23 +202,17 @@ func _verify_persistent_wiring() -> void:
 		_failures.append("BUG5: ExposureMeter has no add() mutator -- R2 exposure toll is a no-op on the meter")
 	if _game.get_node_or_null("DecisionHUD/Root/ExposureReadout") == null:
 		_failures.append("R3 HUD ExposureReadout not present in the decision HUD tree")
-	if _game.get_node_or_null("SellScreen/CenterContainer/Panel/Margin/VBox/BackToConfigButton") == null:
-		_failures.append("'Back to Config' button missing from the sell screen")
+	# M1.6 (M2): the SellScreen + its "Back to Config" button are retired (run-end auto-returns
+	# to the Hub via the App router); the old node-exists assertion is dropped with the node.
 
 
 # --- Config factories ---------------------------------------------------------
 
-## Set the ConfigMenu's working config to `cfg`'s field values (copy field-by-field
-## so the menu keeps its own instance), so start_new_run()'s apply_and_get_config()
-## stages exactly this. Identical to the M1.1 driver's _stage_menu_config.
+## M1.6 (M2): stage `cfg` as the dive's RunConfig via GameState.stage_dive_config — the dive
+## reads it on its next self-start through GameState.dive_config_or_default(). The embedded
+## ConfigMenu rail is gone (dive-only refactor), so we stage directly instead of poking a menu.
 func _stage_menu_config(cfg: RunConfig) -> void:
-	var working: RunConfig = _cfg_menu.apply_and_get_config()
-	for p in cfg.get_property_list():
-		if (int(p.usage) & PROPERTY_USAGE_STORAGE) != 0 and (int(p.usage) & PROPERTY_USAGE_EDITOR) != 0:
-			var n: String = p.name
-			if n == "script" or n.begins_with("resource_"):
-				continue
-			working.set(n, cfg.get(n))
+	GameState.stage_dive_config(cfg)
 
 
 func _all_off() -> RunConfig:
@@ -442,11 +432,10 @@ func _teleport_player(player: Node2D, cell: Vector2i, cell_px: int) -> void:
 	player.global_position = Vector2(cell * cell_px) + Vector2(cell_px, cell_px) * 0.5
 
 
+# M1.6 (M2): the SellScreen is retired (run-end auto-returns to the Hub via the App router).
+# Kept as a no-op (belt-and-braces unpause) so the V-row call sites need no churn.
 func _dismiss_sell_screen() -> void:
 	get_tree().paused = false
-	var sell := _game.get_node_or_null("SellScreen") as CanvasLayer
-	if sell != null and sell.visible:
-		sell.hide()
 
 
 # --- I1 (assembled): level scale visibly changes the materialised band ---------
@@ -674,7 +663,7 @@ func _note_human_deferred() -> void:
 	_human_deferred.append("I3: the exposure bar + penalty banner + R2 clock-toll pulse are LEGIBLE -- checklist")
 	_human_deferred.append("I4: vision OCCLUDES (hides, not dims) beyond the radius + the 'lost' cue reads -- checklist")
 	_human_deferred.append("I5: a RETURNED log carries the real m1-<date>-<sha> build id + Director build_tag -- checklist")
-	_human_deferred.append("V18: no stuck SCREENS via real input (menu/consent/sell navigation) -- checklist")
+	_human_deferred.append("V18: no stuck SCREENS via real input (Main Menu -> Hub -> Dive -> Hub navigation) -- checklist")
 	print("RG1 M1.2 human-deferred (manual playtest checklist): ")
 	for h in _human_deferred:
 		print("  - ", h)

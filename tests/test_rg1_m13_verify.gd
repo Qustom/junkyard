@@ -65,7 +65,6 @@ var _game: MainGame = null
 var _tel: Node = null
 var _gs: Node = null
 var _bus: Node = null
-var _cfg_menu: ConfigMenu = null
 
 
 func _ready() -> void:
@@ -110,12 +109,9 @@ func _run() -> int:
 		return 1
 	_game = scene.instantiate() as MainGame
 	add_child(_game)
-	await get_tree().process_frame   # _ready: fixtures, menu, consent, R2/R3 connect
-
-	_cfg_menu = _game.get_node("%ConfigMenu") as ConfigMenu
-	if _cfg_menu == null:
-		printerr("RG1 M1.3 VERIFY FAIL: ConfigMenu rail not found in assembled scene")
-		return 1
+	# M1.6 (M2): main_game is dive-only and self-starts on _ready; no %ConfigMenu rail to grab
+	# (it moved to M4's P-overlay). Each V-row stages its RunConfig via GameState.stage_dive_config.
+	await get_tree().process_frame   # _ready: fixtures, self-start, R2/R3 connect
 
 	# Persistent-node wiring (carried over from M1.2 RG1 — still required for M1.3).
 	_verify_persistent_wiring()
@@ -416,18 +412,21 @@ func _verify_persistent_wiring() -> void:
 		_failures.append("ExposureMeter (R3) not a persistent child of MainGame")
 	elif not em.is_in_group(&"r3_exposure_meter"):
 		_failures.append("ExposureMeter not in group 'r3_exposure_meter'")
-	if _game.get_node_or_null("SellScreen/CenterContainer/Panel/Margin/VBox/BackToConfigButton") == null:
-		_failures.append("'Back to Config' button missing from the sell screen")
+	# M1.6 (M2): the SellScreen + its "Back to Config" button are retired (run-end auto-returns
+	# to the Hub via the App router); the old node-exists assertion is dropped with the node.
 
 
-# --- J1 (assembled): the CFG rail boots seeded with the default play-preset ------
+# --- J1 (assembled): the dive resolves the default play-preset with no config staged ----
 
-## The build must boot into the F1 stack, not all-off. The ConfigMenu seeds its working
-## config from make_default_play_preset() at _ready; apply_and_get_config() returns it.
+## M1.6 (M2): the build must boot the F1 stack, not all-off. With the embedded ConfigMenu
+## gone, the dive resolves its config via GameState.dive_config_or_default() — which returns
+## make_default_play_preset() when nothing is staged. We clear any staged dive config (stage
+## null) and assert the default-resolved config is the F1 stack, the J1 contract unchanged.
 func _verify_cfg_boots_default_preset() -> void:
-	var working: RunConfig = _cfg_menu.apply_and_get_config()
+	GameState.stage_dive_config(null)
+	var working: RunConfig = GameState.dive_config_or_default()
 	if working == null:
-		_failures.append("J1: CFG apply_and_get_config() returned null at boot")
+		_failures.append("J1: GameState.dive_config_or_default() returned null at boot")
 		return
 	# The boot config must be a real play config, not the all-off control.
 	if working.all_oppositions_disabled():
@@ -441,17 +440,11 @@ func _verify_cfg_boots_default_preset() -> void:
 
 # --- Config factories ----------------------------------------------------------
 
-## Set the ConfigMenu's working config to `cfg`'s field values (copy field-by-field so the
-## menu keeps its own instance), so start_new_run()'s apply_and_get_config() stages exactly
-## this. Identical to the M1.2 driver's _stage_menu_config.
+## M1.6 (M2): stage `cfg` as the dive's RunConfig via GameState.stage_dive_config — the dive
+## reads it on its next self-start through GameState.dive_config_or_default(). The embedded
+## ConfigMenu rail is gone (dive-only refactor), so we stage directly instead of poking a menu.
 func _stage_menu_config(cfg: RunConfig) -> void:
-	var working: RunConfig = _cfg_menu.apply_and_get_config()
-	for p in cfg.get_property_list():
-		if (int(p.usage) & PROPERTY_USAGE_STORAGE) != 0 and (int(p.usage) & PROPERTY_USAGE_EDITOR) != 0:
-			var n: String = p.name
-			if n == "script" or n.begins_with("resource_"):
-				continue
-			working.set(n, cfg.get(n))
+	GameState.stage_dive_config(cfg)
 
 
 func _all_off() -> RunConfig:
@@ -638,11 +631,10 @@ func _teleport_player(player: Node2D, cell: Vector2i, cell_px: int) -> void:
 	player.global_position = Vector2(cell * cell_px) + Vector2(cell_px, cell_px) * 0.5
 
 
+# M1.6 (M2): the SellScreen is retired (run-end auto-returns to the Hub via the App router).
+# Kept as a no-op (belt-and-braces unpause) so the V-row call sites need no churn.
 func _dismiss_sell_screen() -> void:
 	get_tree().paused = false
-	var sell := _game.get_node_or_null("SellScreen") as CanvasLayer
-	if sell != null and sell.visible:
-		sell.hide()
 
 
 # --- JSONL inspection: snapshot keys (incl. J2/J3/J4) + gating + corridor_summary -
