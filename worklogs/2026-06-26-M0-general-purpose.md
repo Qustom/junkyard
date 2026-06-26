@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.6 (Wave 1, lands first + alone)
 - **Branch:** general-purpose/M0
-- **Commit:** 1379886e4d3f874af3d0a577f99ce46c9a18ca96
+- **Commit:** b68c94e678684cde6a37b5dae458a1983026b41c
 
 ## What changed
 M0 is the single-writer foundation pass over the shared structural files for M1.6.
