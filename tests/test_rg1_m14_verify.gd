@@ -51,7 +51,6 @@ var _game: MainGame = null
 var _tel: Node = null
 var _gs: Node = null
 var _bus: Node = null
-var _cfg_menu: ConfigMenu = null
 
 
 func _ready() -> void:
@@ -88,12 +87,9 @@ func _run() -> int:
 		return 1
 	_game = scene.instantiate() as MainGame
 	add_child(_game)
+	# M1.6 (M2): main_game is dive-only and self-starts on _ready; no %ConfigMenu rail to grab
+	# (it moved to M4's P-overlay). Each V-row stages its RunConfig via GameState.stage_dive_config.
 	await get_tree().process_frame
-
-	_cfg_menu = _game.get_node("%ConfigMenu") as ConfigMenu
-	if _cfg_menu == null:
-		printerr("RG1 M1.4 VERIFY FAIL: ConfigMenu rail not found in assembled scene")
-		return 1
 
 	# RG1 (assembled): the CFG rail boots seeded with the default play-preset, NOT all-off.
 	_verify_cfg_boots_default_preset()
@@ -362,10 +358,14 @@ func _plan_counts(rc: RunConfig, pieces_sorted: Array, ceiling: int) -> Dictiona
 
 # --- RG1 (assembled): the CFG rail boots seeded with the default play-preset ------
 
+## M1.6 (M2): the dive resolves its config via GameState.dive_config_or_default() — which
+## returns make_default_play_preset() when nothing is staged. Clear any staged config and
+## assert the default-resolved config is the M1.4 fun stack (the boot contract unchanged).
 func _verify_cfg_boots_default_preset() -> void:
-	var working: RunConfig = _cfg_menu.apply_and_get_config()
+	GameState.stage_dive_config(null)
+	var working: RunConfig = GameState.dive_config_or_default()
 	if working == null:
-		_failures.append("RG1: CFG apply_and_get_config() returned null at boot")
+		_failures.append("RG1: GameState.dive_config_or_default() returned null at boot")
 		return
 	if working.all_oppositions_disabled():
 		_human_deferred.append("RG1: CFG booted all-off rather than the default play-preset -- confirm config_menu seeds make_default_play_preset() (deferred: may be a fixture-mode boot)")
@@ -426,14 +426,10 @@ func _count_hazards_recursive(node: Node, counts: Dictionary) -> void:
 
 # --- Config factories ----------------------------------------------------------
 
+## M1.6 (M2): stage `cfg` as the dive's RunConfig via GameState.stage_dive_config — the dive
+## reads it on its next self-start through GameState.dive_config_or_default().
 func _stage_menu_config(cfg: RunConfig) -> void:
-	var working: RunConfig = _cfg_menu.apply_and_get_config()
-	for p in cfg.get_property_list():
-		if (int(p.usage) & PROPERTY_USAGE_STORAGE) != 0 and (int(p.usage) & PROPERTY_USAGE_EDITOR) != 0:
-			var n: String = p.name
-			if n == "script" or n.begins_with("resource_"):
-				continue
-			working.set(n, cfg.get(n))
+	GameState.stage_dive_config(cfg)
 
 
 func _all_off() -> RunConfig:
@@ -500,11 +496,10 @@ func await_idle() -> void:
 	await get_tree().physics_frame
 
 
+# M1.6 (M2): the SellScreen is retired (run-end auto-returns to the Hub via the App router).
+# Kept as a no-op (belt-and-braces unpause) so the V-row call sites need no churn.
 func _dismiss_sell_screen() -> void:
 	get_tree().paused = false
-	var sell := _game.get_node_or_null("SellScreen") as CanvasLayer
-	if sell != null and sell.visible:
-		sell.hide()
 
 
 # --- JSONL inspection: snapshot keys (incl. K-knobs) + end-causes ----------------

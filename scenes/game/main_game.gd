@@ -35,11 +35,6 @@ const GATE_SCENE_PATH := "res://entities/gate/extract_gate.tscn"
 ## exercised and the loop stays at the M1.0 baseline.
 const RUN_CONFIG_PATH := "res://data/run_config/run_config.tres"
 
-## G6: first-run telemetry consent prompt (Director-ratified G3 #1 → Addressed). Shown
-## once over the menu before gameplay so the G4 cohort actually opts in; telemetry stays
-## opt-in / default OFF.
-const ConsentPromptScript := preload("res://systems/settings/telemetry_consent_prompt.gd")
-
 ## The band id GameState tags the run with. M1 has a single greybox band.
 const BAND_ID := &"near"
 
@@ -56,10 +51,6 @@ const DEFAULT_CELL_SIZE_PX := 16
 ## world-width from the cam_* run-config knobs (default-off => today's (2,2) framing).
 @onready var _camera_rig: Node2D = $CameraRig
 @onready var _camera: CameraView = $CameraRig/CameraView
-@onready var _menu: CanvasLayer = $MainMenu
-@onready var _start_button: Button = %StartButton
-@onready var _version_label: Label = %VersionLabel
-@onready var _sell_screen: SellScreen = $SellScreen
 @onready var _dive_clock: DiveClock = $DiveClock
 ## M1.1 R2/R3: the two cost-axis oppositions live as PERSISTENT children of the dive
 ## scene (like DiveClock) — they self-gate per run (their _on_run_started reads
@@ -69,10 +60,6 @@ const DEFAULT_CELL_SIZE_PX := 16
 ## they react to the run lifecycle automatically. RG1 only injects R2's DiveClock ref.
 @onready var _return_cost: ReturnCost = $ReturnCost   # R2 (Costlier Return)
 @onready var _exposure_meter: ExposureMeter = $ExposureMeter   # R3 (Exposure Meter)
-## M1.1 CFG: the pre-run config rail on the main menu. start_new_run() stages its
-## working config (ratified shape (a)); if the node is absent we fall back to the
-## all-off default at RUN_CONFIG_PATH so the loop still reaches the M1.0 baseline.
-@onready var _config_menu: ConfigMenu = %ConfigMenu
 ## L1 (M1.5): the HUD inventory panel — the throw seam reads its highlighted_index()
 ## as a PURE GETTER (the panel stays a view; main_game owns the model mutation + the
 ## projectile spawn). Resolved by path off the DecisionHUD instance.
@@ -136,9 +123,6 @@ const HAZARD_SCENE_PATH := "res://scenes/hazards/hazard_entity.tscn"
 ## not on tick), so it is safe to tune (ratified Decision 2).
 @export var depth_tick_interval := 0.15
 
-# G6: true while the first-run consent modal is up; blocks starting a run until answered.
-var _consent_pending: bool = false
-
 
 func _ready() -> void:
 	_load_fixtures()
@@ -148,25 +132,17 @@ func _ready() -> void:
 	# a config that never selects the clock toll simply skips the charge.
 	if _return_cost != null:
 		_return_cost.dive_clock = _dive_clock
-	_version_label.text = "build %s" % BuildVersion.id()
-	_start_button.pressed.connect(_on_start_pressed)
-	# W4-11: the production SellScreen only announces intent; G3 owns the restart.
-	# Continue from the reward beat loops straight back into a fresh dive (door 2 —
-	# reuses the menu's config, no menu shown: the config carry-forward of §2.3).
-	# K2 (M1.4): Continue routes through _on_continue_pressed so a MISSED quota triggers
-	# the roguelite wipe BEFORE the next run (the SellScreen flagged pending_wipe()).
-	_sell_screen.continue_pressed.connect(_on_continue_pressed)
-	# RG1 (§8 Q2): "Back to Config" re-opens the menu so the Director can switch configs
-	# mid-session. The next Start (door 1) re-reads ConfigMenu.apply_and_get_config().
-	_sell_screen.back_to_config_pressed.connect(_on_back_to_config)
-	# A finished run (extract OR fail) hands the player back to a safe state; the
-	# SellScreen presents over the paused tree, so we don't need to act here beyond
-	# parking the player. The sell screen + continue drive the loop forward.
+	# M1.6 (M2): main_game is DIVE-ONLY now. The Main Menu (M1) owns the title / Start /
+	# Version / first-run telemetry consent; the Hub (M2) is the between-runs surface; the
+	# P-debug overlay (M4) owns the config rail. Entering this scene == diving, so on
+	# run_ended we route back to the Hub (the App router auto-returns) instead of presenting
+	# a SellScreen. We only keep the dive's own run-end handler (corridor summary + freeze).
 	EventBus.run_ended.connect(_on_run_ended)
-	_show_menu()
-	# G6: first-run only — surface the telemetry consent modal over the menu and block
-	# starting a run until the player answers. After the first answer it never re-shows.
-	_maybe_show_consent_prompt()
+	# Self-start the dive: the portal already gated the player's choice to dive (RD-3), so
+	# the dive scene starts its run on entry. start_new_run() resolves its RunConfig via
+	# GameState.dive_config_or_default() (M4's staged config if the Director set one, else
+	# make_default_play_preset()) — no menu-embedded ConfigMenu rail anymore.
+	start_new_run()
 
 
 func _load_fixtures() -> void:
@@ -188,25 +164,21 @@ func _load_fixtures() -> void:
 
 # --- The loop entry point (G3-owned) -----------------------------------------
 
-## K2 (M1.4): SellScreen.continue_pressed handler. On a MISSED quota the SellScreen
-## set pending_wipe() — run the roguelite wipe (a SEPARATE meta op) BEFORE the next
-## run so it restarts at run 1 / quota_base. A met / quota-off Continue is unchanged
-## (no wipe). A wiped run is just a normal fresh run whose meta is at defaults, so
-## start_new_run needs no special case (start_run re-seeds the quota from quota_base).
-func _on_continue_pressed() -> void:
-	if _sell_screen != null and _sell_screen.pending_wipe():
-		GameState.wipe_meta()
-	start_new_run()
+# M1.6 (M2): _on_continue_pressed (the old SellScreen.continue_pressed handler, which ran
+# the MISS-wipe before looping into a fresh dive) is DELETED. The dive no longer loops
+# through a SellScreen — on run_ended the App router auto-returns to the Hub, and the
+# Hub-return beat (hub.gd) owns the quota eval + roguelite MISS-wipe (decoupled from
+# selling, GameState.evaluate_quota_on_return). The wipe is therefore guaranteed on every
+# return, even if the player never visits M3's Shop to sell — closing the roguelite hole.
 
-
-## Start a fresh dive. The SINGLE place a run begins — both the menu's Start button
-## and SellScreen.continue_pressed call this. Tears down any previous band, builds a
+## Start a fresh dive. The SINGLE place a run begins — called from _ready() on entry
+## (M1.6 M2: the dive self-starts; the portal already gated the choice) and re-callable by
+## the RG verify tests directly. Tears down any previous band, builds a
 ## new seeded one, repositions the player at the entry, and starts the run lifecycle
 ## (which resets run-state: a fresh bag, a reset clock, depth 0). Meta-state (money,
 ## banked_junk) persists across calls — the run/meta boundary is GameState's job; we
 ## only ever touch run-state through start_run(). Safe to call repeatedly per session.
 func start_new_run() -> void:
-	_hide_menu()
 	_clear_band()
 
 	_run_count += 1
@@ -216,11 +188,14 @@ func start_new_run() -> void:
 	# branching (Lever 1) can read it inside generate(). We stage this SAME config
 	# object onto GameState in step 6, so generation and the run share one config —
 	# the M1.1 determinism key is (seed + config).
-	# J1 (M1.3): when there's no CFG rail, fall back to the default play-preset (not the
-	# all-off .tres) so a CFG-less launch boots into the same fun stack the CFG path does.
-	# Tests that want the all-off control stage RunConfig.new()/the .tres explicitly via
-	# GameState.stage_run_config, so the determinism baseline is unaffected.
-	var run_cfg: RunConfig = _config_menu.apply_and_get_config() if _config_menu != null else RunConfig.make_default_play_preset()
+	# M1.6 (M2): the embedded ConfigMenu rail is gone (dive-only refactor). Resolve the
+	# RunConfig from the GameState dive-staged slot: M4's P-debug overlay writes it
+	# (stage_dive_config) when the Director sets a config; otherwise dive_config_or_default()
+	# returns make_default_play_preset() (the same fun stack the old CFG-less fallback used,
+	# preserving the J1 "CFG-less launch boots the fun preset" contract). Tests that want the
+	# all-off control stage a RunConfig.new()/the .tres explicitly via GameState.stage_dive_config
+	# (or stage_run_config), so the determinism baseline is unaffected. Never null.
+	var run_cfg: RunConfig = GameState.dive_config_or_default()
 
 	# 1. Generate + grade + plan (B2 → B3) — pure functions of (seed + config).
 	#    I1 (M1.2): pick the catalog by lvl_enabled (Resolved G — config-dependent
@@ -845,9 +820,13 @@ func _on_run_ended(_reason: StringName, _duration_s: float, _depth_reached: int)
 	# the single resolve point for all three. The accumulators reset on the next run's
 	# _build_cell_depth_map (run-state, never persisted).
 	EventBus.corridor_time_summary.emit(_corridor_time_s, _room_time_s)
-	# The SellScreen (a sibling) presents the reward beat over the paused tree and,
-	# on Continue, calls start_new_run(). We just freeze the player so it can't keep
-	# sliding under the paused overlay edge cases; start_new_run repositions it.
+	# M1.6 (M2): the run is over → the App router observes this same run_ended and
+	# AUTO-RETURNS to the Hub (app.gd:_on_run_ended, deferred one frame), where the
+	# Hub-return beat (hub.gd) evaluates the quota off the held bank and wipes on a MISS.
+	# main_game does NOT emit returned_to_hub itself (the router is the single owner of
+	# the return — a second emit would double-fire it) and no longer presents a SellScreen
+	# (sell moved to M3's Shop; the haul is held-banked in meta until then). We just freeze
+	# the player so it can't keep sliding in the frame before the scene swaps.
 	if _player != null:
 		_player.velocity = Vector2.ZERO
 
@@ -1271,53 +1250,14 @@ func _throw_run_t_ms() -> int:
 	return Time.get_ticks_msec()
 
 
-# --- Menu --------------------------------------------------------------------
-
-func _on_start_pressed() -> void:
-	# G6: while the first-run consent modal is up, the menu is blocked — ignore Start.
-	if _consent_pending:
-		return
-	start_new_run()
-
-
-## RG1 (§8 Q2): the SellScreen's "Back to Config" path. The sell screen already
-## unpaused + hid itself before emitting, so we only re-show the menu (which carries the
-## ConfigMenu rail). The Director edits knobs, then Start → start_new_run() rebinds the
-## config (door 1). Quick re-run (Continue) and switch-config (this) are the two doors.
-func _on_back_to_config() -> void:
-	_show_menu()
-
-
-# --- G6: first-run telemetry consent ----------------------------------------
-
-## Show the consent modal exactly once (first launch / wiped profile). Blocks the
-## Start button until the player answers; after any answer the asked-flag is set so
-## this never shows again. No-op when already asked.
-func _maybe_show_consent_prompt() -> void:
-	if not ConsentPromptScript.should_show():
-		return
-	_consent_pending = true
-	_start_button.disabled = true
-	var prompt: TelemetryConsentPrompt = ConsentPromptScript.new()
-	prompt.choice_made.connect(_on_consent_choice)
-	add_child(prompt)
-
-
-func _on_consent_choice(_enabled: bool) -> void:
-	# Either choice unblocks the menu. The prompt itself persisted the choice + the
-	# asked-flag and (on Enable) toggled Telemetry; we only restore the menu here.
-	_consent_pending = false
-	_start_button.disabled = false
-	_start_button.grab_focus()
-
-
-func _show_menu() -> void:
-	_menu.visible = true
-	_start_button.grab_focus()
-
-
-func _hide_menu() -> void:
-	_menu.visible = false
+# --- Menu / consent / sell-loop: DELETED (M1.6 M2 dive-only refactor) ---------
+# The Main Menu (M1, scenes/menu/*) now owns the title / Start / Version / first-run
+# telemetry consent; the P-debug overlay (M4, ui/config/*) owns the config rail; the
+# Hub (M2, scenes/hub/*) is the between-runs surface entered via the App router. So
+# main_game no longer has a MainMenu CanvasLayer, a Start button, a ConsentPrompt, or a
+# SellScreen — _on_start_pressed / _on_back_to_config / _maybe_show_consent_prompt /
+# _on_consent_choice / _show_menu / _hide_menu are all removed. The dive self-starts in
+# _ready (start_new_run) and routes to the Hub on run_ended (via the router auto-return).
 
 
 # --- Seeding -----------------------------------------------------------------
