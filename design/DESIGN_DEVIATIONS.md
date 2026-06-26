@@ -33,3 +33,25 @@ movement. Mouse + controller (the **primary** schemes) are unaffected; all-off f
 *Claude's recommendation:* **Reviewed** — mouse is the primary KB/M device and the Director kept Q/E+Space as a *fallback*, not
 the main scheme. If a usable keyboard-only aim is wanted, file a small follow-up to track movement direction when neither
 mouse (`_mouse_active`) nor stick is active. Surfaced for the re-test in `design/M1_5_Tasks/G4_findings_M1.5.md`.
+
+---
+
+**[2026-06-26] W2-F1 — `test_rg1_m13_verify` is stale/broken (pre-existing, NOT M1.6 regression).**
+*What vs. the doc:* the M1.3 RG-verify scene fails (exit 1) on `M5/all-on` opposition-telemetry rows
+(`return_cost_incurred`/`exposure_*`/`nav_*` never emitted in headless) + the `timeout` end-cause never observed. M2 touched
+`main_game` (dive-only refactor) so this was checked: **verified it fails identically at the pre-Wave-2 commit `536c9ba`**
+(M0-era, before M2), so it is pre-existing bit-rot, not M2 fallout. The 4 sibling RG verifies (`loop`/`m12`/`m14`/`m15`)
+pass green with M2's identical staged-config plumbing.
+*Why:* m13 was last green at M1.3 (`d9138c7`), is **not in the standing CI gate** (STATUS carry-over noted "wire it in when
+convenient"), and was never maintained through M1.4/M1.5's preset + telemetry changes; its assertions depend on headless
+player-navigation that intermittently doesn't trigger nav/exposure rows.
+*Claude's recommendation:* **Reviewed** + file a small `qa` follow-up to **repair-or-retire m13** (align its preset/telemetry
+expectations to the current build, or drop it in favour of the maintained m14/m15 verifies). Non-blocking for M1.6.
+
+**[2026-06-26] W2-F2 — quota-MISS has no player-facing "QUOTA MISSED" banner yet (deferred to M3).**
+*What vs. the doc:* M2 ships the integrity-critical roguelite wipe routing (quota eval + `wipe_meta()` on the guaranteed
+Hub-return beat, RD-6), but there is **no player-facing feedback** that a wipe happened — the old `SellScreen` "QUOTA MISSED"
+line retired with it and its replacement lives in the Hub-return / Shop UI, which is **M3**.
+*Why:* M2's scope is the flow + the data-integrity wipe; the hub-return/shop presentation is M3's. Sequencing, not a design change.
+*Claude's recommendation:* **Reviewed** — ensure M3's brief carries the quota-MISS feedback (a hub-return banner / shop notice)
+so the player learns the wipe occurred. Tracked into the M3 dispatch.

@@ -11,42 +11,30 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — M1.6 WAVE 2 (M1 ∥ M2 ∥ M4) IN PROGRESS
+## ▶ Next action (start here on a cold restart) — M1.6 WAVE 3 (M3) — close-out findings pending Director
 
-> **✓ Wave 1 (M0) DONE (2026-06-26)** — `main`@`52d6e17`, pushed, board=Done. Persistent root `App` router (new
-> `run/main_scene`) swapping Menu/Hub/Dive + persistent DebugOverlay; 8 EventBus signals; neutral `GameState` economy surface
-> (`owned_items`/`purchase`/`owns`) + `evaluate_quota_on_return()` + `stage_dive_config()`/`dive_config_or_default()` +
-> `App.goto_hub()`/`current_state` (router exposed via group `&"app_router"`, not a signal/autoload); v3→v4 migration skeleton
-> (META_SCHEMA_VERSION stays **3** — M3 bumps); `debug_menu_toggle`=P; greybox menu/hub stubs; `test_app_router`. Gate green:
-> import · smoke · router · run_config 89 · config_menu 89/89 · fp `e943ac9c8bc1` unmoved. Worklog `…-M0-…`. 0 deviations.
-> **M0 seam-notes for M2:** router loads `main_game.tscn` as-is and does NOT auto-start; M2 strips the embedded
-> MainMenu/Start/ConfigMenu, self-starts `_ready`→`start_new_run` reading `GameState.dive_config_or_default()` via
-> `stage_run_config()`, removes the SellScreen auto-present, keeps the programmatic `start_new_run()` the RG tests drive; the
-> Hub-return controller reads `returned_to_hub(reason)` → `evaluate_quota_on_return()` (+ `wipe_meta()` on miss) before re-arming the portal.
+> **✓ Wave 2 (M1 ∥ M2 ∥ M4) DONE (2026-06-26)** — `main`@`40d328d`, pushed, board=Done; clean parallel worktrees
+> (file-disjoint: `scenes/menu/*` ∥ `scenes/hub/*`+`main_game.*`+tests ∥ `ui/config/*`+`app.gd` mount). Topology verified
+> before each merge; 3-way merges conflict-free. Full integrated gate green: import · smoke · router (boot→menu→hub→dive→hub,
+> P-overlay mounted) · config_menu **89/89** · run_config 89 · fp **`e943ac9c8bc1`** byte-match · loop + 4 RG verifies
+> (`loop`/`m12`/`m14`/`m15`). Orchestrator registered `menu_strings` in `project.godot` (M1 flag). Worklogs `…-M1/M2/M4-…`.
+> - **M1** (`bbc61ff`): real Main Menu (New=wipe-with-confirm / Continue save-gated / Quit web-hidden / Settings placeholder); G6 consent re-homed; `menu_strings.csv`.
+> - **M2** (`7c5391e`): walkable greybox Hub (player + departure-portal `Area2D` → `dive_requested` + ShopAnchor for M3 + interim held-haul readout); `main_game` dive-only + self-start via `dive_config_or_default()`; SellScreen auto-present + old G6 path removed; run-end→Hub auto-return; **quota/wipe on Hub `_ready` return beat** (decoupled from selling); fixed `test_main_game_loop` + 5 RG verifies.
+> - **M4** (`1d0c0dc`): P-toggle debug overlay mounted once on `App.DebugOverlay` (pauses dive only, `DiveClock` is PAUSABLE so it freezes); 7-tab `TabContainer`; **r4_ Vision split (Option A, master-less `r4_vision_` pseudo-section) preserves 89 coverage byte-identical**; telemetry-export → Meta tab.
 
-> **In progress (2026-06-26):** **Wave 2** dispatched — **M1** (`scenes/menu/*`, replaces stub), **M2** (`scenes/hub/*` +
-> `main_game.*` dive-only refactor + run-end→hub quota/wipe routing + test fallout), **M4** (`ui/config/config_menu.*`:
-> P-overlay + 7 tabs + r4_ vision split + telemetry-export Meta tab). File-disjoint parallel worktrees; board=In Progress.
-> On each return: verify branch topology (qa git-switch leak) → gate (import · smoke · router · 89/89 · fp `e943ac9c8bc1`) →
-> merge → push → board Done. Then **Wave 3 (M3)**.
+> **Wave-2 close-out — findings for Director disposition** (`design/DESIGN_DEVIATIONS.md`; 0 design deviations from the agents):
+> **W2-F1** `test_rg1_m13_verify` stale/broken — **verified pre-existing** (fails identically at pre-Wave-2 `536c9ba`; not in CI
+> gate; last green at M1.3), recommend Reviewed + a `qa` follow-up to repair-or-retire. **W2-F2** quota-MISS has no player-facing
+> banner yet — deferred to M3's hub-return/shop UI, recommend Reviewed + folded into the M3 brief. Also still open: **L6-F1**
+> (M1.5 keyboard-only aim → DOWN; recommend Reviewed → backlog follow-up).
 
-Design is **locked + wired** (breakdown `design/M1_6_Tasks/M1.6_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock"; every
-task doc carries a "Resolved Decisions (Phase 3)" section; Director verdicts folded in). `TASKS.md` carries the M1.6 queue;
-board items exist (Todo). Begin the build:
+> **▶ Wave 3 = M3 (Hub shop: sell + buy)** — sequential, mounts into the Wave-2 Hub. Spec `design/M1_6_Tasks/M3_hub_shop_economy.md`.
+> Director verdict locked: **persistent buy catalog → META v3→v4 save bump** (migration + `meta_v3.sav` fixture). Reuse
+> `sell_banked_junk` for SELL; `GameState.purchase(item_id,price)` for BUY; `ShopItem`/`ShopCatalog` `.tres`; retire `ui/sell/*`;
+> mount into `hub.tscn`'s `ShopAnchor` (Marker2D @ (-220,-150)); delete the interim `HudLayer/HeldHaul` readout. **Carry W2-F2:**
+> add the quota-MISS feedback to the hub-return/shop. Then Wave 4 re-gate (RG1 build+publish → playtest → RG2 → RG3).
 
-1. **Claim + dispatch M0** (`general-purpose`, Wave 1, solo — single-writer of `game_state.gd`/`event_bus.gd`/`project.godot`/
-   new `scenes/app/app.*`). Set M0 → **In Progress** on the board (`PVTI_lAHOAAXnOs4BasyMzgw7Dvk`). Spec:
-   `design/M1_6_Tasks/M0_foundation_router_economy.md`. Builds the persistent root `App` router (new `run/main_scene`), the 8
-   new EventBus signals, the neutral `GameState` economy surface + quota-decouple + staged-config accessor + `App.current_state`,
-   the `debug_menu_toggle`=P input, and throwaway greybox `main_menu`/`hub` stubs so `main` stays bootable. **No save bump in M0**
-   (M3 lands v3→v4). **No RunConfig knob** → fp `e943ac9c8bc1` + 89-knob count must stay intact.
-2. **Verify + integrate M0**, then **Wave 2 parallel** (file-disjoint worktrees): **M1** (`scenes/menu/*`) ∥ **M2**
-   (`scenes/hub/*` + `main_game.*` dive-only refactor + run-end→hub quota/wipe routing + test fallout) ∥ **M4**
-   (`ui/config/config_menu.*`: P-overlay + 7 tabs + r4_ vision split + telemetry-export Meta tab). Verify branch topology
-   before each merge (qa git-switch leak).
-3. **Wave 3** (sequential): **M3** (Shop sell+buy + `ShopItem`/`ShopCatalog` `.tres` + META v3→v4 bump/migration/fixture +
-   retire `ui/sell/*`, mounted into the Wave-2 Hub). Then **Wave 4 re-gate** (RG1 build+verify+publish → Director playtest →
-   RG2 → RG3).
+---
 
 > **Standing contracts (M1.6):** all-off `RunConfig` default = permanent baseline (fp `e943ac9c8bc1`); **89-knob count holds**
 > (M1.6 adds no lever knob; M4 regroups only); Money/owned purchases are meta, in-dive haul is run-state; save bump v3→v4 lands
