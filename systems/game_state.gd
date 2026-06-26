@@ -47,6 +47,13 @@ var banked_junk: Array[JunkItem] = []
 var run_number: int = 1        # 1-based; the run currently being played. Resets to 1 on wipe.
 var quota_target: int = 0      # the Money bar THIS run must clear. 0 = "not yet initialised"
                                # (lazy-init at the first quota-enabled start_run from quota_base).
+# M1.6 (M0): owned shop purchases — a META inventory of catalog ids (mirrors
+# unlocked_recipes exactly: a flat StringName list, objects-OFF-friendly). Persists
+# across runs; reset on wipe_meta(). Default empty = "owns nothing" = today's
+# behaviour (no shop existed). M3 fills the catalog + the buy effects + the persist
+# wiring (the v3->v4 bump); M0 lands the surface at neutral defaults — declaring it
+# changes nothing until M3's Shop calls purchase().
+var owned_items: Array[StringName] = []
 
 # --- RUN-STATE (disposable) --------------------------------------------------
 var run_active: bool = false
@@ -74,6 +81,14 @@ var active_run_config: RunConfig
 # at start_run. Lets the run-start API stay locked (start_run(band_id, seed)) while
 # still letting the Config menu feed the run. null → start_run uses the all-off default.
 var _staged_run_config: RunConfig
+# M1.6 (M0): the DIVE-staged config slot — distinct from _staged_run_config above.
+# M4's P-debug overlay writes this (stage_dive_config) when the Director sets a config
+# from the Menu/Hub; M2's dive scene reads it on self-start via dive_config_or_default()
+# and feeds it to stage_run_config() before start_run(). It is NOT run-state (it must
+# survive the Menu→Hub→Dive scene swaps the router does) and NOT persisted (a debug
+# director knob, not meta the player owns). null → the dive uses make_default_play_preset()
+# (the existing main_game.gd:223 fallback), so the dive is fully playable before M4 lands.
+var _dive_config: RunConfig
 # E3 #122: single "run is ending" idempotency guard. extract_and_end_run() and
 # fail_run() are the two outcomes of one event; the first to resolve sets this and
 # any later caller early-returns, so a same-frame extract+timeout tie can't double-
@@ -169,6 +184,22 @@ func _default_run_config() -> RunConfig:
 		push_warning("RunConfig missing at %s; using all-off RunConfig.new()." % DEFAULT_RUN_CONFIG_PATH)
 		cfg = RunConfig.new()
 	return cfg
+
+# --- M1.6 (M0): dive-staged config seam (M4 writes, M2's dive reads) ----------
+## M1.6 (M0): M4's P-debug overlay stages the Director's chosen RunConfig here from
+## the Menu/Hub. Survives the router's scene swaps (it is neither run-state nor meta —
+## a debug director knob). A null arg clears it back to the play-preset default.
+func stage_dive_config(config: RunConfig) -> void:
+	_dive_config = config
+
+## M1.6 (M0): the dive self-start seam. M2's dive _ready() reads this to resolve its
+## RunConfig: the M4-staged config if the Director set one, else make_default_play_preset()
+## (the existing main_game.gd:223 fallback). So the dive is fully playable before M4
+## lands the overlay. Never returns null. (M2 then feeds the result into stage_run_config.)
+func dive_config_or_default() -> RunConfig:
+	if _dive_config != null:
+		return _dive_config
+	return RunConfig.make_default_play_preset()
 
 ## D1: construct a fresh run-state bag, reading max_slots once from the authored
 ## InventoryConfig. The capacity *value* is config-derived; the live bag stays
@@ -305,6 +336,35 @@ func add_currency(kind: StringName, delta: int, source: StringName) -> void:
 		_: push_error("Unknown currency: %s" % kind)
 	EventBus.currency_changed.emit(kind, delta, source)
 
+# --- M1.6 (M0): buy economy (neutral until M3's Shop calls it) ----------------
+## M1.6 (M0): the buy-economy entry point. Debits `price` Money through the canonical
+## ledger (add_currency, so Telemetry sees ONE currency_changed(&"money", -price, &"shop")),
+## records the owned id, persists meta (atomic + .bak), and signals. Returns true iff the
+## purchase went through. Reject paths (negative price, already-owned, can't-afford) emit
+## purchase_failed and return false WITHOUT mutating money/owned_items. The run/meta
+## boundary holds: purchases are pure meta (no run-state). Catalog-agnostic primitives —
+## ShopItem is M3's type; M3 calls purchase(item.id, item.cost) and does its UI-side
+## guards before calling (the owns() guard here is the belt-and-braces double-buy block).
+func purchase(item_id: StringName, price: int) -> bool:
+	if price < 0:
+		EventBus.purchase_failed.emit(item_id, price, money)
+		return false
+	if owns(item_id):
+		EventBus.purchase_failed.emit(item_id, price, money)   # already owned → no double-buy
+		return false
+	if money < price:
+		EventBus.purchase_failed.emit(item_id, price, money)   # can't afford
+		return false
+	add_currency(&"money", -price, &"shop")   # ONE ledger event; mirrors sell_banked_junk's credit
+	owned_items.append(item_id)
+	SaveManager.save_meta(0)                   # atomic write + .bak, slot 0 (every meta op's path)
+	EventBus.item_purchased.emit(item_id, price, money)   # money = post-debit balance
+	return true
+
+## M1.6 (M0): does the player own this purchase? Pure read (M3's effects gate on it).
+func owns(item_id: StringName) -> bool:
+	return owned_items.has(item_id)
+
 ## F1: convert the whole banked junk pile → Money at each item's base_sell_value.
 ## This is the loop-closing cash-out: E1/E3 bank item IDENTITIES into meta
 ## (decision: Option B, "bank items not Money"); Money only increments here, when
@@ -399,6 +459,30 @@ func last_quota_result() -> Dictionary:
 	return _quota_result
 
 
+## M1.6 (M0): evaluate the quota on the GUARANTEED Hub-return beat, DECOUPLED from
+## sell_banked_junk (where K2 used to live, game_state.gd:~350). M2's Hub-return
+## controller calls this when a dive resolves so the quota-eval + MISS readout fire
+## independent of whether the player ever visits the Shop to sell — closing the
+## "re-dive without selling skips the wipe" roguelite hole. The MISS-wipe itself stays
+## a separate meta op M2 triggers (wipe_meta) AFTER the player sees the QUOTA MISSED
+## beat, exactly as MainGame did on Continue today — this only EVALUATES, never wipes.
+##
+## Basis: for this_run_banked (0) the basis is the HELD banked_junk value (what the
+## dive brought home), NOT "what was sold this call" — sums base_sell_value over the
+## live banked_junk pile (the same math as run_haul_value/_sum_values). For
+## cumulative_money (1) it reads the live `money`, identical to sell-time. The existing
+## _quota_evaluated_this_run idempotency guard then makes M3's later sell_banked_junk()
+## a safe NO-OP re-eval (it returns the cached result), so the quota can never
+## double-advance regardless of how the Hub-return + a Shop sale interleave.
+## Returns the cached/computed result dict (mirrors last_quota_result's shape).
+func evaluate_quota_on_return() -> Dictionary:
+	var held_value: int = 0
+	for item in banked_junk:
+		if item != null:
+			held_value += item.base_sell_value
+	return _evaluate_quota(held_value)
+
+
 ## K2 (M1.4): the full roguelite wipe (Director FINAL). Resets EVERY meta field to
 ## its construction default, re-persists through SaveManager's atomic write + .bak so
 ## a quit-after-wipe stays wiped, and signals observers. A SEPARATE meta op called by
@@ -418,6 +502,12 @@ func wipe_meta() -> void:
 	unlocked_recipes = empty_recipes
 	var empty_junk: Array[JunkItem] = []
 	banked_junk = empty_junk
+	# M1.6 (M0): owned shop purchases are META → a roguelite wipe clears them too.
+	# Freshly-TYPED empty array (an untyped [] would not match the typed field). This
+	# runs whether or not owned_items persists to disk (RD-4) — the in-memory reset is
+	# unconditional; only the to_meta_dict/from_meta_dict persistence is M3's (the v3->v4 bump).
+	var empty_owned: Array[StringName] = []
+	owned_items = empty_owned
 	# K2 meta: back to run 1 / "uninitialised" so the next quota-enabled start_run
 	# re-seeds the bar from quota_base (run 1, quota $50).
 	run_number = 1
