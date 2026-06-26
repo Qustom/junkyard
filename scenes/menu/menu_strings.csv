@@ -1,0 +1,13 @@
+keys,en
+MENU_TITLE,THE FAR YARD
+MENU_NEW_GAME,New Game
+MENU_CONTINUE,Continue
+MENU_CONTINUE_NONE,Continue — no save yet
+MENU_SETTINGS,Settings
+MENU_SETTINGS_SOON,Settings — coming soon.
+MENU_QUIT,Quit
+MENU_VERSION,build {id}
+MENU_NEWGAME_CONFIRM,Start a new game? This erases your current save.
+MENU_NEWGAME_CONFIRM_OK,New game
+MENU_CANCEL,Cancel
+MENU_OK,OK
