@@ -451,7 +451,120 @@ shared single source — `telemetry_consent_prompt.gd:84`); M1 does **not** dupl
 
 ## Resolved Decisions (Phase 3)
 
-*(Pending — filled by the Phase-3 fresh-eyes resolver, NOT the M1 author, then folded back here. The
-New-Game-over-save behaviour (OQ 1), the Settings-stub scope (OQ 2), and the router-handoff mechanism (OQ 6,
-blocked on M0) are the entries most likely to need a Director verdict; OQ 3/4/7/8/9 are resolvable on technical
-merit.)*
+**Resolver:** fresh-eyes pass (NOT the M1 author), 2026-06-26. Verified every cited API against the live source:
+`SaveManager.has_save(slot)` / `load_meta` (`systems/save_manager.gd:35-36`, `:27-33`), `GameState.wipe_meta()`
+(`game_state.gd:410-431`, slot-0 persist + `meta_wiped`), `GameState` all-zero construction defaults (`:33-49`),
+`TelemetryConsentPrompt.should_show()` static + `MODAL_LAYER=100` (`telemetry_consent_prompt.gd:39-40`, `:32`),
+`BuildVersion.id()` (`systems/version.gd:43`), and the CSV-per-surface precedent (`ui/sell/sell_strings.csv`,
+`ui/config/config_strings.csv`). One correction below (OQ 2). The flow + gating design is otherwise confirmed and
+**frozen** as authored.
+
+### Verification (against real code)
+- **`SaveManager.has_save(0)`** is exactly `FileAccess.file_exists(slot_dir(0)+"/meta.sav")` — a cheap, pollable
+  predicate. Continue's gating is sound. ✓
+- **`GameState.wipe_meta()`** resets every meta field to construction default, **re-persists through the atomic
+  slot-0 path** (`save_meta(0)`, `:426`), and emits `meta_wiped`. So the wipe-then-route path leaves a *clean*
+  `meta.sav` on disk — a later Continue resumes the fresh game, never the destroyed one. No orphaned save. ✓
+- **A brand-new profile boots all-zero** (`game_state.gd:33-49`): money/salvage/lore/exposure/knowledge `0`,
+  empty recipes/banked_junk, `run_number=1`, `quota_target=0`. So "New Game with no save" needs **no** seeding —
+  a straight route. ✓ The first quota-enabled `start_run` lazy-seeds the bar (`:144-153`); the menu seeds nothing.
+- **G6 re-home is a verbatim move:** `should_show()` is static and autoload-free; the prompt self-builds at
+  layer 100 with its own input-blocking backdrop. M1 calls `should_show()`, on true disables the menu buttons +
+  `add_child(prompt)`, re-enables on `choice_made`. **The prompt itself is unchanged.** It writes through
+  `Settings`/`user://settings.cfg`, **outside** the meta save schema → **zero META-schema impact** (no v3→v4
+  bump — that's reserved for M3 if purchases persist). ✓
+- **No fingerprint/knob exposure:** M1 writes only `scenes/menu/*`, adds no `RunConfig` field, no generation
+  touch, no EventBus signal of its own (M0 pre-declares any). The all-off fp (`e943ac9c8bc1`) and the 89-knob
+  count are structurally untouchable from this task. ✓
+
+### Locked decisions
+
+- **OQ 1 — New Game over an existing save: WIPE-WITH-CONFIRM (option i).** LOCKED as the author recommends. New
+  Game on an existing save pops a greybox confirm (`MENU_NEWGAME_CONFIRM`, "Start a new game? This erases your
+  current save."); on confirm `GameState.wipe_meta()` → route to Hub; on cancel, dismiss with the menu unchanged.
+  No save → straight route (already fresh). This matches roguelite convention, is reversible-by-intent (the
+  confirm is the safety), and uses an already-atomic, already-persisting API. **One implementation refinement
+  for the builder (not a design change):** the pseudocode's `_confirm_overwrite_then_new()` uses a bare
+  `ConfirmationDialog` whose default OK/Cancel button text is engine-locale, not `tr()`-routed — set
+  `ok_button_text`/`cancel_button_text` explicitly from `menu_strings.csv` (the pseudocode already does this:
+  `MENU_NEWGAME_CONFIRM_OK` / `MENU_CANCEL`), and keep the confirm **modal/exclusive** (`dialog.exclusive = true`
+  or disable the menu buttons while it's up) so a click-through can't fire New Game twice. **Director taste flag
+  (low-stakes):** the *destructiveness* of New-Game-wipes-save in a single-slot game is the one human seam — see
+  "Needs Director review." Recommendation stands: ship wipe-with-confirm.
+
+- **OQ 2 — Settings-stub scope: HONEST PLACEHOLDER (option a) is the locked M1.6 floor; reuse (b) is an
+  upgrade gated on a Director call.** This **adjusts** the author's lean toward (b). Fresh-eyes verification
+  found that `TelemetrySettingsPanel` (`telemetry_settings_panel.gd`) is **(1) not instanced anywhere today**
+  (only its `CONSENT_COPY` constant is referenced — there is no existing "open the settings panel" idiom to
+  reuse), **(2) a plain full-rect `Control`** with no backdrop, no close button, and no modal framing — opening
+  it from the menu means *building a host overlay + dismiss affordance the panel lacks*, and **(3) authored with
+  raw string literals, NOT `tr()`** — surfacing it from the menu drags a non-localized surface into the new
+  `tr()`-clean menu. That is real new UI wiring, not a "stub." Per the breakdown's exact wording ("a Settings
+  **stub** button") the cheapest truthful deliverable is a greybox **"Settings — coming soon"** modal (built
+  inline like the confirm dialog, strings via `tr()` → `MENU_SETTINGS_SOON`). Full settings (incl. a real home
+  for the telemetry opt-in + rebinding/accessibility) remain **M5**. **Recommendation: ship (a) the honest
+  placeholder for M1.6.** If the Director wants the button to *do* something now — specifically to give a player
+  a post-G6 way to change their telemetry choice — that's option (b), which is a small but real add (host
+  overlay + close + ideally `tr()`-ing the panel) and is **flagged for Director review** below.
+
+- **OQ 3 — Continue disabled-state non-colour channel: TEXT-SWAP (option i).** LOCKED. Disabled Continue greys
+  *and* swaps its label to `MENU_CONTINUE_NONE` ("Continue — no save yet"), a redundant non-colour channel
+  (colorblind-safe) that keeps the affordance visible (teaches the New/Continue model) rather than hiding it.
+  `_refresh_continue_state()` re-runs on `_ready` and after the G6 choice — no polling needed (the menu can't
+  gain a save while it's up; a save only appears after routing away). Resolvable now, no Director input.
+
+- **OQ 4 — Single slot 0.** LOCKED. Hard-code `SAVE_SLOT = 0` (a `const`). Every `GameState` persist already
+  targets slot 0 (`:249/345/426`); multi-slot is a later milestone. No Director input.
+
+- **OQ 5 — Old embedded menu + G6 deletion is M2's job (coordination, no Director call).** CONFIRMED. M1 only
+  *creates* `scenes/menu/*` (file-disjoint). **M2** is the single writer of `main_game.*` and must, in its
+  dive-only refactor, **delete** the `MainMenu` CanvasLayer (`main_game.tscn:42-93`) and the
+  `StartButton`/`_show_menu`/`_hide_menu`/`_on_start_pressed`/`_maybe_show_consent_prompt`/`_on_consent_choice`
+  block + the `ConsentPromptScript` preload from `main_game.gd`, so **no duplicate consent path lands on `main`**.
+  **Action for the orchestrator:** ensure the M2 design/breakdown row explicitly lists "remove the embedded menu
+  + G6 wiring," and M1's shared worklog notes this dependency. Until M2 lands, both paths could co-exist on a
+  feature branch — acceptable in-wave (file-disjoint), but the close-out sweep must confirm M2 removed the old
+  one before RG1.
+
+- **OQ 6 — Router handoff: mechanism-agnostic `_route_to_hub()` helper; M0 publishes the seam.** LOCKED as
+  designed, with the cross-task convergence noted in the Phase-3 brief: **M0 = a persistent root `App` node** that
+  swaps state scenes and holds the P-overlay. Under that model the menu's handoff is **(R-a/R-b): call the App
+  router API / emit the M0 router request signal** (e.g. `App.goto_hub()` or `EventBus.<hub-request>.emit()`),
+  **NOT** a raw `change_scene_to_file` (R-c) — a raw scene-change would tear down the persistent `App` root the
+  router model depends on, so (R-c) is explicitly the *wrong* call under the ratified App-node design and should
+  be dropped from the final body. M1 keeps the single private `_route_to_hub()` helper so the exact call is a
+  one-line fill once M0 lands; **M1 `BlockedBy: M0`** and must not invent its own router. The menu **never** emits
+  `dive_requested` — it hands off to the Hub; the Hub's departure portal (M2) owns `dive_requested`. This is
+  resolved on technical merit (no Director call) given the convergence; the only residual is M0 naming the exact
+  symbol, which M1 consumes verbatim.
+
+- **OQ 7 — Strings: NEW `scenes/menu/menu_strings.csv`.** LOCKED. Each UI surface owns its CSV
+  (`ui/sell/sell_strings.csv`, `ui/config/config_strings.csv`); a new `menu_strings.csv` under `scenes/menu/`
+  keeps M1 file-disjoint and the `MENU_*` namespace clean (reusing `config_strings.csv` would collide with M4,
+  which owns that file in the same wave). Keys: `MENU_TITLE`, `MENU_NEW_GAME`, `MENU_CONTINUE`,
+  `MENU_CONTINUE_NONE`, `MENU_SETTINGS`, `MENU_SETTINGS_SOON` (the placeholder modal, per OQ 2-a), `MENU_QUIT`,
+  `MENU_VERSION`, `MENU_NEWGAME_CONFIRM`, `MENU_NEWGAME_CONFIRM_OK`, `MENU_CANCEL`. The G6 modal's own strings
+  stay in `TelemetrySettingsPanel.CONSENT_COPY` (single source — not duplicated). No Director input.
+
+- **OQ 8 — Quit hidden on web.** LOCKED. `OS.has_feature("web")` → `_quit_button.hide()`. The itch build
+  (Chromium-only) can't close its tab; a dead Quit reads as broken. Desktop keeps `get_tree().quit()`. Resolvable
+  now, no Director input.
+
+- **OQ 9 — Mockup-first: YES, build `main_menu_mockup.html`.** CONFIRMED as a process step (UI/UX playbook
+  workflow 2). One greybox HTML file walking states s1 (no-save/Continue greyed) · s2 (save-exists/Continue
+  focused) · s3 (G6 consent up, buttons blocked) · s4 (New-Game confirm over a save) · s5 (web/Quit hidden),
+  Director sign-off, *then* author `.tscn`/`.gd`. Cheap and the gate — do it. The mockup is the natural place for
+  the Director to also rule on the OQ-1 / OQ-2 taste seams below.
+
+### Needs Director review (two seams — both low-stakes, surface at the mockup gate)
+1. **New-Game destructiveness in a single-slot game (OQ 1).** The locked behavior wipes the one save behind a
+   confirm. The only human call is whether a single-slot build should even *offer* New Game alongside Continue
+   when a save exists (vs., e.g., gating New Game behind Settings), and the exact confirm wording/tone.
+   **Recommendation: keep both buttons + wipe-with-confirm** (standard roguelite, the confirm is the safety).
+   Decide at the mockup sign-off (state s4).
+2. **Does Settings do anything in M1.6? (OQ 2)** Locked floor = honest "coming soon" placeholder (truthful,
+   cheapest, `tr()`-clean). The upgrade — reuse `TelemetrySettingsPanel` so a player can change their post-G6
+   telemetry opt-in now — is a small but real add (build a host overlay + close affordance + ideally `tr()` the
+   panel, which is raw-string today and not currently instanced anywhere). **Recommendation: ship the placeholder
+   for M1.6; defer the real telemetry-settings home to M5** unless the Director wants the post-G6 opt-in change
+   reachable from the menu this iteration. Decide at the mockup sign-off.

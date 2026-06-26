@@ -351,4 +351,95 @@ const META_SCHEMA_VERSION := 4   # was 3
 
 ## Resolved Decisions (Phase 3)
 
-_Pending — filled after the Phase-3 fresh-eyes pass + Director dispositions (router mechanism OQ-1, persist-vs-consumable OQ-3, the final signal set OQ-4/OQ-5). The router mechanism, the economy surface shape, the exact signal set + arities, the entry-swap + P-action edits, and the save-scaffold ownership are FROZEN here once Phase 3 lands._
+_Fresh-eyes pass, 2026-06-26. Resolver did NOT author this design. Every Open Question is resolved below on technical/design merit, cross-checked against the as-built `event_bus.gd`/`game_state.gd`/`save_manager.gd`/`ci_smoke_test.gd`/`project.godot` and against the four sibling M1.6 designs (`M1_main_menu.md`, `M2_hub_scene_flow.md`, `M3_hub_shop_economy.md`, `M4_debug_menu_rework.md`) so the M0 contract MATCHES what the consuming tasks build against. Items needing the Director's vision/fun/tone/scope judgment are tagged **[NEEDS DIRECTOR REVIEW]**; everything else is FROZEN. The router mechanism, the economy surface, the exact signal set + arities, the entry-swap + P-action edits, and the save-scaffold ownership are locked here._
+
+### Verification of the design's premises (all CONFIRMED against the repo)
+
+- **CI is entry-agnostic** — `tools/ci_smoke_test.gd` `extends SceneTree`, runs as `--script`, only checks the six autoloads + RNG determinism + a save round-trip + a `_migrate_meta` v0→v3 step + one `JunkItem` load (`:10-65`). It never reads `run/main_scene` or instantiates `main_game.tscn`. **The `run/main_scene` swap is CI-safe with zero M0 test edits.** ✅ (OQ-7)
+- **P (physical keycode 80) is unused** — grep of the `[input]` block confirms no `physical_keycode":80`; `debug_kill`=75 (`project.godot:144-148`) is the exact shape to mirror. ✅
+- **The economy surface fits the existing meta block** — `add_currency(&"money", delta, source)` (`:300-306`) is the single ledger mutation + `currency_changed` emit; `wipe_meta()` (`:410-431`) resets every typed meta field; `to_meta_dict`/`from_meta_dict` (`:547-581`) persist `unlocked_recipes` as a flat StringName array — `owned_items` clones that pattern exactly. ✅
+- **Save chain is a clean 3-precedent stepwise migration** (`save_manager.gd:75-98`, `META_SCHEMA_VERSION=3`); a v3→v4 step is mechanical. ✅
+
+---
+
+### RD-1 — Router mechanism: **persistent root `App` node (option B). FROZEN.** (resolves OQ-1, OQ-6)
+
+Lock **(B) the persistent root `App` node** (`scenes/app/app.tscn` + `app.gd`) as drawn in B.1. Reasoning held up under fresh eyes:
+- The **load-bearing constraint is the P-debug overlay mount**: M4 (`M4_debug_menu_rework.md:42, 265`) mounts the tabbed config overlay once and toggles it in **all three** states with `PROCESS_MODE_ALWAYS`. A persistent `App.DebugOverlay` `CanvasLayer` gives it ONE home; `change_scene_to_file` (option A) frees the whole tree per swap → the overlay must be re-instanced/re-wired 3× or pushed to a 7th autoload-adjacent layer. (B) is strictly cleaner here.
+- (C) a 7th "SceneRouter" autoload is rejected on CLAUDE.md's "keep autoloads few and disciplined" — a root scene-node gives the identical overlay benefit at autoload-count 6.
+- **All four sibling designs were written mechanism-agnostically** — M1/M2 route every transition through the M0 router API / `EventBus` signals, never calling `get_tree().change_scene_*` themselves (`M2_hub_scene_flow.md:36, 91, 246`; `M1_main_menu.md:114-122`). So (B) is transparent to them; M0 ships the mechanism and they bind to the signals. No sibling-design rework is needed by this lock.
+- **Tree shape FROZEN:** `App (Node)` → `StateHost (Node)` + `DebugOverlay (CanvasLayer)`. `_goto(path, state)` `queue_free()`s the current `StateHost` child and instances the new one (load by PATH, never holding a scene ref across a swap). Boots to `MAIN_MENU_PATH` in `_ready()`.
+- **OQ-6 (Hub teardown) resolved on merit:** the Hub holds NO run-state (Breakdown §2/§7; `M2_hub_scene_flow.md:287` re-instances fresh every entry). Freeing it on dive-entry and rebuilding it from meta (`GameState.money`/`banked_junk`/`owned_items`) on `hub_entered` is correct and cheap. Confirmed consistent with M2's RD ("re-instance the hub fresh on every entry"). The player node is a hub/dive-local entity, re-spawned fresh per entry — never meta. **Nothing is lost by tearing down the Hub: it is a pure view over meta-state.**
+
+### RD-2 — Final `EventBus` signal set: **8 signals, arities frozen.** (resolves OQ-4, OQ-5; reconciles M3)
+
+The provisional 9-signal set is trimmed/reconciled to **8**, cross-checked against M3's actual emitters so M0's pre-declaration and M3's calls AGREE (M0 is the single writer; a mismatch would force M3 to edit `event_bus.gd`, which is forbidden). Final set, appended as the M1.6 block after `event_bus.gd:182`:
+
+| # | signal | arity (FROZEN) | emitter | notes |
+|---|---|---|---|---|
+| 1 | `dive_requested` | `(band_id: StringName)` | M2 portal | router swaps in dive. M1.6 single band `&"near"`. |
+| 2 | `returned_to_hub` | `(reason: StringName)` | App router | reason = `run_ended` reason; the Hub-return beat reads it for the quota/wipe readout (M2 RD-OQ9). |
+| 3 | `hub_entered` | `()` | App router | fired AFTER the hub is in the tree (menu-entry OR dive-return); Hub reads meta directly, no payload. |
+| 4 | `shop_opened` | `()` | M3 shop | RG2 shop-open rate. |
+| 5 | `shop_closed` | `()` | M3 shop | RG2 shop dwell. |
+| 6 | `item_sold` | `(item_count: int, total_value: int, money: int)` | M3 shop | **roll-up, NOT per-item** — see OQ-4 below. money = post-sale balance. |
+| 7 | `item_purchased` | `(item_id: StringName, price: int, money: int)` | `GameState.purchase()` | money = post-debit balance. **3-arg** — see reconciliation note. |
+| 8 | `purchase_failed` | `(item_id: StringName, price: int, money: int)` | `GameState.purchase()` | "can't afford" / "already owned"; money = current balance. |
+
+- **OQ-5 (dive→hub return) RESOLVED: auto-return on `run_ended`; DROP `return_to_hub_requested`.** The set goes 9→8. The router auto-returns (B.1 `_on_run_ended` → deferred `_return_after_dive`), and the dive-outcome readout (quota line + sell tally) re-homes to the Hub-return beat via `returned_to_hub(reason)` — consistent with M2's RD-OQ9 ("the Hub-return beat owns the quota readout + the wipe", `M2_hub_scene_flow.md:290`) and the Director-locked "walk to shop = see your haul = sell". M1.6 has **no** code path that returns to the Hub WITHOUT a dive resolving (the Main Menu routes Menu→Hub via `hub_entered`, not a "back to hub"), so `return_to_hub_requested` would be a dead declaration. Per the L0 house rule, declare only what's emitted — dropped. (If a future "explicit leave the dive" beat appears, re-add it then; it's free to add later.)
+- **OQ-4 (`item_sold` per-item vs roll-up) RESOLVED: roll-up `(item_count, total_value, money)`.** Decisive technical reason: **M3 is the emitter and M3's design emits a roll-up** (`M3_hub_shop_economy.md:157` "fire `EventBus.item_sold(total)`"), because the absorbed `GameState.sell_banked_junk()` sells the WHOLE bank in ONE call returning a breakdown (`game_state.gd:324-352`) and credits via ONE `add_currency`. A per-item signal would force M3 to loop and emit N times against a single-call API — friction with no payoff, since the existing `haul_banked(total_value)` (`event_bus.gd:15`) already carries the total and per-item value lives in the `sell_banked_junk` return breakdown M3 holds locally. **Lock the roll-up but widen M3's proposed 1-arg form to `(item_count, total_value, money)`** so RG2 gets count + post-sale balance for free (M3 updates its emit to the 3-arg form — a pure call-site change, no `event_bus.gd` edit). Per-item value distributions, if RG2 wants them, come from the desktop JSONL the breakdown already feeds, not this signal.
+- **`item_purchased` arity reconciliation (M0 vs M3): lock M0's 3-arg `(item_id, price, money)`.** M3's draft emits 2-arg `item_purchased(item.id, item.cost)` (`M3_hub_shop_economy.md:89`). Since `GameState.purchase()` knows `money` post-debit for free and post-transaction balance is the house convention (mirrors how consumers read `GameState.money` after `currency_changed`), the 3-arg form is strictly richer. **M3 updates its emit to the 3-arg form** (call-site only).
+- House-style compliance CONFIRMED: all 8 carry **primitives only** (no Node refs — the router resolves by path); flow signals (1-3) carry **no `run_t_ms`/`depth`** (they fire outside a dive with no run clock); `run_ended` arity is **untouched** — the router OBSERVES it.
+
+### RD-3 — Economy surface on `GameState`: `purchase()` / `owns()` / `owned_items` at neutral defaults. (reconciles with M3's body)
+
+- **`owned_items: Array[StringName] = []`** added to the meta block (`game_state.gd:32-49`, beside `unlocked_recipes`), reset to a freshly-typed empty array in `wipe_meta()` (`:410-431`). FROZEN.
+- **`owns(item_id: StringName) -> bool`** — pure read. FROZEN.
+- **`purchase(...)` signature reconciliation — RESOLVED: M0 declares the PRIMITIVE form `purchase(item_id: StringName, price: int) -> bool`.** M3's draft wrote `purchase(item: ShopItem)` (`M3_hub_shop_economy.md:73`), but **`ShopItem` is a class M3 authors — it does not exist when M0 lands, so M0 literally cannot declare a `ShopItem`-typed signature without a parse error** (and M0 is the single-writer of the economy surface, by contract). Therefore:
+  - **M0 ships the primitive `purchase(item_id, price)` body** (B.2): affordability guard → `add_currency(&"money", -price, &"shop")` (one ledger event) → `owned_items.append(item_id)` → `SaveManager.save_meta(0)` → emit `item_purchased(item_id, price, money)`; on shortfall emit `purchase_failed(...)` + return false. Neutral until M3 calls it.
+  - **M3 calls `GameState.purchase(item.id, item.cost)`** from its Shop, and does its `ShopItem`-specific guards (the `persistent` + already-owned check, `M3_hub_shop_economy.md:78-80`) **in the Shop UI before calling** — purchase()'s own already-owned guard is the belt-and-braces (recommend M0's `purchase()` also early-return `purchase_failed` if `owns(item_id)` is already true, so a double-buy is impossible regardless of the UI). This keeps `GameState` free of any `ShopItem`/UI dependency (the run/meta boundary + the data-as-Resources separation hold). **M3 updates its design's `purchase(item)` call to `purchase(item.id, item.cost)`** — flagged to M3 below.
+- **Persistence of `owned_items` is gated on RD-4** (the save bump). `purchase()` works either way; only the `to_meta_dict`/`from_meta_dict` lines + the bump are conditional.
+
+### RD-4 — Save schema: **owned_items persists → META v3→v4 bump, landed in M3 (NOT M0).** [NEEDS DIRECTOR REVIEW — fun/scope]
+
+This is the one genuine Director call (vision/scope), surfaced not self-resolved.
+
+**Recommendation (strong): persistent owned upgrades — accept the v3→v4 bump.** Both M0 (OQ-3) and M3 (OQ-1) independently recommend persistent; M3 already specifies the 3-greybox-upgrade catalog (`effect_kind=&"none"` stub spends), the v3→v4 migration step, the `gen_meta_v3_fixture.gd` + `meta_v3.sav` fixture, and the `test_save_migration.gd` `_run_v3()` case (`M3_hub_shop_economy.md:144, 178-198`). Rationale: M1.6's entire premise is to start the meta-spend loop the Hub exists to grow (sell → bank Money → spend on durable upgrades); a consumable-only shop spends Money but leaves no durable meta, proving far less and dodging the save-discipline work every later upgrade needs anyway. The bump is mechanical (3 in-repo precedents).
+
+> **Director question:** *"Should the M1.6 greybox shop sell durable upgrades you keep across runs (→ a deliberate, irreversible META v3→v4 save bump + migration + a `meta_v3.sav` QA fixture, plus a 2–3-item greybox catalog), or only consumables spent within a run (no save change)? Both design passes recommend persistent — it's the meta loop the Hub is built for and the bump is routine; the only cost is irreversible schema debt for a greybox feature that could later be re-cut."*
+
+**M0's scope is fixed regardless of the verdict:** M0 declares `owned_items` + `purchase()`/`owns()` at neutral defaults and **scaffolds** the v3→v4 migration shape in this doc (A.4/B.5). **M0 MUST NOT bump `META_SCHEMA_VERSION`** — the bump + migration step + fixture land in **M3** (where the persist decision is ratified), exactly as M3's design already lays out. If the Director picks consumable-only, no bump ever happens and `owned_items` stays in-memory meta scratch (no `to_meta_dict` lines). The two designs are already consistent on this split. FROZEN: bump-ownership = M3, not M0.
+
+### RD-5 — `project.godot` edits (M0 owns ALL `[application]`/`[input]` edits this milestone). FROZEN.
+
+- **`run/main_scene="res://scenes/app/app.tscn"`** (was `main_game.tscn`). CI-safe (verified). `main_game.tscn` becomes the dive-only scene M2 refactors.
+- **One new input action `debug_menu_toggle` = P (physical keycode 80)**, mirroring `debug_kill`'s shape (`project.godot:144-148`): single `InputEventKey`, `physical_keycode:80`, `deadzone:0.5`. M4 only READS it (`M4_debug_menu_rework.md:268, 281-282` asserts presence with a soft `push_warning`). M0 is the sole `[input]` editor — confirmed no other M1.6 task adds an action.
+- **Determinism preserved:** neither edit feeds `fingerprint()`; M0 adds **no `RunConfig` knob**. All-off fp stays `e943ac9c8bc1`; the **89-knob count holds** (M4 regroups into tabs, never adds/removes). FROZEN.
+
+### RD-6 — P-debug overlay mount + pause behaviour. (resolves OQ-2; defers detail to M4)
+
+- **Mount: `App.DebugOverlay` `CanvasLayer`** — one instance, all three states (RD-1). M0 ships the empty mount + the P action; M4 fills it. FROZEN at the M0 seam.
+- **Pause + visibility are M4's detail, not M0's** — but M0's resolution records the consistent target: M4 sets the overlay `PROCESS_MODE_ALWAYS` and pauses the tree only **in-dive** while open (no-op in Menu/Hub — nothing to tick), and the overlay is reachable in **all three** states (Breakdown M4 row; `M4_debug_menu_rework.md:265`). Consistent across docs; **no Director call needed** (the earlier "available in Main Menu?" flag is resolved: yes, available everywhere, per the breakdown).
+
+### RD-7 — Stub scenes: **YES — M0 ships greybox `main_menu.tscn` + `hub.tscn` stubs so the project stays bootable after Wave 1.** (resolves OQ-8) [minor scope — recommend, Director may veto]
+
+**Resolved: ship the stubs.** `app.tscn`'s `_goto(MAIN_MENU_PATH, ...)` loads `res://scenes/menu/main_menu.tscn` at boot, and the dive path loads `res://scenes/hub/hub.tscn` — neither exists until M1/M2 land in Wave 2. If M0 repoints `run/main_scene` without stubs, the project fails to boot (and the RG verify scenes that instance the dive still work, but a plain launch is broken) between the M0 merge and the M1/M2 merges. Two-line throwaway greybox stubs (a `Label` + a button that emits `dive_requested` for the hub stub; a `Label` + a button that emits `hub_entered`/routes to hub for the menu stub) keep `main` bootable end-to-end after Wave 1, which is the milestone hygiene norm. **M1 REPLACES `main_menu.tscn`; M2 REPLACES `hub.tscn`** — they overwrite the stubs, not create-from-nothing. This is flagged to M1/M2 below. Trade-off: M0 writes ~2 throwaway scenes — acceptable and cheap. (If the Director prefers a clean "M0 lands the swap but the entry edit defers to M1", that's option (b); the stub path is recommended because it keeps `main` always-green-and-bootable, the M1.1+ norm.)
+
+### RD-8 — Router smoke test: **YES, ship a minimal one.** (resolves OQ-7's second half)
+
+M0 owns the new router file, so M0 owns its smoke gate. Add a tiny headless test (a `.tscn` driven scene per the memory rule "verify/knob tests run as SCENES, not `--script`") that instances `app.tscn`, asserts it boots without error, and asserts `_current_state == &"menu"`. Cheap, gives Wave 2 a green router baseline. The existing `ci_smoke_test.gd` stays untouched (it's the autoload/save/RNG gate, entry-agnostic). FROZEN.
+
+---
+
+### Cross-task flags folded back (for the orchestrator / Phase-4 lock)
+
+- **→ M3:** update three call-sites to match M0's locked surface (no `event_bus.gd`/`game_state.gd` economy-surface edits — those are M0's): (1) call `GameState.purchase(item.id, item.cost)` (primitive args), not `purchase(item)`; (2) emit `item_purchased(item.id, item.cost, GameState.money)` (3-arg); (3) emit `item_sold(item_count, total_value, GameState.money)` (3-arg roll-up). M3 still owns the v3→v4 bump + fixture (RD-4) and the `ShopItem`/already-owned UI guards.
+- **→ M1 / M2:** you REPLACE the stub `main_menu.tscn` (M1) / `hub.tscn` (M2) that M0 lands (RD-7); you do not create them from nothing. Route all transitions through the M0 signals (`dive_requested` / `returned_to_hub` / `hub_entered`), never `get_tree().change_scene_*`.
+- **→ M2:** `return_to_hub_requested` is DROPPED (RD-2/OQ-5) — the dive→hub path is auto-return on `run_ended` (router-driven) + the Hub-return beat owns the quota/wipe readout via `returned_to_hub(reason)`, matching M2's RD-OQ9.
+- **→ M4:** mount under `App.DebugOverlay`; you own the pause/visibility detail (RD-6). The web "Export telemetry" re-home (M2 OQ-7 / M3 R6) is NOT an M0 concern — M0 declares no signal for it; the orchestrator picks its final home (recommended: the M4 P-menu, available in all three states).
+
+### Director review queue (do NOT proceed without a verdict)
+
+1. **RD-4 — persistent purchases → META v3→v4 save bump (fun/scope).** Recommend **persistent**; both design passes concur. The bump lands in M3, not M0. *(This is the single un-self-resolvable item; everything else is locked on technical merit.)*
+
+All other Open Questions (OQ-1, OQ-2, OQ-4, OQ-5, OQ-6, OQ-7, OQ-8) are **resolved on technical/design merit** above. Design is locked pending the RD-4 verdict.

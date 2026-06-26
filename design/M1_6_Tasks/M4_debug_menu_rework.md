@@ -387,6 +387,183 @@ also want to read "R4 · Maze / Branching" since Vision left it; OQ-4.
 
 ## Resolved Decisions (Phase 3)
 
-*(pending — filled by a fresh-eyes resolver after Phase 2, then Director-ratified per the four-phase
-process. The load-bearing item to lock is OQ-1: the `r4_` split shape that keeps `has_full_coverage()` +
-both 89-count tests green. OQ-2/3/5/6 carry mild Director taste; OQ-8 is an M0 seam confirmation.)*
+_Fresh-eyes pass, 2026-06-26. Reviewer is **not** the author of M4. Resolved against the verified as-built
+code (`ui/config/config_menu.gd`, `ui/config/config_strings.csv`, `tests/test_config_menu.gd`,
+`tests/test_run_config.gd`) and the M0 sibling (`design/M1_6_Tasks/M0_foundation_router_economy.md` — B.1
+`App` router, B.4 `[input]` block, OQ-1/OQ-2). Items that are pure technical/design merit are **LOCKED** for
+M4's code task; the lone fun/scope call is flagged **Needs Director review** with a recommendation._
+
+### RD-1 — The `r4_` split: **Option A LOCKED** (`R4_VISION_FIELDS` + `"r4_vision_"` pseudo-section; no rename, no new master) — *(resolves OQ-1)*
+
+**Locked: Option A.** Walking the real `has_full_coverage()` (`config_menu.gd:310-333`) confirms it byte-for-byte:
+
+- `bound` is built from **two sources only**: every key in `_rows` (the per-row controls, `:312-313`) **plus**
+  every non-empty `SECTIONS[*].master` (`:314-317`). It is **never** keyed off `MANIFEST`, `SECTIONS` body
+  membership, tab grouping, or section *count*. Coverage is a pure **field-name set** equality
+  (`bound == _exported_config_fields()`, the 89 `@export` props from property-list reflection, `:342-351`).
+- Under Option A: `SECTIONS`'s `r4_` descriptor is **unchanged** → `r4_enabled` stays the one registered master
+  (`:316` still adds it to `bound`). The `r4_` `MANIFEST` entry is trimmed to the **4 maze rows**
+  (`r4_enabled`, `r4_branch_chance_base`, `r4_branch_per_depth`, `r4_max_branch_depth`); the **4 vision rows**
+  (`r4_vision_radius`, `r4_vision_tighten_per_depth`, `r4_fog_enabled`, `r4_lost_proxy_threshold`) move to a new
+  `const R4_VISION_FIELDS` rendered under the master-less `"r4_vision_"` pseudo-section. **Each of the 8 `r4_*`
+  fields still gets exactly one `_build_row` → one `_rows` entry** (the maze 3 via `MANIFEST["r4_"]` minus the
+  master, the vision 4 via `R4_VISION_FIELDS`; `r4_enabled` via the header CheckButton as today). So `bound` is
+  **identical to today's set, member-for-member** → `missing`/`extra` both empty → `has_full_coverage()` true.
+- Both 89-count tests stay green for the same reason: `test_config_menu.gd:53` asserts `exported.size() == 89`
+  (we add/remove **no** `@export` field, so 89 is untouched) and `:56-59` asserts every exported field is in
+  `menu._rows.keys()` (every `r4_*` field is still a `_rows` key, just built from a different constant);
+  `test_run_config.gd` asserts the **schema's** `to_flat_dict()` keys — schema-only, fully invariant to the UI
+  regroup. The all-off fingerprint `e943ac9c8bc1` is also untouched (no field renamed/added/removed; the split
+  is render-layer only).
+
+**Option B (a second real `SECTIONS` entry with `master: ""`) is rejected** as the design recommended — it
+leaks a master-less pseudo-prefix into the `SECTIONS` masters loop and muddies the "one opposition section per
+entry" invariant for zero benefit, since Option A already preserves coverage. **Implementation seam for the
+build task:** factor today's `_build_section(sec)` into `_build_section_into(parent, section_key)` that accepts
+either a real `SECTIONS` prefix (look up the descriptor + `MANIFEST[prefix]` as today) or the `"r4_vision_"`
+pseudo-key (build a master-less header from `CFG_SEC_R4_VISION`/`CFG_GLOSS_R4_VISION` + a body of
+`R4_VISION_FIELDS`, register `_section_bodies["r4_vision_"]`). Register `"r4_vision_"` in `_prefix_of` **after**
+`"r4_"` is matched — careful: `_prefix_of("r4_vision_radius")` must return `"r4_"` (its master/chip live with the
+maze section), so do **not** add `"r4_vision_"` to `_prefix_of`'s scan list; the vision rows route their chip
+refresh through the existing `"r4_"` prefix. `"r4_vision_"` is only ever a **body/dim key**, never a chip/`_prefix_of`
+key. (This keeps the single R4 ON/OFF chip in Level Gen authoritative and avoids a phantom chip on the Vision tab.)
+
+### RD-2 — Tab taxonomy: **the B1 seven-tab map LOCKED** (with `exit_` in Throw & Camera) — *(resolves OQ-6)*
+
+The exact section→tab map is locked as B1/B2, with the sub-calls resolved:
+
+| Tab (CSV key) | Section keys (in render order) |
+|---|---|
+| **Hazards** (`CFG_TAB_HAZARDS`) | `r1_`, `hpp_`, `hbomb_`, `hspike_` |
+| **Level Generation** (`CFG_TAB_LEVELGEN`) | `lvl_`, `r4_` *(maze rows only)* |
+| **Vision** (`CFG_TAB_VISION`) | `r4_vision_` *(pseudo-section, master-less)* |
+| **Timer & Quota** (`CFG_TAB_TIMEQUOTA`) | `timer_`, `quota_` |
+| **Exposure & Return** (`CFG_TAB_EXPRETURN`) | `r2_`, `r3_` |
+| **Throw & Camera** (`CFG_TAB_THROWCAM`) | `throw_`, `cam_`, `exit_` |
+| **Meta** (`CFG_TAB_META`) | `""` |
+
+- **OQ-6(a) — `exit_` → Throw & Camera, LOCKED.** Director's M4 row in the breakdown names only Hazards / Level
+  Gen / Vision / Timer & Quota explicitly and lumps "the remaining sections (Exposure/Return/Throw/Camera/Meta)
+  into sensible tabs." `exit_` (5 rows) is a small dive-tuning bucket; pairing it with `throw_`+`cam_` keeps
+  Level Gen focused on layout-size knobs and gives Throw & Camera a non-trivial size (11 rows). Cheap to
+  re-bucket later (pure presentation) — *no Director gate needed* (it's "sensible-tab" discretion the breakdown
+  delegated).
+- **OQ-6(b) — keep 7 tabs, do NOT merge Timer & Quota with Exposure & Return.** They are distinct conceptual
+  axes (dive-length/economy vs the two cost oppositions); merging would make one ~23-row "Run Rules" tab while
+  saving only one tab. 7 tabs is ≤8 and no tab exceeds ~40 rows (Hazards is largest at 40). LOCKED.
+- **OQ-6(c) — tab order = most-swept-first**, as authored: Hazards, Level Generation, Vision, Timer & Quota,
+  Exposure & Return, Throw & Camera, Meta. LOCKED.
+- **Default open tab = Hazards (index 0)** on first instance (see RD-6 for cross-open persistence).
+
+### RD-3 — Pause-in-dive: **YES in-dive, no-op in Menu/Hub; the DiveClock pauses with the tree — LOCKED** — *(resolves OQ-3)*
+
+Lock the B5 recommendation, consistent with M0 OQ-2(i):
+- The overlay sets `process_mode = Node.PROCESS_MODE_ALWAYS` (so **P** still toggles it while the dive tree is
+  paused) and, on show **in the dive**, sets `get_tree().paused = true`; on hide it restores `paused = false`.
+  In Menu/Hub `_pauses_dive()` returns false → no tree pause (nothing live to freeze). This mirrors SellScreen's
+  paused-overlay idiom (`sell_screen.gd:79,129`, cited in M0 OQ-2).
+- **`_pauses_dive()` reads the app state from the M0 `App` router, not from the scene tree.** The persistent
+  `App` root (M0 B.1) is the single authority for "which state am I in"; M4 queries it (e.g.
+  `App.current_state == App.State.DIVE`) rather than inferring from node paths. **M0/M4 seam:** M0 must expose a
+  read accessor for the current state on the `App` root (a `current_state` enum/getter). Flagged to M0 as a
+  one-line accessor add; if M0's router does not expose it, M4 falls back to checking whether a live `main_game`
+  dive node is present under `App/StateHost`. *Recommend M0 add the accessor (cleaner).*
+- **Sub-question — does the K4 `DiveClock` pause?** **Yes, and it must.** The clock must **not** be
+  `PROCESS_MODE_ALWAYS`; as a normal (inherit-default) node under the dive scene it halts its `_process`/timer
+  when `get_tree().paused = true`, so debug-menu time does **not** burn the dive timer. **M4 verification step:**
+  confirm the `DiveClock` node's `process_mode` is `INHERIT`/`PAUSABLE` (not `ALWAYS`) when the overlay lands; if
+  K4 set it `ALWAYS` for any reason, that is a coordination bug to surface (the dive must freeze fully behind the
+  debug menu). The overlay's *own* `process_mode = ALWAYS` is the only `ALWAYS` node in the paused dive.
+- **Pause-restore safety:** the overlay must only **clear** `paused` it itself set — if the dive was already
+  paused by something else (e.g. the Esc pause menu) when P is pressed, the toggle must not stomp that state.
+  Track a private `_paused_by_overlay: bool` and only restore `paused = false` when the overlay set it. (Edge
+  case noted for the build task; trivial.)
+
+### RD-4 — Config apply timing: **next-Start semantics, unchanged — LOCKED** — *(resolves OQ-5)*
+
+The overlay mutates the live working `_cfg`; `apply_and_get_config()` is read at the **next dive launch** exactly
+as `main_game.gd:223` reads it today (M2's dive-only `main_game` reads the single persistent overlay instance at
+run start). **No mid-dive live-apply** — most knobs are generation-time (the band is already built), so a
+mid-dive edit would be a no-op or inconsistent. Add a one-line note label on the overlay ("changes apply on the
+**next** dive") so a mid-dive editor isn't confused. This is correct for a debug tool and needs **no** Director
+gate (the breakdown already treats the overlay as a between-runs config surface).
+
+### RD-5 — `r4_enabled` master + cross-tab dimming: **master in Level Gen; Vision dims off the same master — LOCKED** — *(resolves OQ-2)*
+
+- The single `r4_enabled` master + its header CheckButton render in the **Level Generation** tab (with the maze
+  rows), since it gates both maze and vision in the engine and there is exactly one master.
+- The **Vision** section is master-less and **dims off `r4_enabled`**. `_on_master_toggled` (`config_menu.gd:700-705`)
+  must, when `prefix == "r4_"`, dim **both** `_section_bodies["r4_"]` **and** `_section_bodies["r4_vision_"]`. Add
+  the same dual-dim in `_refresh_all` (`:721-724`) so a Reset / boot projects the dim onto both bodies. (The
+  cleanest implementation: a small `_dim_bodies_for(prefix, dimmed)` helper that dims `"r4_"`'s two bodies
+  together; everywhere else dims its single body.)
+- The Vision header carries a small gloss line "(gated by the R4 master — see Level Generation)" so the
+  cross-tab dependency is legible as a **non-colour redundant cue** (text, not just the dim), satisfying the
+  playbook's "never colour alone" rule across the tab boundary. The read-only-note alternative (OQ-2's "show a
+  note instead of dimming") is **rejected** — dimming + the gloss line together are the established redundant-cue
+  pattern; a note alone drops the dim channel. LOCKED.
+
+### RD-6 — Tab persistence: **in-session only, no save field — LOCKED** — *(resolves OQ-7)*
+
+The `TabContainer` keeps its `current_tab` across hide/show **within one app session** (don't reset to tab 0 on
+each P-open) — a sweeping Director re-opens where they left. **No** `SaveManager` field (cross-restart
+persistence is a debug-tool convenience that would touch the save schema M1.6 deliberately avoids — and M0 must
+not bump the schema). Since the overlay is a single persistent instance on `App.DebugOverlay` (RD-7), the
+`TabContainer` simply retains `current_tab` naturally between `visible` toggles — **no extra state needed**; just
+do not force `current_tab = 0` on show. LOCKED, trivial.
+
+### RD-7 — Mount point: **single instance on `App.DebugOverlay` — CONFIRMED with M0** — *(resolves OQ-8)*
+
+Confirmed against M0 B.1/B.4: the router is the persistent root **`App`** node
+(`scenes/app/app.tscn` → `App (Node)` → `StateHost (Node)` + `DebugOverlay (CanvasLayer)`). **M4 mounts its
+P-toggle tabbed `ConfigMenu` under `DebugOverlay` as exactly one instance**, surviving all Menu↔Hub↔Dive
+transitions (M0 frees/rebuilds only `StateHost`'s child scene, never `DebugOverlay`). So the working `_cfg` and
+`apply_and_get_config()` are a stable single instance across transitions — the dive reads that one instance at
+`start_new_run`, mirroring today's single `%ConfigMenu`. The coverage assert (`_assert_full_coverage()` in
+`_ready`) still fires once, where the overlay is instanced under `DebugOverlay`. The `debug_menu_toggle`=P action
+(physical keycode 80) is M0's `[input]` edit (M0 B.4); M4 only **reads** it and adds a soft `push_warning` if
+`InputMap.has_action(&"debug_menu_toggle")` is false (mis-merge fails loud). **Seam confirmed — no open item.**
+
+### RD-8 — `CFG_SEC_R4` re-narrow + new CSV keys: **resolved — re-narrow gloss, keep title** — *(resolves OQ-4)*
+
+- **Add** the 7 tab-title keys + the 2 Vision-section keys exactly as B6 lists them
+  (`CFG_TAB_HAZARDS`…`CFG_TAB_META`, `CFG_SEC_R4_VISION`, `CFG_GLOSS_R4_VISION`). No existing key is removed; the
+  per-field/per-section strings are reused verbatim.
+- **Re-narrow `CFG_GLOSS_R4`** (`config_strings.csv:17`) from "branching layout + limited vision; getting lost"
+  to maze-only wording, e.g. **"branching layout; how the maze forks with depth"** (vision now lives in its own
+  tab; leaving the old gloss would mislead). This is a string-value edit, no key change.
+- **Keep the `CFG_SEC_R4` title** "R4 · Maze / Navigation" as-is — *minimal CSV churn*; "Navigation" still
+  reasonably covers maze branching, and a retitle is cosmetic. (If the Director prefers "R4 · Maze / Branching"
+  it is a one-string edit, but not required.) LOCKED at: re-narrow the gloss, keep the title.
+
+### RD-9 — Web telemetry-export button re-home: **ACCOMMODATE; recommend it lands in M3's Shop, not M4** — *(cross-task, from the brief)*
+
+The breakdown §7 SellScreen-retirement risk lists the web "Export telemetry" button among the three SellScreen
+responsibilities needing a new home (Shop UI? Hub terminal? the debug menu?). **Recommendation: it re-homes into
+M3's Shop/Hub-return beat, NOT the debug menu** — it is a *player/tester-facing* action (the web telemetry path
+RG2 depends on), and burying it behind the P-debug overlay would make testers hunt for it; the Shop is the
+natural always-visited between-runs screen. **M4 accommodates** by leaving room: if the Director later prefers it
+in the debug menu, the **Meta tab** is its home (a button docked below the Meta section, not a knob row, so it
+never touches `_rows`/coverage). **M4 does not build the button** (M3 owns SellScreen retirement); M4 only notes
+the Meta-tab fallback slot. *No coverage impact either way.*
+
+### Needs Director review (one item)
+
+- **RRD-A — None of M4's calls are fun/scope-gated; RD-9's button home is the only cross-task taste call.**
+  Strictly, M4 has **no** standalone Director gate — every resolution above is technical or "sensible-tab"
+  discretion the breakdown delegated. The single thing to surface (and it is really **M3's** call, noted here for
+  convergence): **"Where does the retiring web Export-telemetry button live — the M3 Shop (recommended, it's
+  tester-facing and the Shop is always visited) or the P-debug menu's Meta tab (fallback)?"** Recommend the Shop;
+  M4 reserves the Meta-tab slot only as a fallback. *Surfaced to the Director per orchestrator-loop step 7; M4's
+  build is not blocked on it.*
+
+---
+
+**Locked summary for the build task:** 7 tabs (Hazards / Level Gen / Vision / Timer & Quota / Exposure & Return /
+Throw & Camera / Meta) with `exit_` in Throw & Camera; **Option A** r4_ split (`R4_VISION_FIELDS` +
+`"r4_vision_"` body-only pseudo-section, no rename, no new master) — coverage `bound` set is byte-identical so
+`has_full_coverage()` + both 89-count tests + fp `e943ac9c8bc1` stay green; **pause-in-dive yes** (DiveClock
+pauses with the tree, overlay is the lone `PROCESS_MODE_ALWAYS` node, restore only what the overlay paused);
+next-Start apply; `r4_enabled` master in Level Gen dims **both** maze + Vision bodies; in-session tab memory, no
+save field; single instance on `App.DebugOverlay` (M0-confirmed); re-narrow `CFG_GLOSS_R4`, keep the title. One
+Director item surfaced (RRD-A, the Export-telemetry button home — really M3's, M4 not blocked).
