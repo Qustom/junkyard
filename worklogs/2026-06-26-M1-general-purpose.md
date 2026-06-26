@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.6
 - **Branch:** general-purpose/M1
-- **Commit:** cc81f0cd8e5931ccbb8b0f7c0a95c1b177c3cc8f
+- **Commit:** bbc61ff9d2863a6fa17e8fd550f1a87a124ec924
 
 ## What changed
 Replaced the M0 greybox stub `scenes/menu/main_menu.{tscn,gd}` with the real routed Main
