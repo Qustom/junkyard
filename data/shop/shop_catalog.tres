@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ShopCatalog" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://data/shop/shop_catalog.gd" id="0"]
+[ext_resource type="Script" path="res://data/shop/shop_item.gd" id="9"]
+[ext_resource type="Resource" path="res://data/shop/items/shop_scrap_magnet.tres" id="1"]
+[ext_resource type="Resource" path="res://data/shop/items/shop_lucky_charm.tres" id="2"]
+[ext_resource type="Resource" path="res://data/shop/items/shop_reinforced_bag.tres" id="3"]
+
+[resource]
+script = ExtResource("0")
+items = Array[ExtResource("9")]([ExtResource("1"), ExtResource("2"), ExtResource("3")])

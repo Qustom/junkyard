@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ShopItem" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/shop/shop_item.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"reinforced_bag"
+display_name = "Reinforced Bag"
+description = "Greybox upgrade (no effect yet). Proof of the meta-spend loop."
+cost = 250
+persistent = true
+effect_kind = &"none"
+greybox_color = Color(0.55, 0.6, 0.85, 1.0)
