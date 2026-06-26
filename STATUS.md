@@ -11,7 +11,13 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — DISPATCH M1.6 WAVE 1 (M0)
+## ▶ Next action (start here on a cold restart) — M1.6 WAVE 1 (M0) IN PROGRESS
+
+> **In progress (2026-06-26):** **M0** dispatched (`general-purpose`, worktree, branch `general-purpose/M0`, board=In Progress).
+> Foundation: persistent root `App` router + 8 EventBus signals + neutral `GameState` economy surface + quota-decouple +
+> staged-config accessor + `App.current_state` + `debug_menu_toggle`=P + greybox `main_menu`/`hub` stubs + router smoke test.
+> No save bump (M3 lands v3→v4), no RunConfig knob. On return: verify (import · smoke · router smoke · run_config 89 ·
+> config_menu 89/89 · fp `e943ac9c8bc1`) → merge → push → board Done → then dispatch Wave 2 (M1 ∥ M2 ∥ M4).
 
 Design is **locked + wired** (breakdown `design/M1_6_Tasks/M1.6_Breakdown.md` §"Phase 3 Dispositions & Phase 4 Lock"; every
 task doc carries a "Resolved Decisions (Phase 3)" section; Director verdicts folded in). `TASKS.md` carries the M1.6 queue;
