@@ -1,8 +1,9 @@
-[gd_scene load_steps=8 format=3 uid="uid://bm0hub6real00a"]
+[gd_scene load_steps=9 format=3 uid="uid://bm0hub6real00a"]
 
 [ext_resource type="Script" path="res://scenes/hub/hub.gd" id="1"]
 [ext_resource type="PackedScene" path="res://entities/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/hub/departure_portal.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/hub/shop.tscn" id="4"]
 
 [sub_resource type="RectangleShape2D" id="WallH"]
 size = Vector2(760, 24)
@@ -83,19 +84,22 @@ position = Vector2(0, -150)
 [node name="ShopAnchor" type="Marker2D" parent="."]
 position = Vector2(-220, -150)
 
+[node name="HubShop" parent="." instance=ExtResource("4")]
+position = Vector2(-220, -150)
+
 [node name="HubCamera" type="Camera2D" parent="."]
 zoom = Vector2(1.2, 1.2)
 
 [node name="HudLayer" type="CanvasLayer" parent="."]
 
-[node name="HeldHaul" type="Label" parent="HudLayer"]
+[node name="QuotaNotice" type="Label" parent="HudLayer"]
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 360.0
+offset_right = 460.0
 offset_bottom = 44.0
-theme_override_colors/font_color = Color(0.8, 0.84, 0.7, 1)
+theme_override_colors/font_color = Color(0.95, 0.4, 0.35, 1)
 theme_override_font_sizes/font_size = 18
-text = "Held: 0 items  ~$0"
+text = "QUOTA MISSED — progress wiped"
 
 [node name="HubLabel" type="Label" parent="HudLayer"]
 anchors_preset = 5

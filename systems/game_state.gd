@@ -642,6 +642,11 @@ func to_meta_dict() -> Dictionary:
 	for item in banked_junk:
 		if item != null:
 			banked_ids.append(String(item.id))
+	# M1.6 (M3): persist owned shop purchases by id as Strings (objects-OFF, like
+	# banked_junk's id list). from_meta_dict rehydrates to a typed Array[StringName].
+	var owned_strings: Array[String] = []
+	for oid in owned_items:
+		owned_strings.append(String(oid))
 	return {
 		"money": money, "salvage": salvage, "lore": lore,
 		"exposure": exposure, "knowledge_level": knowledge_level,
@@ -650,6 +655,9 @@ func to_meta_dict() -> Dictionary:
 		# K2 (M1.4): quota meta — persists/escalates/resets-on-wipe.
 		"run_number": run_number,
 		"quota_target": quota_target,
+		# M1.6 (M3): owned shop purchases — added at META v3->v4. Old saves predate the
+		# shop; the v3->v4 migration defaults this to [] so from_meta_dict reads "owns nothing".
+		"owned_items": owned_strings,
 	}
 
 func from_meta_dict(d: Dictionary) -> void:
@@ -669,6 +677,12 @@ func from_meta_dict(d: Dictionary) -> void:
 	# (the v2->v3 migration adds them); the defaults here match for a raw read.
 	run_number = d.get("run_number", 1)
 	quota_target = d.get("quota_target", 0)
+	# M1.6 (M3): owned shop purchases. Pre-shop (v3) saves migrate to [] (the v3->v4
+	# step adds the key); rehydrate to a typed Array[StringName].
+	var owned: Array[StringName] = []
+	for o in d.get("owned_items", []):
+		owned.append(StringName(o))
+	owned_items = owned
 
 ## E1: map persisted junk ids back to their JunkItem resources via the catalog.
 func _rehydrate_banked_junk(ids: Array) -> Array[JunkItem]:

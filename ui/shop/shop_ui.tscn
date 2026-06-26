@@ -1,0 +1,130 @@
+[gd_scene load_steps=2 format=3 uid="uid://cshopui6m3ui001"]
+
+[ext_resource type="Script" path="res://ui/shop/shop_ui.gd" id="1"]
+
+[node name="ShopUI" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1")
+
+[node name="Root" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.05, 0.07, 0.85)
+
+[node name="Panel" type="PanelContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -220.0
+offset_right = 300.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="Root/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="Root/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Root/Panel/Margin/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "SHOP"
+theme_override_font_sizes/font_size = 22
+
+[node name="MoneyLabel" type="Label" parent="Root/Panel/Margin/VBox/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Money: $0"
+theme_override_font_sizes/font_size = 22
+
+[node name="QuotaNotice" type="Label" parent="Root/Panel/Margin/VBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "QUOTA MISSED — progress wiped"
+theme_override_colors/font_color = Color(0.95, 0.4, 0.35, 1)
+theme_override_font_sizes/font_size = 18
+
+[node name="Tabs" type="TabContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SELL" type="VBoxContainer" parent="Root/Panel/Margin/VBox/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SellTotalLabel" type="Label" parent="Root/Panel/Margin/VBox/Tabs/SELL"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Held haul: 0 items  ~$0"
+theme_override_font_sizes/font_size = 16
+
+[node name="SellScroll" type="ScrollContainer" parent="Root/Panel/Margin/VBox/Tabs/SELL"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SellList" type="VBoxContainer" parent="Root/Panel/Margin/VBox/Tabs/SELL/SellScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SellButton" type="Button" parent="Root/Panel/Margin/VBox/Tabs/SELL"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Sell all"
+
+[node name="BUY" type="VBoxContainer" parent="Root/Panel/Margin/VBox/Tabs"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="BuyScroll" type="ScrollContainer" parent="Root/Panel/Margin/VBox/Tabs/BUY"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="BuyList" type="VBoxContainer" parent="Root/Panel/Margin/VBox/Tabs/BUY/BuyScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Footer" type="HBoxContainer" parent="Root/Panel/Margin/VBox"]
+layout_mode = 2
+
+[node name="FlashLabel" type="Label" parent="Root/Panel/Margin/VBox/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = ""
+theme_override_colors/font_color = Color(0.95, 0.85, 0.4, 1)
+
+[node name="CloseButton" type="Button" parent="Root/Panel/Margin/VBox/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Close"

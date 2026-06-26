@@ -12,7 +12,7 @@ extends Node
 ##     so autosave-on-sleep/extract can never corrupt meta-state.
 
 const SAVE_ROOT := "user://saves"
-const META_SCHEMA_VERSION := 3
+const META_SCHEMA_VERSION := 4
 const RUN_SCHEMA_VERSION := 1
 
 func slot_dir(slot: int) -> String:
@@ -93,21 +93,16 @@ func _migrate_meta(data: Dictionary) -> Dictionary:
 					data["run_number"] = 1
 				if not data.has("quota_target"):
 					data["quota_target"] = 0
-			# --- v3 -> v4 SKELETON (M1.6 M0 scaffold; FILLED + ACTIVATED in M3) -----
-			# INERT today: META_SCHEMA_VERSION is still 3, so `while v < 3` never enters
-			# this case. M0 lands the SHAPE (per RD-4/RD-5 of M0_foundation_router_economy.md)
-			# so M3's author activates it WITHOUT re-deriving it. To activate in M3 (IF the
-			# Director ratifies persistent purchases — the one open RD-4 fun/scope call):
-			#   1. bump META_SCHEMA_VERSION to 4 (above),
-			#   2. uncomment the owned_items default below,
-			#   3. add "owned_items" to GameState.to_meta_dict()/from_meta_dict() (default []),
-			#   4. add a tests/fixtures/meta_v3.sav fixture + a test_save_migration _run_v3() case.
+			# --- v3 -> v4 (M1.6 M3): ACTIVATED ------------------------------------
+			# The Director ratified persistent shop purchases (DR-M3-1 / RD-1), so M3
+			# bumps META_SCHEMA_VERSION to 4 (above) and lands the migration step. Purely
+			# additive: owned_items defaults to an empty id list, so old saves migrate to
+			# "owns nothing" without crashing load (atomic write + .bak unchanged).
 			3:
 				# v3 -> v4 (M1.6 M3): owned_items added (the Hub shop). Old saves predate
 				# the shop → default to an empty id list so from_meta_dict reads "owns nothing".
-				# if not data.has("owned_items"):
-				#     data["owned_items"] = []
-				pass
+				if not data.has("owned_items"):
+					data["owned_items"] = []
 		v += 1
 		data["schema_version"] = v
 	return data
