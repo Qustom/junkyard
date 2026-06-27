@@ -28,11 +28,30 @@ var _focused_gate: Node = null
 
 func _ready() -> void:
 	visible = false
+	# Derive the glyph from the real `interact` binding (L1 remapped extract→F), so the
+	# HUD CTA never drifts from the actual key (was a hardcoded "E"). Falls back to the
+	# authored key_glyph if the action/keyboard binding is missing.
+	key_glyph = _derive_key_glyph()
 	EventBus.interactable_focused.connect(_on_interactable_focused)
 	EventBus.interactable_unfocused.connect(_on_interactable_unfocused)
 	# Keep the displayed value live while the prompt is up and the player grabs/drops.
 	EventBus.run_inventory_changed.connect(_on_run_inventory_changed)
 	_push_hint.text = tr("HUD_PUSH_HINT")
+
+
+## Read the first keyboard event bound to `interact` and return its key label (e.g.
+## "F"), mirroring InteractionPrompt._derive_key_hint. Falls back to the authored
+## key_glyph so the prompt is never blank.
+func _derive_key_glyph() -> String:
+	if InputMap.has_action("interact"):
+		for event in InputMap.action_get_events("interact"):
+			var key := event as InputEventKey
+			if key != null:
+				var keycode: int = key.physical_keycode if key.physical_keycode != 0 else key.keycode
+				var label: String = OS.get_keycode_string(keycode)
+				if label != "":
+					return label
+	return key_glyph
 
 
 func _on_interactable_focused(target: Node) -> void:

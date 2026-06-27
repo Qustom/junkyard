@@ -433,8 +433,11 @@ func _evaluate_quota(sold_total: int) -> Dictionary:
 		return _quota_result
 	_quota_evaluated_this_run = true
 	# Compute `achieved` by the basis: cumulative_money (1) reads the running balance
-	# after this run's sale; this_run_banked (0) reads only what was sold this run.
-	var achieved: int = money if _quota_basis_snapshot == 1 else sold_total
+	# PLUS the still-held (unsold) haul — on the M1.6 Hub-return beat the dive's haul is
+	# banked-but-unsold, so `money` alone would read a winning run as a MISS; _held_haul_value()
+	# is 0 on the sell path (pile already emptied) so that path stays `money` exactly.
+	# this_run_banked (0) reads only what was banked this run (sold_total == held haul value).
+	var achieved: int = (money + _held_haul_value()) if _quota_basis_snapshot == 1 else sold_total
 	var met: bool = achieved >= quota_target
 	EventBus.quota_evaluated.emit(run_number, quota_target, achieved, met)
 	if met:
@@ -476,11 +479,21 @@ func last_quota_result() -> Dictionary:
 ## double-advance regardless of how the Hub-return + a Shop sale interleave.
 ## Returns the cached/computed result dict (mirrors last_quota_result's shape).
 func evaluate_quota_on_return() -> Dictionary:
+	return _evaluate_quota(_held_haul_value())
+
+
+## M1.6 fix: the value of the haul brought home but NOT yet sold — sums base_sell_value
+## over the live banked_junk pile (the same math as run_haul_value/_sum_values). On the
+## Hub-return beat the haul is HELD (unsold), so `money` alone excludes it; the
+## cumulative_money quota basis must add this so a winning run isn't read as a MISS just
+## because the player hasn't visited the Shop yet. On the sell path banked_junk is already
+## emptied before _evaluate_quota, so this returns 0 and the basis stays `money` exactly.
+func _held_haul_value() -> int:
 	var held_value: int = 0
 	for item in banked_junk:
 		if item != null:
 			held_value += item.base_sell_value
-	return _evaluate_quota(held_value)
+	return held_value
 
 
 ## K2 (M1.4): the full roguelite wipe (Director FINAL). Resets EVERY meta field to

@@ -174,11 +174,31 @@ func _run() -> int:
 	if _advanced_events.size() != 0 or _evaluated_events.size() != 0:
 		failures.append("C6: quota-off emitted signals (adv=%d eval=%d)" % [_advanced_events.size(), _evaluated_events.size()])
 
+	# --- Case 7: M1.6 — Hub-return cumulative basis counts the HELD (unsold) haul ---
+	# Regression for the playtest bug "quota always missed even with > the bar": on the
+	# M1.6 Hub-return beat the haul is banked-but-UNSOLD (held in banked_junk, money not
+	# yet credited), and evaluate_quota_on_return() fires before any Shop sale. The
+	# cumulative_money basis must read money + held haul, else a winning run reads as MISS.
+	_reset_meta(gs)
+	_evaluated_events.clear()
+	_advanced_events.clear()
+	var cfg7 := _make_cfg(true, 50, 50, 1, 1)   # base 50, every_run_end, CUMULATIVE
+	_drive_run(gs, cfg7, &"extract")            # lazy-inits quota_target=50
+	gs.money = 0                                 # nothing sold yet (haul is held)
+	var held := JunkItem.new()
+	held.base_sell_value = 60                    # one held item worth $60 > the $50 bar
+	gs.banked_junk = [held] as Array[JunkItem]
+	var r7: Dictionary = gs.evaluate_quota_on_return()
+	if not bool(r7.get("met", false)):
+		failures.append("C7: held haul $60 (money=0) read as MISS on Hub-return (the reported bug)")
+	if r7.get("achieved", -1) != 60:
+		failures.append("C7: achieved=%s, expected 60 (money 0 + held haul 60)" % str(r7.get("achieved")))
+
 	# --- Cleanup ------------------------------------------------------------------
 	_reset_meta(gs)
 
 	if failures.is_empty():
-		print("QUOTA OK — met advances+persists (run#+target+quota_advanced), miss defers to wipe_meta (9-field reset + meta_wiped), eval idempotent, on_extract skips non-extract, this_run_banked reads sold_total, quota-off fully inert.")
+		print("QUOTA OK — met advances+persists (run#+target+quota_advanced), miss defers to wipe_meta (9-field reset + meta_wiped), eval idempotent, on_extract skips non-extract, this_run_banked reads sold_total, quota-off fully inert, M1.6 Hub-return cumulative basis counts the held unsold haul.")
 		return 0
 	for f in failures:
 		printerr("QUOTA FAIL: ", f)
