@@ -75,3 +75,20 @@ Verified: import clean; fp `e943ac9c8bc1`; 89/89; router/loop/quota/smoke green.
 - `tests/test_quota_system.gd` (FB2 Case 7 regression)
 - `ui/hud/decision_hud.tscn` (FB3 QuotaLabel reposition under Holding)
 - `ui/hud/decision_hud.gd` (FB3 quota `have` = money + haul, live-refresh)
+
+## FB4 — hub controls list + changelog
+
+**Director:** "In the hub, add text for all the controls inputs." + "ensure the changelog is updated."
+
+**Fix:**
+- `scenes/hub/hub.tscn`: added a `ControlsLabel` to the hub `HudLayer` (bottom-left, outlined, multi-line) listing the full
+  scheme decoded from `project.godot` `[input]` + the L1/L6 mouse/stick design: Move (WASD/Arrows/Left stick), Aim
+  (Mouse/Right stick), Throw (Left-click/Space/RT), Cycle item (Mouse wheel/Q·E/LB·RB), Interact·Extract (F / A),
+  Pause (Esc/Start), Debug menu (P). Static help text (matches the hub's existing inline labels; greybox).
+- `changelog.txt` (M1.6 "THE HUB" section): added the on-screen-controls bullet + a line that the HUD now shows the current
+  quota (have vs need) under "Holding:" (folds in FB3 as a player-facing note, per the changelog scope rule — feature
+  descriptions updated in place, no FIXED entries for the in-version FB1/FB2/FB3 fixes).
+
+Verified: import clean; `test_app_router` (boots the hub) OK; smoke OK. Pure hub HUD text + docs — no system/save/knob/fp change.
+
+Files (FB4): `scenes/hub/hub.tscn`, `changelog.txt`.

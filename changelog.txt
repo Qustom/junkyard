@@ -29,6 +29,12 @@ THE HUB (new)
   PORTAL (walk into it to start a dive) and a SHOP terminal. The dive timer does NOT run
   in the hub — the clock is dive-only. When a dive ends (extract, death, or timeout) you
   are automatically returned here, and your quota is checked on arrival.
+* NEW — On-screen controls. The hub shows a list of every control input — move, aim,
+  throw, cycle item, interact/extract, pause, and the debug menu — so you can learn the
+  scheme at a glance before you dive (keyboard/mouse and controller).
+* The HUD now shows your current quota under the "Holding:" readout — what you HAVE
+  (banked money plus your current haul) versus what you NEED — so you always know whether
+  this run is on track to clear the bar.
 
 
 THE SHOP — sell + buy (replaces the old sell screen)
