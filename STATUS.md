@@ -6,8 +6,14 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.6 (Surface & Staging) — **design LOCKED + wired; build NOT started.** Main menu + walkable hub (sell+buy shop replacing SellScreen) + P-key tabbed debug menu, under a Menu→Hub→Dive→Hub `App` router. **Next = dispatch Wave 1 (M0 foundation).**
-**Last updated:** 2026-06-26 (M1.5 re-test → **RG3 ITERATE → M1.6**; four-phase authoring DONE: breakdown + M0–M4 per-task designs + fresh-eyes Resolved Decisions on `main`, pushed. Director dispositioned the scope calls: buy = **persistent → META v3→v4 save bump**; telemetry-export → P-debug Meta tab; New-Game-over-save = wipe-with-confirm; Settings = placeholder. Router = persistent root `App` node; `main_game.tscn` → dive-only; clock dive-only; 89-knob count holds, fp `e943ac9c8bc1` unmoved. `TASKS.md`/board/`STATUS.md` wired for M1.6; M1.5 archived.)
+**Current milestone:** M1.6 (Surface & Staging) — **BUILD COMPLETE (M0–M4) + RG1 published + 4 playtest-feedback fixes; in re-gate.** Boot→Main Menu→walkable Hub (sell+buy Shop) ⇄ Dive via the `App` router; P-key 7-tab debug menu. **Next = Director re-test → RG2/RG3 verdict.**
+**Last updated:** 2026-06-27 (repo restructure: **the Godot project now lives in `Game/`**; M1.6 build done, RG1 + FB1–FB4 published `m1-20260627-41106de`. Awaiting Director re-test verdict.)
+
+> **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
+> (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
+> `res://…` paths are unchanged. Publish: `bash Game/tools/push_itch.sh` (self-locates). CI uses `working-directory: Game`.
+> Design-doc/worklog filesystem paths written before this date gain a `Game/` prefix (e.g. `systems/…` → `Game/systems/…`);
+> their `res://…` references are still valid as-is.
 
 ---
 
