@@ -157,6 +157,9 @@ func _on_run_inventory_changed(_used_slots: int, _max_slots: int) -> void:
 	# Holding is the at-risk number. (Depth is no longer refreshed here — it has its
 	# own edge, EventBus.depth_changed; inventory has nothing to do with room depth. J5.)
 	_refresh_haul()
+	# The quota "have" projects money + the current haul, so it tracks live as you
+	# grab/drop (matches what actually counts toward the cumulative quota at extract).
+	_refresh_quota()
 
 
 ## J5: the room depth changed — the player crossed into a piece of a new depth_index.
@@ -219,10 +222,13 @@ func _on_quota_run_started(_band_id: StringName = &"", _seed: int = 0) -> void:
 	_refresh_quota()
 
 
-## K2 (M1.4): project "Run N · Quota: $have / $need". Gated on quota_enabled (mirrors
-## the R2/R3/timer gates) so an all-off run keeps the line hidden = the M1.0 HUD. `have`
-## reads cumulative GameState.money (matches the cumulative_money basis the preset ships);
-## with a this_run_banked basis the cumulative reading still legibly shows "your balance".
+## K2 (M1.4): project "Run N · Quota: $have / $need", shown under the Holding label.
+## Gated on quota_enabled (mirrors the R2/R3/timer gates) so an all-off run keeps the
+## line hidden = the M1.0 HUD. `have` = cumulative GameState.money PLUS the current haul
+## (run_haul_value) — i.e. what the run would bank toward the cumulative_money quota at
+## extract, so the readout never shows "$0 / $50" while you're holding enough to clear it
+## (the same held-haul logic as the M1.6 evaluate_quota_on_return fix). Refreshed on
+## inventory change so it tracks live as you collect.
 func _refresh_quota() -> void:
 	var cfg: RunConfig = GameState.active_run_config
 	if cfg == null or not cfg.quota_enabled:
@@ -231,7 +237,7 @@ func _refresh_quota() -> void:
 	_quota_label.visible = true
 	_quota_label.text = tr("HUD_QUOTA").format({
 		"run": GameState.run_number,
-		"have": GameState.money,
+		"have": GameState.money + GameState.run_haul_value(),
 		"need": GameState.quota_target,
 	})
 

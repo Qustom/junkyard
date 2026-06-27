@@ -49,9 +49,29 @@ None. UI-only z/glyph change + a run-state quota-math correction; no generation 
 (89 held), no save-schema change, `run_ended` arity untouched. Changelog: no new entry — both are fixes to behaviour already
 described for M1.6 (changelog scope rule: don't add FIXED lines for in-version fixes).
 
+## FB3 — current quota not visible (couldn't see the bar / how much I need)
+
+**Symptom (Director):** "I can't see the current quota, or how much I need. Add that under the holding text."
+
+**Root cause:** the HUD `QuotaLabel` (K2, M1.4 — "Run N · Quota: $have / $need") already existed but was anchored to the
+**bottom-right** (`anchors_preset=3`), not under the L3-relocated top-right "Holding:" label, so it read as missing. Worse,
+its `have` projected **`money` only** — excluding the haul you're carrying — so post-FB2 it would show e.g. "$0 / $50" while
+you held $60 and then passed (the same confusion FB2 fixed).
+
+**Fix:**
+- `ui/hud/decision_hud.tscn`: moved `QuotaLabel` to the top-right directly under `HaulValueLabel` (`anchors_preset=1`,
+  `offset_top=100`/`offset_bottom=126`, same right edge, right-aligned).
+- `ui/hud/decision_hud.gd`: `have = GameState.money + GameState.run_haul_value()` (what the run would bank toward the
+  cumulative quota at extract — matches the FB2 held-haul logic) and refresh it on `run_inventory_changed` so it tracks live
+  as you grab/drop. Still gated on `quota_enabled` (all-off run → hidden, M1.0 HUD).
+
+Verified: import clean; fp `e943ac9c8bc1`; 89/89; router/loop/quota/smoke green. Pure HUD projection — no GameState/save/knob change.
+
 ## Files touched
 
-- `ui/interaction_prompt.tscn` (z-order)
-- `ui/hud/extract_prompt.gd` (derive glyph)
-- `systems/game_state.gd` (`_held_haul_value()` + cumulative-basis fix + `evaluate_quota_on_return` simplify)
-- `tests/test_quota_system.gd` (Case 7 regression)
+- `ui/interaction_prompt.tscn` (FB1 z-order)
+- `ui/hud/extract_prompt.gd` (FB1 derive glyph)
+- `systems/game_state.gd` (FB2 `_held_haul_value()` + cumulative-basis fix + `evaluate_quota_on_return` simplify)
+- `tests/test_quota_system.gd` (FB2 Case 7 regression)
+- `ui/hud/decision_hud.tscn` (FB3 QuotaLabel reposition under Holding)
+- `ui/hud/decision_hud.gd` (FB3 quota `have` = money + haul, live-refresh)
