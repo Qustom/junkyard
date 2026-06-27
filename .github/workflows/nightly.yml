@@ -48,6 +48,10 @@ jobs:
   test:
     name: Test gate (import + smoke + migration + GdUnit4)
     runs-on: ubuntu-latest
+    # The Godot project lives under Game/ — run every command from there.
+    defaults:
+      run:
+        working-directory: Game
     steps:
       - uses: actions/checkout@v4
         with:
@@ -104,6 +108,12 @@ jobs:
     name: Export Win64 + Web + publish to itch (Butler)
     needs: test
     runs-on: ubuntu-latest
+    # The Godot project lives under Game/ — run every command (stamp, import, export,
+    # butler push) from there. git/butler work from the subdir; export paths are
+    # project-relative → Game/build/... (the upload-artifact paths below are repo-root).
+    defaults:
+      run:
+        working-directory: Game
     steps:
       - uses: actions/checkout@v4
         with:
@@ -213,12 +223,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TheFarYard-Win64-${{ env.USER_VERSION }}
-          path: build/win/**
+          path: Game/build/win/**
           if-no-files-found: error
 
       - name: Upload Web build artifact (always — usable even without itch)
         uses: actions/upload-artifact@v4
         with:
           name: TheFarYard-Web-${{ env.USER_VERSION }}
-          path: build/web/**
+          path: Game/build/web/**
           if-no-files-found: error

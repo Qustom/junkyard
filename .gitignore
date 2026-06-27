@@ -5,8 +5,12 @@ APIKEYS.md
 .env.*
 .mcp.local.json
 
-# --- Godot 4.x ---
+# --- Godot 4.x (the engine project now lives under Game/) ---
 .godot/
+/Game/android/
+/Game/build/
+/Game/exports/
+# legacy root paths (kept harmless in case an old export lingers)
 /android/
 /build/
 /exports/
@@ -25,6 +29,8 @@ Thumbs.db
 .vscode/
 
 # --- Test / CI artifacts ---
+/Game/reports/
+/Game/.gdunit4_testadapter/
 /reports/
 /.gdunit4_testadapter/
 
@@ -35,8 +41,8 @@ Thumbs.db
 # BuildVersion at runtime. A build product — never committed (a committed copy could go
 # stale in source the way the old project.godot config/build_sha did). Its .uid is also
 # generated on import and never committed.
-/systems/build_info_gen.gd
-/systems/build_info_gen.gd.uid
+/Game/systems/build_info_gen.gd
+/Game/systems/build_info_gen.gd.uid
 
 # Agent worktrees (ephemeral; never commit)
 .claude/worktrees/

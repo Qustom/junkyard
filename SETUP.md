@@ -61,9 +61,10 @@ chmod +x "$HOME/.local/bin/butler"
 butler -V          # verify (PATH already has ~/.local/bin)
 ```
 
-Now a local web export + push works via `bash tools/push_itch.sh` (it stamps the build, exports the
-`Web` preset to `build/web/`, resolves the itch key from `BUTLER_API_KEY` or the `# Itch.io` section
-of `APIKEYS.md` **without printing it**, and pushes `qusto/the-far-yard:html5`).
+Now a local web export + push works via `bash Game/tools/push_itch.sh` (the script self-locates to the
+`Game/` project; it stamps the build, exports the `Web` preset to `Game/build/web/`, resolves the itch
+key from `BUTLER_API_KEY` or the `# Itch.io` section of `APIKEYS.md` **without printing it**, and pushes
+`qusto/the-far-yard:html5`).
 
 **Human-only prerequisites for an actual publish** (butler pushes *builds*, not page settings):
 
@@ -78,7 +79,7 @@ of `APIKEYS.md` **without printing it**, and pushes `qusto/the-far-yard:html5`).
    `credentialless` COEP scheme itch serves) — play in **Chrome or Edge**. Fallback if the toggle is
    fiddly: a single-threaded export (`variant/thread_support=false` in `export_presets.cfg`, which
    uses the installed `web_nothreads_release.zip` — no SAB/headers, a perf cost, but portable).
-4. **Confirm one manual push** — `bash tools/push_itch.sh` (or `butler push build/web
+4. **Confirm one manual push** — `bash Game/tools/push_itch.sh` (or `butler push Game/build/web
    qusto/the-far-yard:html5`) once, before the nightly cron is relied on.
 
 ## 2. Git LFS
@@ -94,10 +95,13 @@ Verified: a test PNG committed as a 3-line LFS pointer (`version/oid/size`), not
 
 ## 3. Godot project
 
+> The Godot project lives under **`Game/`** (repo root holds design/docs only). Pass `--path Game` (or `cd Game`); `res://`
+> paths are unchanged.
+
 ```bash
-godot --headless --import                                  # compile scripts, build .godot/
-godot --headless --script res://tools/ci_smoke_test.gd     # → "SMOKE OK" (exit 0)
-godot project.godot                                        # open the editor
+godot --headless --path Game --import                              # compile scripts, build Game/.godot/
+godot --headless --path Game --script res://tools/ci_smoke_test.gd # → "SMOKE OK" (exit 0)
+godot Game/project.godot                                           # open the editor
 ```
 The smoke test exercises the M0 spike: autoloads, seeded-RNG determinism, save round-trip +
 migration, and Resource loading. CI runs the same two commands (`.github/workflows/ci.yml`).

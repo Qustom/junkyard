@@ -12,6 +12,12 @@ jobs:
   smoke:
     name: Headless import + smoke test
     runs-on: ubuntu-latest
+    # The Godot project lives under Game/; run every command from there so `--import`,
+    # `res://…`, and `--path .` resolve against Game/project.godot. (working-directory
+    # affects `run:` steps only — `actions/*` steps like checkout/upload use repo-root paths.)
+    defaults:
+      run:
+        working-directory: Game
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,5 +78,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gdunit4-report
-          path: reports/**/*.xml
+          path: Game/reports/**/*.xml
           if-no-files-found: ignore

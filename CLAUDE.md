@@ -73,7 +73,7 @@ The canonical as-built reality of the M1 build lives in `design/M1_Tasks/M1_As_B
 
 Each milestone runs as a **build phase** (waves of tasks) followed by a **playtest feedback gate** that records an explicit **go / iterate / pivot** verdict. The verdict is the human Director's call — Claude assembles the evidence (telemetry + analysis) and **recommends**; it never decides (the canonical example is M1.0's G4 gate, `design/M1_Tasks/G4_findings.md`). The verdict drives what happens next:
 
-> **Publish every playtest build to itch (standing step of the playtest gate).** When the re-gate's playtest build is produced (the RG1-style "build + verify" task), **publish it to itch.io** so the Director (and any tester) can play it in-browser: from the repo root run `bash tools/push_itch.sh` (stamp → export the Web preset → `butler push qusto/the-far-yard:html5`). If `butler` is a shell alias (it's at `/mnt/c/wsl-libraries/butler/butler`), pass `BUTLER=/mnt/c/wsl-libraries/butler/butler` — scripts can't see aliases. Live page: `https://qusto.itch.io/the-far-yard` (password-gated; **Chrome/Edge only** — Firefox lacks the SharedArrayBuffer COEP itch serves). Desktop stays the telemetry vehicle; web telemetry returns via the in-game "Export telemetry" button. Prereqs + the harmless godot export-exit crash are documented in `tools/playtest/tester_readme.md` ("Publishing a playtest build") and `SETUP.md §1a`.
+> **Publish every playtest build to itch (standing step of the playtest gate).** When the re-gate's playtest build is produced (the RG1-style "build + verify" task), **publish it to itch.io** so the Director (and any tester) can play it in-browser: from the repo root run `bash Game/tools/push_itch.sh` (the script self-locates to `Game/`; stamp → export the Web preset → `butler push qusto/the-far-yard:html5`). If `butler` is a shell alias (it's at `/mnt/c/wsl-libraries/butler/butler`), pass `BUTLER=/mnt/c/wsl-libraries/butler/butler` — scripts can't see aliases. Live page: `https://qusto.itch.io/the-far-yard` (password-gated; **Chrome/Edge only** — Firefox lacks the SharedArrayBuffer COEP itch serves). Desktop stays the telemetry vehicle; web telemetry returns via the in-game "Export telemetry" button. Prereqs + the harmless godot export-exit crash are documented in `Game/tools/playtest/tester_readme.md` ("Publishing a playtest build") and `SETUP.md §1a`.
 
 > **Generate the build's changelog (standing step of the playtest gate — do this WITH the publish).** Every playtest-ready build ships **alongside an updated `changelog.txt`** so the Director/testers know what changed. Before (or with) the itch publish, update `changelog.txt` for that build and commit it. **Scope rule:** the changelog documents the **delta from the *previous* shipped version** (e.g. M1.3 → M1.4) as a clean *feature* list — what's new/changed for a player coming from the last version. **Do NOT list intra-version bug-fixes or tweaks to features that are themselves new in this version** (a fix to an M1.4-new hazard is not a separate entry — just describe the feature in its final, working state). Mid-version tweaks (e.g. a Director config change) update the relevant *feature's description* in place rather than adding a "FIXED/CHANGED" entry. Keep a short "NOT YET IN THIS BUILD" note for known deferred follow-ups. The changelog is provided to the Director with the playtest build.
 
@@ -153,14 +153,19 @@ A task is only **Done** when its worklog exists, names a real commit, and the de
 
 ## Commands
 
+> **The Godot project lives in `Game/`** (repo-root holds only design/docs/meta — `design/`, `worklogs/`, `*.md`, etc.).
+> Pass `--path Game` to every `godot` invocation (or `cd Game` first). **`res://` paths are unchanged** — they resolve against
+> `Game/project.godot`, so every `res://…` reference in code/tests/docs stays valid. Headless tests still run as SCENES.
+
 `godot` is installed user-local at `~/.local/bin/godot` (4.6.3-stable). Ensure `export PATH="$HOME/.local/bin:$PATH"`.
 
 ```bash
-godot --headless --import                                   # build .godot, compile all scripts (catches parse errors)
-godot --headless --script res://tools/ci_smoke_test.gd      # M0 headless smoke test → exits non-zero on failure (CI gate)
-godot project.godot                                         # open in the editor (GUI)
+godot --headless --path Game --import                              # build Game/.godot, compile all scripts (parse errors)
+godot --headless --path Game --script res://tools/ci_smoke_test.gd # M0 headless smoke test → non-zero on failure (CI gate)
+godot --headless --path Game res://tests/<name>.tscn               # run a verify/knob test (as a SCENE, never --script)
+godot Game/project.godot                                           # open in the editor (GUI)
 
-git lfs status                                              # confirm binaries are LFS pointers, not blobs
+git lfs status                                              # confirm binaries are LFS pointers, not blobs (run from repo root)
 claude mcp list                                             # health-check fal-ai / elevenlabs / pixellab MCP servers
 ```
 
