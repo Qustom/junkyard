@@ -13,6 +13,14 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ## ▶ Next action (start here on a cold restart) — DIRECTOR PLAYTEST the M1.6 build → RG2 → RG3
 
+> **RG1 feedback fixes (2026-06-27, applied direct — gate green, re-published `m1-20260627-d8e3517`):** Director playtest
+> surfaced 2 bugs → fixed on `main`@`d8e3517`. **FB1** the "[F] extract" prompt was hidden behind the gate door — lifted the
+> world `InteractionPrompt` above geometry (`z_index=100`, `z_as_relative=false`) + made the HUD `ExtractPrompt` derive its
+> glyph from the real `interact` binding (stale "E"→"F"). **FB2** quota always MISSED — the `cumulative_money` basis read
+> `money` only, but M1.6 holds the haul unsold until the Shop and `evaluate_quota_on_return()` fires pre-sale → `achieved=0`;
+> fix: cumulative basis = `money + _held_haul_value()` (0 on the sell path, unchanged there). New quota Case 7 regression.
+> Gate green: fp `e943ac9c8bc1` · 89/89 · router/loop/save-v4/shop/m15/smoke. Worklog `…-RG1FB-claude.md`. **Re-test the new build.**
+
 > **✓ RG1 DONE + PUBLISHED (2026-06-26)** — `main`@`aea0bb7`, board=Done. Build-verify doc
 > `design/M1_6_Tasks/RG1_playtest_build.md` + M1.6 changelog block; full verify matrix green (router · shop · save v1/v2/v3→**v4**
 > · m15 preset fp `e943ac9c8bc1` · 89/89 · loop). No new test (existing suite covers the gate — QA call). **Published to itch:**
