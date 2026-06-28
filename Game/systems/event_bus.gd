@@ -233,7 +233,8 @@ signal purchase_failed(item_id: StringName, price: int, money: int)
 # (N1's swap seam) and swaps AnimatedSprite2D <-> greybox + gates the movement-lock.
 # `enabled == true` means "player art ON" (AnimatedSprite2D shown, greybox hidden,
 # movement-lock active); `enabled == false` → greybox (M1.6 byte-for-byte, lock off).
-# Default state is art ON.
+# Default state is art OFF (greybox / M1.6 look) — the animated character is opt-in via
+# the debug Player tab (Director-directed 2026-06-28).
 
 # --- N2 debug view toggle (tooling, not gameplay) ----------------------------
 signal debug_player_art_toggled(enabled: bool)
