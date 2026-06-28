@@ -22,4 +22,10 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*(empty between waves — M1.6 Wave 3 (M3) deviations land here)*
+- **[2026-06-28] PLAYERTAB / player_visual.gd timing model** — N1's ratified shared lock knobs `lock_duration_cap_s` (0.4)
+  + `fixed_lock_s` (0.18) were REPLACED by per-action `pickup_lock_s` (0.25) + `throw_lock_s` (0.30), so the new debug "Player"
+  tab can tune pickup and throw timing separately. **Director-directed** ("make the pick / throw timing configurable" +
+  "separate pickup & throw"). CLIP_DRIVEN (the shipped default) is byte-for-byte unchanged (caps ≥ clip lengths → non-binding);
+  only non-default FIXED-mode durations differ (0.18 → 0.25/0.30). fp `e943ac9c8bc1` unmoved; 89-knob count held (controls are
+  debug-only, outside MANIFEST). **Claude's recommendation: Addressed** (this IS the Director's directive — reapply to the N1
+  as-built/design doc at close-out). · _Awaiting Director disposition at the next wave close-out._

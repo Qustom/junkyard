@@ -37,6 +37,12 @@ See `CLAUDE.md` → "The orchestrator loop".
 >   fp unmoved; player_visual/config 89 green. Worklog `…-FIXEAST-claude.md`.
 > Both still need on-screen confirmation in RG1 (headless can't render the ghost-gone / the clean east throw).
 >
+> **✓ PLAYERTAB (`bb1976a`, 2026-06-28) — debug menu "Player" tab added, integrated, pushed.** New `CFG_TAB_PLAYER` tab holds
+> the **Player art (debug)** toggle (MOVED off Meta) + live pickup/throw animation-lock controls: lock-on-pickup, animate-on-reject,
+> lock-mode (Clip-driven/Fixed), and **separate `Pickup lock (s)` / `Throw lock (s)`** (per-action timing — replaced N1's shared
+> cap/fixed; see `DESIGN_DEVIATIONS.md`, recommend Addressed). Live via new EventBus `debug_player_anim_config_changed`. Debug-only
+> (outside MANIFEST): fp `e943ac9c8bc1` unmoved · **89/89** held · CLIP_DRIVEN default byte-preserved. Worklog `…-PLAYERTAB-general-purpose.md`.
+>
 > **▶ Wave 2 = RE-GATE.** **RG1** (qa): author `design/M1_7_Tasks/RG1_playtest_build.md` from the M1.6 template; run the M1.7
 > verify matrix (8-way anim + toggle swap headless-provable parts; fp/89/smoke); **update `changelog.txt`** (M1.6→M1.7 delta:
 > the player is now an animated character + a debug art toggle); **publish to itch** `BUTLER=/mnt/c/wsl-libraries/butler/butler
