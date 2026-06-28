@@ -17,29 +17,23 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — M1.7 WAVE 1: ✓N0 ✓N1 → **N2 (next)** → RG1
+## ▶ Next action (start here on a cold restart) — M1.7 WAVE 2 (RE-GATE): RG1 build+verify+publish+changelog
 
-> **M1.7 (Player Embodiment) — design LOCKED; N0+N1 built+integrated; N2 is the last build task.** Director-directed: the
-> `player_basic_template` art (8-dir walk/pickup/throw + idle-from-rotations) is now on the player, driven off the existing
-> `facing`/`aim`/`velocity`/`junk_picked_up`/`item_thrown` seams. Breakdown `design/M1_7_Tasks/M1.7_Breakdown.md`; per-task
-> designs `N0/N1/N2_*.md` (LOCKED, with `Resolved Decisions` + `Director Disposition`). **Invariants (held through N1):**
-> all-off fp `e943ac9c8bc1` unmoved · 89-knob count holds · art-OFF = M1.6 byte-for-byte · collision r=14 +
-> `player_movement.tres` untouched · art COPIED not moved · filter-off pixel art, LFS.
+> **✓ M1.7 WAVE 1 (BUILD) COMPLETE + VERIFIED ON `main`@`cffb5db` (2026-06-28), pushed.** The greybox player is replaced by
+> the animated `player_basic_template` character (8-dir idle/walk + pickup/throw) in **both** Hub and Dive, plus a Meta-tab
+> "Player art (debug)" toggle that swaps back to greybox. **Wave-1 close-out: 0 deviations** (`DESIGN_DEVIATIONS.md` empty).
+> Integrated gate green: import · smoke · fp **`e943ac9c8bc1`** byte-identical · config **89/89** · `PLAYER_VISUAL OK` ·
+> `MOVE OK`. Tasks N0 (`07edb77`) · N1 (`47ab9a8`) · N2 (`cffb5db`) — board=Done. Worklogs `…-N{0,1,2}-general-purpose.md`.
 >
-> **▶ Dispatch N2** (`design/M1_7_Tasks/N2_debug_player_art_toggle.md`): a view-only "Player art (debug)" `CheckButton` on the
-> `config_menu` **Meta tab** (default checked = art ON, session-only) → emits `EventBus.debug_player_art_toggled` → the N1
-> `PlayerVisual._on_art_toggled` swaps `AnimatedSprite2D` ↔ greybox. **NEVER added to `_rows`/MANIFEST** (keeps 89-knob
-> coverage + fp). Then **RG1** build + verify + itch publish + changelog → Director playtest → RG2 → RG3 in
-> `design/M1_7_Tasks/G4_findings_M1.7.md`.
+> **▶ Wave 2 = RE-GATE.** **RG1** (qa): author `design/M1_7_Tasks/RG1_playtest_build.md` from the M1.6 template; run the M1.7
+> verify matrix (8-way anim + toggle swap headless-provable parts; fp/89/smoke); **update `changelog.txt`** (M1.6→M1.7 delta:
+> the player is now an animated character + a debug art toggle); **publish to itch** `BUTLER=/mnt/c/wsl-libraries/butler/butler
+> bash Game/tools/push_itch.sh` (Chrome/Edge, password-gated; **network/human-gated**). Then **Director playtest** → **RG2**
+> readability/telemetry → **RG3** verdict in `design/M1_7_Tasks/G4_findings_M1.7.md`.
 >
-> **✓ N0 DONE (2026-06-27)** — `main`@`07edb77`. 152 PNGs copied `art_workshop`→`Game/art/player/` (source intact) +
-> `player_frames.tres` (32 clips) + EventBus `debug_player_art_toggled`. Worklog `…-N0-general-purpose.md`.
-> **✓ N1 DONE (2026-06-27)** — `main`@`47ab9a8`. `PlayerVisual` child + `AnimatedSprite2D` (scale 0.45, y=-18, z=10);
-> greybox `Visual`/`Nose` retained hidden; 8-way FSM (`quantize_dir`+`select_state` pure helpers, `test_player_visual` green);
-> accepted-only clip-driven movement-lock with `@export` knobs (`lock_on_pickup`/`play_pickup_on_reject`/`lock_mode`/
-> `lock_duration_cap_s`/`fixed_lock_s`). DoD green: helper test · scene-loads(32 clips) · smoke · fp `e943ac9c8bc1` · 89/89 ·
-> movement test. **RG1 manual item:** confirm on-screen anim in BOTH scenes + lock-feel + scale/offset seat (headless can't).
-> Worklog `…-N1-general-purpose.md`. 0 deviations.
+> **⚠ MANUAL (headless can't render):** the on-screen confirmation — that idle/walk/pickup/throw read correctly in BOTH Hub
+> and Dive, the scale 0.45 / y=-18 seats the character on the r=14 body, the toggle swaps art↔greybox live, and the
+> movement-lock doesn't feel sluggish (flip `PlayerVisual.lock_mode=FIXED` in-editor if it does) — is the core RG1 item.
 
 ---
 
