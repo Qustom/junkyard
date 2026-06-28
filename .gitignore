@@ -46,3 +46,7 @@ Thumbs.db
 
 # Agent worktrees (ephemeral; never commit)
 .claude/worktrees/
+
+# Local desktop build artifacts (win64 etc.), labeled by build id under builds/<id>/.
+# Large binaries produced on demand via the Win64 export preset; never committed.
+/builds/
