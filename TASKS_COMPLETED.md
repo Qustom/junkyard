@@ -351,3 +351,16 @@ Breakdown + locked decisions: `design/M1_5_Tasks/M1.5_Breakdown.md`. Re-gate ver
 - **Wave 2 (Agency & threat):** L1 (throwing mechanic: highlight selector + `thrown_item` Area2D, kills pursuer/ping-pong, miss re-drops; input remap F/Q-E/Space) · L2 (spawn-room pursuer = room-bound slow patrol) · L5 (K5 `*_kills` toggles + retired `_driven_default_preset()`).
 - **Wave 3 (RG1):** M1.5 playtest build + verify + itch publish.
 - **Wave 4 (L6 control rework):** mouse-aim throw (point at cursor, LMB throw, wheel cycle) + twin-stick controller (right-stick aim, RT throw, LB/RB cycle); Q/E+Space kept. Post-RG3 tuning (timer 600→300, controller throw press-edge latch, hazard fair-share). Director re-test → **RG3 verdict ITERATE → M1.6**.
+
+---
+
+## M1.6 — Surface & Staging — ✓ BUILD DONE 2026-06-26; RG1 published 2026-06-27 (re-gate RG2/RG3 Director-pending)
+
+Give the game a surface: boot→Main Menu→walkable Hub (sell+buy Shop)⇄Dive via the persistent root `App` router; P-key
+7-tab debug menu (Vision split out). Breakdown + locked decisions: `design/M1_6_Tasks/M1.6_Breakdown.md`. Per-task specs:
+`design/M1_6_Tasks/M*.md`. All-off fp byte-identical (e943ac9c8bc1); 89-knob count held; save META v3→v4 (`owned_items`)
++ migration + `meta_v3.sav` fixture. Proof: `STATUS.md` §(archived) M1.6 build waves + `worklogs/2026-06-2{5,6,7}-*`.
+- **Wave 1 (M0, `52d6e17`):** persistent root `App` router + 8 EventBus signals + neutral GameState economy surface + quota-decouple + staged-config accessor + `debug_menu_toggle`=P + greybox stubs.
+- **Wave 2 (M1∥M2∥M4, `40d328d`):** Main Menu · walkable Hub + `main_game` dive-only refactor + hub-return quota/wipe · P-tab debug menu + Vision split (89-coverage byte-identical).
+- **Wave 3 (M3, `f47d8fc`):** Hub Shop sell+buy + 3-item persistent catalog + META v3→v4 + SellScreen retired + quota-MISS notice.
+- **Wave 4 (RG1, `aea0bb7` + FB1–FB4 `41106de`):** M1.6 build+verify doc + changelog + itch publish; 4 RG1 playtest-feedback fixes (extract-prompt z-order, quota cumulative basis, on-screen controls list). **RG2/RG3 remain Director-gated** (re-test → verdict in `design/M1_6_Tasks/G4_findings_M1.6.md`).

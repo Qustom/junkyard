@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.6 (Surface & Staging) — **BUILD COMPLETE (M0–M4) + RG1 published + 4 playtest-feedback fixes; in re-gate.** Boot→Main Menu→walkable Hub (sell+buy Shop) ⇄ Dive via the `App` router; P-key 7-tab debug menu. **Next = Director re-test → RG2/RG3 verdict.**
-**Last updated:** 2026-06-27 (repo restructure: **the Godot project now lives in `Game/`**; M1.6 build done, RG1 + FB1–FB4 published `m1-20260627-41106de`. Awaiting Director re-test verdict.)
+**Current milestone:** M1.7 (Player Embodiment) — **DESIGN LOCKED (Phases 0–4 done); build NOT started.** Replace the greybox player with the `player_basic_template` sprite (8-dir walk/pickup/throw/idle) in Hub + Dive + a debug toggle to disable the art. **Next = dispatch N0 (art import + SpriteFrames + signal).** *(M1.6 build+RG1 done; its RG2/RG3 re-gate is Director-pending, non-blocking — M1.7 is Director-directed content opened ahead of that verdict.)*
+**Last updated:** 2026-06-27 (M1.7 authored: breakdown + N0/N1/N2 per-task designs + fresh-eyes resolution + Director dispositions folded; `TASKS.md`/`STATUS.md` wired. Ready for the build wave.)
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
@@ -17,7 +17,25 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — DIRECTOR PLAYTEST the M1.6 build → RG2 → RG3
+## ▶ Next action (start here on a cold restart) — DISPATCH M1.7 WAVE 1: N0 → N1 → N2
+
+> **M1.7 (Player Embodiment) — design LOCKED, build ready.** Director-directed: put the `player_basic_template` art
+> (flannel/hoodie, 8-dir walk/pickup/throw + idle-from-rotations) on the player in **both** Hub and Dive, driven off the
+> existing `facing`/`aim`/`velocity`/`junk_picked_up`/`item_thrown` seams; add a debug toggle to disable the art (→ greybox).
+> Breakdown `design/M1_7_Tasks/M1.7_Breakdown.md`; per-task designs `N0/N1/N2_*.md` (each LOCKED, with `Resolved Decisions`
+> + `Director Disposition`). **Sequential single wave:** **N0** (copy art `art_workshop`→`Game`, author `player_frames.tres`
+> SpriteFrames, declare `debug_player_art_toggled`) → **N1** (AnimatedSprite2D + `player_visual.gd` 8-way FSM + accepted-only
+> clip-driven movement-lock, both `@export`-tunable; greybox retained as fallback) → **N2** (Meta-tab "Player art (debug)"
+> CheckButton, view-only, outside the 89-knob MANIFEST). **Invariants:** all-off fp `e943ac9c8bc1` unmoved · 89-knob count
+> holds · art-OFF = M1.6 byte-for-byte · collision r=14 + `player_movement.tres` untouched · art COPIED not moved (preserve
+> `art_workshop/` history) · filter-off pixel art, LFS. **Dispatch N0 first** (it blocks N1; N1 blocks N2). Then RG1 build +
+> verify + itch publish + changelog → Director playtest → RG2 → RG3 verdict in `design/M1_7_Tasks/G4_findings_M1.7.md`.
+>
+> *(Board: create the N0/N1/N2/RG1–RG3 items on GitHub Projects #1 on claim — see CLAUDE.md "Remote & board sync".)*
+
+---
+
+## (Director-pending, non-blocking) M1.6 re-gate — RG2 → RG3
 
 > **RG1 feedback fixes (2026-06-27, applied direct — gate green, re-published `m1-20260627-a1097fd`):** Director playtest
 > surfaced 3 items → fixed on `main`@`a1097fd`. **FB1** the "[F] extract" prompt was hidden behind the gate door — lifted the

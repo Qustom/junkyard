@@ -49,73 +49,68 @@ All waves built + re-gated: Waves 1–3 (L0–L5 + RG1) + Wave 4 (L6 control rew
 
 ---
 
-## M1.6 — Surface & Staging (ACTIVE — iterating on the M1.5 ITERATE verdict)
+## M1.6 — Surface & Staging — ✓ BUILD DONE; RG1 published; RG2/RG3 Director-pending
 
-Give the game a **surface**: boot to a real Main Menu, stage between runs in a **walkable greybox Hub** with a **Shop**
-that sells your haul AND lets you spend Money on greybox upgrades (replacing the auto-`SellScreen`), and **depart** into
-dives from there — and move the debug controls off the first screen into a **P-key tabbed** menu. Breakdown + dependency
-map + wave order + locked decisions: `design/M1_6_Tasks/M1.6_Breakdown.md` (§"Phase 3 Dispositions & Phase 4 Lock").
-Provenance: `G4_findings_M1.5.md` §RG3. **Design is LOCKED** — every task doc carries a "Resolved Decisions (Phase 3)"
-section; Director dispositioned the scope calls (buy = persistent → META v3→v4 save bump; telemetry-export → P-debug Meta
-tab; New-Game-over-save = wipe-with-confirm; Settings = placeholder). App flow **Menu → Hub ⇄ Dive** via a persistent root
-`App` router; `main_game.tscn` becomes dive-only; the clock is dive-only. All-off `RunConfig` stays the permanent baseline
-(fp=e943ac9c8bc1); **89-knob count holds** (no lever knob; M4 regroups only); Money/owned purchases are meta.
+Build (M0·M1·M2·M4·M3) + RG1 (itch published `m1-20260627-41106de` + FB1–FB4) all on `main`, archived →
+`TASKS_COMPLETED.md`. **Open (Director-gated, non-blocking M1.7):** **RG2** (telemetry/flow analysis) + **RG3** verdict
+(go/iterate/pivot) in `design/M1_6_Tasks/G4_findings_M1.6.md` — these await the Director's re-test. M1.7 below is
+**Director-directed content** opened ahead of that formal verdict.
 
-### Wave 1 — Foundation  *(M0 solo — single-writer on the shared flow/economy/config files)*
+---
 
-### M0 — Foundation: app-flow router + economy + signals + P action
-- Milestone: M1.6 (Wave 1)   Assignee: general-purpose   BlockedBy: none
-- Spec: `design/M1_6_Tasks/M0_foundation_router_economy.md`
-- Goal: build the persistent root `App` router (`scenes/app/app.*` = new `run/main_scene`; `StateHost` swaps Menu/Hub/Dive; one persistent `DebugOverlay` `CanvasLayer`; auto-returns to Hub by observing the locked `run_ended`); declare the 8 new `EventBus` signals; add the neutral `GameState` economy surface (`purchase(item_id,price)`/`owns()`/`owned_items` + v3→v4 migration skeleton, NO schema bump) + the quota-decouple (`evaluate_quota_on_return()`) + the staged-config accessor + `App.current_state`; add the `debug_menu_toggle`=P input + the `run/main_scene` swap; ship throwaway greybox `main_menu.tscn`/`hub.tscn` STUBS + a router smoke test. Single-writer of `game_state.gd`/`event_bus.gd`/`project.godot`/`app.*`.
-- Done when: project imports clean + boots to the `App` router → menu stub; all-off fp byte-identical (e943ac9c8bc1); 89-knob count unchanged; smoke + router smoke test green; all 8 signals declared; economy surface present at neutral defaults (no save bump yet); CI smoke test still boots.
+## M1.7 — Player Embodiment (ACTIVE — Director-directed; design LOCKED)
 
-### Wave 2 — Surface scenes  *(M1 ∥ M2 ∥ M4 — file-disjoint, parallel worktrees)*
+Replace the greybox player (teal `ColorRect`+`Nose`) with the **first real character sprite** — the
+`player_basic_template` (flannel/hoodie, 8-directional: walk · pickup · throw · idle-from-rotations) — in **both** the Hub
+and the Dive, driven entirely off the existing `facing`/`aim`/`velocity`/`junk_picked_up`/`item_thrown` seams; plus a
+**debug toggle** to disable the art (fall back to greybox). Breakdown + dependency map + wave order + locked decisions:
+`design/M1_7_Tasks/M1.7_Breakdown.md`. **Design is LOCKED** — every task doc carries a `Resolved Decisions` + a
+`Director Disposition` section. Director calls: art in BOTH hub+dive (one shared `player.tscn`); pickup/throw use a **brief
+movement-lock** (lock on **accepted** pickups only; **clip-driven** duration) — **both exposed as `@export` knobs** on the
+visual controller (NOT `RunConfig` fields). **Invariants:** all-off `RunConfig` fp stays `e943ac9c8bc1`; **89-knob count
+holds** (the debug art toggle is a view-only switch OUTSIDE the `config_menu` MANIFEST/coverage); **art-OFF = M1.6
+byte-for-byte** (greybox retained, no lock); collision r=14 + `player_movement.tres` untouched; frames **COPIED** (never
+moved) from `art_workshop/` into `Game/`, filter-off, LFS. Sequential single wave: N0 → N1 → N2.
 
-### M1 — Main menu scene
-- Milestone: M1.6 (Wave 2)   Assignee: ui-ux-designer (+ general-purpose)   BlockedBy: M0
-- Spec: `design/M1_6_Tasks/M1_main_menu.md`
-- Goal: new `scenes/menu/main_menu.tscn`+`.gd` (replaces the M0 stub) as the routed app entry: **New Game** (wipe-with-confirm on an existing save → `wipe_meta` → Hub) / **Continue** (enabled iff `SaveManager.has_save(0)`) / **Quit** (hidden on web) / **Settings** ("coming soon" placeholder); re-home the G6 first-run telemetry-consent here; version label; `menu_strings.csv`; greybox `Control`. Routes to Hub via the M0 router API.
-- Done when: boot lands on the Main Menu; New/Continue/Quit/Settings behave as locked; Continue gates on save presence; New Game confirms before wiping; G6 consent fires once on first run; routes into the Hub; greybox, all strings via `tr()`.
+### Wave 1 — Build  *(N0 → N1 → N2, sequential; one writer per file)*
 
-### M2 — Hub scene + Menu→Hub→Dive→Hub flow
-- Milestone: M1.6 (Wave 2)   Assignee: general-purpose (+ qa-playtest-coordinator: test-fallout)   BlockedBy: M0
-- Spec: `design/M1_6_Tasks/M2_hub_scene_flow.md`
-- Goal: new walkable greybox `scenes/hub/hub.*` (replaces the M0 stub): bespoke room, Player spawn, a **departure-portal** interactable → `dive_requested` → router loads the dive; a **shop anchor** for M3; an interim "Held: N items ~$X" readout (deleted by M3). **Refactor `main_game.*` to dive-only** (strip the embedded MainMenu/ConfigMenu/Start/SellScreen; dive self-starts in `_ready`→`start_new_run` reading the staged config else preset). Route run-end → **Hub**, firing the **quota-eval + roguelite miss-wipe on the guaranteed hub-return beat** (decoupled from selling, before the portal re-arms). Fix the test fallout (`test_main_game_loop` + the 5 RG verify scenes lose `%ConfigMenu`/`SellScreen`). **No `DiveClock` in the hub.**
-- Done when: Menu→Hub→portal→Dive→return→Hub flows; the clock runs only in the dive; quota+wipe fire on hub-return without a shop visit; main_game is dive-only and self-starts; broken tests fixed + green; all-off fp byte-identical; no duplicate G6 consent path.
+### N0 — Foundation: art import + `SpriteFrames` + signal seam
+- Milestone: M1.7 (Wave 1)   Assignee: character-animator (+ general-purpose)   BlockedBy: none
+- Spec: `design/M1_7_Tasks/N0_art_import_spriteframes.md`
+- Goal: **copy** (never move) the 152 `player_basic_template` PNGs from `art_workshop/game_art/player_explorations/20260627/player_basic_template/{rotations,move,pickup,throw}` into `res://art/player/…` (hyphens→underscores); `--import` so `.import` inherits the project nearest filter; author `res://entities/player/player_frames.tres` (`SpriteFrames`, 32 clips `<state>_<dir>`: idle 8×1 loop / walk 8×6@10fps loop / pickup 8×5@20fps one-shot / throw 8×7@24fps one-shot); pre-declare the ONE new EventBus signal `debug_player_art_toggled(enabled: bool)` (tooling). Single writer of `event_bus.gd` + the new asset.
+- Done when: frames present under `Game/art/player/` (source still in `art_workshop/`); SpriteFrames loads headless with the 32 clips + correct frame counts/loops; import clean; all-off fp byte-identical (e943ac9c8bc1); 89-knob count unchanged; smoke green; signal declared.
 
-### M4 — Debug-menu rework (P-key + tabs)
-- Milestone: M1.6 (Wave 2)   Assignee: ui-ux-designer (+ general-purpose)   BlockedBy: M0
-- Spec: `design/M1_6_Tasks/M4_debug_menu_rework.md`
-- Goal: move `config_menu` off the first screen → a **P-toggle overlay** (mounted on the M0 `App.DebugOverlay`, pauses the dive while open, no-op in Menu/Hub); restructure into a **7-tab `TabContainer`** (Hazards / Level Generation / **Vision** / Timer & Quota / Exposure & Return / Throw & Camera / Meta); **split the `r4_` vision/fog rows out of the maze section** via Option A (master-less `r4_vision_` pseudo-section — no field rename, no master) **preserving 89-knob coverage**; add the retiring web "Export telemetry" button to the **Meta tab**; new CSV title keys. Pure `ui/config/config_menu.*` (+ CSV).
-- Done when: P opens/closes the tabbed debug menu in all 3 states; Vision is its own tab/section, maze rows stay in Level Gen, no `r4_` field renamed; `has_full_coverage()` + both 89-count tests green; all-off fp byte-identical; telemetry-export works from the Meta tab on web; pause-in-dive doesn't burn the clock.
+### N1 — Player visual state machine (8-way + actions + lock)
+- Milestone: M1.7 (Wave 1)   Assignee: general-purpose (+ character-animator)   BlockedBy: N0
+- Spec: `design/M1_7_Tasks/N1_player_visual_state_machine.md`
+- Goal: rework `entities/player/player.tscn` — add an `AnimatedSprite2D` (from `player_frames.tres`), **retain** the greybox `Visual`/`Nose` hidden-by-default as the art-OFF fallback; new `player_visual.gd` controller with PURE unit-testable helpers `quantize_dir(facing,current)` (8-way, ~10° hysteresis) + `select_state(velocity,locked,action)` (idle↔walk @ ~8px/s; pickup/throw priority); plays pickup on `junk_picked_up` (accepted only, `@export`-gated) + throw on `item_thrown`; **brief movement-lock** by zeroing `input_dir` into the unchanged `step_velocity` (clip-driven, `@export` mode+cap; armed only when art ON). Applies in hub + dive via the shared scene.
+- Done when: player shows correct idle/walk per direction + pickup/throw clips in BOTH hub and dive; movement-lock works + is `@export`-tunable; greybox hidden when art on; pure helpers have a headless scene test; collision/movement untouched; all-off fp `e943ac9c8bc1` unmoved; smoke + suite green.
 
-### Wave 3 — Shop + integrate  *(M3 sequential — mounts into the Wave-2 Hub)*
+### N2 — Debug "disable player art" toggle
+- Milestone: M1.7 (Wave 1)   Assignee: ui-ux-designer (+ general-purpose)   BlockedBy: N1
+- Spec: `design/M1_7_Tasks/N2_debug_player_art_toggle.md`
+- Goal: add a **non-`RunConfig`** `CheckButton` to the `config_menu` **Meta tab** (label "Player art (debug)", key `CFG_DEBUG_PLAYER_ART`, default checked = art ON, **session-only** — no save write), patterned on the existing Meta-tab telemetry-export button; `toggled` emits `EventBus.debug_player_art_toggled(enabled)`; the player handler swaps `AnimatedSprite2D` ↔ greybox (`Visual`+`Nose`) and disarms the movement-lock when off. The control is NEVER added to `_rows`/MANIFEST.
+- Done when: toggling at runtime swaps art↔greybox in hub + dive; default = art ON; `test_config_menu` still reports **89** + coverage assertion green; all-off fp `e943ac9c8bc1` unmoved; no save-schema change.
 
-### M3 — Hub shop (sell + buy)
-- Milestone: M1.6 (Wave 3)   Assignee: general-purpose (+ game-director-designer: catalog `.tres`; + ui-ux-designer: shop UI)   BlockedBy: M0, M2
-- Spec: `design/M1_6_Tasks/M3_hub_shop_economy.md`
-- Goal: a Shop interactable in the Hub opens a Shop UI — **SELL** the banked haul → Money (reuses `sell_banked_junk`) + **BUY** a minimal greybox **persistent** catalog (3 owned-across-runs upgrades, `ShopItem`/`ShopCatalog` `.tres`, effects may stub) via M0's `purchase()`; land the **META save-schema bump v3→v4** (`owned_items`) + migration step + `meta_v3.sav` fixture + migration test; **retire `ui/sell/*`** (sell tally → Shop; quota/wipe already on the M2 hub-return beat; telemetry-export already on the M4 Meta tab). Mount into the Wave-2 Hub.
-- Done when: Shop sells the haul + buys persistent upgrades gated by Money; owned upgrades survive a save/load (v1→v4 & v3→v4 migrations green + fixture); SellScreen retired with nothing dropped; quota/wipe still correct; all-off fp byte-identical; 89-knob count unchanged.
+### Wave 2 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
 
-### Wave 4 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
+### RG1 — M1.7 playtest build + verify + publish
+- Milestone: M1.7 (Wave 2)   Assignee: qa-playtest-coordinator   BlockedBy: N0,N1,N2
+- Spec: author from `design/M1_6_Tasks/RG1_playtest_build.md` template → `design/M1_7_Tasks/RG1_playtest_build.md`
+- Goal: assemble + verify the M1.7 build (8-way idle/walk + pickup/throw in hub AND dive; debug toggle swaps art↔greybox; all-off fp byte-identical `e943ac9c8bc1`; 89-knob coverage; smoke + suite green); **publish to itch** via `bash Game/tools/push_itch.sh`; update `changelog.txt` (M1.6→M1.7 delta: the player is now an animated character + the debug art toggle).
+- Done when: a fresh build animates the player correctly in both scenes; the debug toggle works live; verify matrix green; build live on `qusto/the-far-yard:html5`; changelog updated.
 
-### RG1 — M1.6 playtest build + verify
-- Milestone: M1.6 (Wave 4)   Assignee: qa-playtest-coordinator   BlockedBy: M0,M1,M2,M3,M4
-- Spec: author from `design/M1_5_Tasks/RG1_playtest_build.md` template
-- Goal: assemble + verify the M1.6 loop (boot→Menu→New/Continue→Hub→portal→dive→return→Shop sell+buy; clock dive-only; P-toggle tabbed debug menu; save migration; all-off fp byte-identical; 89-knob coverage); **publish to itch** via `bash tools/push_itch.sh`; update `changelog.txt` (delta from M1.5).
-- Done when: a fresh build runs the full surface loop; Continue resumes a save; the shop sell+buy + owned upgrades persist; debug menu opens on P; build live on `qusto/the-far-yard:html5`.
-
-### RG2 — M1.6 telemetry / flow analysis vs M1.0–M1.5
-- Milestone: M1.6 (Wave 4)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data
+### RG2 — M1.7 readability / telemetry check
+- Milestone: M1.7 (Wave 2)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data
 - Spec: template `design/M1_1_Tasks/RG2_telemetry_analysis.md`
-- Goal: did the surface loop land — boot-to-menu, hub dwell, sell+buy usage, dive-launch from hub, debug-menu opt-in via P; distributions vs the M1.0–M1.5 baselines where comparable; surface flow dead-ends.
-- Done when: an analysis artifact reading the surface-loop adoption + any flow friction, comparable to the prior findings.
+- Goal: light pass (visual change) — confirm no perf regression from the sprite on the web build; telemetry comparable to M1.6; surface any readability friction (8-dir snapping, movement-lock feel) the Director flags.
+- Done when: a short analysis artifact + the Director's readability notes assembled for RG3.
 
-### RG3 — M1.6 re-gate verdict (Director decides)
-- Milestone: M1.6 (Wave 4)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
+### RG3 — M1.7 re-gate verdict (Director decides)
+- Milestone: M1.7 (Wave 2)   Assignee: qa-playtest-coordinator (assembles) → Director (decides)   BlockedBy: RG2
 - Spec: template `design/M1_1_Tasks/RG3_regate_verdict.md`
-- Goal: record go/iterate/pivot in `design/M1_6_Tasks/G4_findings_M1.6.md`. go → M2 (milestone); iterate → M1.7; pivot → design rework.
-- Done when: a recorded go/iterate/pivot verdict, comparable to the prior findings.
+- Goal: record go/iterate/pivot in `design/M1_7_Tasks/G4_findings_M1.7.md`. Watch-items: movement-lock feel; 8-direction legibility; the dive-gear-vs-surface-look question.
+- Done when: a recorded go/iterate/pivot verdict.
 
 ---
 
