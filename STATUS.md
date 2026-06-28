@@ -17,7 +17,31 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — M1.7 WAVE 2 (RE-GATE): RG1 build+verify+publish+changelog
+## ▶ Next action (start here on a cold restart) — DIRECTOR PLAYTEST the M1.7 build → RG2 → RG3
+
+> **✓ RG1 DONE + PUBLISHED (2026-06-28).** Build-verify doc `design/M1_7_Tasks/RG1_playtest_build.md` + M1.7 changelog block
+> (`changelog.txt`); full M1.7 verify matrix green (import · smoke · fp **`e943ac9c8bc1`** · config **89/89** · `PLAYER_VISUAL OK`
+> · `MOVE OK` · junk/drop/loop · no save-schema change). No new `test_rg1_m17_verify` (QA call — the gate is visual/tooling; the
+> existing suite + `test_player_visual` cover the non-rendered surface). **Published to itch:** `qusto/the-far-yard:html5 @
+> m1-20260628-867410f` (build #1758386 ✓; Chrome/Edge, password-gated: https://qusto.itch.io/the-far-yard). Fixed a publish
+> blocker en route: `push_itch.sh` looked for `APIKEYS.md` in `Game/` post-restructure → now resolves it at the real repo root
+> (`867410f`-chain). Worklog `…-RG1M17-qa-playtest-coordinator.md`. RG1 board=Done.
+>
+> **▶ DIRECTOR PLAYTEST (human-gated).** Play the published build. **The animated character is OFF by default** (boots to greybox
+> = M1.6 parity) — press **P → the new "Player" tab → tick "Player art (debug)"** to turn it on. Then check: 8-dir idle/walk reads
+> as you aim/move (mouse + controller) · pickup + throw animations in hub AND dive · **throw RIGHT/east is a clean single
+> character** (the regenerated frames) · the one-frame spawn "jump" is gone (thrown/re-dropped junk, dive-start, hazards) · the
+> Player-tab **Pickup lock (s)** / **Throw lock (s)** + lock-mode change the feel (try Fixed + shorter if sluggish) · toggling art
+> OFF restores greybox. Export telemetry (in-game button on web). Full checklist: `RG1_playtest_build.md` §4.5.
+>
+> Then **RG2** (qa telemetry/readability) → **RG3** verdict (go → next / iterate → M1.8 / pivot) in
+> `design/M1_7_Tasks/G4_findings_M1.7.md`. Claude assembles + recommends; the Director plays + decides.
+>
+> **As-built note to fold at close-out:** `event_bus.gd` comment corrected (art default OFF) — `867410f`.
+
+---
+
+## (archived — M1.7 build + fixes, all on `main`, pushed) Wave 1 build + post-build tweaks
 
 > **✓ M1.7 WAVE 1 (BUILD) COMPLETE + VERIFIED ON `main`@`cffb5db` (2026-06-28), pushed.** The greybox player is replaced by
 > the animated `player_basic_template` character (8-dir idle/walk + pickup/throw) in **both** Hub and Dive, plus a Meta-tab
