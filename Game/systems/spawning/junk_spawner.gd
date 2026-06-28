@@ -64,6 +64,11 @@ func spawn_one(item: JunkItem, world_pos: Vector2, container: Node) -> JunkPicku
 		return null
 	container.add_child(pickup)
 	pickup.global_position = world_pos
+	# M1.7 interp-ghost fix: physics_interpolation is ON (project.godot) — without this reset
+	# the pickup renders one frame interpolated between its spawn transform and world_pos (the
+	# "junk flashes/ghosts" bug). Render-only: no gameplay/RNG change. Covers BOTH planned band
+	# junk AND re-dropped junk (the _on_junk_dropped path routes through spawn_one).
+	pickup.reset_physics_interpolation()
 	pickup.setup(item)
 	return pickup
 

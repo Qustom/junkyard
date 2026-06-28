@@ -254,6 +254,10 @@ func start_new_run() -> void:
 
 	# 5. Put the player at the entry and let the camera find it.
 	_player.global_position = spawn_pos
+	# M1.7 interp-ghost fix: physics_interpolation is ON — reset so the player doesn't render
+	# one frame interpolated between its last position and the dive-start spawn (the dive-start
+	# player ghost). Render-only: no gameplay/RNG change.
+	_player.reset_physics_interpolation()
 	_player.velocity = Vector2.ZERO
 	# K6 (M1.4): the camera rig is level-owned now (not a child of the player), so it
 	# must be re-centred on the player at run start before make_current/reset_smoothing
@@ -261,6 +265,9 @@ func start_new_run() -> void:
 	# follow (_physics_process) keeps it locked thereafter; interpolation smooths it.
 	if _camera_rig != null:
 		_camera_rig.global_position = spawn_pos
+		# M1.7 interp-ghost fix: reset so the rig doesn't render one frame interpolated from its
+		# last run's position to the new spawn (the dive-start camera ghost). Render-only.
+		_camera_rig.reset_physics_interpolation()
 	if _camera != null:
 		_camera.make_current()
 		_camera.reset_smoothing()
@@ -470,6 +477,9 @@ func _spawn_new_hazards(rc: RunConfig, band: Band, spawn_pos: Vector2 = Vector2.
 				var hz := scene.instantiate() as Node2D
 				_band_container.add_child(hz)
 				hz.global_position = pos
+				# M1.7 interp-ghost fix: reset so the hazard doesn't render one interpolated frame
+				# from origin to its spawn cell (hazard spawn ghost). Render-only.
+				hz.reset_physics_interpolation()
 				hz.setup(rc, player, _new_hazard_spawn_ctx(kind, p, k, spawned_total, room_bounds))
 				spawned_total += 1
 				type_spawned += 1
@@ -549,6 +559,9 @@ func _spawn_r1_hazards(rc: RunConfig, band: Band) -> void:
 			_band_container.add_child(hz)
 			var pos: Vector2 = _hazard_spawn_position(band, depths[i], i)
 			hz.global_position = pos
+			# M1.7 interp-ghost fix: reset so the hazard doesn't render one interpolated frame
+			# from origin to its spawn position (hazard spawn ghost). Render-only.
+			hz.reset_physics_interpolation()
 			# L2 (M1.5): thread the pursuer's spawn-room bounds (the owning piece's floor-cell
 			# bbox in world space) so r1_spawn_room_only can confine its patrol + gate its chase.
 			# Resolved from the placed position (the J2 path discards the chosen cell). Empty
@@ -584,6 +597,9 @@ func _populate_room_density(band: Band, rc: RunConfig, hazard_scene: PackedScene
 		var hz := hazard_scene.instantiate() as HazardEntity
 		_band_container.add_child(hz)
 		hz.global_position = positions[i]
+		# M1.7 interp-ghost fix: reset so the density hazard doesn't render one interpolated
+		# frame from origin to its spawn position (hazard spawn ghost). Render-only.
+		hz.reset_physics_interpolation()
 		# L2: thread this density hazard's spawn-room bounds (empty Rect2 if the parallel
 		# plan came up short → entity falls back to chase-everywhere — never crashes).
 		var rb: Rect2 = bounds[i] if i < bounds.size() else Rect2()
@@ -1098,6 +1114,9 @@ func _spawn_gate_at(world_pos: Vector2) -> void:
 	var gate := gate_scene.instantiate() as ExtractGate
 	_band_container.add_child(gate)
 	gate.global_position = world_pos
+	# M1.7 interp-ghost fix: reset so the gate doesn't render one interpolated frame from
+	# origin to its placed world position (gate spawn ghost). Render-only.
+	gate.reset_physics_interpolation()
 	_gates.append(gate)
 
 
@@ -1241,6 +1260,9 @@ func _spawn_thrown_item(item: JunkItem, origin: Vector2, dir: Vector2, cfg: RunC
 	var proj := scene.instantiate() as ThrownItem
 	_band_container.add_child(proj)
 	proj.global_position = origin
+	# M1.7 interp-ghost fix: reset so the projectile doesn't render one interpolated frame from
+	# origin to the throw start (the thrown-item ghost). Render-only.
+	proj.reset_physics_interpolation()
 	proj.setup(item, dir, cfg.throw_speed, cfg.throw_max_range, GameState.current_depth_index)
 
 
