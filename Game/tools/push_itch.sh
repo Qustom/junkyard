@@ -62,8 +62,15 @@ test -f "$EXPORT_DIR/index.wasm" || { echo "ERROR: export produced no $EXPORT_DI
 test -f "$EXPORT_DIR/index.pck"  || { echo "ERROR: export produced no $EXPORT_DIR/index.pck"  >&2; exit 1; }
 
 # --- 3. resolve the itch key WITHOUT printing it --------------------------------
+# Since the 2026-06-27 restructure the godot project lives in Game/ and $REPO_ROOT above
+# resolves to Game/ (SCRIPT_DIR/..), but APIKEYS.md lives at the ACTUAL repo root one level
+# up. Resolve it from the cwd (Game/) first, else the parent (real repo root).
+APIKEYS_FILE=""
+for cand in APIKEYS.md ../APIKEYS.md; do
+  [ -f "$cand" ] && { APIKEYS_FILE="$cand"; break; }
+done
 if [ -z "${BUTLER_API_KEY:-}" ]; then
-  if [ -f APIKEYS.md ]; then
+  if [ -n "$APIKEYS_FILE" ]; then
     # Under the "# Itch.io" header, take the API key's last whitespace-token. PREFER a line
     # whose label contains "key" (the itch API key, e.g. `key: <~40 chars>`); else fall back to
     # the LONGEST token. This avoids grabbing a co-located page/access-PASSWORD line (a short
@@ -78,7 +85,7 @@ if [ -z "${BUTLER_API_KEY:-}" ]; then
         if (length(tok) > length(longest)) longest=tok
       }
       END {print (keytok != "" ? keytok : longest)}
-    ' APIKEYS.md)"
+    ' "$APIKEYS_FILE")"
   fi
 fi
 # Sanitise the key: strip ALL whitespace incl. CR/LF. APIKEYS.md on a Windows/WSL (/mnt/c)
