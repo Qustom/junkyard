@@ -25,6 +25,18 @@ See `CLAUDE.md` → "The orchestrator loop".
 > Integrated gate green: import · smoke · fp **`e943ac9c8bc1`** byte-identical · config **89/89** · `PLAYER_VISUAL OK` ·
 > `MOVE OK`. Tasks N0 (`07edb77`) · N1 (`47ab9a8`) · N2 (`cffb5db`) — board=Done. Worklogs `…-N{0,1,2}-general-purpose.md`.
 >
+> **✓ Two Director-reported visual bugs FIXED + INTEGRATED (2026-06-28), pushed:**
+> - **FIXINTERP** (`9e134fd`) — junk/player/hazard "jumps somewhere else for one frame" = `physics_interpolation=true`
+>   teleport ghost with no `reset_physics_interpolation()`. Added the reset at 8 world-entity spawn-teleport sites
+>   (junk_spawner.spawn_one, thrown-item, player+camera dive-start, hazard spawns, extract-gate). Render-only; fp unmoved;
+>   junk/throw/loop tests green. Left the K6 per-tick camera smoothing alone. Worklog `…-FIXINTERP-general-purpose.md`.
+> - **FIXEAST** (`a37d106`) — "throw-right character cut in half" = corrupt `throw/east` source (PixelLab neighbor-bleed in
+>   all 7 frames; only east). **Regenerated east via PixelLab** (Director-authorized; char `3cb56375`, new anim `b03f703e`,
+>   clean 7f), replaced in `Game/` + `art_workshop` source (corrupt originals preserved in git history + GENERATION.md note).
+>   Bundled the recurring SpriteFrames uid-drift cleanup (godot-normalized `uid://bd2h7mfhen6uo` + player.tscn hint). Asset-only;
+>   fp unmoved; player_visual/config 89 green. Worklog `…-FIXEAST-claude.md`.
+> Both still need on-screen confirmation in RG1 (headless can't render the ghost-gone / the clean east throw).
+>
 > **▶ Wave 2 = RE-GATE.** **RG1** (qa): author `design/M1_7_Tasks/RG1_playtest_build.md` from the M1.6 template; run the M1.7
 > verify matrix (8-way anim + toggle swap headless-provable parts; fp/89/smoke); **update `changelog.txt`** (M1.6→M1.7 delta:
 > the player is now an animated character + a debug art toggle); **publish to itch** `BUTLER=/mnt/c/wsl-libraries/butler/butler
