@@ -1,6 +1,56 @@
 THE FAR YARD — CHANGELOG
 ========================
 
+M1.7 — "Player Embodiment"   (changes since M1.6)
+-------------------------------------------------
+
+This version gives the player a BODY. Until now you played as a greybox box with a
+little nose pointing where you aim. M1.7 adds a real, hand-drawn animated character —
+the flannel/hoodie "surface" look — that idles and walks in all 8 directions and plays
+pickup and throw animations. It renders in BOTH the hub and the dive.
+
+>>> IMPORTANT: THE NEW CHARACTER IS OFF BY DEFAULT. <<<
+The build still boots to the same greybox box as M1.6 — identical look and feel — so the
+character is OPT-IN. To turn it on: press P to open the debug menu, go to the new PLAYER
+tab, and tick "Player art (debug)". The player immediately becomes the animated character
+in the hub and in dives. Untick it to go back to the greybox.
+
+
+THE ANIMATED CHARACTER (new — opt-in)
+-------------------------------------
+* NEW — 8-direction animated player character. With "Player art (debug)" ON (P -> Player
+  tab), the player renders as a real character with idle and walk animations in all 8
+  directions, following your aim, plus dedicated PICKUP and THROW animations. Throwing
+  reads cleanly in every direction. The character sits correctly on the player's body and
+  shows up in both the hub and the dive.
+* NEW — Player tab in the debug menu. The P-menu has a new PLAYER tab. It holds the
+  "Player art (debug)" toggle and live controls for how pickup/throw animations briefly
+  root the player while they play: a lock MODE (Clip-driven or Fixed), separate PICKUP and
+  THROW lock durations, lock-on-pickup, and animate-on-rejected-pickup. Tune these live if
+  the pickup/throw root feels too long or too short (try Fixed mode with shorter durations
+  for a snappier feel).
+
+
+POLISH
+------
+* FIXED — One-frame spawn "jump". Freshly-spawned and re-dropped junk, thrown items, the
+  player and camera at the start of a dive, and hazards as they appear no longer flash at a
+  wrong position for a single frame before settling. Spawns are now smooth.
+
+
+NOT YET IN THIS BUILD
+---------------------
+* The animated character is OFF BY DEFAULT — you must turn it on via P -> Player tab ->
+  "Player art (debug)". Out of the box the game looks exactly like M1.6 (the greybox).
+* The character wears the same "surface" outfit in dives as on the surface — there is no
+  separate dive-gear look yet (a later iteration).
+* The dive, hub, shop, economy, hazards, quota, and timer are all unchanged from M1.6 —
+  M1.7 only changes how the player is drawn (plus the spawn-jump fix above).
+
+
+====================================================================================
+
+
 M1.6 — "Surface & Staging"   (changes since M1.5)
 -------------------------------------------------
 
