@@ -58,3 +58,15 @@ Each animation was generated for all 8 directions (1 generation/direction). They
 Clean, consistent base sprite with empty hands — good as the reusable player template the other outfits can branch from. All three template animations carry the character identity and read clearly at sprite scale (walk, crouch-grab, overhand throw). Game-ready for a top-down prototype.
 
 **Next steps if wanted:** add idle/run/death etc. (same template flow); or use `create_character_state` to spin outfit variants (dive gear, the other surface looks) *off this template* so they share one identity instead of being independent text generations.
+
+## Revision — 2026-06-28: throw/east regenerated (neighbor-bleed fix)
+
+The original **`throw/east`** animation (PixelLab animation `c9587f42-2d20-439e-bd88-dd13ebb85dd4`) shipped a generation
+artifact: all 7 east frames contained **two ghost copies of adjacent characters** (a green sliver left + a second figure
+right of the real flannel character) — it read in-engine as "the character cut in half / two images far apart" when throwing
+right. Only `throw/east` was affected; the other 7 directions were clean.
+
+**Fix:** `delete_animation(throw-object, east)` → `animate_character(template=throw-object, directions=[east])` → new clean
+animation `b03f703e-93d2-42df-8a2e-c6baca3507e4` (single character, full wind-up→throw→follow-through, 7f, 124×124). The 7
+`throw/east/frame_00{0..6}.png` here **and** the `Game/art/player/throw/east/` copies were replaced with the clean frames.
+The corrupt originals remain in git history (committed at `07edb77`). All other directions/animations untouched.

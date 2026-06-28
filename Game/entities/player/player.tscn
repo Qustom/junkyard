@@ -4,7 +4,7 @@
 [ext_resource type="Resource" path="res://data/player/player_movement.tres" id="2"]
 [ext_resource type="PackedScene" uid="uid://bc7htvca74xox" path="res://components/interaction/interaction_detector.tscn" id="3"]
 [ext_resource type="Script" path="res://entities/player/player_visual.gd" id="4"]
-[ext_resource type="SpriteFrames" uid="uid://dn0player7frames" path="res://entities/player/player_frames.tres" id="5"]
+[ext_resource type="SpriteFrames" uid="uid://bd2h7mfhen6uo" path="res://entities/player/player_frames.tres" id="5"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 14.0
