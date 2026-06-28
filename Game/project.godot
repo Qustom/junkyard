@@ -32,15 +32,6 @@ gdscript/warnings/untyped_declaration=1
 
 [display]
 
-; K3 (M1.4): resolution-independent camera. Render to a fixed base canvas
-; (today's implicit 1152x648 engine default, made explicit) and scale that
-; canvas to the OS window so the world-units the camera shows no longer track
-; the window size. stretch=canvas_items + aspect=expand (no letterbox bars;
-; wide windows reveal a wider band) + scale_mode=integer (PIXEL-PERFECT whole-
-; number canvas scale, honouring the filter-OFF pixel-art rule). With cam_enabled
-; false the CameraView leaves zoom=(2,2) and this base reproduces today's framing.
-window/size/viewport_width=1152
-window/size/viewport_height=648
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/stretch/scale_mode="integer"
@@ -167,16 +158,6 @@ locale/translations=PackedStringArray("res://ui/inventory/inventory_strings.en.t
 
 [physics]
 
-; K6 (M1.4): root-cause movement-jitter fix. The player integrates only in
-; _physics_process (60 Hz); with interpolation OFF (the Godot 4 default) its
-; on-screen transform snaps to the latest physics state every drawn frame, so on
-; >60 Hz / browser (itch) displays the body advances in uneven steps the eye reads
-; as jitter (amplified by the zoom=2 camera). physics_interpolation=true makes the
-; renderer interpolate every physics-moved node between ticks -> smooth at any
-; refresh. Render-time only: does NOT change the sim, move_and_slide() results,
-; RNG draws, or fingerprint() -> the all-off baseline e943ac9c8bc1 is unaffected.
-; ticks_per_second=60 is written explicitly only to make the rate intentional.
-common/physics_ticks_per_second=60
 common/physics_interpolation=true
 
 [rendering]
