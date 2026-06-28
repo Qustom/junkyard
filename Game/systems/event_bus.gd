@@ -224,3 +224,16 @@ signal item_purchased(item_id: StringName, price: int, money: int)
 ## current balance. Lets the Shop UI show the failure without GameState knowing about
 ## the UI. Emitted by GameState.purchase() on the reject paths.
 signal purchase_failed(item_id: StringName, price: int, money: int)
+
+# === M1.7 signals (sole event_bus.gd edit this milestone, owner = N0) =========
+# A SINGLE tooling signal — the M1.7 "disable player art" debug toggle (N2). This
+# is NOT a gameplay or telemetry signal and NOT a RunConfig knob: it stays OUTSIDE
+# the config_menu MANIFEST / has_full_coverage() set, so the 89-knob count holds
+# (breakdown §6.2). Emitted by the Meta-tab CheckButton (N2); the Player listens
+# (N1's swap seam) and swaps AnimatedSprite2D <-> greybox + gates the movement-lock.
+# `enabled == true` means "player art ON" (AnimatedSprite2D shown, greybox hidden,
+# movement-lock active); `enabled == false` → greybox (M1.6 byte-for-byte, lock off).
+# Default state is art ON.
+
+# --- N2 debug view toggle (tooling, not gameplay) ----------------------------
+signal debug_player_art_toggled(enabled: bool)
