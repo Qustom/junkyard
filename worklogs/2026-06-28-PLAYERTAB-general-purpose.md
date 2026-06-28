@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.7
 - **Branch:** general-purpose/player-tab
-- **Commit:** f5e988f565188e04bad9847ec271dc0f17bd6dd7
+- **Commit:** bb1976a059c672ca6f23b4416b720a786d38a335
 
 ## What changed
 Added a new VIEW-ONLY debug menu tab **"Player"** that holds the player-visual debug
