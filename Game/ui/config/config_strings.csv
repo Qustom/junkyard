@@ -137,3 +137,12 @@ CFG_EXPORT_TELEMETRY,Export telemetry
 CFG_EXPORT_DONE,Downloaded {name}
 CFG_EXPORT_EMPTY,No telemetry to export yet
 CFG_DEBUG_PLAYER_ART,Player art (debug)
+CFG_TAB_PLAYER,Player
+CFG_PLAYER_HEADER,Player (debug)
+CFG_PLAYER_LOCK_ON_PICKUP,Lock on pickup
+CFG_PLAYER_PICKUP_ON_REJECT,Animate pickup on reject
+CFG_PLAYER_LOCK_MODE,Lock mode
+CFG_PLAYER_LOCK_MODE_CLIP,Clip-driven
+CFG_PLAYER_LOCK_MODE_FIXED,Fixed
+CFG_PLAYER_PICKUP_LOCK_S,Pickup lock (s)
+CFG_PLAYER_THROW_LOCK_S,Throw lock (s)

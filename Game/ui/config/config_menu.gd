@@ -176,6 +176,14 @@ const R4_VISION_FIELDS := [
 	"r4_vision_radius", "r4_vision_tighten_per_depth", "r4_fog_enabled", "r4_lost_proxy_threshold",
 ]
 
+## M1.7 (Player tab) — the body/section key for the VIEW-ONLY debug Player tab (mirrors
+## R4_VISION_KEY). It is NEVER a real SECTIONS prefix, NEVER added to _prefix_of's scan
+## list, and NEVER produces a _rows entry: every control under it (the moved art toggle +
+## the 5 anim-lock controls) is built outside MANIFEST, mutates no _cfg field, and is
+## invisible to has_full_coverage() — so coverage's 89-field bound set is byte-identical
+## and the determinism fingerprint cannot move. These are DEBUG view controls, not knobs.
+const PLAYER_DEBUG_KEY := "player_debug_"
+
 ## M4 (M1.6) — tab taxonomy (RD-2, LOCKED). Each tab is a CSV title-key + an ordered
 ## list of SECTION KEYS to render inside its scroll. A section key is a SECTIONS prefix
 ## EXCEPT R4_VISION_KEY ("r4_vision_") which is the split-out, master-less Vision
@@ -188,6 +196,11 @@ const TABS := [
 	{"title_key": "CFG_TAB_TIMEQUOTA", "sections": ["timer_", "quota_"]},
 	{"title_key": "CFG_TAB_EXPRETURN", "sections": ["r2_", "r3_"]},
 	{"title_key": "CFG_TAB_THROWCAM",  "sections": ["throw_", "cam_", "exit_"]},
+	# M1.7 — the VIEW-ONLY debug Player tab (art toggle + per-action anim-lock timing).
+	# PURE PRESENTATION + debug: PLAYER_DEBUG_KEY is not a SECTIONS prefix and produces no
+	# _rows entry, so coverage's 89-field bound set is unchanged. Inserted right before
+	# Meta (Meta stays last).
+	{"title_key": "CFG_TAB_PLAYER",    "sections": [PLAYER_DEBUG_KEY]},
 	{"title_key": "CFG_TAB_META",      "sections": [""]},
 ]
 
@@ -302,6 +315,15 @@ var _tab_container: TabContainer = null   # M4 (M1.6): the 7-tab restructure roo
 # M4 (M1.6): pause-in-dive bookkeeping (RD-3). Only restore a pause WE set so the
 # overlay never stomps a pre-existing pause (e.g. an Esc menu).
 var _paused_by_overlay: bool = false
+
+# M1.7 (Player tab): refs to the VIEW-ONLY debug anim-lock widgets so the single
+# _emit_player_anim_config() helper can read all of them. NOT in _rows (debug-only,
+# invisible to coverage). Defaults MUST mirror player_visual.gd's @export defaults.
+var _player_lock_on_pickup_cb: CheckButton = null
+var _player_reject_cb: CheckButton = null
+var _player_lock_mode_opt: OptionButton = null
+var _player_pickup_lock_spin: SpinBox = null
+var _player_throw_lock_spin: SpinBox = null
 
 
 func _ready() -> void:
@@ -519,6 +541,9 @@ func _build_section_into(parent: Control, section_key: String) -> void:
 	if section_key == R4_VISION_KEY:
 		_build_vision_pseudo_section(parent)
 		return
+	if section_key == PLAYER_DEBUG_KEY:
+		_build_player_debug_section(parent)
+		return
 
 	var sec := _section_descriptor(section_key)
 	var prefix: String = sec.prefix
@@ -578,11 +603,9 @@ func _build_section_into(parent: Control, section_key: String) -> void:
 
 	# M4 (M1.6): the Meta tab's telemetry-export button (re-homed from the retiring
 	# SellScreen, RD-9 fallback slot). NOT a knob row — it never touches _rows/coverage.
-	# N2 (M1.7): the debug player-art toggle is appended FIRST (above the web-only export
-	# button, which is hidden on desktop), per the Director disposition — also a non-field
-	# Meta control that never touches _rows/coverage.
+	# M1.7 (Player tab): the debug player-art toggle MOVED to the new Player tab, so Meta
+	# now renders only the (web-only) export button.
 	if prefix == "":
-		_build_debug_player_art_toggle(col)
 		_build_meta_export_button(col)
 
 
@@ -681,6 +704,131 @@ func _build_debug_player_art_toggle(parent: Control) -> void:
 ## calls _set_field, so apply_and_get_config()/the determinism fingerprint are unmoved.
 func _on_debug_player_art_toggled(enabled: bool) -> void:
 	EventBus.debug_player_art_toggled.emit(enabled)
+
+
+## M1.7 (Player tab): the VIEW-ONLY debug Player section (mirrors the Vision pseudo-
+## section pattern). Holds the MOVED player-art toggle + 5 live anim-lock controls. NONE
+## of these are RunConfig knobs: nothing here is built via _build_row, nothing writes
+## _rows or _cfg, and PLAYER_DEBUG_KEY is not a SECTIONS prefix — so has_full_coverage()'s
+## 89-field bound set is byte-identical and the determinism fingerprint cannot move. The
+## controls emit EventBus.debug_player_anim_config_changed; PlayerVisual (N1) listens.
+## IMPORTANT: every initial widget default below MUST equal player_visual.gd's @export
+## defaults (lock_mode = CLIP_DRIVEN, lock_on_pickup = true, play_pickup_on_reject =
+## false, pickup_lock_s = 0.25, throw_lock_s = 0.30) — same coupling as the art toggle's
+## "default checked = art ON". Greybox build style: default theme, tr() for every string,
+## redundant non-colour channels (CheckButton state + label text carry ON/OFF, not colour).
+func _build_player_debug_section(parent: Control) -> void:
+	var box := PanelContainer.new()
+	box.name = "Section_player_debug"
+	parent.add_child(box)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	box.add_child(col)
+
+	var header := HBoxContainer.new()
+	header.name = "Header"
+	header.add_theme_constant_override("separation", 8)
+	col.add_child(header)
+
+	var title := Label.new()
+	title.text = tr("CFG_PLAYER_HEADER")
+	title.add_theme_font_size_override("font_size", 16)
+	header.add_child(title)
+
+	# The MOVED art toggle (built by its unchanged method — still outside _rows/coverage).
+	_build_debug_player_art_toggle(col)
+
+	# --- Lock on pickup (bool) — default CHECKED (= lock_on_pickup default true) -------
+	var lop_row := HBoxContainer.new()
+	lop_row.name = "PlayerLockOnPickupRow"
+	lop_row.add_theme_constant_override("separation", 8)
+	var lop_cb := CheckButton.new()
+	lop_cb.name = "PlayerLockOnPickup"
+	lop_cb.text = tr("CFG_PLAYER_LOCK_ON_PICKUP")
+	lop_cb.button_pressed = true                  # default = lock_on_pickup (true)
+	lop_cb.toggled.connect(func(_on: bool) -> void: _emit_player_anim_config())
+	lop_row.add_child(lop_cb)
+	col.add_child(lop_row)
+	_player_lock_on_pickup_cb = lop_cb
+
+	# --- Animate pickup on reject (bool) — default UNCHECKED (= play_pickup_on_reject) -
+	var rej_row := HBoxContainer.new()
+	rej_row.name = "PlayerPickupOnRejectRow"
+	rej_row.add_theme_constant_override("separation", 8)
+	var rej_cb := CheckButton.new()
+	rej_cb.name = "PlayerPickupOnReject"
+	rej_cb.text = tr("CFG_PLAYER_PICKUP_ON_REJECT")
+	rej_cb.button_pressed = false                 # default = play_pickup_on_reject (false)
+	rej_cb.toggled.connect(func(_on: bool) -> void: _emit_player_anim_config())
+	rej_row.add_child(rej_cb)
+	col.add_child(rej_row)
+	_player_reject_cb = rej_cb
+
+	# --- Lock mode (enum) — OptionButton, default idx 0 = Clip-driven (= CLIP_DRIVEN) -
+	var mode_row := HBoxContainer.new()
+	mode_row.name = "PlayerLockModeRow"
+	mode_row.add_theme_constant_override("separation", 8)
+	var mode_label := Label.new()
+	mode_label.text = tr("CFG_PLAYER_LOCK_MODE")
+	mode_label.custom_minimum_size = Vector2(160, 0)
+	mode_row.add_child(mode_label)
+	var mode_opt := OptionButton.new()
+	mode_opt.name = "PlayerLockMode"
+	mode_opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_opt.add_item(tr("CFG_PLAYER_LOCK_MODE_CLIP"), 0)   # idx 0 = CLIP_DRIVEN (default)
+	mode_opt.add_item(tr("CFG_PLAYER_LOCK_MODE_FIXED"), 1)  # idx 1 = FIXED
+	mode_opt.select(0)
+	mode_opt.item_selected.connect(func(_idx: int) -> void: _emit_player_anim_config())
+	mode_row.add_child(mode_opt)
+	col.add_child(mode_row)
+	_player_lock_mode_opt = mode_opt
+
+	# --- Pickup lock (s) — SpinBox, step 0.01, ~0..1, default 0.25 (= pickup_lock_s) --
+	_player_pickup_lock_spin = _build_player_lock_spin(col, "PlayerPickupLock",
+		"CFG_PLAYER_PICKUP_LOCK_S", 0.25)
+	# --- Throw lock (s) — SpinBox, step 0.01, ~0..1, default 0.30 (= throw_lock_s) ----
+	_player_throw_lock_spin = _build_player_lock_spin(col, "PlayerThrowLock",
+		"CFG_PLAYER_THROW_LOCK_S", 0.30)
+
+
+## M1.7 (Player tab): a labelled [Label][SpinBox] row for a per-action lock-seconds
+## control (step 0.01, range ~0..1). Returns the SpinBox so the caller can store the ref.
+## Debug-only: not a knob, never writes _rows/_cfg.
+func _build_player_lock_spin(parent: Control, node_name: String, label_key: String, default_val: float) -> SpinBox:
+	var row := HBoxContainer.new()
+	row.name = "%sRow" % node_name
+	row.add_theme_constant_override("separation", 8)
+	var label := Label.new()
+	label.text = tr(label_key)
+	label.custom_minimum_size = Vector2(160, 0)
+	row.add_child(label)
+	var spin := SpinBox.new()
+	spin.name = node_name
+	spin.min_value = 0.0
+	spin.max_value = 1.0
+	spin.step = 0.01
+	spin.allow_greater = true                     # type-exact escape hatch past 1.0
+	spin.value = default_val
+	spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spin.value_changed.connect(func(_v: float) -> void: _emit_player_anim_config())
+	row.add_child(spin)
+	parent.add_child(row)
+	return spin
+
+
+## M1.7 (Player tab): read ALL the Player-tab anim-lock widgets and emit the live debug
+## signal PlayerVisual listens for. Debug tooling — mutates no _cfg field, never calls
+## _set_field, so apply_and_get_config()/the determinism fingerprint are unmoved.
+func _emit_player_anim_config() -> void:
+	if _player_lock_mode_opt == null:
+		return   # not built yet (defensive)
+	EventBus.debug_player_anim_config_changed.emit(
+		_player_lock_mode_opt.get_selected_id(),
+		_player_lock_on_pickup_cb.button_pressed,
+		_player_reject_cb.button_pressed,
+		_player_pickup_lock_spin.value,
+		_player_throw_lock_spin.value)
 
 
 ## M4 (M1.6) / RD-9: the web telemetry-export button, re-homed from the retiring

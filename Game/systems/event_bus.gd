@@ -237,3 +237,12 @@ signal purchase_failed(item_id: StringName, price: int, money: int)
 
 # --- N2 debug view toggle (tooling, not gameplay) ----------------------------
 signal debug_player_art_toggled(enabled: bool)
+
+# --- M1.7 Player tab: live anim-lock tuning (tooling, not gameplay) -----------
+# Emitted by the debug Player tab's controls (config_menu) whenever any of the
+# player-visual anim-lock widgets change. PlayerVisual (N1) listens and applies the
+# values live (next action). Like debug_player_art_toggled, this is a debug-tooling
+# signal — NOT a RunConfig knob, NOT in config_menu's MANIFEST / has_full_coverage()
+# set, so the 89-knob count + determinism fingerprint are untouched. lock_mode = 0
+# (CLIP_DRIVEN) / 1 (FIXED); pickup_lock_s / throw_lock_s are per-action lock seconds.
+signal debug_player_anim_config_changed(lock_mode: int, lock_on_pickup: bool, play_pickup_on_reject: bool, pickup_lock_s: float, throw_lock_s: float)

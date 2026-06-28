@@ -58,18 +58,66 @@ func _run() -> int:
 		if not bound.has(f):
 			failures.append("field '%s' has NO bound control (unreachable knob)" % f)
 
-	# --- 1b. N2 (M1.7): the debug player-art toggle is a NON-FIELD Meta control ----
-	# It MUST exist, default checked (art ON), and stay OUT of _rows (so it never
-	# inflates coverage past 89 and never moves the determinism fingerprint).
+	# --- 1b. M1.7 (Player tab): the debug Player tab holds the MOVED art toggle + 5 -----
+	# anim-lock controls, all NON-FIELD / view-only. Each MUST render under the Player
+	# tab's "Section_player_debug" panel, default to player_visual.gd's @export defaults,
+	# and stay OUT of _rows (so none inflate coverage past 89 or move the fingerprint).
+
+	# The Player tab page exists (its tab label is tr("CFG_TAB_PLAYER")).
+	var player_section := menu.find_child("Section_player_debug", true, false)
+	if player_section == null:
+		failures.append("M1.7: Section_player_debug (the Player tab body) not found")
+
+	# The art toggle MOVED to the Player tab (under Section_player_debug), default checked.
 	var art_toggle := menu.find_child("DebugPlayerArtToggle", true, false) as CheckButton
 	if art_toggle == null:
-		failures.append("N2: DebugPlayerArtToggle not found on the Meta tab")
+		failures.append("M1.7: DebugPlayerArtToggle not found on the Player tab")
 	else:
 		if not art_toggle.button_pressed:
-			failures.append("N2: DebugPlayerArtToggle must default CHECKED (art ON)")
+			failures.append("M1.7: DebugPlayerArtToggle must default CHECKED (art ON)")
+		if player_section != null and not player_section.is_ancestor_of(art_toggle):
+			failures.append("M1.7: the art toggle must render under the Player tab, not Meta")
+
+	# Lock on pickup — CheckButton, default CHECKED (= lock_on_pickup true).
+	var lop_cb := menu.find_child("PlayerLockOnPickup", true, false) as CheckButton
+	if lop_cb == null:
+		failures.append("M1.7: PlayerLockOnPickup control not found")
+	elif not lop_cb.button_pressed:
+		failures.append("M1.7: PlayerLockOnPickup must default CHECKED (lock_on_pickup=true)")
+
+	# Animate pickup on reject — CheckButton, default UNCHECKED (= play_pickup_on_reject false).
+	var rej_cb := menu.find_child("PlayerPickupOnReject", true, false) as CheckButton
+	if rej_cb == null:
+		failures.append("M1.7: PlayerPickupOnReject control not found")
+	elif rej_cb.button_pressed:
+		failures.append("M1.7: PlayerPickupOnReject must default UNCHECKED (play_pickup_on_reject=false)")
+
+	# Lock mode — OptionButton, default selected id 0 = Clip-driven (= CLIP_DRIVEN).
+	var mode_opt := menu.find_child("PlayerLockMode", true, false) as OptionButton
+	if mode_opt == null:
+		failures.append("M1.7: PlayerLockMode control not found")
+	elif mode_opt.get_selected_id() != 0:
+		failures.append("M1.7: PlayerLockMode must default to Clip-driven (id 0), got id %d" % mode_opt.get_selected_id())
+
+	# Pickup lock (s) — SpinBox, default 0.25 (= pickup_lock_s).
+	var pickup_spin := menu.find_child("PlayerPickupLock", true, false) as SpinBox
+	if pickup_spin == null:
+		failures.append("M1.7: PlayerPickupLock control not found")
+	elif not is_equal_approx(pickup_spin.value, 0.25):
+		failures.append("M1.7: PlayerPickupLock must default 0.25 (got %s)" % pickup_spin.value)
+
+	# Throw lock (s) — SpinBox, default 0.30 (= throw_lock_s).
+	var throw_spin := menu.find_child("PlayerThrowLock", true, false) as SpinBox
+	if throw_spin == null:
+		failures.append("M1.7: PlayerThrowLock control not found")
+	elif not is_equal_approx(throw_spin.value, 0.30):
+		failures.append("M1.7: PlayerThrowLock must default 0.30 (got %s)" % throw_spin.value)
+
+	# NONE of the 6 Player-tab debug controls may leak into _rows (would trip coverage).
+	var player_debug_controls := [art_toggle, lop_cb, rej_cb, mode_opt, pickup_spin, throw_spin]
 	for k in menu._rows.keys():
-		if str(k) == "DebugPlayerArtToggle" or menu._rows[k] == art_toggle:
-			failures.append("N2: the art toggle leaked into _rows — it would trip coverage")
+		if menu._rows[k] in player_debug_controls:
+			failures.append("M1.7: a Player-tab debug control leaked into _rows (field '%s') — it would trip coverage" % str(k))
 
 	# --- 2. Edit: a master toggle + a knob set flows to the working config ------
 	# Master on.

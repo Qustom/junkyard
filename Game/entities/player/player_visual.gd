@@ -23,14 +23,24 @@ class_name PlayerVisual
 ## N2 emits EventBus.debug_player_art_toggled to swap at runtime; N1 only listens.
 
 ## Lock-duration mode. CLIP_DRIVEN: the action clip's own runtime roots the body
-## (released by animation_finished), capped by lock_duration_cap_s. FIXED: a fixed
-## fixed_lock_s root regardless of clip length (the clip finishes cosmetically).
+## (released by animation_finished), capped by the PER-ACTION lock seconds
+## (pickup_lock_s / throw_lock_s). FIXED: that same per-action seconds value is the
+## fixed root regardless of clip length (the clip finishes cosmetically).
 ## Director-ratified default = CLIP_DRIVEN with a ceiling cap (OQ-3).
 enum LockMode { CLIP_DRIVEN, FIXED }
 
 ## --- Director-ratified configurable knobs (visual-controller @exports, NOT
 ## RunConfig fields — they live entirely outside config_menu's MANIFEST / 89-field
-## coverage set, so the determinism fingerprint and knob count are untouched). ---
+## coverage set, so the determinism fingerprint and knob count are untouched). The
+## debug Player tab (config_menu, M1.7) tunes these live via
+## EventBus.debug_player_anim_config_changed. ---
+## Knobs:
+##   - lock_on_pickup (bool) — root the body on an accepted pickup.
+##   - play_pickup_on_reject (bool) — animate a full-bag (rejected) pickup too.
+##   - lock_mode (LockMode) — CLIP_DRIVEN (clip runtime, capped) or FIXED.
+##   - pickup_lock_s (float) — per-action lock seconds for a pickup: the FIXED
+##     duration in FIXED mode, the cap on the clip length in CLIP_DRIVEN mode.
+##   - throw_lock_s (float) — the same, for a throw (tunable SEPARATELY from pickup).
 
 ## OQ-5: lock + crouch-grab clip on ACCEPTED pickups only (default). Flip false to
 ## make accepted pickups cosmetic-only (clip plays, no movement root).
@@ -40,11 +50,15 @@ enum LockMode { CLIP_DRIVEN, FIXED }
 @export var play_pickup_on_reject: bool = false
 ## OQ-3: lock duration mode. Default CLIP_DRIVEN (root = exactly the clip runtime).
 @export var lock_mode: LockMode = LockMode.CLIP_DRIVEN
-## OQ-3: ceiling cap (s) so a mis-authored long clip can't over-root under
-## CLIP_DRIVEN. pickup≈0.25 s / throw≈0.29 s, so 0.4 s is a safe cap.
-@export var lock_duration_cap_s: float = 0.4
-## OQ-3: the fixed root duration (s) used only when lock_mode == FIXED.
-@export var fixed_lock_s: float = 0.18
+## M1.7 (Player tab): per-action PICKUP lock seconds. In FIXED mode this is the root
+## duration; in CLIP_DRIVEN mode it is the cap on the clip length. Default 0.25 s —
+## the pickup clip (5f @ 20fps = 0.25 s) is at the cap, so CLIP_DRIVEN is unchanged.
+@export var pickup_lock_s: float = 0.25
+## M1.7 (Player tab): per-action THROW lock seconds, tunable separately from pickup.
+## In FIXED mode this is the root duration; in CLIP_DRIVEN mode it is the cap on the
+## clip length. Default 0.30 s — the throw clip (7f @ 24fps ≈ 0.2917 s) is under the
+## cap, so CLIP_DRIVEN is byte-identical to the shipped behaviour.
+@export var throw_lock_s: float = 0.30
 
 ## Walk↔idle speed threshold (px/s). Above → walk; at/below → idle. 8 px/s sits well
 ## above the friction tail (no walk-in-place) and far below max_speed=200 (OQ-2).
@@ -83,6 +97,7 @@ func _ready() -> void:
 	EventBus.junk_picked_up.connect(_on_junk_picked_up)
 	EventBus.item_thrown.connect(_on_item_thrown)
 	EventBus.debug_player_art_toggled.connect(_on_art_toggled)
+	EventBus.debug_player_anim_config_changed.connect(_on_anim_config_changed)
 	_sprite.animation_finished.connect(_on_anim_finished)
 
 	# Loud-fail a clip-name / dir-spelling mismatch with N0's SpriteFrames so a
@@ -155,23 +170,25 @@ func _begin_action(action: StringName, do_lock: bool) -> void:
 	_sprite.play(StringName("%s_%s" % [action, _current_dir]))
 
 
-## The lock window for an action. CLIP_DRIVEN: the clip's real runtime
-## (frames / fps), capped by lock_duration_cap_s — released early by
-## animation_finished, the cap only guards a mis-authored long clip. FIXED:
-## fixed_lock_s regardless of clip length.
+## The lock window for an action, using its PER-ACTION seconds (throw_lock_s for a
+## throw, pickup_lock_s otherwise). CLIP_DRIVEN: the clip's real runtime
+## (frames / fps), capped by that per-action value — released early by
+## animation_finished, the cap only guards a mis-authored long clip. FIXED: the
+## per-action value regardless of clip length.
 func _lock_duration_for(action: StringName) -> float:
+	var per_action_s := throw_lock_s if action == &"throw" else pickup_lock_s
 	if lock_mode == LockMode.FIXED:
-		return fixed_lock_s
+		return per_action_s
 	var clip := StringName("%s_%s" % [action, _current_dir])
 	var frames := _sprite.sprite_frames
 	if frames == null or not frames.has_animation(clip):
-		return lock_duration_cap_s
+		return per_action_s
 	var fps: float = frames.get_animation_speed(clip)
 	var count: int = frames.get_frame_count(clip)
 	if fps <= 0.0 or count <= 0:
-		return lock_duration_cap_s
+		return per_action_s
 	var clip_len: float = float(count) / fps
-	return minf(clip_len, lock_duration_cap_s)
+	return minf(clip_len, per_action_s)
 
 
 func _on_anim_finished() -> void:
@@ -185,6 +202,17 @@ func _on_anim_finished() -> void:
 
 
 # --- N2 art swap (N1 listens; N2 emits) --------------------------------------
+
+## M1.7 (Player tab): live debug tuning of the anim-lock knobs from the config menu.
+## Applies on the NEXT action (an in-flight lock keeps its already-computed window).
+## The art-OFF guard is untouched — the lock is still only armed when art is ON.
+func _on_anim_config_changed(lock_mode_i: int, lop: bool, pper: bool, pls: float, tls: float) -> void:
+	lock_mode = lock_mode_i as LockMode
+	lock_on_pickup = lop
+	play_pickup_on_reject = pper
+	pickup_lock_s = pls
+	throw_lock_s = tls
+
 
 func _on_art_toggled(enabled: bool) -> void:
 	_art_on = enabled
