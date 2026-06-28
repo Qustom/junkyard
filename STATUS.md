@@ -17,21 +17,29 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — DISPATCH M1.7 WAVE 1: N0 → N1 → N2
+## ▶ Next action (start here on a cold restart) — M1.7 WAVE 1: ✓N0 ✓N1 → **N2 (next)** → RG1
 
-> **M1.7 (Player Embodiment) — design LOCKED, build ready.** Director-directed: put the `player_basic_template` art
-> (flannel/hoodie, 8-dir walk/pickup/throw + idle-from-rotations) on the player in **both** Hub and Dive, driven off the
-> existing `facing`/`aim`/`velocity`/`junk_picked_up`/`item_thrown` seams; add a debug toggle to disable the art (→ greybox).
-> Breakdown `design/M1_7_Tasks/M1.7_Breakdown.md`; per-task designs `N0/N1/N2_*.md` (each LOCKED, with `Resolved Decisions`
-> + `Director Disposition`). **Sequential single wave:** **N0** (copy art `art_workshop`→`Game`, author `player_frames.tres`
-> SpriteFrames, declare `debug_player_art_toggled`) → **N1** (AnimatedSprite2D + `player_visual.gd` 8-way FSM + accepted-only
-> clip-driven movement-lock, both `@export`-tunable; greybox retained as fallback) → **N2** (Meta-tab "Player art (debug)"
-> CheckButton, view-only, outside the 89-knob MANIFEST). **Invariants:** all-off fp `e943ac9c8bc1` unmoved · 89-knob count
-> holds · art-OFF = M1.6 byte-for-byte · collision r=14 + `player_movement.tres` untouched · art COPIED not moved (preserve
-> `art_workshop/` history) · filter-off pixel art, LFS. **Dispatch N0 first** (it blocks N1; N1 blocks N2). Then RG1 build +
-> verify + itch publish + changelog → Director playtest → RG2 → RG3 verdict in `design/M1_7_Tasks/G4_findings_M1.7.md`.
+> **M1.7 (Player Embodiment) — design LOCKED; N0+N1 built+integrated; N2 is the last build task.** Director-directed: the
+> `player_basic_template` art (8-dir walk/pickup/throw + idle-from-rotations) is now on the player, driven off the existing
+> `facing`/`aim`/`velocity`/`junk_picked_up`/`item_thrown` seams. Breakdown `design/M1_7_Tasks/M1.7_Breakdown.md`; per-task
+> designs `N0/N1/N2_*.md` (LOCKED, with `Resolved Decisions` + `Director Disposition`). **Invariants (held through N1):**
+> all-off fp `e943ac9c8bc1` unmoved · 89-knob count holds · art-OFF = M1.6 byte-for-byte · collision r=14 +
+> `player_movement.tres` untouched · art COPIED not moved · filter-off pixel art, LFS.
 >
-> *(Board: create the N0/N1/N2/RG1–RG3 items on GitHub Projects #1 on claim — see CLAUDE.md "Remote & board sync".)*
+> **▶ Dispatch N2** (`design/M1_7_Tasks/N2_debug_player_art_toggle.md`): a view-only "Player art (debug)" `CheckButton` on the
+> `config_menu` **Meta tab** (default checked = art ON, session-only) → emits `EventBus.debug_player_art_toggled` → the N1
+> `PlayerVisual._on_art_toggled` swaps `AnimatedSprite2D` ↔ greybox. **NEVER added to `_rows`/MANIFEST** (keeps 89-knob
+> coverage + fp). Then **RG1** build + verify + itch publish + changelog → Director playtest → RG2 → RG3 in
+> `design/M1_7_Tasks/G4_findings_M1.7.md`.
+>
+> **✓ N0 DONE (2026-06-27)** — `main`@`07edb77`. 152 PNGs copied `art_workshop`→`Game/art/player/` (source intact) +
+> `player_frames.tres` (32 clips) + EventBus `debug_player_art_toggled`. Worklog `…-N0-general-purpose.md`.
+> **✓ N1 DONE (2026-06-27)** — `main`@`47ab9a8`. `PlayerVisual` child + `AnimatedSprite2D` (scale 0.45, y=-18, z=10);
+> greybox `Visual`/`Nose` retained hidden; 8-way FSM (`quantize_dir`+`select_state` pure helpers, `test_player_visual` green);
+> accepted-only clip-driven movement-lock with `@export` knobs (`lock_on_pickup`/`play_pickup_on_reject`/`lock_mode`/
+> `lock_duration_cap_s`/`fixed_lock_s`). DoD green: helper test · scene-loads(32 clips) · smoke · fp `e943ac9c8bc1` · 89/89 ·
+> movement test. **RG1 manual item:** confirm on-screen anim in BOTH scenes + lock-feel + scale/offset seat (headless can't).
+> Worklog `…-N1-general-purpose.md`. 0 deviations.
 
 ---
 
