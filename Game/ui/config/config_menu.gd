@@ -676,9 +676,10 @@ func _section_descriptor(prefix: String) -> Dictionary:
 ## has_full_coverage()'s 89-field bound set is byte-identical and the determinism
 ## fingerprint (e943ac9c8bc1) cannot move (it mutates no _cfg field, never calls
 ## _set_field). On toggle it emits EventBus.debug_player_art_toggled(enabled); the
-## PlayerVisual listens and swaps AnimatedSprite2D <-> greybox. Default = art ON
-## (CheckButton checked, matching the player scene's art-on default — no boot emit
-## needed). Session-only: no save write, no schema_version bump. Not web-guarded — a
+## PlayerVisual listens and swaps AnimatedSprite2D <-> greybox. Default = art OFF
+## (CheckButton UNchecked, matching the player scene's greybox default — the animated
+## character is opt-in; no boot emit needed). Session-only: no save write, no
+## schema_version bump. Not web-guarded — a
 ## desktop/dev aid useful in every build. Placed above the (web-only) export button
 ## per the Director disposition.
 func _build_debug_player_art_toggle(parent: Control) -> void:
@@ -690,7 +691,7 @@ func _build_debug_player_art_toggle(parent: Control) -> void:
 	var cb := CheckButton.new()
 	cb.name = "DebugPlayerArtToggle"
 	cb.text = tr("CFG_DEBUG_PLAYER_ART")
-	cb.button_pressed = true                  # default = art ON (matches player scene default)
+	cb.button_pressed = false                 # default = art OFF / greybox (matches player scene default; art is opt-in)
 	cb.toggled.connect(_on_debug_player_art_toggled)
 	row.add_child(cb)
 

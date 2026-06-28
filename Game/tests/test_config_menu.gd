@@ -68,13 +68,14 @@ func _run() -> int:
 	if player_section == null:
 		failures.append("M1.7: Section_player_debug (the Player tab body) not found")
 
-	# The art toggle MOVED to the Player tab (under Section_player_debug), default checked.
+	# The art toggle MOVED to the Player tab (under Section_player_debug), default UNCHECKED
+	# (art OFF / greybox is the shipped default; the animated character is opt-in — 2026-06-28).
 	var art_toggle := menu.find_child("DebugPlayerArtToggle", true, false) as CheckButton
 	if art_toggle == null:
 		failures.append("M1.7: DebugPlayerArtToggle not found on the Player tab")
 	else:
-		if not art_toggle.button_pressed:
-			failures.append("M1.7: DebugPlayerArtToggle must default CHECKED (art ON)")
+		if art_toggle.button_pressed:
+			failures.append("M1.7: DebugPlayerArtToggle must default UNCHECKED (art OFF / greybox)")
 		if player_section != null and not player_section.is_ancestor_of(art_toggle):
 			failures.append("M1.7: the art toggle must render under the Player tab, not Meta")
 

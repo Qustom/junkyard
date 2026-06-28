@@ -43,6 +43,12 @@ See `CLAUDE.md` → "The orchestrator loop".
 > cap/fixed; see `DESIGN_DEVIATIONS.md`, recommend Addressed). Live via new EventBus `debug_player_anim_config_changed`. Debug-only
 > (outside MANIFEST): fp `e943ac9c8bc1` unmoved · **89/89** held · CLIP_DRIVEN default byte-preserved. Worklog `…-PLAYERTAB-general-purpose.md`.
 >
+> **✓ ART DEFAULT FLIPPED TO OFF (2026-06-28, Director-directed).** The shipped default is now **greybox (art OFF)** — the
+> animated character is **opt-in** via the Player-tab toggle; with art off the pickup/throw movement-lock is also off (gated by
+> `_art_on`). Changed: `player_visual._art_on=false`, `player.tscn` (AnimatedSprite2D hidden / greybox `Visual`+`Nose` shown),
+> the Player-tab art `CheckButton` default unchecked, + the `test_config_menu` assertion. So the **default build == M1.6 look &
+> feel**; turning art ON in the Player tab previews the new character. fp `e943ac9c8bc1` unmoved · 89/89 · smoke · player_visual OK.
+>
 > **▶ Wave 2 = RE-GATE.** **RG1** (qa): author `design/M1_7_Tasks/RG1_playtest_build.md` from the M1.6 template; run the M1.7
 > verify matrix (8-way anim + toggle swap headless-provable parts; fp/89/smoke); **update `changelog.txt`** (M1.6→M1.7 delta:
 > the player is now an animated character + a debug art toggle); **publish to itch** `BUTLER=/mnt/c/wsl-libraries/butler/butler

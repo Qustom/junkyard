@@ -85,7 +85,10 @@ const DIRS: Array[StringName] = [
 @onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 var _player: Player
-var _art_on: bool = true
+## Default = art OFF (greybox / M1.6 look). The animated character is OPT-IN via the
+## debug menu's Player tab (Director-directed 2026-06-28). With art off, is_locked()
+## returns false, so the pickup/throw movement-lock is also off by default.
+var _art_on: bool = false
 var _lock_remaining: float = 0.0
 var _current_dir: StringName = &"south"
 var _current_action: StringName = &""   # &"" | &"pickup" | &"throw"
