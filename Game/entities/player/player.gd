@@ -52,6 +52,11 @@ var _exposure_speed_mult: float = 1.0
 
 @onready var _nose: Node2D = get_node_or_null("Nose")
 
+## N1 (M1.7): the visual state machine. Null-guarded — when absent (or when art is
+## OFF) the movement-input gate below never triggers and _physics_process executes
+## its exact M1.6 path. The lock is only ever armed under art ON.
+@onready var _visual: PlayerVisual = get_node_or_null("PlayerVisual")
+
 
 func _ready() -> void:
 	EventBus.exposure_speed_mult_changed.connect(_on_exposure_speed_mult_changed)
@@ -67,6 +72,13 @@ func _physics_process(delta: float) -> void:
 	# diagonals, so we must NOT normalize again before scaling by max_speed.
 	var input_dir: Vector2 = Input.get_vector(
 		"move_left", "move_right", "move_up", "move_down")
+
+	# N1 (M1.7): while the action-lock is active (ONLY ever true under art ON), zero
+	# the movement input so the UNCHANGED step_velocity decelerates the body via
+	# friction (no velocity clobber; move_and_slide + aim still run). When art is OFF
+	# (or no visual), is_locked() is false and this short-circuits to today's path.
+	if _visual != null and _visual.is_locked():
+		input_dir = Vector2.ZERO
 
 	velocity = step_velocity(velocity, input_dir, delta)
 

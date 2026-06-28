@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cn1playervisualtst"]
+
+[ext_resource type="Script" path="res://tests/test_player_visual.gd" id="1"]
+
+[node name="TestPlayerVisual" type="Node"]
+script = ExtResource("1")
