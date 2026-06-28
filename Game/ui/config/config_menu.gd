@@ -578,7 +578,11 @@ func _build_section_into(parent: Control, section_key: String) -> void:
 
 	# M4 (M1.6): the Meta tab's telemetry-export button (re-homed from the retiring
 	# SellScreen, RD-9 fallback slot). NOT a knob row — it never touches _rows/coverage.
+	# N2 (M1.7): the debug player-art toggle is appended FIRST (above the web-only export
+	# button, which is hidden on desktop), per the Director disposition — also a non-field
+	# Meta control that never touches _rows/coverage.
 	if prefix == "":
+		_build_debug_player_art_toggle(col)
 		_build_meta_export_button(col)
 
 
@@ -641,6 +645,42 @@ func _section_descriptor(prefix: String) -> Dictionary:
 			return sec
 	push_error("ConfigMenu: no SECTIONS descriptor for prefix '%s'" % prefix)
 	return SECTIONS[0]
+
+
+## N2 (M1.7): a VIEW-ONLY debug switch that disables the player art (falls back to the
+## retained greybox Visual/Nose). It is NOT a RunConfig knob — it is built by its OWN
+## method (never _build_row), NEVER writes _rows, and is NOT a SECTIONS master, so
+## has_full_coverage()'s 89-field bound set is byte-identical and the determinism
+## fingerprint (e943ac9c8bc1) cannot move (it mutates no _cfg field, never calls
+## _set_field). On toggle it emits EventBus.debug_player_art_toggled(enabled); the
+## PlayerVisual listens and swaps AnimatedSprite2D <-> greybox. Default = art ON
+## (CheckButton checked, matching the player scene's art-on default — no boot emit
+## needed). Session-only: no save write, no schema_version bump. Not web-guarded — a
+## desktop/dev aid useful in every build. Placed above the (web-only) export button
+## per the Director disposition.
+func _build_debug_player_art_toggle(parent: Control) -> void:
+	parent.add_child(HSeparator.new())
+	var row := HBoxContainer.new()
+	row.name = "DebugPlayerArtRow"
+	row.add_theme_constant_override("separation", 8)
+
+	var cb := CheckButton.new()
+	cb.name = "DebugPlayerArtToggle"
+	cb.text = tr("CFG_DEBUG_PLAYER_ART")
+	cb.button_pressed = true                  # default = art ON (matches player scene default)
+	cb.toggled.connect(_on_debug_player_art_toggled)
+	row.add_child(cb)
+
+	parent.add_child(row)
+	# NOTE: deliberately NOT _rows["..."] = cb — this control is invisible to coverage,
+	# is never reset by _refresh_all()/_on_reset_pressed() (they iterate _rows only), and
+	# is never reached by _push_value_to_control (it is not a field).
+
+
+## N2 (M1.7): the toggle handler — a pure signal emit. Mutates no _cfg field, never
+## calls _set_field, so apply_and_get_config()/the determinism fingerprint are unmoved.
+func _on_debug_player_art_toggled(enabled: bool) -> void:
+	EventBus.debug_player_art_toggled.emit(enabled)
 
 
 ## M4 (M1.6) / RD-9: the web telemetry-export button, re-homed from the retiring

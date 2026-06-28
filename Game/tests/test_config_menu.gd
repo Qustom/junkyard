@@ -58,6 +58,19 @@ func _run() -> int:
 		if not bound.has(f):
 			failures.append("field '%s' has NO bound control (unreachable knob)" % f)
 
+	# --- 1b. N2 (M1.7): the debug player-art toggle is a NON-FIELD Meta control ----
+	# It MUST exist, default checked (art ON), and stay OUT of _rows (so it never
+	# inflates coverage past 89 and never moves the determinism fingerprint).
+	var art_toggle := menu.find_child("DebugPlayerArtToggle", true, false) as CheckButton
+	if art_toggle == null:
+		failures.append("N2: DebugPlayerArtToggle not found on the Meta tab")
+	else:
+		if not art_toggle.button_pressed:
+			failures.append("N2: DebugPlayerArtToggle must default CHECKED (art ON)")
+	for k in menu._rows.keys():
+		if str(k) == "DebugPlayerArtToggle" or menu._rows[k] == art_toggle:
+			failures.append("N2: the art toggle leaked into _rows — it would trip coverage")
+
 	# --- 2. Edit: a master toggle + a knob set flows to the working config ------
 	# Master on.
 	var r1_master := menu._rows["r1_enabled"] as CheckButton

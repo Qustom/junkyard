@@ -136,3 +136,4 @@ CFG_R4_VISION_GATED,(gated by the R4 master — enable R4 in Level Generation)
 CFG_EXPORT_TELEMETRY,Export telemetry
 CFG_EXPORT_DONE,Downloaded {name}
 CFG_EXPORT_EMPTY,No telemetry to export yet
+CFG_DEBUG_PLAYER_ART,Player art (debug)
