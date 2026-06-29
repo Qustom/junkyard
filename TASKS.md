@@ -68,13 +68,13 @@ Shed the Hub's greybox skin for the placeholder **Layout-A vertical-spine** salv
 
 ### Wave 1 — Build  *(H0 → H1, sequential; H1 is the sole `hub.tscn` writer)*
 
-### H0 — Asset import + Hub `TileSet`
+### H0 — Asset import + Hub `TileSet` — ✓ **DONE** (`33f67d5`, 2026-06-28)
 - Milestone: M1.8 (Wave 1)   Assignee: environment-artist (+ general-purpose)   BlockedBy: none
-- Goal: COPY (not move) `layout_a_assets/ground/*.png` (16) + `objects/*.png` (24) → `Game/art/hub/{ground,objects}/`; import (filter OFF); build `Game/data/tilesets/hub_ground.tres` (32px, 16 tiles). DoD: `--import` clean; tileset loads; assets in BOTH `Game/` and `art_workshop/`; no `hub.tscn` change. Worklog + SHA.
+- COPIED (not moved) 16 ground tiles + 20 props → `Game/art/hub/{ground,objects}/` (originals intact); built `Game/data/tilesets/hub_ground.tres` (32px, 16 tiles). Import clean. Worklog `…-H0H1-hub-dressing-general-purpose.md`.
 
-### H1 — Dress the Hub scene (Layout-A vertical spine)
+### H1 — Dress the Hub scene (Layout-A vertical spine) — ✓ **DONE** (`81a3c13`, 2026-06-28)
 - Milestone: M1.8 (Wave 1)   Assignee: general-purpose (+ environment-artist)   BlockedBy: H0
-- Goal: re-skin `hub.tscn` — TileMapLayer ground spine (asphalt S → dirt mid → litter+scrap-wall N, central lane clean), `dive_gate`+`portal_glow` on `DeparturePortal`, `shack_door`+benches on `HubShop`, ~12 dressing props scattered + y-sorted; **preserve all functional contracts**. DoD: import clean; smoke green; fp `e943ac9c8bc1`; 89/89; hub load/contract check passes; wall-bounded. Worklog + SHA + deviations.
+- Re-skinned `hub.tscn`: `HubGround` TileMapLayer spine + `dive_gate`/`portal_glow`/`shack_door`/benches + 15 y-sorted dressing props; all functional contracts invariant. Gate green: import · smoke · fp `e943ac9c8bc1` · 89/89. Integrated `main`@`11b8ff4`. 5 deviations → Director close-out.
 
 ### H3 — Street-exit threshold prop (PixelLab) — **DEFERRED (Director-gated, paid credits)**
 - Milestone: M1.8   Assignee: environment-artist   BlockedBy: Director OK

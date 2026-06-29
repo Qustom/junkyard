@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.8 (Hub Art Dressing — Layout A vertical spine) — **Director-directed, build IN PROGRESS.** Shed the Hub's greybox skin for the placeholder Layout-A salvage-yard art (tiled ground spine, salvage-shed shop, fenced dive gate, scattered junk props), loop-behaviour unchanged. *(M1.7 build+RG1 done + published; its RG2/RG3 Director-pending, non-blocking — M1.8 is content opened ahead of that verdict, as M1.7 was ahead of M1.6.)*
-**Last updated:** 2026-06-28 (M1.8 opened: breakdown authored `design/M1_8_Tasks/M1.8_Breakdown.md`; asset gap analysis done — all loop-critical art present, no PixelLab needed; H0+H1 build dispatched.)
+**Current milestone:** M1.8 (Hub Art Dressing — Layout A vertical spine) — **Wave 1 BUILD DONE + INTEGRATED on `main`@`11b8ff4`, pushed.** The greybox Hub is re-skinned with the placeholder Layout-A salvage-yard art (tiled ground spine, salvage-shed shop, fenced dive gate, 15 scattered junk props), loop-behaviour byte-identical. **Next = Wave 2 re-gate (HG1 verify+changelog+publish → Director playtest → HG2/HG3).** *(M1.7 build+RG1 done + published; its RG2/RG3 Director-pending, non-blocking — M1.8 is content opened ahead of that verdict, as M1.7 was ahead of M1.6.)*
+**Last updated:** 2026-06-28 (M1.8 Wave 1 H0+H1 done: assets+TileSet+dressed `hub.tscn` on `main`@`11b8ff4`; fp `e943ac9c8bc1` unmoved, 89/89, smoke green. 5 deviations logged → Director close-out. Compositing preview `m1_8_hub_preview.png` produced.)
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
@@ -27,15 +27,26 @@ See `CLAUDE.md` → "The orchestrator loop".
 > `Interactable` ids + collision + `hub.gd` node paths + wall-bounding are invariant (H1 is a re-skin).
 > **Copy, never move** from `art_workshop/`.
 >
-> **▶ Wave 1 (in progress):** **H0** (env-artist) copy ground+object PNGs → `Game/art/hub/`, build
-> `Game/data/tilesets/hub_ground.tres`; **H1** (general-purpose, sole `hub.tscn` writer, blockedBy H0)
-> dress the vertical spine — TileMapLayer ground (asphalt S → dirt mid → litter+scrap-wall N, central
-> lane clean), `dive_gate`+`portal_glow` on `DeparturePortal`, `shack_door`+benches on `HubShop`, ~12
-> dressing props scattered, y-sorted. Then **Wave 2** re-gate (HG1 verify+changelog+publish → HG2
-> readability → HG3 verdict in `design/M1_8_Tasks/G4_findings_M1.8.md`).
+> **✓ Wave 1 DONE (`main`@`11b8ff4`).** **H0** (`33f67d5`) copied 16 ground tiles + 20 props → `Game/art/hub/`,
+> built `Game/data/tilesets/hub_ground.tres`; **H1** (`81a3c13`) re-skinned `hub.tscn` — `HubGround` TileMapLayer
+> spine (asphalt S → dirt mid → litter N, scrap-wall border, central lane clean), `dive_gate`+`portal_glow` on
+> `DeparturePortal`, `shack_door`+`workbench`+`sort_table` on `HubShop`, 15 dressing props y-sorted, camera 1.2→1.05.
+> Visual-only re-skin: portal/shop `Interactable` ids + collision + `hub.gd` node paths + wall-bounding all invariant.
+> Gate green: import · smoke · fp **`e943ac9c8bc1`** · **89/89**. Worklog `…-H0H1-hub-dressing-general-purpose.md`.
+> Originals intact in `art_workshop/` (copy-not-move verified). **Asset gap:** street-threshold `SS` deferred (H3,
+> PixelLab/paid/Director-gated) — not loop-critical.
 >
-> **⚠ MANUAL (headless can't render):** the on-screen read — spine flows S→N, central lane clear,
-> functional props (gate/shack) distinguishable from dressing, golden-hour holds — is the core Director item.
+> **▶ Wave 1 close-out (Director dispositions — 5 deviations in `design/DESIGN_DEVIATIONS.md`, all recommend Reviewed):**
+> doorway-only shack (vs open-roof) · camera 1.05 · walls kept as re-tinted ColorRects · 15 props (vs ~10–12) · stale
+> "24 objects" doc count (actual 20). + the carried PLAYERTAB (M1.7) entry recommends Addressed.
+>
+> **▶ Wave 2 = re-gate:** **HG1** (qa) verify matrix + `changelog.txt` (M1.7→M1.8: art-dressed hub) + publish to itch →
+> **Director playtest** → **HG2** readability → **HG3** verdict in `design/M1_8_Tasks/G4_findings_M1.8.md`.
+>
+> **⚠ MANUAL (headless can't render here — Godot has no display server in WSL2):** the on-screen read — spine flows
+> S→N, central lane clear, functional props (gate/shack) distinguishable from dressing, prop scale/busyness vs the
+> player, golden-hour holds — is the core Director item. A compositing preview (`m1_8_hub_preview.png`, faithful coords +
+> real assets, not an engine render) approximates it; the true render comes from the HG1 itch build or the editor.
 
 ---
 
