@@ -29,3 +29,24 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
   only non-default FIXED-mode durations differ (0.18 → 0.25/0.30). fp `e943ac9c8bc1` unmoved; 89-knob count held (controls are
   debug-only, outside MANIFEST). **Claude's recommendation: Addressed** (this IS the Director's directive — reapply to the N1
   as-built/design doc at close-out). · _Awaiting Director disposition at the next wave close-out._
+
+- **[2026-06-28] M1.8 H1 / hub.tscn — shack rendered DOORWAY-ONLY (no open-roof interior).** The dressed-layout doc
+  carried an open question "shack: open-roof room vs. lit-doorway only." H1 ships doorway-only: `shack_door` sprite +
+  `workbench`/`sort_table` props beside it, NO visible plank-floor (`▓`) interior room (the Shop is already a separate UI
+  scene, so an interior adds dressing for no behaviour gain on the first pass). Plank-floor tiles (01/03/07/09/11) are imported
+  and in `hub_ground.tres`, so an open-roof follow-up is cheap. **Claude's recommendation: Reviewed** (matches the breakdown's
+  Phase-2 recommendation; the HG3 gate can revisit). · _Awaiting Director disposition at the M1.8 wave close-out._
+- **[2026-06-28] M1.8 H1 / hub.tscn — HubCamera.zoom 1.2 → 1.05** to frame the full vertical spine (street edge → north gate).
+  Not a knob, just the hub camera (no RunConfig change; fp `e943ac9c8bc1` unmoved, 89/89 held). **Claude's recommendation:
+  Reviewed** (render-time framing is a Director manual-confirm). · _Awaiting Director disposition._
+- **[2026-06-28] M1.8 H1 / hub.tscn — wall visuals kept as re-tinted ColorRects (deep rust), not replaced by scrap-wall
+  sprites.** The scrap-wall *ground* ring forms the border read; the dark wall ColorRects sit on it as the impassable mass,
+  keeping each `StaticBody2D` collider + visual exactly paired (lowest bounding risk). **Claude's recommendation: Reviewed.**
+  · _Awaiting Director disposition._
+- **[2026-06-28] M1.8 H1 / hub.tscn — ~15 dressing props placed (breakdown said ~10–12).** Within the layout's "scatter
+  without obvious repeats" intent; trivially trimmable if the Director finds it busy at the readability gate. Pure decoration,
+  no new collision. **Claude's recommendation: Reviewed.** · _Awaiting Director disposition._
+- **[2026-06-28] M1.8 H0 / asset count — README/breakdown say "24 object PNGs"; directory has 20** (16 ground + 20 objects).
+  Copied all 20 actual objects; no asset missing for the dressing pass (the breakdown gap table's own "19 present" is
+  consistent with ~20). Documentation count is stale, not a build gap. **Claude's recommendation: Reviewed** (fix the README
+  count at close-out). · _Awaiting Director disposition._
