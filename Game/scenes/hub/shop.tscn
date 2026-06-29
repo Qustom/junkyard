@@ -1,8 +1,11 @@
-[gd_scene load_steps=5 format=3 uid="uid://dshop6hub2m3001"]
+[gd_scene load_steps=8 format=3 uid="uid://dshop6hub2m3001"]
 
 [ext_resource type="Script" path="res://scenes/hub/shop.gd" id="1"]
 [ext_resource type="Script" path="res://components/interaction/interactable.gd" id="2"]
 [ext_resource type="PackedScene" path="res://ui/shop/shop_ui.tscn" id="3"]
+[ext_resource type="Texture2D" uid="uid://c20mlgq3aycri" path="res://art/hub/objects/shack_door.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://d3p0w66vlvciw" path="res://art/hub/objects/workbench.png" id="5"]
+[ext_resource type="Texture2D" uid="uid://ca25bpt0a6bw7" path="res://art/hub/objects/sort_table.png" id="6"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_shop"]
 size = Vector2(48, 64)
@@ -12,19 +15,16 @@ collision_layer = 0
 collision_mask = 0
 script = ExtResource("1")
 
-[node name="Body" type="ColorRect" parent="."]
-offset_left = -24.0
-offset_top = -32.0
-offset_right = 24.0
-offset_bottom = 32.0
-color = Color(0.3, 0.7, 0.45, 1)
+[node name="ShackDoor" type="Sprite2D" parent="."]
+texture = ExtResource("4")
 
-[node name="BodyInner" type="ColorRect" parent="."]
-offset_left = -16.0
-offset_top = -24.0
-offset_right = 16.0
-offset_bottom = 24.0
-color = Color(0.15, 0.4, 0.25, 1)
+[node name="Workbench" type="Sprite2D" parent="."]
+position = Vector2(-58, 8)
+texture = ExtResource("5")
+
+[node name="SortTable" type="Sprite2D" parent="."]
+position = Vector2(58, 8)
+texture = ExtResource("6")
 
 [node name="Interactable" type="Area2D" parent="."]
 collision_layer = 4
