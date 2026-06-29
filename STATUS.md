@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.7 (Player Embodiment) — **DESIGN LOCKED (Phases 0–4 done); build NOT started.** Replace the greybox player with the `player_basic_template` sprite (8-dir walk/pickup/throw/idle) in Hub + Dive + a debug toggle to disable the art. **Next = dispatch N0 (art import + SpriteFrames + signal).** *(M1.6 build+RG1 done; its RG2/RG3 re-gate is Director-pending, non-blocking — M1.7 is Director-directed content opened ahead of that verdict.)*
-**Last updated:** 2026-06-27 (M1.7 authored: breakdown + N0/N1/N2 per-task designs + fresh-eyes resolution + Director dispositions folded; `TASKS.md`/`STATUS.md` wired. Ready for the build wave.)
+**Current milestone:** M1.8 (Hub Art Dressing — Layout A vertical spine) — **Director-directed, build IN PROGRESS.** Shed the Hub's greybox skin for the placeholder Layout-A salvage-yard art (tiled ground spine, salvage-shed shop, fenced dive gate, scattered junk props), loop-behaviour unchanged. *(M1.7 build+RG1 done + published; its RG2/RG3 Director-pending, non-blocking — M1.8 is content opened ahead of that verdict, as M1.7 was ahead of M1.6.)*
+**Last updated:** 2026-06-28 (M1.8 opened: breakdown authored `design/M1_8_Tasks/M1.8_Breakdown.md`; asset gap analysis done — all loop-critical art present, no PixelLab needed; H0+H1 build dispatched.)
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
@@ -17,7 +17,29 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — DIRECTOR PLAYTEST the M1.7 build → RG2 → RG3
+## ▶ Next action (start here on a cold restart) — M1.8 Wave 1 BUILD (H0 → H1), then re-gate
+
+> **M1.8 = Hub Art Dressing** (Director-directed, art-only iteration). Breakdown:
+> `design/M1_8_Tasks/M1.8_Breakdown.md`. Source: `art_workshop/map_layouts/staging_area_layout_a_dressed.md`
+> + `layout_a_assets/` (16 ground tiles + 24 props; gap analysis = nothing loop-critical missing →
+> **no PixelLab run**; the one missing prop, the street threshold `SS`, is deferred (H3, paid/Director-gated)).
+> **Contracts:** all-off fp **`e943ac9c8bc1`** + **89/89** held (no knob); **no save change**; portal/shop
+> `Interactable` ids + collision + `hub.gd` node paths + wall-bounding are invariant (H1 is a re-skin).
+> **Copy, never move** from `art_workshop/`.
+>
+> **▶ Wave 1 (in progress):** **H0** (env-artist) copy ground+object PNGs → `Game/art/hub/`, build
+> `Game/data/tilesets/hub_ground.tres`; **H1** (general-purpose, sole `hub.tscn` writer, blockedBy H0)
+> dress the vertical spine — TileMapLayer ground (asphalt S → dirt mid → litter+scrap-wall N, central
+> lane clean), `dive_gate`+`portal_glow` on `DeparturePortal`, `shack_door`+benches on `HubShop`, ~12
+> dressing props scattered, y-sorted. Then **Wave 2** re-gate (HG1 verify+changelog+publish → HG2
+> readability → HG3 verdict in `design/M1_8_Tasks/G4_findings_M1.8.md`).
+>
+> **⚠ MANUAL (headless can't render):** the on-screen read — spine flows S→N, central lane clear,
+> functional props (gate/shack) distinguishable from dressing, golden-hour holds — is the core Director item.
+
+---
+
+## (M1.7 — build+RG1 done + published; RG2/RG3 Director-pending, non-blocking) DIRECTOR PLAYTEST → RG2 → RG3
 
 > **✓ RG1 DONE + PUBLISHED (2026-06-28).** Build-verify doc `design/M1_7_Tasks/RG1_playtest_build.md` + M1.7 changelog block
 > (`changelog.txt`); full M1.7 verify matrix green (import · smoke · fp **`e943ac9c8bc1`** · config **89/89** · `PLAYER_VISUAL OK`

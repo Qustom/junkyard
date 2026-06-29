@@ -58,6 +58,40 @@ Build (M0·M1·M2·M4·M3) + RG1 (itch published `m1-20260627-41106de` + FB1–F
 
 ---
 
+## M1.8 — Hub Art Dressing (ACTIVE — Director-directed; art-only iteration)
+
+Shed the Hub's greybox skin for the placeholder **Layout-A vertical-spine** salvage-yard art
+(`art_workshop/map_layouts/`), loop-behaviour unchanged. Breakdown: `design/M1_8_Tasks/M1.8_Breakdown.md`.
+**Contracts:** all-off fp `e943ac9c8bc1` + 89/89 held (no knob); no save change; portal/shop
+`Interactable` ids + collision + `hub.gd` node paths + wall-bounding invariant; **copy, never move** from
+`art_workshop/`. M1.7's RG2/RG3 stay non-blocking.
+
+### Wave 1 — Build  *(H0 → H1, sequential; H1 is the sole `hub.tscn` writer)*
+
+### H0 — Asset import + Hub `TileSet`
+- Milestone: M1.8 (Wave 1)   Assignee: environment-artist (+ general-purpose)   BlockedBy: none
+- Goal: COPY (not move) `layout_a_assets/ground/*.png` (16) + `objects/*.png` (24) → `Game/art/hub/{ground,objects}/`; import (filter OFF); build `Game/data/tilesets/hub_ground.tres` (32px, 16 tiles). DoD: `--import` clean; tileset loads; assets in BOTH `Game/` and `art_workshop/`; no `hub.tscn` change. Worklog + SHA.
+
+### H1 — Dress the Hub scene (Layout-A vertical spine)
+- Milestone: M1.8 (Wave 1)   Assignee: general-purpose (+ environment-artist)   BlockedBy: H0
+- Goal: re-skin `hub.tscn` — TileMapLayer ground spine (asphalt S → dirt mid → litter+scrap-wall N, central lane clean), `dive_gate`+`portal_glow` on `DeparturePortal`, `shack_door`+benches on `HubShop`, ~12 dressing props scattered + y-sorted; **preserve all functional contracts**. DoD: import clean; smoke green; fp `e943ac9c8bc1`; 89/89; hub load/contract check passes; wall-bounded. Worklog + SHA + deviations.
+
+### H3 — Street-exit threshold prop (PixelLab) — **DEFERRED (Director-gated, paid credits)**
+- Milestone: M1.8   Assignee: environment-artist   BlockedBy: Director OK
+- The one missing spec prop (`SS`); not loop-critical (no functional street exit yet). Generate only on explicit Director go.
+
+### Wave 2 — Re-gate  *(after Wave 1 + Director playtest)*
+
+### HG1 — M1.8 playtest build + verify + publish
+- Milestone: M1.8 (Wave 2)   Assignee: qa-playtest-coordinator   BlockedBy: H0,H1
+- Goal: verify (dressed hub loads, loop unchanged, fp/89/smoke green); update `changelog.txt` (M1.7→M1.8: art-dressed hub); publish to itch (`bash Game/tools/push_itch.sh`).
+
+### HG2 — M1.8 readability check + HG3 — verdict (Director)
+- Milestone: M1.8 (Wave 2)   Assignee: qa (assembles) → Director (decides)   BlockedBy: HG1 + human playtest
+- Record go/iterate/pivot in `design/M1_8_Tasks/G4_findings_M1.8.md`.
+
+---
+
 ## M1.7 — Player Embodiment (ACTIVE — Director-directed; design LOCKED)
 
 Replace the greybox player (teal `ColorRect`+`Nose`) with the **first real character sprite** — the
