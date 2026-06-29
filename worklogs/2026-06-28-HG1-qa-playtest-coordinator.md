@@ -4,7 +4,9 @@
 - **Subagent:** qa-playtest-coordinator
 - **Milestone:** M1.8 (Hub Art Dressing)
 - **Branch:** qa/m1.8-hg1
-- **Commit:** 95c6d622d947e3ba4569bc98bfaf45754e1ed714
+- **Commit:** 1a551e896fdc6d731262840dbed8b1338b3a71dd (the recorded SHA; a no-op re-amend to
+  stamp this exact value would shift it again, so this is the canonical HG1 commit on
+  branch `qa/m1.8-hg1` — the worklog content is otherwise final).
 
 ## What changed
 Authored the HG1 M1.8 build-verify doc (`design/M1_8_Tasks/HG1_playtest_build.md`, from the
