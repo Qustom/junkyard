@@ -82,9 +82,9 @@ Shed the Hub's greybox skin for the placeholder **Layout-A vertical-spine** salv
 
 ### Wave 2 — Re-gate  *(after Wave 1 + Director playtest)*
 
-### HG1 — M1.8 playtest build + verify + publish
+### HG1 — M1.8 playtest build + verify + publish — ✓ **DONE + PUBLISHED** (`9d613ed`, 2026-06-28)
 - Milestone: M1.8 (Wave 2)   Assignee: qa-playtest-coordinator   BlockedBy: H0,H1
-- Goal: verify (dressed hub loads, loop unchanged, fp/89/smoke green); update `changelog.txt` (M1.7→M1.8: art-dressed hub); publish to itch (`bash Game/tools/push_itch.sh`).
+- Full suite green (fp `e943ac9c8bc1` + 89/89 unmoved, no save change); `changelog.txt` M1.8 block; verify doc `design/M1_8_Tasks/HG1_playtest_build.md`. Published `qusto/the-far-yard:html5 @ m1-20260629-9d613ed`. Worklog `…-HG1-qa-playtest-coordinator.md`.
 
 ### HG2 — M1.8 readability check + HG3 — verdict (Director)
 - Milestone: M1.8 (Wave 2)   Assignee: qa (assembles) → Director (decides)   BlockedBy: HG1 + human playtest

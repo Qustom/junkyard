@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.8 (Hub Art Dressing — Layout A vertical spine) — **Wave 1 BUILD DONE + INTEGRATED on `main`@`11b8ff4`, pushed.** The greybox Hub is re-skinned with the placeholder Layout-A salvage-yard art (tiled ground spine, salvage-shed shop, fenced dive gate, 15 scattered junk props), loop-behaviour byte-identical. **Next = Wave 2 re-gate (HG1 verify+changelog+publish → Director playtest → HG2/HG3).** *(M1.7 build+RG1 done + published; its RG2/RG3 Director-pending, non-blocking — M1.8 is content opened ahead of that verdict, as M1.7 was ahead of M1.6.)*
-**Last updated:** 2026-06-28 (M1.8 Wave 1 H0+H1 done: assets+TileSet+dressed `hub.tscn` on `main`@`11b8ff4`; fp `e943ac9c8bc1` unmoved, 89/89, smoke green. 5 deviations logged → Director close-out. Compositing preview `m1_8_hub_preview.png` produced.)
+**Current milestone:** M1.8 (Hub Art Dressing — Layout A vertical spine) — **Wave 1 BUILD + Wave 2 HG1 DONE + PUBLISHED.** The greybox Hub is re-skinned with the placeholder Layout-A salvage-yard art; full suite green, loop byte-identical; published to itch `m1-20260629-9d613ed`. **Next = DIRECTOR PLAYTEST → HG2 (readability) → HG3 (verdict).** *(M1.7 build+RG1 done + published; its RG2/RG3 Director-pending, non-blocking.)*
+**Last updated:** 2026-06-28 (M1.8 HG1 done: verify matrix green — fp `e943ac9c8bc1` + 89/89 unmoved, no save change; `changelog.txt` M1.8 block; published `qusto/the-far-yard:html5 @ m1-20260629-9d613ed`. `main`@`9d613ed`.)
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
@@ -17,7 +17,30 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — M1.8 Wave 1 BUILD (H0 → H1), then re-gate
+## ▶ Next action (start here on a cold restart) — DIRECTOR PLAYTEST the M1.8 build → HG2 → HG3
+
+> **✓ HG1 DONE + PUBLISHED (2026-06-28).** `main`@`9d613ed`; verify doc `design/M1_8_Tasks/HG1_playtest_build.md`
+> + `changelog.txt` M1.8 block. Full suite green (import · smoke · fp **`e943ac9c8bc1`** · **89/89** · loop · router ·
+> shop/quota · save v1→v4 · 4 hazards · player_visual · hub-contract spot-check). **No save-schema change.** Published:
+> `qusto/the-far-yard:html5 @ m1-20260629-9d613ed` (Chrome/Edge, password-gated: https://qusto.itch.io/the-far-yard).
+> Worklog `…-HG1-qa-playtest-coordinator.md`.
+>
+> **▶ DIRECTOR PLAYTEST (human-gated).** Play the published build. The dressed Hub is the default look now (no toggle
+> needed). Check (HG1 §5): the spine reads S→N (paved spawn → dirt yard → scrap-litter back); the central spawn→shop→gate
+> lane stays clear; the salvage-shed shop + fenced dive-gate read as distinct from the dressing junk; **prop scale/busyness
+> vs. the player** (the readability watch-item); golden-hour holds; **the loop plays identically** (walk → shop sell/buy →
+> dive → return); framerate with ~15 props; toggling the M1.7 **player art ON** (P → Player tab) still y-sorts among props.
+> Export telemetry (in-game button on web).
+>
+> Then **HG2** (qa readability/telemetry) → **HG3** verdict (go → next milestone / iterate → M1.9 / pivot) in
+> `design/M1_8_Tasks/G4_findings_M1.8.md`. Claude assembles + recommends; the Director plays + decides.
+>
+> **⚠ Wave-1 close-out still open:** 5 deviations in `design/DESIGN_DEVIATIONS.md` (all recommend Reviewed; + carried
+> PLAYERTAB → Addressed) await Director disposition — fold at the HG3 close-out.
+
+---
+
+## (archived — M1.8 Wave 1 build, on `main`, pushed) H0 + H1
 
 > **M1.8 = Hub Art Dressing** (Director-directed, art-only iteration). Breakdown:
 > `design/M1_8_Tasks/M1.8_Breakdown.md`. Source: `art_workshop/map_layouts/staging_area_layout_a_dressed.md`
