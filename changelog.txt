@@ -1,6 +1,54 @@
 THE FAR YARD — CHANGELOG
 ========================
 
+M1.8 — "The Yard Takes Shape"   (changes since M1.7)
+----------------------------------------------------
+
+THE HUB — the surface you stand on between runs — is no longer a grey box. Until now
+the staging area was a flat grey floor with a green box for the shop and a purple box for
+the dive portal. M1.8 dresses it into a lived-in, golden-hour salvage YARD you walk
+around in. Nothing about how the game PLAYS changed — only how the surface LOOKS. (This
+is placeholder art, not the final look.)
+
+
+THE DRESSED YARD (new)
+----------------------
+* NEW — A tiled ground that reads as a spine. The hub floor is now tiled instead of a
+  flat colour: a paved street/apron at the south entrance where you spawn, packed-dirt
+  across the open yard, and grubbier scrap-litter toward the back — drawing your eye
+  north toward the dive. The central spawn -> shop -> gate lane is kept clearest so the
+  route reads at a glance. A scrap-wall border rings the yard (you still can't walk off it).
+* NEW — A salvage-shed shop. Where the green box was, the shop is now a salvage shed with
+  a door and a workbench / sort-table beside it. Walk up and interact exactly as before —
+  the SELL/BUY shop opens unchanged.
+* NEW — A fenced dive gate with a portal glow. Where the purple box was, the dive portal
+  is now a fenced, padlocked dive gate with a cold-violet glow spilling through from the
+  other side. Walk into it to dive, exactly as before.
+* NEW — Scattered junkyard props. The yard is framed with junk: a car up on blocks, a
+  truck cab, tire stacks, oil drums, a freezer, a bathtub, a cable spool, a pallet of
+  cans, a propane tank, a signpost, a wheelbarrow, and smaller bits. Bigger silhouettes
+  sit near the fences, litter thickens toward the back, and the central lane stays clear.
+  The player correctly walks behind and in front of props as you move around them.
+* The M1.7 player-art toggle still works in the dressed hub: press P -> Player tab ->
+  "Player art (debug)" and the animated character renders and sorts correctly among the
+  yard props.
+
+
+NOT YET IN THIS BUILD
+---------------------
+* The art is PLACEHOLDER — the layout, readability, and mood are what's being tested, not
+  the final pixel-craft. A proper art pass comes later.
+* Only the SURFACE hub is dressed — the dive interiors are still greybox.
+* There is no functional street exit yet — the south entrance is a paved edge with a
+  signpost, not a walk-out gate (a later addition).
+* The shop is a doorway you interact with, not a walk-in interior room.
+* The loop is otherwise UNCHANGED from M1.7 — same dive, shop, economy, quota, timer, and
+  controls. M1.8 only changes how the hub looks.
+
+
+====================================================================================
+
+
 M1.7 — "Player Embodiment"   (changes since M1.6)
 -------------------------------------------------
 
