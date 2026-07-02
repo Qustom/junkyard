@@ -76,6 +76,15 @@ Shed the Hub's greybox skin for the placeholder **Layout-A vertical-spine** salv
 - Milestone: M1.8 (Wave 1)   Assignee: general-purpose (+ environment-artist)   BlockedBy: H0
 - Re-skinned `hub.tscn`: `HubGround` TileMapLayer spine + `dive_gate`/`portal_glow`/`shack_door`/benches + 15 y-sorted dressing props; all functional contracts invariant. Gate green: import · smoke · fp `e943ac9c8bc1` · 89/89. Integrated `main`@`11b8ff4`. 5 deviations → Director close-out.
 
+### H2 — Hub art re-dress: seamless Wang ground + perspective pass — ✓ **DONE** (2026-07-01, Director-directed)
+- Milestone: M1.8 (iteration on Wave 1, pre-HG3)   Assignee: orchestrator (direct, PixelLab MCP)   BlockedBy: H1
+- Director `/goal`: kill the per-tile black borders / misaligned tiles / wrong object angles. Ground re-authored as 3
+  chained PixelLab corner-Wang tilesets (asphalt↔dirt↔litter↔scrap, gradient-map retoned to Band-0) painted by a
+  vertex-map `hub_ground.gd` (RNG-free, 36×20 cells fills the camera); 6 props regenerated angle-consistent (+ NEW
+  front-facade shack 176×144, NEW south fence line); y-sort re-anchored to sprite base. Contracts invariant (ids,
+  collision, node paths, spawn, zoom); gate green: import · smoke · fp `e943ac9c8bc1` · 89/89 · hub contract (720 cells).
+  7 deviations → Director close-out. Worklog `…-H2-hub-redress-orchestrator.md`.
+
 ### H3 — Street-exit threshold prop (PixelLab) — **DEFERRED (Director-gated, paid credits)**
 - Milestone: M1.8   Assignee: environment-artist   BlockedBy: Director OK
 - The one missing spec prop (`SS`); not loop-critical (no functional street exit yet). Generate only on explicit Director go.
