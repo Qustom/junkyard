@@ -85,6 +85,16 @@ Shed the Hub's greybox skin for the placeholder **Layout-A vertical-spine** salv
   collision, node paths, spawn, zoom); gate green: import · smoke · fp `e943ac9c8bc1` · 89/89 · hub contract (720 cells).
   7 deviations → Director close-out. Worklog `…-H2-hub-redress-orchestrator.md`.
 
+### H4 — Hub 45° isometric re-dress (iso tiles + transitions) — ✓ **DONE** (2026-07-02, Director-directed)
+- Milestone: M1.8 (iteration, pre-HG3)   Assignee: orchestrator (direct, PixelLab MCP)   BlockedBy: H2
+- Director `/goal`: 45° perspective; grass/dirt/scrap tile families; AI transitions between tiles. 48 iso tiles
+  (PixelLab create_tiles_pro @45°; transitions via per-edge shape-mode prompts — the inpaint API discards frozen
+  context and style mode ignores the iso shape; both evidenced). NEW `hub_ground_iso.tres` (DIAMOND_DOWN 64×32) +
+  rewritten RNG-free zone painter (963 cells); dressing props removed, shop + dive portal + colliders kept. Gate
+  green: import · smoke · fp `e943ac9c8bc1` · 89/89 · iso hub contract. First attempt was falsely reported done
+  without landing (caught by the Director) — rebuilt + verified, incl. pck-content check post-publish. 4 deviations
+  → Director close-out. Worklog `…2026-07-02-H4-hub-iso-orchestrator.md`.
+
 ### H3 — Street-exit threshold prop (PixelLab) — **DEFERRED (Director-gated, paid credits)**
 - Milestone: M1.8   Assignee: environment-artist   BlockedBy: Director OK
 - The one missing spec prop (`SS`); not loop-critical (no functional street exit yet). Generate only on explicit Director go.

@@ -87,3 +87,26 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
   to sprite BASE (position=feet + `offset`), fixing sort-by-center artifacts. 12 props kept as-is where the old angle
   already read fine. Old `ground_tile_*.png` left on disk (unreferenced; plank tiles reusable). **Claude's recommendation:
   Reviewed.** · _Awaiting Director disposition._
+
+- **[2026-07-02] M1.8 H4 / hub ground — 45° ISOMETRIC pivot (supersedes the H2 top-down Wang ground for the playtest).**
+  Director-directed (`/goal`): the floor is now a DIAMOND_DOWN iso TileMapLayer (`hub_ground_iso.tres`, 48 PixelLab 45°
+  tiles — grass/dirt families, scrap variants, grass↔dirt edge transitions) painted by a rewritten RNG-free zone painter
+  (963 cells, fills the camera view). H2's top-down tileset + atlases remain in-repo (one tile_set swap to revert).
+  fp `e943ac9c8bc1` + 89/89 unmoved. **Claude's recommendation: the HG3 gate dispositions iso vs top-down as one call.**
+  · _Awaiting Director disposition._
+- **[2026-07-02] M1.8 H4 / props — ALL dressing props removed** (cars, freezer, drums, tire stack, fences, signpost,
+  pride-spot set). Director-directed ("removing other objects, keeping the shop and the dive portal"). The kept
+  shack/gate/bench sprites are H2 front-facing art on an iso ground — acknowledged placeholder mismatch pending the iso
+  verdict. **Claude's recommendation: Reviewed** (iso prop re-dress is a follow-up task if iso wins). · _Awaiting
+  Director disposition._
+- **[2026-07-02] M1.8 H4 / layout — grass surround replaces BOTH the scrap-wall border ring and the south asphalt
+  street.** The Layout-A "street edge" spawn band is gone in this pass (the brief's tile list was grass/dirt/scrap only).
+  Wall colliders are unchanged but the bounds now read as a dirt→grass seam, not walls/fence. **Claude's recommendation:
+  needs Director review** — does the iso look need a street/entrance cue and a harder "wall" read at the bounds?
+  · _Awaiting Director disposition._
+- **[2026-07-02] M1.8 H4 / tooling — the brief's "edit image API" transitions were unachievable as specified:** (a) the
+  inpaint mode (`create_map_object` + mask) regenerates whole objects, discarding frozen context (4 attempts; evidence
+  `art_workshop/game_art/hub_iso/inpaint_attempt_results.png`); (b) `create_tiles_pro` style mode matched palette but
+  ignored the isometric shape (returned 32×32 squares). Shipped transitions are a shape-mode batch with per-edge prompts —
+  same intent (AI-generated blends between our tile materials), different endpoint. **Claude's recommendation: Reviewed.**
+  · _Awaiting Director disposition._

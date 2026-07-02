@@ -1,27 +1,11 @@
-[gd_scene load_steps=24 format=3 uid="uid://bm0hub6real00a"]
+[gd_scene load_steps=7 format=3 uid="uid://bm0hub6real00a"]
 
 [ext_resource type="Script" path="res://scenes/hub/hub.gd" id="1"]
 [ext_resource type="PackedScene" path="res://entities/player/player.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/hub/departure_portal.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/hub/shop.tscn" id="4"]
 [ext_resource type="Script" path="res://scenes/hub/hub_ground.gd" id="5"]
-[ext_resource type="TileSet" path="res://data/tilesets/hub_ground.tres" id="6"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/car_on_blocks.png" id="7"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/truck_cab.png" id="8"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/freezer.png" id="9"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/bathtub.png" id="10"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/tire_stack.png" id="11"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/oil_drums.png" id="12"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/cable_spool.png" id="13"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/pallet_cans.png" id="14"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/propane_tank.png" id="15"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/signpost.png" id="16"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/wheelbarrow.png" id="17"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/potted_plant.png" id="18"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/folding_chair.png" id="19"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/chalkboard.png" id="20"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/dog_bowl.png" id="21"]
-[ext_resource type="Texture2D" path="res://art/hub/objects/fence_strip.png" id="22"]
+[ext_resource type="TileSet" path="res://data/tilesets/hub_ground_iso.tres" id="6"]
 
 [sub_resource type="RectangleShape2D" id="WallH"]
 size = Vector2(760, 24)
@@ -37,6 +21,7 @@ script = ExtResource("1")
 
 [node name="Floor" type="TileMapLayer" parent="Room"]
 z_index = -10
+y_sort_enabled = true
 tile_set = ExtResource("6")
 script = ExtResource("5")
 
@@ -59,109 +44,6 @@ shape = SubResource("WallV")
 [node name="WallE" type="CollisionShape2D" parent="Room/Walls"]
 position = Vector2(368, 0)
 shape = SubResource("WallV")
-
-[node name="Props" type="Node2D" parent="."]
-y_sort_enabled = true
-
-[node name="TruckCab" type="Sprite2D" parent="Props"]
-position = Vector2(-282, -40)
-offset = Vector2(-1, -24)
-texture = ExtResource("8")
-
-[node name="TireStack" type="Sprite2D" parent="Props"]
-position = Vector2(-300, 40)
-offset = Vector2(-1, -19)
-texture = ExtResource("11")
-
-[node name="OilDrums" type="Sprite2D" parent="Props"]
-position = Vector2(-310, 120)
-offset = Vector2(0, -14)
-texture = ExtResource("12")
-
-[node name="CableSpool" type="Sprite2D" parent="Props"]
-position = Vector2(-245, 175)
-offset = Vector2(-2, -19)
-texture = ExtResource("13")
-
-[node name="CarOnBlocks" type="Sprite2D" parent="Props"]
-position = Vector2(272, -100)
-offset = Vector2(-2, -30)
-texture = ExtResource("7")
-
-[node name="Freezer" type="Sprite2D" parent="Props"]
-position = Vector2(318, -30)
-offset = Vector2(0, -24)
-texture = ExtResource("9")
-
-[node name="PalletCans" type="Sprite2D" parent="Props"]
-position = Vector2(300, 50)
-offset = Vector2(0, -20)
-texture = ExtResource("14")
-
-[node name="Bathtub" type="Sprite2D" parent="Props"]
-position = Vector2(286, 125)
-offset = Vector2(0, -21)
-texture = ExtResource("10")
-
-[node name="PropaneTank" type="Sprite2D" parent="Props"]
-position = Vector2(325, 180)
-offset = Vector2(1, -19)
-texture = ExtResource("15")
-
-[node name="Wheelbarrow" type="Sprite2D" parent="Props"]
-position = Vector2(205, 185)
-offset = Vector2(0, -20)
-texture = ExtResource("17")
-
-[node name="PottedPlant" type="Sprite2D" parent="Props"]
-position = Vector2(-160, -95)
-offset = Vector2(1, -20)
-texture = ExtResource("18")
-
-[node name="DogBowl" type="Sprite2D" parent="Props"]
-position = Vector2(-120, -85)
-offset = Vector2(0, -13)
-texture = ExtResource("21")
-
-[node name="FoldingChair" type="Sprite2D" parent="Props"]
-position = Vector2(-135, -115)
-offset = Vector2(0, -19)
-texture = ExtResource("19")
-
-[node name="Chalkboard" type="Sprite2D" parent="Props"]
-position = Vector2(-92, -140)
-offset = Vector2(0, -23)
-texture = ExtResource("20")
-
-[node name="Signpost" type="Sprite2D" parent="Props"]
-position = Vector2(-140, 185)
-offset = Vector2(0, -29)
-texture = ExtResource("16")
-
-[node name="FenceW2" type="Sprite2D" parent="Props"]
-position = Vector2(-304, 245)
-offset = Vector2(0, -17)
-texture = ExtResource("22")
-
-[node name="FenceW1" type="Sprite2D" parent="Props"]
-position = Vector2(-152, 245)
-offset = Vector2(0, -17)
-texture = ExtResource("22")
-
-[node name="FenceC" type="Sprite2D" parent="Props"]
-position = Vector2(0, 245)
-offset = Vector2(0, -17)
-texture = ExtResource("22")
-
-[node name="FenceE1" type="Sprite2D" parent="Props"]
-position = Vector2(152, 245)
-offset = Vector2(0, -17)
-texture = ExtResource("22")
-
-[node name="FenceE2" type="Sprite2D" parent="Props"]
-position = Vector2(304, 245)
-offset = Vector2(0, -17)
-texture = ExtResource("22")
 
 [node name="PlayerSpawn" type="Marker2D" parent="."]
 position = Vector2(0, 120)
