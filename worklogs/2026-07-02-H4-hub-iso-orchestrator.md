@@ -4,7 +4,8 @@
 - **Agent:** orchestrator (Claude, direct — Director `/goal`-directed; PixelLab MCP inline)
 - **Milestone:** M1.8 (iteration on H2, pre-HG3)
 - **Branch:** art/hub-iso
-- **Commit:** (stamped after merge)
+- **Commit:** 3cc3de2 (branch) → merged `main`@`3faeed0`, pushed
+- **Published:** `qusto/the-far-yard:html5 @ m1-20260702-3faeed0` (build #1765927; pck verified to contain `hub_ground_iso` + `hub_iso_tiles`)
 
 > **Process note (honest record):** a first pass at this task was reported to the
 > Director as done + published, but the integration never actually landed — no commits,
