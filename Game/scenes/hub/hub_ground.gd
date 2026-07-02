@@ -1,108 +1,111 @@
 class_name HubGround
 extends TileMapLayer
-## HubGround (M1.8 hub re-dress) — paints the dressed Layout-A vertical-spine floor for
-## the static surface Hub. Pure presentation: a deterministic, RNG-FREE programmatic
+## HubGround (M1.8 H4 — 45° isometric re-dress) — paints the surface Hub floor as a
+## diamond-isometric terrain. Pure presentation: a deterministic, RNG-FREE programmatic
 ## paint (the hub is an authored room, not a generated band — it must NOT touch the RNG
 ## autoload, which is reserved for reproducible proc-gen). Reads/writes no game state.
 ##
-## The floor is a corner-based Wang paint: terrain is defined at cell VERTICES and each
-## cell picks the tile whose four corners match, so every material seam (asphalt→dirt,
-## dirt→litter, dirt→scrap-wall) gets an organic seamless transition instead of the old
-## framed per-tile squares. hub_ground.tres holds three 4×4 Wang atlases (PixelLab
-## topdown tilesets, chained off one shared dirt base tile so their dirt is pixel-
-## identical), each laid out in Wang-index order: idx = NW*8+NE*4+SW*2+SE, where a set
-## bit means the corner is the atlas's UPPER material; atlas coords = (idx % 4, idx / 4).
+## hub_ground_iso.tres holds ONE 8×6 atlas (64×78 cells) of PixelLab 45° isometric
+## tiles (create_tiles_pro, tile_view_angle=45): rows 0–1 junk/scrap variants, rows 2–3
+## plain grass/dirt, rows 4–5 grass↔dirt edge transitions. Each source tile is
+## re-canvased so its diamond FACE center (y≈28 of the 64px source) sits at the texture
+## center — no per-tile texture_origin needed.
 ##
-## The spine, south(+y)→north(-y), mirrors staging_area_layout_a_dressed.md §1:
-##   • south street band    → asphalt (world y >= 192, runs to the view edges)
-##   • open yard (middle)   → packed dirt — the central lane stays cleanest
-##   • north fringe         → sparse litter patches (never in the central lane)
-##   • the framing border   → scrap-wall heaps (under/behind the wall colliders)
-## The painted grid (36×20 cells) intentionally overshoots the walled room so the camera
-## view is filled with scrap/street instead of black backdrop.
+## Grid: TILE_LAYOUT_DIAMOND_DOWN, tile_size 64×32 — cell (cx,cy) sits at screen
+## ((cx-cy)*32, (cx+cy)*16). Tile faces are ~42px tall, so southern tiles overlap
+## northern skirts; the layer y-sorts (set in hub.tscn) so draw order is strictly N→S
+## and the overlap hides the painterly diamond edges.
+##
+## Zones (screen space, matching the wall colliders): the walled yard rectangle is
+## packed DIRT with scrap/tuft accents; everything beyond is overgrown GRASS with junk
+## heaps; the yard boundary picks a directional grass-edge transition tile by which
+## diamond neighbour is grass (corners → patchy mix), and grass cells touching the
+## yard blend back with tuft/patchy tiles.
 
-## Sources in hub_ground.tres.
-const SRC_ASPHALT_DIRT: int = 0   # lower=asphalt, upper=dirt
-const SRC_DIRT_LITTER: int = 1    # lower=dirt,    upper=litter
-const SRC_DIRT_SCRAP: int = 2     # lower=dirt,    upper=scrap wall
+const SRC: int = 0
 
-enum Mat { DIRT, ASPHALT, LITTER, SCRAP }
+## Atlas tile indices (index = col + row*8; atlas coord = (idx % 8, idx / 8)).
+const GRASS_PLAIN: Array[int] = [16, 17, 20, 25]
+const GRASS_ACC: Array[int] = [21, 22, 18, 29]     # weeds / darker patches
+const GRASS_FLOWERS: Array[int] = [23, 24, 28]
+const GRASS_SCRAP: Array[int] = [0, 1, 2, 3, 4, 5] # junk heaps in the meadow
+const DIRT_PLAIN: Array[int] = [26, 27]
+const DIRT_ACC: Array[int] = [30, 31, 6]           # pebbles / footprints / rich dirt
+const DIRT_SCRAP: Array[int] = [9, 10]             # tools / dark debris
+const DIRT_TUFTS: int = 11
+const PATCHY: int = 12
+## Transition tiles: dirt face with grass creeping over ONE edge.
+const TR_NW: int = 32
+const TR_NE: int = 35
+const TR_SW: int = 34
+const TR_SE: int = 39
 
-## Cell grid: 36×20 cells (1152×640 px) centred on origin — fills the default
-## 1152×648 view at HubCamera zoom 1.05. Vertices run (0..37, 0..21).
-const CX_MIN: int = -18
-const CX_MAX: int = 17
-const CY_MIN: int = -10
-const CY_MAX: int = 9
+## Dirt-yard half-extent in screen px (matches the walled room bounds).
+const YARD_X: int = 340
+const YARD_Y: int = 216
+
+## Cell iteration bounds: covers screen x ∈ [-640,640], y ∈ [-380,380] under the
+## DIAMOND_DOWN mapping (fills the 1152×648 view at HubCamera zoom 1.05 with margin).
+const C_MIN: int = -24
+const C_MAX: int = 24
 
 
 func _ready() -> void:
 	_paint()
 
 
-## Deterministic integer hash of a vertex coord — NOT RNG. Same coords → same value,
-## forever (the hub floor must be byte-identical every run).
-func _h32(vx: int, vy: int) -> int:
-	var h: int = ((vx * 73856093) ^ (vy * 19349663)) & 0xFFFFFFFF
+## Deterministic integer hash of a cell coord — NOT RNG. Same coords → same tile.
+func _h32(x: int, y: int) -> int:
+	var h: int = ((x * 73856093) ^ (y * 19349663)) & 0xFFFFFFFF
 	h = (h ^ (h >> 13)) & 0x7fffffff
 	return h
 
 
-## Terrain material at a vertex. Rules keep incompatible pairs (asphalt+scrap,
-## asphalt+litter, litter+scrap) at least one full cell apart so every cell mixes at
-## most one atlas's lower/upper pair.
-func _vertex_mat(vx: int, vy: int) -> Mat:
-	# South street band (world y >= 192): asphalt across the full painted width.
-	if vy >= 16:
-		return Mat.ASPHALT
-	# Border scrap heaps: west (x <= -352), east (x >= 352), north (y <= -224); the
-	# side walls stop short of the street so scrap never touches asphalt in one cell.
-	if (vx <= 7 or vx >= 29 or vy <= 3) and vy <= 14:
-		return Mat.SCRAP
-	# North fringe: sparse hash-scattered litter patches, clear of the central lane
-	# (|vx-18| > 4 keeps the spawn→shack→gate lane clean, layout §1) and one cell
-	# clear of the scrap border.
-	if vx >= 10 and vx <= 26 and vy >= 5 and vy <= 8 and absi(vx - 18) > 4:
-		if _h32(vx, vy) % 6 == 0:
-			return Mat.LITTER
-	return Mat.DIRT
+func _screen(cx: int, cy: int) -> Vector2i:
+	return Vector2i((cx - cy) * 32, (cx + cy) * 16)
+
+
+func _is_dirt(cx: int, cy: int) -> bool:
+	var s := _screen(cx, cy)
+	return absi(s.x) <= YARD_X and absi(s.y) <= YARD_Y
 
 
 func _paint() -> void:
 	clear()
-	for cy in range(CY_MIN, CY_MAX + 1):
-		for cx in range(CX_MIN, CX_MAX + 1):
-			var vx: int = cx - CX_MIN
-			var vy: int = cy - CY_MIN
-			var m: Array[Mat] = [
-				_vertex_mat(vx, vy), _vertex_mat(vx + 1, vy),        # NW NE
-				_vertex_mat(vx, vy + 1), _vertex_mat(vx + 1, vy + 1) # SW SE
-			]
-			var source_id: int
-			var idx: int
-			if m.has(Mat.ASPHALT):
-				source_id = SRC_ASPHALT_DIRT
-				idx = _wang(m, Mat.DIRT)     # upper material of this atlas is DIRT
-			elif m.has(Mat.SCRAP):
-				source_id = SRC_DIRT_SCRAP
-				idx = _wang(m, Mat.SCRAP)
-			elif m.has(Mat.LITTER):
-				source_id = SRC_DIRT_LITTER
-				idx = _wang(m, Mat.LITTER)
-			else:
-				# Pure dirt. The all-dirt tile is pixel-identical in all three atlases
-				# (chained from one base tile); use the asphalt_dirt copy (idx 15).
-				source_id = SRC_ASPHALT_DIRT
-				idx = 15
-			set_cell(Vector2i(cx, cy), source_id, Vector2i(idx % 4, idx / 4))
+	for cx in range(C_MIN, C_MAX + 1):
+		for cy in range(C_MIN, C_MAX + 1):
+			var s := _screen(cx, cy)
+			if absi(s.x) > 640 or absi(s.y) > 380:
+				continue
+			var idx: int = _pick(cx, cy)
+			set_cell(Vector2i(cx, cy), SRC, Vector2i(idx % 8, idx / 8))
 
 
-## Wang corner index for the atlas whose UPPER material is `upper`:
-## NW*8 + NE*4 + SW*2 + SE*1, bit set where the corner is the upper material.
-func _wang(m: Array[Mat], upper: Mat) -> int:
-	var idx: int = 0
-	if m[0] == upper: idx += 8
-	if m[1] == upper: idx += 4
-	if m[2] == upper: idx += 2
-	if m[3] == upper: idx += 1
-	return idx
+func _pick(cx: int, cy: int) -> int:
+	var h: int = _h32(cx + 64, cy + 64)
+	if _is_dirt(cx, cy):
+		# Yard boundary: which diamond neighbours are grass?
+		# DIAMOND_DOWN: +cx → SE, -cx → NW, +cy → SW, -cy → NE.
+		var grass_edges: Array[int] = []
+		if not _is_dirt(cx - 1, cy): grass_edges.append(TR_NW)
+		if not _is_dirt(cx + 1, cy): grass_edges.append(TR_SE)
+		if not _is_dirt(cx, cy + 1): grass_edges.append(TR_SW)
+		if not _is_dirt(cx, cy - 1): grass_edges.append(TR_NE)
+		if grass_edges.size() == 1:
+			return grass_edges[0]
+		if grass_edges.size() >= 2:
+			return PATCHY
+		var r: int = h % 20
+		if r < 14: return DIRT_PLAIN[h % DIRT_PLAIN.size()]
+		if r < 17: return DIRT_ACC[h % DIRT_ACC.size()]
+		if r < 19: return DIRT_SCRAP[h % DIRT_SCRAP.size()]
+		return DIRT_TUFTS
+	# Grass cell touching the yard → tufty blend toward the dirt.
+	if _is_dirt(cx + 1, cy) or _is_dirt(cx - 1, cy) \
+			or _is_dirt(cx, cy + 1) or _is_dirt(cx, cy - 1):
+		return DIRT_TUFTS if h % 3 == 0 else PATCHY
+	var r: int = h % 20
+	if r < 11: return GRASS_PLAIN[h % GRASS_PLAIN.size()]
+	if r < 15: return GRASS_ACC[h % GRASS_ACC.size()]
+	if r < 17: return GRASS_FLOWERS[h % GRASS_FLOWERS.size()]
+	return GRASS_SCRAP[h % GRASS_SCRAP.size()]
