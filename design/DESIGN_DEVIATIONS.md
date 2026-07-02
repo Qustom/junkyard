@@ -50,3 +50,40 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
   Copied all 20 actual objects; no asset missing for the dressing pass (the breakdown gap table's own "19 present" is
   consistent with ~20). Documentation count is stale, not a build gap. **Claude's recommendation: Reviewed** (fix the README
   count at close-out). · _Awaiting Director disposition._
+
+- **[2026-07-01] M1.8 H2 / ground re-authored — 16 framed variant tiles → 3 PixelLab corner-Wang transition tilesets**
+  (`asphalt↔dirt`, `dirt↔litter`, `dirt↔scrap`, chained off one shared dirt base tile). Director-directed ("black border in
+  each tile / tiles not aligned"): the H0 tiles had baked-in vignette rings and clashing per-tile texture; the Wang sets give
+  organic seamless seams. `hub_ground.gd` now paints a deterministic RNG-free **vertex map** (terrain at cell corners → Wang
+  tile lookup), and the painted grid grew 24×16 → 36×20 (720 cells) so the 1152×648 camera view is filled with scrap/street
+  instead of black backdrop. fp `e943ac9c8bc1` + 89/89 unmoved. **Claude's recommendation: Reviewed** (reapply to the layout
+  doc + M1_As_Built at close-out). · _Awaiting Director disposition._
+- **[2026-07-01] M1.8 H2 / tile palette — PixelLab output gradient-map retoned to Band-0.** Generated dirt ran hot
+  red-orange and litter came out green-cyan; all three sheets were post-processed (warm hues → rust-brown/dusty-ochre ramp,
+  cool litter hues → gray-rust) per the research-02 §6 grayscale+gradient-map pipeline. Retone script kept with the archived
+  sources in `art_workshop/game_art/hub_redress/`. **Claude's recommendation: Reviewed.** · _Awaiting Director disposition._
+- **[2026-07-01] M1.8 H2 / litter fringe — continuous north litter band → sparse hash-scattered patches.** The dressed
+  layout wants the ground "grubbier and busier" toward the north; the generated litter texture reads as dark shrubbery in
+  large contiguous masses, so H2 ships isolated 1-vertex patches (~2-cell organic blobs, never in the central lane). The
+  "danger gradient" cue is carried by the scrap-wall junk rim instead. **Claude's recommendation: Reviewed** (revisit with
+  litter *props* or a lighter debris texture if the HG3 gate wants the gradient stronger). · _Awaiting Director disposition._
+- **[2026-07-01] M1.8 H2 / wall visuals — ColorRect wall masses REMOVED (supersedes the 2026-06-28 "wall visuals kept"
+  entry above).** The dirt↔scrap Wang border now IS the wall visual (organic junk-pile rim). All four `StaticBody2D`
+  colliders untouched — visuals and bounding are no longer paired 1:1, but the scrap band fully covers every collider
+  footprint. **Claude's recommendation: Reviewed** (disposition together with the superseded entry). · _Awaiting Director
+  disposition._
+- **[2026-07-01] M1.8 H2 / shack — doorway-only → full front-facing building sprite, 176×144 (supersedes the 2026-06-28
+  "doorway-only" entry above).** Director-directed ("objects don't look the proper angles"): the 64×64 corner-iso
+  `shack_door` was smaller than the player; the new straight-on facade (warm windows, sign) restores building scale. Shop
+  remains a separate UI scene — still no open-roof interior. Sign text garbled ("SALANGE") — placeholder-grade, cheap regen
+  later. **Claude's recommendation: Addressed** (fold the front-facade shack into the dressed-layout doc; retire the
+  open-roof open question or re-open it explicitly). · _Awaiting Director disposition._
+- **[2026-07-01] M1.8 H2 / south street edge — NEW low chain-link fence line (5 `fence_strip` sprites) on the S wall
+  collider.** Not in the H1 dressing; makes the invisible south bound read as the yard perimeter (the layout's "low
+  fence/curb"). The `SS` street-exit gap stays unbuilt (H3 deferred, unchanged). **Claude's recommendation: Reviewed.**
+  · _Awaiting Director disposition._
+- **[2026-07-01] M1.8 H2 / object angles — 6 props regenerated for camera-angle consistency** (`dive_gate` front-on into
+  the wall + glow beyond, `car_on_blocks`/`truck_cab` side-view, `freezer`, `cable_spool`, `signpost`); y-sort re-anchored
+  to sprite BASE (position=feet + `offset`), fixing sort-by-center artifacts. 12 props kept as-is where the old angle
+  already read fine. Old `ground_tile_*.png` left on disk (unreferenced; plank tiles reusable). **Claude's recommendation:
+  Reviewed.** · _Awaiting Director disposition._

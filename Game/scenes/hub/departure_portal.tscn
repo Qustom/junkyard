@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" path="res://scenes/hub/departure_portal.gd" id="1"]
 [ext_resource type="Script" path="res://components/interaction/interactable.gd" id="2"]
-[ext_resource type="Texture2D" uid="uid://vipypf7jxjr1" path="res://art/hub/objects/dive_gate.png" id="3"]
-[ext_resource type="Texture2D" uid="uid://cvs8fr4ipg32k" path="res://art/hub/objects/portal_glow.png" id="4"]
+[ext_resource type="Texture2D" path="res://art/hub/objects/dive_gate.png" id="3"]
+[ext_resource type="Texture2D" path="res://art/hub/objects/portal_glow.png" id="4"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_portal"]
 size = Vector2(48, 64)
@@ -15,11 +15,12 @@ script = ExtResource("1")
 
 [node name="PortalGlow" type="Sprite2D" parent="."]
 z_index = -1
-position = Vector2(0, -26)
+position = Vector2(0, -65)
 texture = ExtResource("4")
 
 [node name="DiveGate" type="Sprite2D" parent="."]
-position = Vector2(0, -16)
+position = Vector2(0, -10)
+offset = Vector2(-4, -28)
 texture = ExtResource("3")
 
 [node name="Interactable" type="Area2D" parent="."]
