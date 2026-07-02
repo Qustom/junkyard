@@ -27,8 +27,8 @@ See `CLAUDE.md` → "The orchestrator loop".
 > paths · spawn · zoom). Gate green: import · smoke · fp **`e943ac9c8bc1`** · **89/89** · hub contract (720 cells).
 > Preview: `hub_after2.png` (sent to Director). Worklog `…-H2-hub-redress-orchestrator.md`.
 >
-> **▶ REPUBLISH to itch** (the `m1-20260629-9d613ed` build predates H2): `bash Game/tools/push_itch.sh`
-> (BUTLER=/mnt/c/wsl-libraries/butler/butler). Changelog M1.8 block already updated in place.
+> **✓ REPUBLISHED to itch:** `qusto/the-far-yard:html5 @ m1-20260702-2457bc2` (Chrome/Edge, password-gated:
+> https://qusto.itch.io/the-far-yard). Changelog M1.8 block updated in place. `main`@`2457bc2`.
 >
 > **▶ DIRECTOR PLAYTEST (human-gated).** Play the republished build. Check (HG1 §5 + H2): the ground reads as
 > seamless materials (no tile grid/borders); the spine reads S→N (paved+fenced street → dirt yard → litter patches →

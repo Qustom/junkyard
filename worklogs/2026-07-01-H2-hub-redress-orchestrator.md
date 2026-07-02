@@ -4,7 +4,8 @@
 - **Agent:** orchestrator (Claude, direct — Director `/goal`-directed interactive iteration; PixelLab MCP driven inline)
 - **Milestone:** M1.8 (post-HG1 iteration on the Wave-1 dressing, pre-HG3)
 - **Branch:** art/hub-redress
-- **Commit:** 08c65cbc9e08e59102917a807d02da55700489f6
+- **Commit:** e0e11e7 (branch) → merged `main`@`2457bc2`, pushed
+- **Published:** `qusto/the-far-yard:html5 @ m1-20260702-2457bc2`
 
 ## Director's brief (the `/goal`)
 
@@ -95,7 +96,7 @@ front-on, cars near-isometric, shack a tiny corner-iso building smaller than the
 
 The on-screen look is the point of this task and is untestable headless: seam quality at
 asphalt→dirt and wall bases, litter patch read (debris vs shrub), shack/gate scale vs the
-player, fence line, golden-hour hold. Published to itch for the M1.8 playtest.
+player, fence line, golden-hour hold. Published to itch for the M1.8 playtest: `m1-20260702-2457bc2`.
 
 ## Design deviations
 
