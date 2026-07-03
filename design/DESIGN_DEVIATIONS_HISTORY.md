@@ -484,3 +484,28 @@ Full verdict record: `design/M1_8_Tasks/G4_findings_M1.8.md`. Entries verbatim-s
 **M1.9 Wave-2 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 3 (S3, sole
 `main_game.gd` writer).** Side record: BUG-M13FLAKE filed (pre-existing m13 headless timing flake,
 not an M1.9 regression).
+
+---
+
+## M1.9 Wave-3 close-out (2026-07-03) — 5 entries (S3): 4 Reviewed + 1 Addressed
+
+- **S3/bandgen surface — touched per binding §7.2 Q6(iv) despite the brief's reserve line**
+  (2026-07-03) — **Reviewed** (spec-over-brief; `piece_pool_ext` + pipeline-owned ext-catalog swap
+  had to land with the call-site switch; fp re-verified). **Reapply:** S3 spec close-out amendments.
+- **S3/to_flat_dict — one-level nested `param_overrides` stamp** (2026-07-03) — **Addressed.**
+  Director required the flatness pin absolute: flattened at close-out to dotted rows
+  `param_overrides.<def_id>.<param_key>` → primitive (no base key, zero rows neutral);
+  `_param_override_rows()` replaces `_param_overrides_flat()`; `test_run_config` pin restored
+  absolute + dotted-row assertions; breakdown amendment 10 updated (S4 asserts the dotted shape).
+  Verified: run_config/telemetry-marking/config-menu 89/89/encounter-builder/m12/m14/m15/corridor
+  + smoke green. **Reapply:** S3 spec amendments + breakdown amendment 10.
+- **S3/spec §3.5 case-7 — enable-alone spawns zero (neutral cards)** (2026-07-03) — **Reviewed**
+  (honest behavior asserted; S4 carries the "enabled def, fully-neutral card" trap-warning flag).
+  **Reapply:** S3 spec amendments.
+- **S3/deck-lane ctx enrichment** (2026-07-03) — **Reviewed** (determinism-neutral; enables S7
+  authoring existing hazards into band_two's deck). **Reapply:** S3 spec amendments.
+- **S3/`is_inert()` pre-flight** (2026-07-03) — **Reviewed** (preserves S0's all-off
+  no-service-node contract). **Reapply:** S3 spec amendments.
+
+**M1.9 Wave-3 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 4
+(S4 ∥ S6a ∥ S6b ∥ S7, file-disjoint parallel worktrees).**

@@ -115,25 +115,28 @@ func _ready() -> void:
 		# L5 (M1.5) — per-hazard lethality toggles (default true = M1.4 lethal behaviour).
 		"hpp_kills", "hbomb_kills", "hspike_kills",
 		# S3 (M1.9) — generic opposition levers (@export_storage; SG2 segments def sweeps).
-		"oppositions_enabled", "param_overrides",
+		# param_overrides has NO base key: it stamps as flat dotted rows
+		# "param_overrides.<def_id>.<param_key>" (Wave-3 close-out, Director 2026-07-03).
+		"oppositions_enabled",
 	]
 	for k in expected_keys:
 		if not flat.has(k):
 			failures.append("to_flat_dict() missing knob '%s'" % k)
-	# Flat: no nested Dictionary values — with ONE sanctioned exception (S3, M1.9,
-	# breakdown amendment 10): "param_overrides" is a documented one-level nested stamp
-	# (def_id -> { param_key -> value }, String keys, primitive leaves).
+	# Flat: no nested Dictionary values — ABSOLUTE, no exceptions (Wave-3 close-out:
+	# the former one-level param_overrides nesting was flattened to dotted rows).
 	for k in flat.keys():
-		if flat[k] is Dictionary and k != "param_overrides":
+		if flat[k] is Dictionary:
 			failures.append("to_flat_dict() value for '%s' is nested (must be flat)" % k)
 	# S3 neutrality: an all-off config stamps EMPTY lever values (the levers are
 	# invisible-neutral on the control), and the two levers round-trip through the stamp.
 	if not (flat["oppositions_enabled"] is Array) or not (flat["oppositions_enabled"] as Array).is_empty():
 		failures.append("to_flat_dict() all-off 'oppositions_enabled' is not an empty Array: %s"
 			% str(flat.get("oppositions_enabled")))
-	if not (flat["param_overrides"] is Dictionary) or not (flat["param_overrides"] as Dictionary).is_empty():
-		failures.append("to_flat_dict() all-off 'param_overrides' is not an empty Dictionary: %s"
-			% str(flat.get("param_overrides")))
+	for k in flat.keys():
+		if String(k).begins_with("param_overrides."):
+			failures.append("to_flat_dict() all-off stamped an override row '%s' (must stamp none)" % k)
+	if flat.has("param_overrides"):
+		failures.append("to_flat_dict() still stamps a base 'param_overrides' key (dotted rows only)")
 	var levered := RunConfig.new()
 	levered.oppositions_enabled = [&"spike", &"charger"]
 	levered.param_overrides = { "spike": { "base_count": 2, "rotation_speed": 45.0 } }
@@ -141,9 +144,12 @@ func _ready() -> void:
 	if lever_flat.get("oppositions_enabled") != ["spike", "charger"]:
 		failures.append("to_flat_dict() 'oppositions_enabled' did not stamp as Strings: %s"
 			% str(lever_flat.get("oppositions_enabled")))
-	var po: Variant = lever_flat.get("param_overrides")
-	if not (po is Dictionary) or (po as Dictionary).get("spike", {}).get("base_count", -1) != 2:
-		failures.append("to_flat_dict() 'param_overrides' nested stamp wrong: %s" % str(po))
+	if lever_flat.get("param_overrides.spike.base_count", -1) != 2:
+		failures.append("to_flat_dict() dotted override row 'param_overrides.spike.base_count' wrong: %s"
+			% str(lever_flat.get("param_overrides.spike.base_count")))
+	if lever_flat.get("param_overrides.spike.rotation_speed", -1.0) != 45.0:
+		failures.append("to_flat_dict() dotted override row 'param_overrides.spike.rotation_speed' wrong: %s"
+			% str(lever_flat.get("param_overrides.spike.rotation_speed")))
 	if JSON.parse_string(JSON.stringify(lever_flat)) == null:
 		failures.append("to_flat_dict() with S3 levers set did not survive JSON round-trip")
 	# JSON-safe round-trip: stringify then parse must not error and must preserve keys.

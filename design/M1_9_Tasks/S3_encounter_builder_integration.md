@@ -419,3 +419,24 @@ Spot-verification outcome: the doc is substantially accurate — every P1–P12 
 ---
 
 *Spec authored for M1.9 S3 (Phase-2 fan-out). §6's questions are CLOSED by §7 (Phase-3 fresh-eyes resolution, 2026-07-02, with orchestrator cross-contract adjudications folded in): the implementing agent builds against §6's recommendations as committed decisions, amended by §7.1's corrections C1–C4 and §7.2's Q3 normalization + Q6(iv) supersession. Deviations during the build go to `design/DESIGN_DEVIATIONS.md` for the Wave-3 close-out sweep.*
+
+---
+
+## Wave-3 close-out amendments (as-built, Director-dispositioned 2026-07-03)
+
+- **Bandgen surface touched per binding §7.2 Q6(iv)** (Director: **Reviewed**) — `piece_pool_ext`
+  profile field + pipeline-owned `lvl_enabled` ext-catalog swap landed with the call-site switch
+  (parity test P5/P0 amended to match); swap inert for null `piece_pool_ext`.
+- **`param_overrides` telemetry stamp is FLAT dotted rows** (Director: **Addressed** → flattened at
+  close-out) — `to_flat_dict()` emits `param_overrides.<def_id>.<param_key>` → primitive (no base
+  key; zero rows when neutral); the no-nesting pin is absolute again; breakdown amendment 10 updated;
+  **S4 must assert the dotted shape**.
+- **§3.5 case-7 corrected** (Director: **Reviewed**) — `oppositions_enabled` alone spawns zero (S2's
+  cards are neutral); enabling requires a `param_overrides` count. **S4 flag:** the config-trap
+  generalization should consider warning on "enabled def id with a fully-neutral card".
+- **Deck-lane ctx enrichment stands** (Director: **Reviewed**) — per-piece cell computation + per-kind
+  legacy ctx vocabulary (`initial_dir`/`room_bounds`/`phase_salt`) + `room_key`; determinism-neutral;
+  keeps existing hazards authorable into S7's band_two deck on their locked contract.
+- **`EncounterBuilder.is_inert(profile, rc)` pre-flight stands** (Director: **Reviewed**) — the
+  façade's pre-check is how S0's all-off "no def, no scene, NO service node" contract survives the
+  extraction.

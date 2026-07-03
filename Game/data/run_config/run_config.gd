@@ -474,14 +474,14 @@ func effective_room_count(baseline_count: int) -> int:
 
 ## Serialize every knob to a flat, JSON-safe Dictionary for TEL to snapshot onto
 ## the `run_started` row's `data` (additive payload — NOT a schema bump). Flat by
-## design: keys are the field names, values are JSON primitives (int/float/bool/
-## String/Array of float). TEL wires the call; R0 only provides the method.
-## ONE sanctioned exception (S3, M1.9 — breakdown amendment 10): the
-## "param_overrides" stamp is NESTED one level (def_id -> { param_key -> value },
-## String keys, primitive leaves) because a def sweep is intrinsically
-## two-dimensional; it stays JSON-safe and empty (`{}`) on every neutral config.
+## design — ABSOLUTELY: keys are field names, values are JSON primitives (int/
+## float/bool/String/Array of float); no value is ever a Dictionary. The
+## param_overrides stamp (S3, M1.9 — breakdown amendment 10 as amended at the
+## Wave-3 close-out, Director 2026-07-03) is emitted as FLAT dotted rows
+## "param_overrides.<def_id>.<param_key>" -> primitive; a neutral config emits
+## zero such rows. TEL wires the call; R0 only provides the method.
 func to_flat_dict() -> Dictionary:
-	return {
+	var flat: Dictionary = {
 		# meta
 		"seed_override": seed_override,
 		"build_tag": build_tag,
@@ -594,8 +594,11 @@ func to_flat_dict() -> Dictionary:
 		# S3 (M1.9) — generic opposition levers (additive payload; SG2 segments def
 		# sweeps). Neutral configs stamp an empty Array + empty Dictionary.
 		"oppositions_enabled": _stringname_array_to_strings(oppositions_enabled),
-		"param_overrides": _param_overrides_flat(),
 	}
+	var override_rows: Dictionary = _param_override_rows()
+	for row_key: String in override_rows:
+		flat[row_key] = override_rows[row_key]
+	return flat
 
 
 ## Array[StringName] → plain Array of String so the flat dict stays JSON-portable
@@ -608,20 +611,18 @@ func _stringname_array_to_strings(names: Array[StringName]) -> Array:
 	return out
 
 
-## param_overrides → the JSON-safe nested stamp (the ONE sanctioned nested
-## to_flat_dict() value — see the docstring): String def-id keys, one level of
-## { param_key -> primitive } beneath. Non-Dictionary entries are dropped (a
-## malformed override is a config-authoring error, not a telemetry crash).
-func _param_overrides_flat() -> Dictionary:
+## param_overrides → FLAT dotted stamp rows ("param_overrides.<def_id>.<param_key>"
+## -> primitive value), keeping to_flat_dict() nesting-free (Wave-3 close-out,
+## Director Addressed 2026-07-03). Non-Dictionary entries are dropped (a malformed
+## override is a config-authoring error, not a telemetry crash).
+func _param_override_rows() -> Dictionary:
 	var out: Dictionary = {}
 	for def_id: Variant in param_overrides:
 		var entry: Variant = param_overrides[def_id]
 		if not (entry is Dictionary):
 			continue
-		var flat_entry: Dictionary = {}
 		for k: Variant in (entry as Dictionary):
-			flat_entry[String(k)] = (entry as Dictionary)[k]
-		out[String(def_id)] = flat_entry
+			out["param_overrides.%s.%s" % [String(def_id), String(k)]] = (entry as Dictionary)[k]
 	return out
 
 
