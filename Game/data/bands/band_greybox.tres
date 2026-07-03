@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="BandProfile" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://data/bands/band_profile.gd" id="1"]
+[ext_resource type="Resource" path="res://data/bandgen_config.tres" id="2"]
+[ext_resource type="Resource" path="res://data/piece_catalog.tres" id="3"]
+[ext_resource type="Resource" path="res://systems/depth/depth_curve.tres" id="4"]
+[ext_resource type="Resource" path="res://data/junk/junk_catalog.tres" id="5"]
+
+[resource]
+script = ExtResource("1")
+id = &"band_greybox"
+display_name = "The Near Yard (greybox)"
+backend = "socket"
+backend_config = ExtResource("2")
+archetype = "linear"
+archetype_params = {}
+piece_pool = ExtResource("3")
+principles = Array[Resource]([])
+flavors = Array[Resource]([])
+depth_curve = ExtResource("4")
+junk_catalog = ExtResource("5")
+opposition_deck = Array[Resource]([])
+band_depth = 1
+palette_tint = Color(1, 1, 1, 1)
