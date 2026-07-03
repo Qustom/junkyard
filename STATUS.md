@@ -9,10 +9,10 @@ See `CLAUDE.md` → "The orchestrator loop".
 **Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Waves 1–2 DONE + swept (close-outs archived); Wave 3 (S3) IN PROGRESS (dispatched).** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
 **Last updated:** 2026-07-03 (Wave-2 close-out: 8 deviations dispositioned 7 Reviewed + 1 Addressed (run-clock seam → typed injected Callable, fixed + re-verified) — reapplied (S2/S5 spec amendment sections; S5 §2.2 in place) + archived. `DESIGN_DEVIATIONS.md` empty. m13 flake = pre-existing, BUG-M13FLAKE filed. Wave 3 dispatched: S3 → general-purpose (EncounterBuilder + RunConfig levers + both call-site switches; sole `main_game.gd` writer).)
 
-## In progress
-| Task | Since | Agent(s) | Milestone | Note |
-|---|---|---|---|---|
-| S3 — EncounterBuilder + RunConfig generic levers + both call-site integrations | 2026-07-03 | general-purpose | M1.9 (Wave 3) | Branch `general-purpose/S3`. Sole `main_game.gd` writer. `@export_storage` levers (89 holds); fp byte-identical THROUGH the new call sites; preset cohort parity; `test_encounter_builder`. |
+## Wave 3 — Done (2026-07-03)
+| Task | Agent | Merged | Proof |
+|---|---|---|---|
+| S3 — EncounterBuilder + RunConfig generic levers + both call-site integrations | general-purpose | `d9f5377` (branch `general-purpose/S3`) | Worklog `worklogs/2026-07-03-S3-general-purpose.md`; integrated matrix 23 tests + smoke ALL green (incl. m13 first-run); fp `e943ac9c8bc1` through the new call sites; preset cohort byte-parity; 89/89 held (`@export_storage` levers invisible); 91 knobs stamped. 5 deviations logged — sweep next. |
 
 ## Wave 2 — Done (2026-07-03)
 | Task | Agent | Merged | Proof |
