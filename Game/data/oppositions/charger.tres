@@ -1,0 +1,121 @@
+[gd_resource type="Resource" script_class="OppositionDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/oppositions/opposition_def.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/charger.tscn" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"charger"
+display_name = "The Wrecker"
+archetype = "actor"
+host_scene = ExtResource("2")
+credit_cost = 2
+spawn_weight = 1.0
+min_band = 2
+cap_group = &"new_hazards"
+per_room_cap = 1
+per_band_cap = 4
+params = {
+"aggro_range": 160.0,
+"base_count": 1,
+"charge_max_dist": 220.0,
+"charge_speed": 520.0,
+"cooldown_s": 0.6,
+"count_per_depth": 0.0,
+"kills": true,
+"lane_width": 28.0,
+"lock_at_telegraph_start": true,
+"recover_s": 1.2,
+"telegraph_s": 0.5,
+"throwable_while_charging": true,
+"wall_crash_recover_mult": 1.0
+}
+param_schema = Array[Dictionary]([{
+"default": 1,
+"gloss": "CFG_FIELD_CHARGER_BASE_COUNT",
+"key": "base_count",
+"max": 10,
+"min": 0,
+"type": "int"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_CHARGER_COUNT_PER_DEPTH",
+"key": "count_per_depth",
+"max": 5.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 160.0,
+"gloss": "CFG_FIELD_CHARGER_AGGRO_RANGE",
+"key": "aggro_range",
+"max": 400.0,
+"min": 32.0,
+"type": "float"
+}, {
+"default": 0.5,
+"gloss": "CFG_FIELD_CHARGER_TELEGRAPH_S",
+"key": "telegraph_s",
+"max": 1.5,
+"min": 0.2,
+"type": "float"
+}, {
+"default": 520.0,
+"gloss": "CFG_FIELD_CHARGER_CHARGE_SPEED",
+"key": "charge_speed",
+"max": 900.0,
+"min": 200.0,
+"trap_if_neutral": true,
+"type": "float"
+}, {
+"default": 220.0,
+"gloss": "CFG_FIELD_CHARGER_CHARGE_MAX_DIST",
+"key": "charge_max_dist",
+"max": 600.0,
+"min": 48.0,
+"type": "float"
+}, {
+"default": 1.2,
+"gloss": "CFG_FIELD_CHARGER_RECOVER_S",
+"key": "recover_s",
+"max": 3.0,
+"min": 0.4,
+"type": "float"
+}, {
+"default": 0.6,
+"gloss": "CFG_FIELD_CHARGER_COOLDOWN_S",
+"key": "cooldown_s",
+"max": 3.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 28.0,
+"gloss": "CFG_FIELD_CHARGER_LANE_WIDTH",
+"key": "lane_width",
+"max": 64.0,
+"min": 16.0,
+"type": "float"
+}, {
+"default": true,
+"gloss": "CFG_FIELD_CHARGER_LOCK_AT_TELEGRAPH_START",
+"key": "lock_at_telegraph_start",
+"type": "bool"
+}, {
+"default": true,
+"gloss": "CFG_FIELD_CHARGER_THROWABLE_WHILE_CHARGING",
+"key": "throwable_while_charging",
+"type": "bool"
+}, {
+"default": 1.0,
+"gloss": "CFG_FIELD_CHARGER_WALL_CRASH_RECOVER_MULT",
+"key": "wall_crash_recover_mult",
+"max": 4.0,
+"min": 1.0,
+"type": "float"
+}, {
+"default": true,
+"gloss": "CFG_FIELD_CHARGER_KILLS",
+"key": "kills",
+"type": "bool"
+}])
+lethality = "lethal"
+kills = true
