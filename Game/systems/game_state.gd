@@ -89,6 +89,15 @@ var _staged_run_config: RunConfig
 # director knob, not meta the player owns). null → the dive uses make_default_play_preset()
 # (the existing main_game.gd:223 fallback), so the dive is fully playable before M4 lands.
 var _dive_config: RunConfig
+# M1.9 (S0 pre-declare, S8 §3 seam): the staged dive ROUTING key. GameState
+# self-subscribes to EventBus.dive_requested and stages the emitted band_id here so
+# the choice survives the router's hub→dive scene swap (a signal is an event, not
+# storage — main_game._ready fires after the emission is history). Run-staging, NOT
+# meta, never persisted; consumed-on-read via consume_pending_dive_band() (mirrors
+# _staged_run_config) so a stale choice can never leak into a later run. &"" =
+# nothing staged (callers treat it as "default band"). INERT until S3 wires
+# main_game to consume it — nothing reads this slot in Waves 1–2.
+var _pending_dive_band: StringName = &""
 # E3 #122: single "run is ending" idempotency guard. extract_and_end_run() and
 # fail_run() are the two outcomes of one event; the first to resolve sets this and
 # any later caller early-returns, so a same-frame extract+timeout tie can't double-
@@ -119,6 +128,10 @@ func _ready() -> void:
 	EventBus.player_died.connect(_on_player_died)
 	# E3: clock timeout is a FAILED run — route it through the shared fail path.
 	EventBus.dive_clock_timeout.connect(_on_dive_clock_timeout)
+	# M1.9 (S0/S8): stage the dive routing key on every dive request (see
+	# _pending_dive_band above). The portal stays dumb (it only announces); the
+	# router stays truth-free; GameState is the carrier across the scene swap.
+	EventBus.dive_requested.connect(_on_dive_requested)
 	run_rules = load(RUN_RULES_PATH) as RunRules
 	if run_rules == null:
 		push_warning("RunRules missing at %s; using code defaults (0.20 / highest_value)." % RUN_RULES_PATH)
@@ -200,6 +213,20 @@ func dive_config_or_default() -> RunConfig:
 	if _dive_config != null:
 		return _dive_config
 	return RunConfig.make_default_play_preset()
+
+# --- M1.9 (S0/S8): dive band routing staging seam ------------------------------
+## Handler for EventBus.dive_requested — stage the routing key for the upcoming dive.
+func _on_dive_requested(band_id: StringName) -> void:
+	_pending_dive_band = band_id
+
+## M1.9 (S0 pre-declare; S3 consumes): return the staged dive routing key and CLEAR
+## it (consume-on-read, mirroring _staged_run_config) so a later run can never
+## inherit a stale choice. &"" = nothing staged — callers treat that as "the default
+## band" (band_greybox). Inert until S3 wires main_game's profile resolution to it.
+func consume_pending_dive_band() -> StringName:
+	var key := _pending_dive_band
+	_pending_dive_band = &""
+	return key
 
 ## D1: construct a fresh run-state bag, reading max_slots once from the authored
 ## InventoryConfig. The capacity *value* is config-derived; the live bag stays
