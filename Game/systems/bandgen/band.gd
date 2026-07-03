@@ -60,3 +60,29 @@ func fingerprint() -> String:
 	for p in pieces:
 		parts.append("%s@%s#%d" % [p.piece_id, p.offset_cell, p.mated_socket_index])
 	return "|".join(parts).sha256_text()
+
+
+## Wear-aware SUPPLEMENTARY determinism bar (M1.9 S5, spec §6.1 + §10 A1):
+## sha256 of the band-global floor cells sorted (y, x). Exists because
+## fingerprint() hashes the piece list only and is blind to WearDecay's
+## floor/wall mutation.
+##
+## This is NOT the layout-control fingerprint — it must never replace
+## fingerprint() in any control/parity assertion (fingerprint() stays the
+## pinned bar of test_bandgen_determinism / test_band_pipeline_parity; this
+## method is asserted only by the flavor tests). Computed from floor_cells —
+## the pre-seal walkable truth — so it is stable whether called before or
+## after the materialisation seal (the sealer never touches floor_cells).
+func floor_fingerprint() -> String:
+	var cells: Array[Vector2i] = []
+	for p in pieces:
+		for c in p.floor_cells:
+			cells.append(c)
+	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		if a.y != b.y:
+			return a.y < b.y
+		return a.x < b.x)
+	var parts := PackedStringArray()
+	for c in cells:
+		parts.append("%d,%d" % [c.x, c.y])
+	return "|".join(parts).sha256_text()
