@@ -1,0 +1,101 @@
+[gd_resource type="Resource" script_class="OppositionDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/oppositions/opposition_def.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/splitter_child.tscn" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"splitter_child"
+display_name = "Fault-shard"
+archetype = "actor"
+host_scene = ExtResource("2")
+credit_cost = 0
+spawn_weight = 1.0
+min_band = 2
+cap_group = &"new_hazards"
+per_room_cap = 2
+per_band_cap = 8
+params = {
+"base_count": 0,
+"catch_radius": 20.0,
+"child_count": 2,
+"child_despawn_s": 0.0,
+"child_speed_mult": 1.6,
+"child_spread": 24.0,
+"count_per_depth": 0.0,
+"generations": 0,
+"move_speed": 88.0,
+"split_on": 0
+}
+param_schema = Array[Dictionary]([{
+"default": 0,
+"gloss": "CFG_GLOSS_SPLITTER_BASE_COUNT",
+"key": "base_count",
+"max": 10,
+"min": 0,
+"type": "int"
+}, {
+"default": 0.0,
+"gloss": "CFG_GLOSS_SPLITTER_COUNT_PER_DEPTH",
+"key": "count_per_depth",
+"max": 5.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 88.0,
+"gloss": "CFG_GLOSS_SPLITTER_SPEED",
+"key": "move_speed",
+"max": 200.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 20.0,
+"gloss": "CFG_GLOSS_SPLITTER_CATCH",
+"key": "catch_radius",
+"max": 64.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 2,
+"gloss": "CFG_GLOSS_SPLITTER_CHILDREN",
+"key": "child_count",
+"max": 4,
+"min": 0,
+"type": "int"
+}, {
+"default": 1.6,
+"gloss": "CFG_GLOSS_SPLITTER_CHILDSPEED",
+"key": "child_speed_mult",
+"max": 3.0,
+"min": 0.5,
+"type": "float"
+}, {
+"default": 0,
+"gloss": "CFG_GLOSS_SPLITTER_GENERATIONS",
+"key": "generations",
+"max": 3,
+"min": 0,
+"type": "int"
+}, {
+"default": 0,
+"gloss": "CFG_GLOSS_SPLITTER_SPLITON",
+"key": "split_on",
+"options": ["throw_death", "any_death"],
+"type": "enum"
+}, {
+"default": 24.0,
+"gloss": "CFG_GLOSS_SPLITTER_SPREAD",
+"key": "child_spread",
+"max": 96.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_GLOSS_SPLITTER_DESPAWN",
+"key": "child_despawn_s",
+"max": 60.0,
+"min": 0.0,
+"type": "float"
+}])
+lethality = "lethal"
+kills = true
