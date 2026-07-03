@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://b5dencbuilder003"]
+
+[ext_resource type="Script" path="res://tests/test_encounter_builder.gd" id="1"]
+
+[node name="TestEncounterBuilder" type="Node"]
+script = ExtResource("1")

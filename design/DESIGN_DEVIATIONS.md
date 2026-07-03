@@ -23,3 +23,49 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 `DESIGN_DEVIATIONS_HISTORY.md`.*
 
 ---
+
+[2026-07-03] **S3 / bandgen surface** — S3 touched `systems/bandgen/band_pipeline.gd`,
+`data/bands/band_profile.gd`, `data/bands/band_greybox.tres`, and `tests/test_band_pipeline_parity.gd`,
+which the dispatch brief's must-not-touch line reserved. · The spec's **binding** §7.2 Q6(iv)
+(orchestrator-adjudicated, superseding §2.4(ii)'s call-site fallback) directs exactly this: the
+optional `piece_pool_ext: PieceCatalog` profile field + the pipeline's `rc.lvl_enabled` swap land
+WITH S3's call-site switch — without it the preset (lvl-on) band would generate off the baseline
+catalog (a layout/parity break `test_rg1_m13_verify` runs on). The parity test's P5 lvl case had to
+follow (its direct-path comparison now generates against the ext catalog, since the swap is
+pipeline-owned; P0 gains the piece_pool_ext same-object identity check). All-off fp e943ac9c8bc1
+re-verified byte-identical; the swap is inert for null-`piece_pool_ext` profiles. ·
+**Recommendation: Reviewed** (spec-over-brief conflict resolved in the spec's favor, as the brief
+itself says "the spec is authoritative").
+
+[2026-07-03] **S3 / test_run_config flatness pin** — `test_run_config.gd`'s "no nested Dictionary
+values in `to_flat_dict()`" assertion gained ONE sanctioned exception: `"param_overrides"` (plus
+coverage of the two new lever keys + neutrality/round-trip). · Breakdown amendment 10 makes the
+nested `param_overrides` stamp (def_id → {param → value}, String keys, primitive leaves) canonical —
+a def sweep is intrinsically two-dimensional; the `to_flat_dict()` docstring was amended in the same
+change. Still JSON-safe; `{}` on every neutral config. · **Recommendation: Reviewed.**
+
+[2026-07-03] **S3 / spec §3.5 case-7 expectation corrected** — `oppositions_enabled = [&"spike"]`
+alone spawns ZERO instances (the spec sketch said "spawns via its authored card"). · S2 authored
+every def's spawn card NEUTRAL (params mirror `RunConfig.new()` all-off defaults), so the enable-list
+engages the deck machinery but n = base 0 + 0·depth = 0. `test_encounter_builder` case 7 asserts the
+honest behavior: enable-list + `param_overrides` (e.g. `{"spike": {"base_count": 1}}`) spawns, and
+the override is visible in the ctx merge. · **Recommendation: Reviewed** — and flag to S4: the
+config-trap generalization should consider warning on "enabled def id with a fully-neutral card"
+(the R-opposition BUG6 analogue).
+
+[2026-07-03] **S3 / deck-lane ctx enrichment vs the §3.1 sketch** — the deck lane computes
+cells/bounds once per PIECE (def-independent; the sketch recomputed per def) and its spawn ctx
+carries, beyond the sketch's merged-params: the per-kind legacy ctx vocabulary (`initial_dir`/
+`room_bounds`/`phase_salt`, keyed on a lane-local accumulator) plus the S0-reserved `room_key`. ·
+Determinism-neutral (both are pure reorderings/additions with no RNG and no legacy-lane effect);
+the kind ctx keeps known hazards authored into future decks (S7 authors existing hazards INTO
+band_two) on their locked entity contract instead of a dead seam; `room_key` lets the service's
+per-room cap tier actually bind for deck defs that author `per_room_cap > 0`. ·
+**Recommendation: Reviewed** (S7 should confirm the deck-lane ctx suffices for band_two's deck).
+
+[2026-07-03] **S3 / façade `is_inert()` pre-check (additive builder API)** — `_spawn_new_hazards`
+asks `EncounterBuilder.is_inert(profile, rc)` before `_ensure_spawn_service()`. · Preserves S0's
+all-off contract ("no def, no scene, NO service node") through the extraction: `populate()` alone
+would arm the service before discovering the empty plan. Load-free on the all-off path (deck/extras
+emptiness tests + the legacy adapter, which only loads defs for enabled+non-neutral types). ·
+**Recommendation: Reviewed.**

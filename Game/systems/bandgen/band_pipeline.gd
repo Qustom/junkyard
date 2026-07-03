@@ -68,7 +68,15 @@ func generate(profile: BandProfile, seed: int, rc: RunConfig = null) -> Band:
 	# the exact same draw sites as today (band_generator.gd:308-329). Same
 	# args, same retry loop, same _derive_seed chain, same RNG reseed.
 	var cfg := profile.backend_config as BandGenConfig
+	# I1 catalog swap (S3, §7.2 Q6(iv) / S1 §10.1 Q3): lvl_enabled + an authored
+	# piece_pool_ext swaps in the extended pool — the exact config-dependent swap the
+	# main_game call site used to do (Resolved G), relocated here so the profile fully
+	# owns generation content. lvl off / ext absent → piece_pool (the all-off fp and
+	# every ext-less profile are byte-untouched).
 	var catalog: Array[ZonePieceData] = profile.piece_pool.pieces
+	if rc != null and rc.lvl_enabled and profile.piece_pool_ext != null \
+			and not profile.piece_pool_ext.pieces.is_empty():
+		catalog = profile.piece_pool_ext.pieces
 	var band := BandGenerator.new().generate(seed, cfg, catalog, rc)
 	if band == null or band.pieces.is_empty():
 		push_error("BandPipeline: generation produced no pieces (profile '%s', seed %d)"

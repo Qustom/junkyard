@@ -21,6 +21,10 @@ extends Node
 const PROFILE_PATH := "res://data/bands/band_greybox.tres"
 const CONFIG_PATH := "res://data/bandgen_config.tres"
 const CATALOG_PATH := "res://data/piece_catalog.tres"
+## M1.9 (S3, §7.2 Q6(iv)): the lvl_enabled ext-catalog swap moved INTO the pipeline
+## (profile.piece_pool_ext) — P5's lvl case compares against the direct path on the
+## SAME extended catalog, exactly as the old main_game call-site swap did.
+const CATALOG_EXT_PATH := "res://data/piece_catalog_ext.tres"
 const CURVE_PATH := "res://systems/depth/depth_curve.tres"
 const JUNK_CATALOG_PATH := "res://data/junk/junk_catalog.tres"
 
@@ -173,6 +177,9 @@ func _check_profile_contract(profile: BandProfile, failures: Array[String]) -> v
 		failures.append("P0: backend_config is NOT the live bandgen_config.tres object")
 	if profile.piece_pool != load(CATALOG_PATH):
 		failures.append("P0: piece_pool is NOT the live piece_catalog.tres object")
+	# M1.9 (S3): the profile now carries the I1 extended pool for the lvl swap.
+	if profile.piece_pool_ext != load(CATALOG_EXT_PATH):
+		failures.append("P0: piece_pool_ext is NOT the live piece_catalog_ext.tres object")
 	if profile.depth_curve != load(CURVE_PATH):
 		failures.append("P0: depth_curve is NOT the live depth_curve.tres object")
 	if profile.junk_catalog != load(JUNK_CATALOG_PATH):
@@ -192,9 +199,13 @@ func _run_rc_passthrough_checks(gen: BandGenerator, pipe: BandPipeline,
 	r4_on.r4_max_branch_depth = 8
 
 	# lvl room-count override → the generator's effective_room_count hook.
+	# M1.9 (S3, §7.2 Q6(iv)): lvl_enabled ALSO swaps the pipeline onto
+	# profile.piece_pool_ext, so the direct comparison generates against the same
+	# extended catalog (the old main_game.gd:205-207 swap, now pipeline-owned).
 	var lvl_on := RunConfig.new()
 	lvl_on.lvl_enabled = true
 	lvl_on.lvl_room_count = 8
+	var catalog_ext: Array[ZonePieceData] = (load(CATALOG_EXT_PATH) as PieceCatalog).pieces
 
 	var any_r4_differs := false
 	for seed in SEEDS:
@@ -209,7 +220,7 @@ func _run_rc_passthrough_checks(gen: BandGenerator, pipe: BandPipeline,
 		_free_band(piped_r4)
 		_free_band(baseline)
 
-		var direct_lvl := gen.generate(seed, cfg, catalog, lvl_on)
+		var direct_lvl := gen.generate(seed, cfg, catalog_ext, lvl_on)
 		var piped_lvl := pipe.generate(profile, seed, lvl_on)
 		if piped_lvl == null or direct_lvl.fingerprint() != piped_lvl.fingerprint():
 			failures.append("P5 seed %d: lvl room-count pipeline fp != direct fp" % seed)

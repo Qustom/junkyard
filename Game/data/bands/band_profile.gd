@@ -38,6 +38,13 @@ extends Resource
 
 # --- Content the backend draws from ---------------------------------------
 @export var piece_pool: PieceCatalog = null   # the biome's dedicated pieces
+## OPTIONAL extended pool for the I1 lvl_enabled catalog swap (S3, per S1 §10.1 Q3 /
+## S3 §7.2 Q6(iv)): when a RunConfig with lvl_enabled reaches the pipeline AND this is
+## set (non-null, non-empty), it REPLACES piece_pool for that run — the exact
+## config-dependent swap main_game.gd used to do at the call site (Resolved G), so
+## adding pieces never moves the all-off baseline fingerprint. Null = no swap (lvl-on
+## runs use piece_pool — the old "ext catalog absent" fallback).
+@export var piece_pool_ext: PieceCatalog = null
 
 # --- ORGANIZING PRINCIPLES / FLAVOR passes (ordered stage lists) -----------
 ## Empty in every Phase-A profile. S5 defines the stage Resource contract
