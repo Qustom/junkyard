@@ -160,25 +160,12 @@ stay (dual-emit) through the gate; single-writer-per-file per wave (`main_game.g
 
 ---
 
-## M1.8 — Hub Art Dressing (build DONE; HG2/HG3 Director-pending, non-blocking)
+## M1.8 — Hub Art Dressing — ✓ CLOSED 2026-07-02 (Director)
 
-Shed the Hub's greybox skin for the placeholder **Layout-A vertical-spine** salvage-yard art
-(`art_workshop/map_layouts/`), loop-behaviour unchanged. Breakdown: `design/M1_8_Tasks/M1.8_Breakdown.md`.
-**Contracts:** all-off fp `e943ac9c8bc1` + 89/89 held (no knob); no save change; portal/shop
-`Interactable` ids + collision + `hub.gd` node paths + wall-bounding invariant; **copy, never move** from
-`art_workshop/`. M1.7's RG2/RG3 stay non-blocking.
-
-**Build tasks all DONE + archived → `TASKS_COMPLETED.md`** (H0 `33f67d5` · H1 `81a3c13` · H2 re-dress ·
-H4 iso re-dress · HG1 published `m1-20260629-9d613ed`, then republished through `m1-20260702-3faeed0`).
-Open here: H3 (deferred) + HG2/HG3 (Director-pending).
-
-### H3 — Street-exit threshold prop (PixelLab) — **DEFERRED (Director-gated, paid credits)**
-- Milestone: M1.8   Assignee: environment-artist   BlockedBy: Director OK
-- The one missing spec prop (`SS`); not loop-critical (no functional street exit yet). Generate only on explicit Director go.
-
-### HG2 — M1.8 readability check + HG3 — verdict (Director)
-- Milestone: M1.8 (Wave 2)   Assignee: qa (assembles) → Director (decides)   BlockedBy: HG1 + human playtest
-- Record go/iterate/pivot in `design/M1_8_Tasks/G4_findings_M1.8.md`.
+Build + HG1 published (final `m1-20260702-3faeed0`, 45° iso hub retained; H2 top-down = revert path). HG2
+short-circuited by direct Director review; verdict + watch-items: `design/M1_8_Tasks/G4_findings_M1.8.md`.
+17 deviations dispositioned (15 Reviewed + 2 Addressed) + archived. Tasks archived → `TASKS_COMPLETED.md`.
+H3 (street-threshold prop) carried to the follow-ups section below.
 
 ---
 
@@ -217,6 +204,10 @@ Open here: RG2/RG3 (Director-pending, non-blocking).
 ## M1 follow-ups (deferred tech-debt — non-blocking, backlog)
 
 From the M1 wave-5 close-out (`DESIGN_DEVIATIONS_HISTORY.md` §"M1 wave 5"). Neither blocks M1.2; pick up opportunistically.
+
+### H3 — Street-exit threshold prop (PixelLab) — **DEFERRED (Director-gated, paid credits)** *(carried from M1.8, closed 2026-07-02)*
+- Milestone: M1.8 (follow-up)   Assignee: environment-artist   BlockedBy: Director OK
+- The one missing Layout-A spec prop (`SS`); not loop-critical (no functional street exit yet). Generate only on explicit Director go. Watch-item context: `design/M1_8_Tasks/G4_findings_M1.8.md`.
 
 ### FU1 — GdUnit4 `test_jsonl_writer`
 - Milestone: M1 (follow-up)   Assignee: qa-playtest-coordinator   BlockedBy: none

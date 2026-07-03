@@ -396,3 +396,15 @@ rider** — the chosen default is correct, but expose it as a tunable so it can 
 
 Both remain **RG-watch items** for the RG1 Director playtest (felt-cost of rooting in a tense extract); the configurability is the
 agreed hedge so tuning is a one-line export change, not a redesign. Walk-cadence FPS ratified at **10 fps for RG1** (revisit at RG2).
+
+---
+
+## As-built amendment (M1.8 close-out, 2026-07-02 — deviation PLAYERTAB, Director: Addressed)
+
+The ratified shared lock knobs `lock_duration_cap_s` (0.4) + `fixed_lock_s` (0.18) were **replaced
+post-N1 by per-action knobs** `pickup_lock_s` (0.25) + `throw_lock_s` (0.30) (Director-directed, commit
+`bb1976a`), tunable live from the debug-menu **Player tab** alongside lock-on-pickup / animate-on-reject /
+lock-mode. **CLIP_DRIVEN (the shipped default) is byte-for-byte unchanged** (caps ≥ clip lengths →
+non-binding); only non-default FIXED-mode durations differ. These per-action knobs are the canonical
+as-built timing model; this section supersedes the shared-knob text above. fp `e943ac9c8bc1` + knob-count
+contracts held (controls are debug-only, outside the MANIFEST).

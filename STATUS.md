@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02, opened ahead of M1.8's HG3 verdict, which stays pending/non-blocking) — **design LOCKED, Phase 4 wired. ▶ Next: dispatch build Wave 1 (S0 ∥ S1).** *(M1.8 HG2/HG3 + 13-deviation close-out and M1.7/M1.6 RG2/RG3 stay Director-pending, non-blocking.)*
-**Last updated:** 2026-07-02 (M1.9 four-phase authoring complete: breakdown + 10 fresh-eyes-resolved designs + cross-task adjudications + Director ratifications D-RAT-1..4 — The Sump, hazard bundle, band tuning, tint-only. TASKS.md + board + STATUS wired; stale M1.2–M1.8 status sections swept → `STATUS_ARCHIVE.md`.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **design LOCKED, Phase 4 wired, workspace clean. ▶ Next: dispatch build Wave 1 (S0 ∥ S1).** *(M1.8 CLOSED 2026-07-02 — verdict + 17-deviation close-out in `design/M1_8_Tasks/G4_findings_M1.8.md`; only M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
+**Last updated:** 2026-07-02 (M1.8 closed out: 17 deviations dispositioned 15 Reviewed + 2 Addressed, reapplied (N1 amendment · layout-doc as-built · breakdown count) + archived; iso hub retained, H2 top-down = revert path; `hub_ground_iso.tres` uid normalization committed (import+smoke green) — working tree clean. Earlier: M1.9 four-phase authoring complete, D-RAT-1..4 ratified, TASKS/board/STATUS wired.)
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
@@ -33,39 +33,17 @@ See `CLAUDE.md` → "The orchestrator loop".
 > SG3). **Wave close-out deviation sweep after every wave.** Key contracts: all-off fp `e943ac9c8bc1` byte-identical
 > at every boundary; bandgen determinism through the pipeline; 89→91 knob model at S4; no save change; no PixelLab.
 >
-> **⚠ M1.8 close-out still open (non-blocking, carried):** 13 deviations in `design/DESIGN_DEVIATIONS.md` await
-> Director disposition at the HG3 close-out; the H4 iso build's Director playtest + HG2/HG3 verdict are pending.
-> **⚠ Working-tree note:** `Game/data/tilesets/hub_ground_iso.tres` carries an uncommitted local modification of
-> unknown origin (predates the M1.9 session) — surfaced to the Director 2026-07-02; do not commit it blindly.
+> **✓ M1.8 CLOSED (2026-07-02)** — nothing carried into the build waves; `DESIGN_DEVIATIONS.md` is empty.
 
 ---
 
-## (M1.8 — pending Director playtest; superseded as current milestone by M1.9) republish H2 → DIRECTOR PLAYTEST → HG2 → HG3
+## ✓ M1.8 — Hub Art Dressing — CLOSED 2026-07-02 (Director)
 
-> **✓ H2 HUB RE-DRESS DONE (2026-07-01, Director-directed `/goal`).** Ground re-authored as 3 chained PixelLab
-> corner-Wang tilesets (asphalt↔dirt↔litter↔scrap, gradient-map retoned to Band-0) painted by a **vertex-map**
-> `hub_ground.gd` (RNG-free, 36×20 = 720 cells — fills the camera view, no black backdrop); 6 props regenerated
-> angle-consistent (gate front-on INTO the north wall, cars side-view, + NEW 176×144 front-facade shack, NEW south
-> fence line); all props y-sort by BASE now (position=feet + offset). Contracts invariant (ids · collision · node
-> paths · spawn · zoom). Gate green: import · smoke · fp **`e943ac9c8bc1`** · **89/89** · hub contract (720 cells).
-> Preview: `hub_after2.png` (sent to Director). Worklog `…-H2-hub-redress-orchestrator.md`.
->
-> **✓ REPUBLISHED to itch:** `qusto/the-far-yard:html5 @ m1-20260702-2457bc2` (Chrome/Edge, password-gated:
-> https://qusto.itch.io/the-far-yard). Changelog M1.8 block updated in place. `main`@`2457bc2`.
->
-> **▶ DIRECTOR PLAYTEST (human-gated).** Play the republished build. Check (HG1 §5 + H2): the ground reads as
-> seamless materials (no tile grid/borders); the spine reads S→N (paved+fenced street → dirt yard → litter patches →
-> scrap wall); the central spawn→shop→gate lane stays clear; the office-shack + gate-in-wall read as functional vs.
-> dressing; **object angles feel consistent with the player**; golden-hour holds; **the loop plays identically**
-> (walk → shop sell/buy → dive → return); toggling the M1.7 **player art ON** (P → Player tab) still y-sorts among
-> props. Export telemetry (in-game button on web).
->
-> Then **HG2** (qa readability/telemetry) → **HG3** verdict (go → next milestone / iterate → M1.9 / pivot) in
-> `design/M1_8_Tasks/G4_findings_M1.8.md`. Claude assembles + recommends; the Director plays + decides.
->
-> **⚠ Close-out still open:** 13 deviations in `design/DESIGN_DEVIATIONS.md` — 5 Wave-1 (all recommend Reviewed; the
-> "walls kept as ColorRects" + "doorway-only shack" entries are now SUPERSEDED by H2) + carried PLAYERTAB (→ Addressed)
-> + 7 new H2 entries (6 recommend Reviewed, shack → Addressed) — all await Director disposition at the HG3 close-out.
+> Build + HG1 done + published (final build `m1-20260702-3faeed0`, iso hub). The formal HG2 was
+> short-circuited by direct Director review; verdict + watch-items (iso prop re-dress · bounds/street
+> cue · H3 deferred) recorded in **`design/M1_8_Tasks/G4_findings_M1.8.md`**. 17 deviations
+> dispositioned (15 Reviewed + 2 Addressed), reapplied + archived → `DESIGN_DEVIATIONS_HISTORY.md`.
+> Tasks archived → `TASKS_COMPLETED.md` §M1.8. H2 top-down dressing stays the one-swap revert path.
 
 ---
 

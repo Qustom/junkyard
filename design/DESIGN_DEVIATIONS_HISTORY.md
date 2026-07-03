@@ -392,3 +392,45 @@ itch publish + changelog.**
   in `TASKS.md` backlog. Non-blocking.
 
 **M1.6 Wave 2 close-out complete.** `DESIGN_DEVIATIONS.md` empty between waves. **Next: Wave 3 — M3 (Hub shop sell+buy + META v3→v4).**
+
+---
+
+## M1.8 close-out (2026-07-02) — 17 entries dispositioned (Director reviewed in-session): 15 Reviewed + 2 Addressed
+
+Full verdict record: `design/M1_8_Tasks/G4_findings_M1.8.md`. Entries verbatim-summarized from the active log:
+
+- **PLAYERTAB / player_visual.gd timing model** (2026-06-28) — shared `lock_duration_cap_s`/`fixed_lock_s` → per-action
+  `pickup_lock_s` (0.25) / `throw_lock_s` (0.30), Director-directed. **Addressed.** **Reapply:** as-built amendment appended to
+  `design/M1_7_Tasks/N1_player_visual_state_machine.md` (per-action knobs canonical; CLIP_DRIVEN default byte-unchanged).
+- **H1 shack doorway-only** (2026-06-28) — **Reviewed** (superseded by the H2 front-facade entry below; open-roof question retired).
+- **H1 HubCamera.zoom 1.2 → 1.05** (2026-06-28) — **Reviewed** (render-time framing; later superseded in practice by H4's painter fill).
+- **H1 wall visuals kept as re-tinted ColorRects** (2026-06-28) — **Reviewed** (superseded by the H2 walls-removed entry below).
+- **H1 ~15 dressing props (breakdown said ~10–12)** (2026-06-28) — **Reviewed** (moot post-H4 prop removal).
+- **H0 asset count — docs said 24 object PNGs, directory has 20** (2026-06-28) — **Reviewed.** **Reapply:** M1.8 breakdown
+  source section corrected 24 → 20.
+- **H2 ground re-authored — 16 framed tiles → 3 corner-Wang transition tilesets + vertex-map painter (720 cells)**
+  (2026-07-01, Director-directed) — **Reviewed.** **Reapply:** as-built block added to
+  `art_workshop/map_layouts/staging_area_layout_a_dressed.md` (notes H4 iso now supersedes the *visual*; Wang sets remain the revert path).
+- **H2 tile palette gradient-map retoned to Band-0** (2026-07-01) — **Reviewed** (retone script archived with sources).
+- **H2 litter fringe — continuous band → sparse hash-scattered patches** (2026-07-01) — **Reviewed** (danger-gradient cue carried
+  by the scrap rim; revisit only if a future gate wants it stronger).
+- **H2 wall ColorRect masses REMOVED — Wang scrap border IS the wall visual** (2026-07-01; supersedes the H1 walls entry) —
+  **Reviewed** (colliders untouched; scrap band covers every collider footprint).
+- **H2 shack — doorway-only → full front-facing building sprite 176×144** (2026-07-01, Director-directed; supersedes the H1
+  doorway entry) — **Addressed.** **Reapply:** dressed-layout doc updated — front-facade shack folded in, open-roof open question
+  RETIRED (Shop remains a separate UI scene; garbled sign = placeholder-grade).
+- **H2 south fence line (5 fence_strip sprites on the S collider)** (2026-07-01) — **Reviewed** (H4 later removed it with all
+  dressing props; grass surround note in G4 watch-items).
+- **H2 object angles — 6 props regenerated; y-sort re-anchored to sprite base** (2026-07-01) — **Reviewed.**
+- **H4 hub ground — 45° ISOMETRIC pivot (`hub_ground_iso.tres`, 963-cell zone painter)** (2026-07-02, Director-directed) —
+  **Reviewed / iso RETAINED** as the current dressing (the recommendation deferred iso-vs-top-down to HG3; the Director settled it
+  by retention at close-out — H2 top-down stays the one-swap revert path; felt read arrives with the M1.9 SG1 build).
+- **H4 ALL dressing props removed (shop + dive portal kept)** (2026-07-02, Director-directed) — **Reviewed** (iso prop re-dress
+  = follow-up only if iso survives the M1.9 gate — G4 watch-item).
+- **H4 grass surround replaces the scrap-wall ring + south street** (2026-07-02) — **Reviewed as-is** (the flagged
+  street-entrance-cue / harder-bounds-read question stays a G4 watch-item, no change directed).
+- **H4 tooling — brief's edit-image transitions unachievable as specified; shipped per-edge shape-mode batch instead**
+  (2026-07-02) — **Reviewed** (evidence archived in `art_workshop/game_art/hub_iso/`; matches the `pixellab-wang-tileset-pipeline`
+  memory).
+
+**M1.8 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: M1.9 build Wave 1 (S0 ∥ S1).**

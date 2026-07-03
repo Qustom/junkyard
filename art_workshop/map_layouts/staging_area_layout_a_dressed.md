@@ -122,12 +122,36 @@ lane, and (c) sell the lived-in business. All are Band-0 mundane — the *recogn
 
 ## Open questions (carried from the parent doc, now ground/prop-specific)
 
-- **Shack: interior scene or open-roof room?** If open-roof, the `▓` plank floor + `T` benches must
-  be dressed as a *visible* room on this screen (more interior props needed); if a separate scene,
-  `D` just needs a convincing lit doorway here.
+- ~~**Shack: interior scene or open-roof room?**~~ **RETIRED (M1.8 close-out, 2026-07-02, Director:
+  Addressed):** as-built the shack is a **full front-facing building sprite (176×144, warm windows,
+  sign)** — neither open-roof nor doorway-only; the Shop remains a separate UI scene. See the
+  "As-built (M1.8)" block at the end of this doc.
 - **Is the dirt a single tile or does it need rut/path baked variants** so the worn shack↔gate
   footpath reads without a separate decal layer?
 - **One dive gate, or hint at multiple portals past it?** Affects whether `P` is a single glow or a
   faint cluster, and how much fence run frames the gate.
 - **How much base-personalization** (the soft life-sim props) belongs in the *first* placeholder pass
   vs. deferred until the yard-growth system exists? — a scope call for the Director.
+
+---
+
+## As-built (M1.8, recorded at close-out 2026-07-02)
+
+The shipped M1.8 hub departed from this spec through two Director-directed re-dress iterations
+(deviations dispositioned + archived — `design/DESIGN_DEVIATIONS_HISTORY.md` §"M1.8 close-out";
+verdict record `design/M1_8_Tasks/G4_findings_M1.8.md`):
+
+- **Ground (H2):** the 16 framed variant tiles were replaced by **3 chained PixelLab corner-Wang
+  transition tilesets** (asphalt↔dirt↔litter↔scrap, gradient-map retoned to Band-0) painted by a
+  deterministic RNG-free **vertex-map** painter (`hub_ground.gd`, 36×20 = 720 cells). The litter
+  fringe ships as sparse hash-scattered patches, not a continuous band; the wall ColorRect masses were
+  removed (the Wang scrap border IS the wall visual; all four `StaticBody2D` colliders unchanged).
+- **Shack (H2):** full front-facing facade sprite 176×144 (see the retired open question above).
+  South edge gained a low chain-link fence line; 6 props were regenerated angle-consistent and props
+  y-sort by sprite BASE.
+- **Current look (H4):** the hub then pivoted to a **45° isometric ground** (`hub_ground_iso.tres`,
+  48 PixelLab iso tiles — grass/dirt/scrap + edge transitions, DIAMOND_DOWN 64×32, 963-cell zone
+  painter); **all dressing props removed** (shop + dive portal kept); a grass surround replaces the
+  scrap ring + south street. **This layout doc's top-down dressing (and the H2 Wang assets) remain
+  in-repo as the one-swap revert path.** Iso prop re-dress + a street/entrance cue are G4 watch-items,
+  live only if the iso look survives the M1.9 gate.
