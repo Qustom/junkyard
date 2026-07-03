@@ -6,8 +6,16 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Waves 1–2 DONE + swept (close-outs archived); Wave 3 (S3) IN PROGRESS (dispatched).** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
-**Last updated:** 2026-07-03 (Wave-2 close-out: 8 deviations dispositioned 7 Reviewed + 1 Addressed (run-clock seam → typed injected Callable, fixed + re-verified) — reapplied (S2/S5 spec amendment sections; S5 §2.2 in place) + archived. `DESIGN_DEVIATIONS.md` empty. m13 flake = pre-existing, BUG-M13FLAKE filed. Wave 3 dispatched: S3 → general-purpose (EncounterBuilder + RunConfig levers + both call-site switches; sole `main_game.gd` writer).)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Waves 1–3 DONE + swept; Wave 4 (S4 ∥ S6a ∥ S6b ∥ S7) IN PROGRESS (dispatched, 4 parallel worktrees).** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Last updated:** 2026-07-03 (Wave-3 close-out: 5 deviations, 4 Reviewed + 1 Addressed (param_overrides stamp → FLAT dotted rows `param_overrides.<def>.<param>`, fixed + re-verified; breakdown amendment 10 updated — S4 asserts the dotted shape). Wave 4 dispatched: S4 generated menu (sole `run_config.gd` writer, 89→91), S6a Charger, S6b Splitter, S7 band_two "The Sump".)
+
+## In progress
+| Task | Since | Agent(s) | Milestone | Note |
+|---|---|---|---|---|
+| S4 — Generated debug-menu sections + coverage 91 + sweep hygiene | 2026-07-03 | general-purpose | M1.9 (W4) | Branch `general-purpose/S4`. Sole `run_config.gd` Wave-4 writer (levers → plain `@export`, 89→91); param_overrides stamp = DOTTED rows; `debug_run_dirtied` emitter; respawn-tier live edit. |
+| S6a — Charger "The Wrecker" | 2026-07-03 | general-purpose (+ animator-grade tell as placeholder) | M1.9 (W4) | Branch `general-purpose/S6a`. ChargeLane component + `charger.tres`; D-RAT-2 bundle (dash-invuln def default true, wall-crash bonus-stun 1.0); off by default. |
+| S6b — Splitter | 2026-07-03 | general-purpose (+ animator-grade placeholders) | M1.9 (W4) | Branch `general-purpose/S6b`. `splitter.tres` + `splitter_child.tres`; mid-run `svc.spawn` on throw-death via S2's `resolve_throw_death` seam; D-RAT-2 (2 children, gen 1, no salvage). |
+| S7 — band_two "The Sump" | 2026-07-03 | game-director-designer (lead; tint-only art per D-RAT-4) | M1.9 (W4) | Branch `game-director-designer/S7`. Profile + branchy archetype + S5 flavors on + deck + `band_depth=2`; D-RAT-1 (Sump identity) + D-RAT-3 (16 pieces/0.15 branch/+15% budget/reused vault piece). |
 
 ## Wave 3 — Done (2026-07-03)
 | Task | Agent | Merged | Proof |
