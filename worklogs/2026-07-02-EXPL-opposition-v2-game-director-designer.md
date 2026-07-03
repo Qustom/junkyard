@@ -4,7 +4,7 @@
 - **Subagent:** game-director-designer
 - **Milestone:** M1 (exploration / pre-M2 architecture)
 - **Branch:** game-director-designer/expl-20260702-opposition
-- **Commit:** db588085dfdd677f2eac57ef07d67b48d0ae0f74
+- **Commit:** 3c7cb0a7780bc67d98aaa7763345dbd7b4bc3f6d (worklog originally stamped the pre-amend SHA db58808; corrected at integration)
 
 ## What changed
 Authored a REFINED v2 of the Scalable Opposition System architecture exploration,
