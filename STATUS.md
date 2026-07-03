@@ -13,7 +13,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 | Task | Since | Agent(s) | Milestone | Note |
 |---|---|---|---|---|
 | S2 — Opposition component extraction + `param_schema` | 2026-07-02 | general-purpose | M1.9 (Wave 2) | Branch `general-purpose/S2`. Riskiest step: golden frame-trace parity, fp byte-identical, hazard suite green, params↔schema bijection. Does NOT touch `main_game.gd`. |
-| S5 — Band flavor stages + connectivity guarantee | 2026-07-02 | general-purpose | M1.9 (Wave 2) | Branch `general-purpose/S5`. Empty-flavors control fp unmoved; per-stage sub-seeds; strand-proof test at max decay. Sole Wave-2 writer of `band_pipeline.gd`. |
+| ~~S5 — Band flavor stages + connectivity guarantee~~ | 2026-07-02 | general-purpose | M1.9 (Wave 2) | **DONE 2026-07-02** — merged to `main` (commit `0aa085c`). New `test_band_flavors` F1–F8 green 9 seeds; parity test UNMODIFIED green; fp `e943ac9c8bc1` unmoved; strand-proof at max decay green. Worklog `worklogs/2026-07-02-S5-general-purpose.md`. 4 deviations logged (all rec. Reviewed; WearDecay breach-led headline flagged for Director visibility) — sweep at Wave-2 close-out. |
 
 ## Wave 1 — Done (2026-07-02)
 | Task | Agent | Merged | Proof |
