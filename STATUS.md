@@ -13,7 +13,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 | Task | Since | Agent(s) | Milestone | Note |
 |---|---|---|---|---|
 | S0 — SpawnService + OppositionDef data layer + EventBus pre-declare | 2026-07-02 | general-purpose | M1.9 (Wave 1) | Worktree branch `general-purpose/S0`. Sole writer of `main_game.gd`/`event_bus.gd`/`game_state.gd` this wave. DoD: fp `e943ac9c8bc1` byte-identical, rg1/new-hazard tests green UNMODIFIED, `test_spawn_service` green. |
-| S1 — BandProfile + BandPipeline + `band_greybox.tres` | 2026-07-02 | general-purpose | M1.9 (Wave 1) | Worktree branch `general-purpose/S1`. Touches ONLY `systems/bandgen/` + `data/bands/` + new tests. DoD: `test_band_pipeline_parity` byte-match 9-seed matrix, bandgen suite green, all-off fp unmoved. |
+| ~~S1 — BandProfile + BandPipeline + `band_greybox.tres`~~ | 2026-07-02 | general-purpose | M1.9 (Wave 1) | **DONE 2026-07-02** — merged to `main` (branch `general-purpose/S1`, commit `9a8c6fb`). Parity byte-match 9 seeds (fp `e943ac9c8bc1`), bandgen suite + smoke green on integrated main, purely additive scope. Worklog `worklogs/2026-07-02-S1-general-purpose.md`. Deviations: none. |
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
