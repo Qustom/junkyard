@@ -6,8 +6,8 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Wave 1 (S0 ∥ S1) BUILT + INTEGRATED on `main`. ▶ Next: Wave-1 close-out — 2 S0 deviations await Director disposition; Wave 2 (S2 ∥ S5) dispatches only after the sweep.** *(M1.8 CLOSED 2026-07-02; M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
-**Last updated:** 2026-07-02 (Wave 1 integrated + verified on main: import · smoke · fp `e943ac9c8bc1` (bandgen determinism + corridor lever) · `test_band_pipeline_parity` 9-seed byte-match · `test_spawn_service` · `test_new_hazard_spawn` UNMODIFIED · rg1 m14/loop — all green. `design/DESIGN_DEVIATIONS.md` holds 2 S0 entries, both recommended Reviewed.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Wave 1 DONE + close-out swept (1 Reviewed + 1 Addressed, reapplied + archived). ▶ Next: dispatch Wave 2 (S2 ∥ S5, parallel worktrees).** *(M1.8 CLOSED 2026-07-02; M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
+**Last updated:** 2026-07-02 (Wave-1 close-out: cap-accounting deviation Reviewed → live-registry semantics canonical (breakdown contracts + S0 spec §10); untyped-locals deviation Addressed → sweep restructured fully typed, re-verified (spawn_service/new_hazard_spawn/corridor_lever/smoke green). `DESIGN_DEVIATIONS.md` empty.)
 
 ## Wave 1 — Done (2026-07-02)
 | Task | Agent | Merged | Proof |

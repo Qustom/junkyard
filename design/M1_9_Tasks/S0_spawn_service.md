@@ -977,3 +977,17 @@ Spot-verified 2026-07-02 against the working tree: the §1.2/§1.3 line anchors 
 or orchestrator cross-contract adjudication; the sole Director-facing residue (numeric ceiling
 merge) is explicitly post-gate on SG3's watch-list. Implementation deviations from §9 go to
 `design/DESIGN_DEVIATIONS.md` for the Wave-1 close-out sweep.*
+
+---
+
+## 10. Wave-1 close-out amendments (as-built, Director-dispositioned 2026-07-02)
+
+- **Cap-group accounting is live-registry-derived** (Director: **Reviewed**). §6.1's
+  `{ceiling, count}` monotonic-counter sketch is superseded: the service stores ceilings only and
+  derives counts from the validity-swept live registry (one source of truth with `live_count()`).
+  A node freed mid-run re-opens cap headroom for mid-run spawners (S6b+). Also recorded in the
+  breakdown's cross-cutting contracts.
+- **Registry sweep is fully typed** (Director: **Addressed** → code restructured at close-out).
+  `_compact()`/`clear_all()` test `entry["node"]` in place via `is_instance_valid(...)` instead of
+  binding possibly-freed instances to locals — no untyped locals; the typed-GDScript convention
+  holds with zero exceptions.

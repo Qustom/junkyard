@@ -183,12 +183,11 @@ func despawn(node: Node) -> void:
 ## re-arms for the next begin_band().
 func clear_all() -> void:
 	for def_id in _live:
-		for e in _live[def_id]:
-			# Untyped local: assigning a freed instance to a typed Node var raises a
-			# script error, and entries can hold nodes already freed with the band.
-			var n = e["node"]
-			if is_instance_valid(n):
-				(n as Node).queue_free()
+		for e: Dictionary in _live[def_id]:
+			# Entries can hold nodes already freed with the band; a freed instance
+			# can't pass through a typed Node local, so test the value in place.
+			if is_instance_valid(e["node"]):
+				(e["node"] as Node).queue_free()
 	_live.clear()
 	_cap_groups.clear()
 	_def_groups.clear()
@@ -283,8 +282,8 @@ func _compact(def_id: StringName) -> Array:
 		return []
 	var entries: Array = _live[def_id]
 	for i in range(entries.size() - 1, -1, -1):
-		# Untyped local (see clear_all): a freed instance can't be assigned to Node.
-		var n = entries[i]["node"]
-		if not is_instance_valid(n):
+		# A freed instance can't pass through a typed Node local (see clear_all),
+		# so test the entry's value in place.
+		if not is_instance_valid(entries[i]["node"]):
 			entries.remove_at(i)
 	return entries

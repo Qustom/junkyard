@@ -434,3 +434,21 @@ Full verdict record: `design/M1_8_Tasks/G4_findings_M1.8.md`. Entries verbatim-s
   memory).
 
 **M1.8 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: M1.9 build Wave 1 (S0 ∥ S1).**
+
+---
+
+## M1.9 Wave-1 close-out (2026-07-02) — 2 entries: 1 Reviewed + 1 Addressed
+
+- **S0/SpawnService — cap-group accounting live-registry-derived, not the §6.1 monotonic
+  `{ceiling, count}` counter** (2026-07-02) — **Reviewed.** Freed nodes re-open cap headroom for
+  mid-run spawners (S6b+); unobservable in Phase A (fingerprints/positions byte-identical,
+  verified). **Reapply:** breakdown §Cross-cutting contracts (cap line) + S0 spec §10 as-built
+  amendment — "hard caps bound live nodes" is now canonical.
+- **S0/SpawnService — untyped locals in `_compact()`/`clear_all()`** (2026-07-02) — **Addressed.**
+  Director required a pattern with no untyped locals; restructured at close-out to test
+  `entry["node"]` in place via `is_instance_valid(...)` (no local binding of possibly-freed
+  instances). Verified: `test_spawn_service` (incl. free-without-despawn) + golden
+  `test_new_hazard_spawn` + fp `e943ac9c8bc1` + smoke all green. Typed-GDScript convention holds
+  with zero exceptions; S0 spec §10 records the as-built shape.
+
+**M1.9 Wave-1 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 2 (S2 ∥ S5).**
