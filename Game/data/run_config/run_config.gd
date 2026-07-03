@@ -406,24 +406,26 @@ const LVL_LOOT_AREA_UNIT: int = 96
 # S3 (M1.9) — generic opposition levers (exploration v2 "RunConfig integration").
 # ADDITIVE + neutral-by-default: empty array/dict = no def loaded, no override
 # applied — the all-off control and every legacy preset are byte-untouched.
-# Declared @export_storage (serialized to .tres, NOT editor-visible) so
-# config_menu's 89-row has_full_coverage() reflection (STORAGE && EDITOR) is
-# unaffected in Wave 3 (empirically verified on 4.6.3 — usage 4098, EDITOR bit
-# absent; spec §7.1 C1); S4 promotes both to plain @export + bound rows in
-# Wave 4 (count model: 89 frozen legacy + 2 levers = 91).
+# S3 landed both as @export_storage (invisible to the STORAGE && EDITOR
+# reflection net) so the 89-row pin held through Wave 3; S4 (Wave 4) PROMOTED
+# both to plain @export + bound sentinel rows in the ConfigMenu — the count
+# model is now 89 frozen legacy + 2 levers = 91, and the levers are back inside
+# has_full_coverage()'s fail-loud enumeration (S4 §8.1 Q3: a storage-only knob
+# class would be a permanent reflection blind spot).
 # =============================================================================
+@export_group("S3 Opposition Levers")
 ## ADDITIVE def enable-list (a sweep/debug lever): each listed OppositionDef id
 ## (res://data/oppositions/<id>.tres) is loaded and appended, id-deduped, to the
 ## dive's effective opposition deck through the EncounterBuilder's deck machinery
 ## — on a deck-less band (band 1) it seeds a one-def deck at the def's authored
 ## spawn card. It never REMOVES a band author's deck entry. Empty = neutral.
-@export_storage var oppositions_enabled: Array[StringName] = []
+@export var oppositions_enabled: Array[StringName] = []
 ## def_id -> { param_key -> value } sweep overrides, applied to DEF-DRIVEN params
 ## (deck lane + extras) at ctx-merge time; legacy-knob-driven values stay
 ## authoritative for the legacy lane in M1.9 (no double-driving — S3 §7.2
 ## Q6(ii)). String or StringName def-id keys accepted; leaves are primitives.
 ## Empty = neutral.
-@export_storage var param_overrides: Dictionary = {}
+@export var param_overrides: Dictionary = {}
 
 
 ## The hardcoded corridor piece-id set (J4) the corridor-rarity lever down-weights and the

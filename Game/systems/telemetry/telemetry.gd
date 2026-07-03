@@ -48,6 +48,10 @@ var _run_t0_ms: int = 0
 var _accepted_value: int = 0   # sum of accepted-pickup values seen this run
 var _last_banked: int = 0      # latest haul_banked total (kept on extract OR fail)
 var _max_depth: int = 0        # highest depth reached this run
+# M1.9 (S4) sweep hygiene: true once a debug live tweak (debug_run_dirtied) perturbed
+# THIS run. Stamped onto the run_ended row so SG2 filters the whole run from the gate
+# cohort; reset false every run_started (a clean run self-describes as debug_dirty:false).
+var _debug_dirty: bool = false
 
 
 func _ready() -> void:
@@ -84,6 +88,15 @@ func _ready() -> void:
 	# kill is self-identifying in the log instead of a bare, reasonless cause=death
 	# run_ended (additive row; no schema/arity change). Only fires from debug_kill.
 	EventBus.player_died.connect(_on_player_died)
+	# M1.9 (S4): the GENERIC opposition rows — SG2 counts spawns/hits/deaths BY DEF ID
+	# off these. Entities/the SpawnService dual-emit the legacy per-type signals above
+	# alongside these until post-gate retirement; the legacy subscriptions stay
+	# byte-identical. Analysis counts from ONE family (SG2's brief: the generic one).
+	EventBus.opposition_event.connect(_on_opposition_event)
+	EventBus.opposition_killed_player.connect(_on_opposition_killed_player)
+	# M1.9 (S4) sweep hygiene: a debug-menu live tweak dirties the ACTIVE run — an
+	# auditable row now + a debug_dirty stamp on the run_ended row (additive only).
+	EventBus.debug_run_dirtied.connect(_on_debug_run_dirtied)
 
 
 ## Public toggle entry point for the settings UI. Persists the flag and applies it
@@ -132,6 +145,7 @@ func _on_run_started(band_id: StringName, seed: int) -> void:
 	_accepted_value = 0
 	_last_banked = 0
 	_max_depth = 0
+	_debug_dirty = false   # S4: every run starts experiment-clean
 	# G3: stamp the build id on the run_started row so a feedback report + its JSONL
 	# tie to one exact build. Extra `data` field only — the schema envelope + every
 	# other row are untouched (G2 tests assert envelope keys, not run_started payload).
@@ -144,6 +158,10 @@ func _on_run_started(band_id: StringName, seed: int) -> void:
 	# can segment in-progress / abandoned runs by quota pressure even without a clean end.
 	# Additive `data` keys only — no schema bump, no run_ended arity change. For an all-off
 	# run these are the inert defaults (1 / 0), so the row stays self-identifying.
+	# S4 (M1.9): also stamp the enabled-but-inert DEF traps (the BUG6 detector
+	# generalized to OppositionDefs — OppositionLint) beside the legacy list, so a
+	# dead def-sweep run is as self-identifying as a dead R-opposition run. Additive
+	# `data` key only, [] for the all-off control (empty lever loads NO def).
 	var quota_meta: Dictionary = _active_quota_meta()
 	_emit_row(Schema.RUN_STARTED, {
 		"band_id": String(band_id),
@@ -151,6 +169,7 @@ func _on_run_started(band_id: StringName, seed: int) -> void:
 		"build": BuildVersionScript.id(),
 		"run_config": _active_run_config_dict(),
 		"inert_enabled_oppositions": _active_inert_oppositions(),
+		"inert_enabled_defs": _active_inert_defs(),
 		"quota_run_number": quota_meta.get("run_number", 1),
 		"quota_target": quota_meta.get("quota_target", 0),
 	})
@@ -235,6 +254,45 @@ func _on_player_died(cause: StringName) -> void:
 		_writer.flush()
 
 
+# --- M1.9 (S4): generic opposition rows + sweep hygiene ------------------------
+func _on_opposition_event(id: StringName, event: StringName, depth: int, _run_t_ms: int) -> void:
+	# Any opposition lifecycle moment, keyed by def id (== the legacy telemetry kind,
+	# so historical rows join). TEL stamps run-elapsed itself (house rule — the
+	# signal's run_t_ms is emitter-convenience; generation-time spawns pass 0).
+	_emit_row(Schema.OPPOSITION_EVENT, {
+		"id": String(id),
+		"event": String(event),
+		"depth": depth,
+		"run_t_ms": _elapsed_ms(),
+	})
+
+
+func _on_opposition_killed_player(id: StringName, depth: int, _run_t_ms: int) -> void:
+	# The dedicated death channel — a def ACTUALLY ended the run. Like HAZARD_CAUGHT
+	# this precedes the death run_ended; flush for crash safety.
+	_emit_row(Schema.OPPOSITION_KILLED_PLAYER, {
+		"id": String(id),
+		"depth": depth,
+		"run_t_ms": _elapsed_ms(),
+	})
+	if _writer != null:
+		_writer.flush()
+
+
+func _on_debug_run_dirtied(source: StringName, _run_t_ms: int) -> void:
+	# S4 §3.6: the moment is auditable (like debug_kill) AND the whole run is marked —
+	# _debug_dirty rides until run_ended stamps it, so SG2 filters the run, not just
+	# the moment. Flush: a dirty marker must survive a crash.
+	_debug_dirty = true
+	_emit_row(Schema.DEBUG_DIRTIED, {
+		"source": String(source),
+		"depth": _current_depth(),
+		"run_t_ms": _elapsed_ms(),
+	})
+	if _writer != null:
+		_writer.flush()
+
+
 # --- R2 ----------------------------------------------------------------------
 func _on_return_cost_incurred(depth: int, cost_kind: StringName, magnitude: float) -> void:
 	_emit_row(Schema.RETURN_COST_INCURRED, {
@@ -307,12 +365,16 @@ func _on_run_ended(reason: StringName, duration_s: float, depth_reached: int) ->
 			"cause": cause,
 		})
 
+	# S4 (M1.9): stamp the sweep-hygiene flag on EVERY run_ended row (additive data
+	# key — the locked signal arity is untouched; the ROW carries it). false on a
+	# clean run, true once any debug live tweak fired — every run self-describes.
 	_emit_row(Schema.RUN_ENDED, {
 		"cause": cause,
 		"duration_s": duration_s,
 		"banked_total": banked_total,
 		"lost_total": lost_total,
 		"max_depth": maxi(_max_depth, depth_reached),
+		"debug_dirty": _debug_dirty,
 	})
 	if _writer != null:
 		_writer.flush()
@@ -366,6 +428,20 @@ func _active_inert_oppositions() -> Array:
 	if gs != null and gs.active_run_config != null:
 		var out: Array = []
 		for id in gs.active_run_config.inert_enabled_oppositions():
+			out.append(String(id))
+		return out
+	return []
+
+
+## S4 (M1.9): the enabled-but-inert DEF trap list (OppositionLint — the BUG6 detector
+## generalized to defs) for the active config, as a plain Array (JSONL-safe). Same
+## /root/GameState read surface as the legacy list; [] when no config AND [] for an
+## empty oppositions_enabled lever (which also loads zero defs — lazy discipline).
+func _active_inert_defs() -> Array:
+	var gs := get_node_or_null("/root/GameState")
+	if gs != null and gs.active_run_config != null:
+		var out: Array = []
+		for id in OppositionLint.inert_enabled_defs_for(gs.active_run_config):
 			out.append(String(id))
 		return out
 	return []

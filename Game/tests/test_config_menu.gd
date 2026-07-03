@@ -50,8 +50,29 @@ func _run() -> int:
 	# (r1_spawn_room_only/r1_patrol_speed) + L5 3 *_kills (hpp_kills/hbomb_kills/hspike_kills)
 	# = 8 → 81 + 8 = 89. (The M1.5 lock's "88" was an off-by-one: 81 + 8 = 89; the actual
 	# pre-L0 schema is 72 @export var + 9 @export_enum = 81, +8 new @export var = 80+9 = 89.)
-	if exported.size() != 89:
-		failures.append("expected 89 exported RunConfig fields, schema has %d" % exported.size())
+	#
+	# M1.9 (S4) — the pin is now a TWO-PART model (S4 §3.4 Layer 2 / §8.1 Q3) so the
+	# historical 89 stays meaningful as exactly the number it always measured:
+	#   * the LEGACY exported set (total minus the 2 named S3 generic levers) is FROZEN
+	#     at 89 — the M1.1–M1.8 hand-authored surface;
+	#   * the removed set is EXACTLY {oppositions_enabled, param_overrides} → total 91.
+	# A third generic lever fails loudly twice (set membership + total). Per-def knobs
+	# NEVER enter this count (they are not RunConfig @export fields) — new defs change
+	# no asserted number; their coverage is the per-def bijection below.
+	var generic_levers: Array = ["oppositions_enabled", "param_overrides"]
+	var legacy_exported: Array = []
+	for f in exported:
+		if not generic_levers.has(f):
+			legacy_exported.append(f)
+	if legacy_exported.size() != 89:
+		failures.append("expected 89 LEGACY exported RunConfig fields (frozen M1.1–M1.8 surface), got %d"
+			% legacy_exported.size())
+	for lever in generic_levers:
+		if not exported.has(lever):
+			failures.append("S4: generic lever '%s' missing from the exported set (promotion to @export failed?)" % lever)
+	if exported.size() != 91:
+		failures.append("expected 91 exported RunConfig fields total (89 legacy + 2 levers), schema has %d"
+			% exported.size())
 
 	var bound := menu._rows.keys()   # bound controls; masters are included as CheckButtons
 	for f in exported:
@@ -119,6 +140,81 @@ func _run() -> int:
 	for k in menu._rows.keys():
 		if menu._rows[k] in player_debug_controls:
 			failures.append("M1.7: a Player-tab debug control leaked into _rows (field '%s') — it would trip coverage" % str(k))
+
+	# --- 1c. M1.9 (S4): the GENERATED Oppositions surface -----------------------
+	# COUNT-AGNOSTIC by design (S4 DoD): the menu must build with however many defs
+	# are authored (4 at S4 time; 6+ after S6a/S6b land) with ZERO menu edits — so
+	# these assertions key off menu._defs, never a hardcoded def count.
+	if menu._defs.size() < 4:
+		failures.append("S4: expected at least the 4 migrated defs loaded, got %d" % menu._defs.size())
+
+	# The per-def bijection net (params ↔ param_schema ↔ generated rows) is green.
+	if not menu.has_full_def_coverage():
+		failures.append("S4: has_full_def_coverage() FAILED — per-def params/schema/rows drift")
+
+	# §8.3.3: the generated section order equals the sorted-by-id def list, and each
+	# def has a section + a full row ledger.
+	var prev_id := ""
+	for def in menu._defs:
+		var id := String(def.id)
+		if prev_id != "" and id < prev_id:
+			failures.append("S4: _defs not sorted by id ('%s' after '%s')" % [id, prev_id])
+		prev_id = id
+		if menu.find_child("DefSection_%s" % id, true, false) == null:
+			failures.append("S4: no generated section for def '%s'" % id)
+		var rows: Dictionary = menu._def_rows.get(id, {})
+		if rows.size() != def.param_schema.size():
+			failures.append("S4: def '%s' has %d generated rows for %d schema entries"
+				% [id, rows.size(), def.param_schema.size()])
+
+	# The two generic levers are bound via DISTINCT sentinel controls (S4 §8.0.2).
+	if not menu._rows.has("oppositions_enabled") or not menu._rows.has("param_overrides"):
+		failures.append("S4: lever sentinel bindings missing from _rows")
+	elif menu._rows["oppositions_enabled"] == menu._rows["param_overrides"]:
+		failures.append("S4: the two lever sentinels must be DISTINCT controls")
+
+	# Staging round-trip: master toggle stages the enable-list; a param widget stages
+	# a SPARSE override; returning to the authored default erases it.
+	var stage_def: OppositionDef = menu._defs[0]
+	var stage_id := String(stage_def.id)
+	var def_master: CheckButton = menu._def_masters.get(stage_id, null)
+	if def_master == null:
+		failures.append("S4: def '%s' has no master CheckButton" % stage_id)
+	else:
+		def_master.button_pressed = true   # emits toggled → stages enablement
+		await get_tree().process_frame
+		if not menu.apply_and_get_config().oppositions_enabled.has(stage_def.id):
+			failures.append("S4: def master ON did not stage '%s' in oppositions_enabled" % stage_id)
+	# Find a numeric schema param to override via its SpinBox (canonical control).
+	var num_key := ""
+	var num_default := 0.0
+	for entry in stage_def.param_schema:
+		if String(entry.get("type", "")) == "float":
+			num_key = String(entry.get("key", ""))
+			num_default = float(stage_def.params.get(num_key, 0.0))
+			break
+	if num_key == "":
+		failures.append("S4: def '%s' has no float schema param to exercise staging" % stage_id)
+	else:
+		var num_spin := menu._def_rows[stage_id][num_key] as SpinBox
+		if num_spin == null:
+			failures.append("S4: def '%s' param '%s' control is not a SpinBox" % [stage_id, num_key])
+		else:
+			num_spin.value = num_default + 7.0     # deviates → sparse override staged
+			await get_tree().process_frame
+			var po: Dictionary = menu.apply_and_get_config().param_overrides
+			var sub: Dictionary = po.get(stage_id, {})
+			if not is_equal_approx(float(sub.get(num_key, -12345.0)), num_default + 7.0):
+				failures.append("S4: override %s.%s=+7 not staged sparsely (param_overrides=%s)"
+					% [stage_id, num_key, str(po)])
+			num_spin.value = num_default           # back to the authored default → erased
+			await get_tree().process_frame
+			po = menu.apply_and_get_config().param_overrides
+			if po.has(stage_id):
+				failures.append("S4: returning to the authored default did not erase the sparse override (%s)"
+					% str(po))
+			num_spin.value = num_default + 7.0     # leave one staged so Reset proves the clear
+			await get_tree().process_frame
 
 	# --- 2. Edit: a master toggle + a knob set flows to the working config ------
 	# Master on.

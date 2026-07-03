@@ -114,7 +114,8 @@ func _ready() -> void:
 		"r1_spawn_room_only", "r1_patrol_speed",
 		# L5 (M1.5) — per-hazard lethality toggles (default true = M1.4 lethal behaviour).
 		"hpp_kills", "hbomb_kills", "hspike_kills",
-		# S3 (M1.9) — generic opposition levers (@export_storage; SG2 segments def sweeps).
+		# S3 (M1.9) — generic opposition levers (plain @export since S4's Wave-4
+		# promotion; SG2 segments def sweeps).
 		# param_overrides has NO base key: it stamps as flat dotted rows
 		# "param_overrides.<def_id>.<param_key>" (Wave-3 close-out, Director 2026-07-03).
 		"oppositions_enabled",
