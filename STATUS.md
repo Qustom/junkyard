@@ -6,8 +6,14 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Wave 1 DONE + close-out swept (1 Reviewed + 1 Addressed, reapplied + archived). ▶ Next: dispatch Wave 2 (S2 ∥ S5, parallel worktrees).** *(M1.8 CLOSED 2026-07-02; M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
-**Last updated:** 2026-07-02 (Wave-1 close-out: cap-accounting deviation Reviewed → live-registry semantics canonical (breakdown contracts + S0 spec §10); untyped-locals deviation Addressed → sweep restructured fully typed, re-verified (spawn_service/new_hazard_spawn/corridor_lever/smoke green). `DESIGN_DEVIATIONS.md` empty.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Wave 1 DONE + swept; Wave 2 (S2 ∥ S5) IN PROGRESS (dispatched, parallel worktrees).** *(M1.8 CLOSED 2026-07-02; M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
+**Last updated:** 2026-07-02 (Wave 2 dispatched: S2 → general-purpose (component extraction + param_schema; entity scripts + oppositions data, NOT main_game), S5 → general-purpose (SetPieceInject + WearDecay + connectivity stage in the S1 hook; bandgen + bands data only). Board: both In Progress.)
+
+## In progress
+| Task | Since | Agent(s) | Milestone | Note |
+|---|---|---|---|---|
+| S2 — Opposition component extraction + `param_schema` | 2026-07-02 | general-purpose | M1.9 (Wave 2) | Branch `general-purpose/S2`. Riskiest step: golden frame-trace parity, fp byte-identical, hazard suite green, params↔schema bijection. Does NOT touch `main_game.gd`. |
+| S5 — Band flavor stages + connectivity guarantee | 2026-07-02 | general-purpose | M1.9 (Wave 2) | Branch `general-purpose/S5`. Empty-flavors control fp unmoved; per-stage sub-seeds; strand-proof test at max decay. Sole Wave-2 writer of `band_pipeline.gd`. |
 
 ## Wave 1 — Done (2026-07-02)
 | Task | Agent | Merged | Proof |
