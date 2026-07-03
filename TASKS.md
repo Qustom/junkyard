@@ -58,7 +58,109 @@ Build (M0·M1·M2·M4·M3) + RG1 (itch published `m1-20260627-41106de` + FB1–F
 
 ---
 
-## M1.8 — Hub Art Dressing (ACTIVE — Director-directed; art-only iteration)
+## M1.9 — Scalable Opposition + Band Systems (ACTIVE — Director-directed; design LOCKED 2026-07-02)
+
+Implement the two explored scalable architectures — the **SpawnService/EncounterBuilder** split
+(opposition v2) and the **BandProfile/BandPipeline** (bands) — then prove them with **2 new hazards
+(Charger "The Wrecker" + Splitter) and 1 new band ("The Sump", `band_two`)** behind a second hub portal.
+Breakdown + cross-task amendments + Director ratifications: `design/M1_9_Tasks/M1.9_Breakdown.md`.
+Every task doc carries a BINDING `Resolved Decisions (Phase 3)` section. **Contracts:** all-off fp
+`e943ac9c8bc1` byte-identical at every wave boundary; bandgen determinism byte-matches through the
+pipeline; knob model 89 (frozen legacy) → 91 at S4; no save-schema change; legacy R1/K5 knobs + signals
+stay (dual-emit) through the gate; single-writer-per-file per wave (`main_game.gd`: S0 → S3 only;
+`run_config.gd` Wave-4 writer = S4); parallel agents in worktrees; no PixelLab (D-RAT-4).
+
+### Wave 1 — Foundations  *(S0 ∥ S1, parallel worktrees)*
+
+### S0 — SpawnService + OppositionDef data layer + EventBus pre-declare
+- Milestone: M1.9 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_9_Tasks/S0_spawn_service.md` (body + §Resolved Decisions)
+- Goal: extract the mechanism half of `_spawn_new_hazards` into a policy-free per-dive `SpawnService`; author the 4 shipped hazards as `OppositionDef.tres` (`Game/data/oppositions/`); pre-declare `opposition_event` / `opposition_killed_player` (silent until S2) / `debug_run_dirtied` + the `dive_requested` doc-amendment + inert GameState staging seam. Sole writer of `main_game.gd`, `event_bus.gd`, `game_state.gd` this wave.
+- Done when: all-off fp `e943ac9c8bc1` byte-identical; every `test_rg1_m1*` + `test_new_hazard_spawn` green UNMODIFIED (forwarding consts + ctx forwarder); preset cohort unchanged; new `test_spawn_service` green (caps/registry/valid_cells/clear_all/staging round-trip); import + smoke green; worklog + commit.
+
+### S1 — BandProfile + BandPipeline + `band_greybox.tres`
+- Milestone: M1.9 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_9_Tasks/S1_band_profile_pipeline.md` (body + §10 Resolved Decisions)
+- Goal: `BandProfile` resource (incl. `palette_tint`) + `BandPipeline.generate(profile, seed, rc)` delegating to today's `BandGenerator` (seal stays at materialisation; marked `# STAGE HOOK (S5)` slot) + `data/bands/band_greybox.tres`. Touches ONLY `systems/bandgen/` + `data/bands/` + new tests.
+- Done when: `test_band_pipeline_parity` byte-matches fingerprints vs the direct path across the 9-seed matrix (+ grading/rc-pass-through/purity guards); existing bandgen suite green; all-off fp unmoved; worklog + commit.
+
+### Wave 2 — Internals  *(S2 ∥ S5, parallel worktrees)*
+
+### S2 — Opposition component extraction + `param_schema`
+- Milestone: M1.9 (Wave 2)   Assignee: general-purpose   BlockedBy: S0
+- Spec: `design/M1_9_Tasks/S2_components_param_schema.md` (body + §Resolved Decisions)
+- Goal: refactor the 4 shipped entities onto the 9-component set (host-ticked child Nodes, resolved primitives; guards/timers transplant line-for-line into hosts); complete per-def `params`+`param_schema` (incl. `trap_if_neutral`); land the `thrown_item.gd` seam `resolve_throw_death(killer_ctx) -> bool` + the `LethalContact` external-contact seam; dual-emit generic signals from components.
+- Done when: all-off fp byte-identical; full hazard suite green; golden frame-trace parity harness green (goldens captured pre-refactor); params↔schema bijection check green; worklog + commit.
+
+### S5 — Band flavor stages: SetPieceInject + WearDecay + connectivity guarantee
+- Milestone: M1.9 (Wave 2)   Assignee: general-purpose   BlockedBy: S1
+- Spec: `design/M1_9_Tasks/S5_flavor_stages_connectivity.md` (body + §10 Resolved Decisions)
+- Goal: the two flavor stages (attach-at-socket set-pieces via `SetPieceEntry` pools; breach-led WearDecay) + the ASSERT/CARVE connectivity stage, in S1's stage hook, per-stage sub-seeds, off by default.
+- Done when: empty-flavors control fingerprint unmoved; per-stage double-run determinism green; strand-proof test green at max decay across the seed matrix; `floor_fingerprint()` guardrails in place; worklog + commit.
+
+### Wave 3 — Integration  *(S3 alone — sole `main_game.gd` writer)*
+
+### S3 — EncounterBuilder + RunConfig levers + both call-site integrations
+- Milestone: M1.9 (Wave 3)   Assignee: general-purpose   BlockedBy: S0, S1, S2
+- Spec: `design/M1_9_Tasks/S3_encounter_builder_integration.md` (body + §7 Resolved Decisions)
+- Goal: policy out of `main_game` into `EncounterBuilder.populate(band, deck, I, svc)` (legacy lane = byte-exact parity; deck lane = credit budget, `instability(d)=1.0+0.15*(d-1)`); levers `oppositions_enabled`/`param_overrides` as `@export_storage`; `main_game` → `BandPipeline.generate` + `_resolve_band_profile()` (default `band_greybox`) + `piece_pool_ext` field.
+- Done when: all-off fp byte-identical THROUGH the new call sites; byte-exact preset parity (plan-capture vs FakeSpawnService); bandgen determinism green through the pipeline; `test_encounter_builder` (8 cases) green; suite green unmodified; worklog + commit.
+
+### Wave 4 — Surface + content proof  *(S4 ∥ S6a ∥ S6b ∥ S7, parallel worktrees)*
+
+### S4 — Generated debug-menu sections + coverage 91 + sweep hygiene
+- Milestone: M1.9 (Wave 4)   Assignee: general-purpose   BlockedBy: S2, S3
+- Spec: `design/M1_9_Tasks/S4_generated_config_menu.md` (body + §8 Resolved Decisions)
+- Goal: 9th "Oppositions" tab generated from `param_schema` (all authored defs, sorted ids); promote the two levers to `@export` + bound rows (count model 89 frozen legacy + 2 = **91**); per-def bijection assertion; sparse `param_overrides` staging stamped on `run_started`; explicit respawn-with-new-params button emitting `debug_run_dirtied`; Telemetry subscribes to the generic signals. Sole Wave-4 writer of `run_config.gd`.
+- Done when: two-part coverage pin green (89 legacy + named levers = 91); per-def bijection green; headless menu matrix (0/4/6 defs) green as scenes; `debug_dirty` lands on run rows; all-off fp unmoved; worklog + commit.
+
+### S6a — New hazard #1: Charger ("The Wrecker")
+- Milestone: M1.9 (Wave 4)   Assignee: general-purpose (+ character-animator: placeholder sprite/tell)   BlockedBy: S2, S3
+- Spec: `design/M1_9_Tasks/S6a_charger_hazard.md` (body + §Resolved Decisions; D-RAT-2)
+- Goal: `charger.tres` (min_band=2) + the ONE new `ChargeLane` component (host-ticked; DORMANT→TELEGRAPH→CHARGE→RECOVER; swept-segment lethal via the LethalContact external seam; `lock_at_telegraph_start=true`; wall-crash stun knob; group-toggle dash-invuln — deck override per D-RAT-2); `ProximityTrigger` wake; greybox directional-wedge tell.
+- Done when: all-off fp unmoved; `test_charger` green (telegraph timing, kill gating, wall stop, cap=1/room, events); params↔schema green; deterministic placement; worklog + commit.
+
+### S6b — New hazard #2: Splitter
+- Milestone: M1.9 (Wave 4)   Assignee: general-purpose (+ character-animator: placeholder sprites)   BlockedBy: S2, S3
+- Spec: `design/M1_9_Tasks/S6b_splitter_hazard.md` (body + §Resolved Decisions; D-RAT-2)
+- Goal: `splitter.tres` + `splitter_child.tres` (min_band=2, `cap_group=&"new_hazards"`, per_band_cap=8) + the throw-death split hook (client (b): `svc.spawn` mid-run at adjacent `valid_cells`, deterministic-per-split from parent, ctx carries depth/run_t_ms); slow `ChaseMove` pursuer; children half-scale, pure cost, gen 1; `&"split"`/`&"split_refused"` events.
+- Done when: all-off fp unmoved; generation fingerprint unaffected by splits; cap-refusal test green; `test_splitter` green; params↔schema green (both defs); worklog + commit.
+
+### S7 — New band: `band_two.tres` ("The Sump")
+- Milestone: M1.9 (Wave 4)   Assignee: game-director-designer (+ environment-artist: tint pass, general-purpose: glue)   BlockedBy: S1, S5, S3
+- Spec: `design/M1_9_Tasks/S7_band_two.md` (body + §Resolved Decisions; D-RAT-1/3/4)
+- Goal: author The Sump as data — socket/branchy (target 16, branch 0.15), `band_depth=2`, flavors `SetPieceInject` (reused large piece) + `WearDecay(&"flooded")` per S5's real schemas, 6-entry deck (4 legacy + charger/splitter, authored order), `depth_curve_band_two.tres` (1.15→2.1, tier 2→5), sepia-amber `palette_tint` (tint-only).
+- Done when: `band_two` deterministic (same seed → same fp ×2; connectivity through decay green); deck spawns within caps via the builder; `band_greybox` control untouched; headless profile-load contract test green; worklog + commit.
+
+### Wave 5 — Reachability
+
+### S8 — Second hub portal + band routing + telemetry stamp
+- Milestone: M1.9 (Wave 5)   Assignee: general-purpose   BlockedBy: S3, S7
+- Spec: `design/M1_9_Tasks/S8_hub_portal_routing.md` (body + §Resolved Decisions; D-RAT-1)
+- Goal: second `departure_portal.tscn` instance at (220,-150) (`interactable_id=&"portal_band_two"`, route key `&"band_two"`, ember-orange glow, Sump prompt); rewrite `_resolve_band_profile()` off `consume_pending_dive_band()`; portal 1 (`&"near"`→band_greybox) byte-identical; `band_id` already stamps run rows (verify).
+- Done when: existing portal path byte-identical (fp + `test_hub_contract`); `test_band_routing` green (new portal lands in band_two with its fp); smoke green; no save change; worklog + commit.
+
+### Wave 6 — Re-gate  *(standing playtest-gate steps)*
+
+### SG1 — M1.9 playtest build + verify + changelog + itch publish
+- Milestone: M1.9 (Wave 6)   Assignee: qa-playtest-coordinator   BlockedBy: S0–S8 all Done
+- Spec: breakdown §SG1; template `design/M1_8_Tasks/HG1_playtest_build.md`
+- Goal: full M1.9 verify matrix (fp `e943ac9c8bc1` · 91-knob model · bandgen determinism · preset parity · both portals · suite); `changelog.txt` M1.8→M1.9 feature delta; publish to itch (`BUTLER=/mnt/c/wsl-libraries/butler/butler bash Game/tools/push_itch.sh`, human/network-gated).
+- Done when: verify matrix green; changelog committed; build live on `qusto/the-far-yard:html5`.
+
+### SG2 — M1.9 telemetry / balance analysis
+- Milestone: M1.9 (Wave 6)   Assignee: qa-playtest-coordinator   BlockedBy: SG1 + Director playtest
+- Goal: per-band comparison off `band_id`; new-hazard readability + fairness (via `opposition_event`); The Sump's +15% step felt?; `debug_dirty` runs filtered; web perf with the deck live.
+- Done when: analysis doc assembled for SG3.
+
+### SG3 — M1.9 re-gate verdict (Director decides)
+- Milestone: M1.9 (Wave 6)   Assignee: qa (assembles) → Director (decides)   BlockedBy: SG2
+- Goal: go/iterate/pivot in `design/M1_9_Tasks/G4_findings_M1.9.md`. Watch-items: did "content = data" hold (true proof cost incl. the LethalContact seam); promote charger/splitter to band 1?; legacy-signal retirement; ceiling numeric merge; CaveBackend/ScatterBackend next?
+- Done when: recorded verdict.
+
+---
+
+## M1.8 — Hub Art Dressing (build DONE; HG2/HG3 Director-pending, non-blocking)
 
 Shed the Hub's greybox skin for the placeholder **Layout-A vertical-spine** salvage-yard art
 (`art_workshop/map_layouts/`), loop-behaviour unchanged. Breakdown: `design/M1_8_Tasks/M1.8_Breakdown.md`.
@@ -66,44 +168,13 @@ Shed the Hub's greybox skin for the placeholder **Layout-A vertical-spine** salv
 `Interactable` ids + collision + `hub.gd` node paths + wall-bounding invariant; **copy, never move** from
 `art_workshop/`. M1.7's RG2/RG3 stay non-blocking.
 
-### Wave 1 — Build  *(H0 → H1, sequential; H1 is the sole `hub.tscn` writer)*
-
-### H0 — Asset import + Hub `TileSet` — ✓ **DONE** (`33f67d5`, 2026-06-28)
-- Milestone: M1.8 (Wave 1)   Assignee: environment-artist (+ general-purpose)   BlockedBy: none
-- COPIED (not moved) 16 ground tiles + 20 props → `Game/art/hub/{ground,objects}/` (originals intact); built `Game/data/tilesets/hub_ground.tres` (32px, 16 tiles). Import clean. Worklog `…-H0H1-hub-dressing-general-purpose.md`.
-
-### H1 — Dress the Hub scene (Layout-A vertical spine) — ✓ **DONE** (`81a3c13`, 2026-06-28)
-- Milestone: M1.8 (Wave 1)   Assignee: general-purpose (+ environment-artist)   BlockedBy: H0
-- Re-skinned `hub.tscn`: `HubGround` TileMapLayer spine + `dive_gate`/`portal_glow`/`shack_door`/benches + 15 y-sorted dressing props; all functional contracts invariant. Gate green: import · smoke · fp `e943ac9c8bc1` · 89/89. Integrated `main`@`11b8ff4`. 5 deviations → Director close-out.
-
-### H2 — Hub art re-dress: seamless Wang ground + perspective pass — ✓ **DONE** (2026-07-01, Director-directed)
-- Milestone: M1.8 (iteration on Wave 1, pre-HG3)   Assignee: orchestrator (direct, PixelLab MCP)   BlockedBy: H1
-- Director `/goal`: kill the per-tile black borders / misaligned tiles / wrong object angles. Ground re-authored as 3
-  chained PixelLab corner-Wang tilesets (asphalt↔dirt↔litter↔scrap, gradient-map retoned to Band-0) painted by a
-  vertex-map `hub_ground.gd` (RNG-free, 36×20 cells fills the camera); 6 props regenerated angle-consistent (+ NEW
-  front-facade shack 176×144, NEW south fence line); y-sort re-anchored to sprite base. Contracts invariant (ids,
-  collision, node paths, spawn, zoom); gate green: import · smoke · fp `e943ac9c8bc1` · 89/89 · hub contract (720 cells).
-  7 deviations → Director close-out. Worklog `…-H2-hub-redress-orchestrator.md`.
-
-### H4 — Hub 45° isometric re-dress (iso tiles + transitions) — ✓ **DONE** (2026-07-02, Director-directed)
-- Milestone: M1.8 (iteration, pre-HG3)   Assignee: orchestrator (direct, PixelLab MCP)   BlockedBy: H2
-- Director `/goal`: 45° perspective; grass/dirt/scrap tile families; AI transitions between tiles. 48 iso tiles
-  (PixelLab create_tiles_pro @45°; transitions via per-edge shape-mode prompts — the inpaint API discards frozen
-  context and style mode ignores the iso shape; both evidenced). NEW `hub_ground_iso.tres` (DIAMOND_DOWN 64×32) +
-  rewritten RNG-free zone painter (963 cells); dressing props removed, shop + dive portal + colliders kept. Gate
-  green: import · smoke · fp `e943ac9c8bc1` · 89/89 · iso hub contract. First attempt was falsely reported done
-  without landing (caught by the Director) — rebuilt + verified, incl. pck-content check post-publish. 4 deviations
-  → Director close-out. Worklog `…2026-07-02-H4-hub-iso-orchestrator.md`.
+**Build tasks all DONE + archived → `TASKS_COMPLETED.md`** (H0 `33f67d5` · H1 `81a3c13` · H2 re-dress ·
+H4 iso re-dress · HG1 published `m1-20260629-9d613ed`, then republished through `m1-20260702-3faeed0`).
+Open here: H3 (deferred) + HG2/HG3 (Director-pending).
 
 ### H3 — Street-exit threshold prop (PixelLab) — **DEFERRED (Director-gated, paid credits)**
 - Milestone: M1.8   Assignee: environment-artist   BlockedBy: Director OK
 - The one missing spec prop (`SS`); not loop-critical (no functional street exit yet). Generate only on explicit Director go.
-
-### Wave 2 — Re-gate  *(after Wave 1 + Director playtest)*
-
-### HG1 — M1.8 playtest build + verify + publish — ✓ **DONE + PUBLISHED** (`9d613ed`, 2026-06-28)
-- Milestone: M1.8 (Wave 2)   Assignee: qa-playtest-coordinator   BlockedBy: H0,H1
-- Full suite green (fp `e943ac9c8bc1` + 89/89 unmoved, no save change); `changelog.txt` M1.8 block; verify doc `design/M1_8_Tasks/HG1_playtest_build.md`. Published `qusto/the-far-yard:html5 @ m1-20260629-9d613ed`. Worklog `…-HG1-qa-playtest-coordinator.md`.
 
 ### HG2 — M1.8 readability check + HG3 — verdict (Director)
 - Milestone: M1.8 (Wave 2)   Assignee: qa (assembles) → Director (decides)   BlockedBy: HG1 + human playtest
@@ -111,7 +182,7 @@ Shed the Hub's greybox skin for the placeholder **Layout-A vertical-spine** salv
 
 ---
 
-## M1.7 — Player Embodiment (ACTIVE — Director-directed; design LOCKED)
+## M1.7 — Player Embodiment (build DONE; RG2/RG3 Director-pending, non-blocking)
 
 Replace the greybox player (teal `ColorRect`+`Nose`) with the **first real character sprite** — the
 `player_basic_template` (flannel/hoodie, 8-directional: walk · pickup · throw · idle-from-rotations) — in **both** the Hub
@@ -125,33 +196,9 @@ holds** (the debug art toggle is a view-only switch OUTSIDE the `config_menu` MA
 byte-for-byte** (greybox retained, no lock); collision r=14 + `player_movement.tres` untouched; frames **COPIED** (never
 moved) from `art_workshop/` into `Game/`, filter-off, LFS. Sequential single wave: N0 → N1 → N2.
 
-### Wave 1 — Build  *(N0 → N1 → N2, sequential; one writer per file)*
-
-### N0 — Foundation: art import + `SpriteFrames` + signal seam
-- Milestone: M1.7 (Wave 1)   Assignee: character-animator (+ general-purpose)   BlockedBy: none
-- Spec: `design/M1_7_Tasks/N0_art_import_spriteframes.md`
-- Goal: **copy** (never move) the 152 `player_basic_template` PNGs from `art_workshop/game_art/player_explorations/20260627/player_basic_template/{rotations,move,pickup,throw}` into `res://art/player/…` (hyphens→underscores); `--import` so `.import` inherits the project nearest filter; author `res://entities/player/player_frames.tres` (`SpriteFrames`, 32 clips `<state>_<dir>`: idle 8×1 loop / walk 8×6@10fps loop / pickup 8×5@20fps one-shot / throw 8×7@24fps one-shot); pre-declare the ONE new EventBus signal `debug_player_art_toggled(enabled: bool)` (tooling). Single writer of `event_bus.gd` + the new asset.
-- Done when: frames present under `Game/art/player/` (source still in `art_workshop/`); SpriteFrames loads headless with the 32 clips + correct frame counts/loops; import clean; all-off fp byte-identical (e943ac9c8bc1); 89-knob count unchanged; smoke green; signal declared.
-
-### N1 — Player visual state machine (8-way + actions + lock)
-- Milestone: M1.7 (Wave 1)   Assignee: general-purpose (+ character-animator)   BlockedBy: N0
-- Spec: `design/M1_7_Tasks/N1_player_visual_state_machine.md`
-- Goal: rework `entities/player/player.tscn` — add an `AnimatedSprite2D` (from `player_frames.tres`), **retain** the greybox `Visual`/`Nose` hidden-by-default as the art-OFF fallback; new `player_visual.gd` controller with PURE unit-testable helpers `quantize_dir(facing,current)` (8-way, ~10° hysteresis) + `select_state(velocity,locked,action)` (idle↔walk @ ~8px/s; pickup/throw priority); plays pickup on `junk_picked_up` (accepted only, `@export`-gated) + throw on `item_thrown`; **brief movement-lock** by zeroing `input_dir` into the unchanged `step_velocity` (clip-driven, `@export` mode+cap; armed only when art ON). Applies in hub + dive via the shared scene.
-- Done when: player shows correct idle/walk per direction + pickup/throw clips in BOTH hub and dive; movement-lock works + is `@export`-tunable; greybox hidden when art on; pure helpers have a headless scene test; collision/movement untouched; all-off fp `e943ac9c8bc1` unmoved; smoke + suite green.
-
-### N2 — Debug "disable player art" toggle
-- Milestone: M1.7 (Wave 1)   Assignee: ui-ux-designer (+ general-purpose)   BlockedBy: N1
-- Spec: `design/M1_7_Tasks/N2_debug_player_art_toggle.md`
-- Goal: add a **non-`RunConfig`** `CheckButton` to the `config_menu` **Meta tab** (label "Player art (debug)", key `CFG_DEBUG_PLAYER_ART`, default checked = art ON, **session-only** — no save write), patterned on the existing Meta-tab telemetry-export button; `toggled` emits `EventBus.debug_player_art_toggled(enabled)`; the player handler swaps `AnimatedSprite2D` ↔ greybox (`Visual`+`Nose`) and disarms the movement-lock when off. The control is NEVER added to `_rows`/MANIFEST.
-- Done when: toggling at runtime swaps art↔greybox in hub + dive; default = art ON; `test_config_menu` still reports **89** + coverage assertion green; all-off fp `e943ac9c8bc1` unmoved; no save-schema change.
-
-### Wave 2 — Re-gate  *(sequential; RG2/RG3 after the human playtest)*
-
-### RG1 — M1.7 playtest build + verify + publish
-- Milestone: M1.7 (Wave 2)   Assignee: qa-playtest-coordinator   BlockedBy: N0,N1,N2
-- Spec: author from `design/M1_6_Tasks/RG1_playtest_build.md` template → `design/M1_7_Tasks/RG1_playtest_build.md`
-- Goal: assemble + verify the M1.7 build (8-way idle/walk + pickup/throw in hub AND dive; debug toggle swaps art↔greybox; all-off fp byte-identical `e943ac9c8bc1`; 89-knob coverage; smoke + suite green); **publish to itch** via `bash Game/tools/push_itch.sh`; update `changelog.txt` (M1.6→M1.7 delta: the player is now an animated character + the debug art toggle).
-- Done when: a fresh build animates the player correctly in both scenes; the debug toggle works live; verify matrix green; build live on `qusto/the-far-yard:html5`; changelog updated.
+**Build tasks all DONE + archived → `TASKS_COMPLETED.md`** (N0 `07edb77` · N1 `47ab9a8` · N2 `cffb5db` ·
+RG1 published `m1-20260628-867410f` + FIXINTERP/FIXEAST/PLAYERTAB/art-default-OFF follow-ups).
+Open here: RG2/RG3 (Director-pending, non-blocking).
 
 ### RG2 — M1.7 readability / telemetry check
 - Milestone: M1.7 (Wave 2)   Assignee: qa-playtest-coordinator   BlockedBy: RG1 + human playtest data

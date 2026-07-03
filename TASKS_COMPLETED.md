@@ -364,3 +364,29 @@ Give the game a surface: boot→Main Menu→walkable Hub (sell+buy Shop)⇄Dive 
 - **Wave 2 (M1∥M2∥M4, `40d328d`):** Main Menu · walkable Hub + `main_game` dive-only refactor + hub-return quota/wipe · P-tab debug menu + Vision split (89-coverage byte-identical).
 - **Wave 3 (M3, `f47d8fc`):** Hub Shop sell+buy + 3-item persistent catalog + META v3→v4 + SellScreen retired + quota-MISS notice.
 - **Wave 4 (RG1, `aea0bb7` + FB1–FB4 `41106de`):** M1.6 build+verify doc + changelog + itch publish; 4 RG1 playtest-feedback fixes (extract-prompt z-order, quota cumulative basis, on-screen controls list). **RG2/RG3 remain Director-gated** (re-test → verdict in `design/M1_6_Tasks/G4_findings_M1.6.md`).
+
+---
+
+## M1.7 — Player Embodiment — ✓ BUILD DONE 2026-06-28; RG1 published (re-gate RG2/RG3 Director-pending)
+
+Replace the greybox player with the animated `player_basic_template` character (8-dir idle/walk + pickup/throw) in
+both Hub and Dive, + a debug art toggle (shipped default = art OFF = M1.6 parity, Director-directed). Breakdown:
+`design/M1_7_Tasks/M1.7_Breakdown.md`; specs `design/M1_7_Tasks/N*.md`. All-off fp byte-identical (e943ac9c8bc1);
+89-knob count held (toggle outside MANIFEST); no save change; frames COPIED from `art_workshop/` (LFS, filter off).
+- **Wave 1 (N0 `07edb77` · N1 `47ab9a8` · N2 `cffb5db`):** art import + 32-clip SpriteFrames + `debug_player_art_toggled` signal · `player_visual.gd` 8-way FSM + movement-lock · Meta-tab (later Player-tab) debug toggle. 0 deviations.
+- **Post-build fixes (Director-reported):** FIXINTERP `9e134fd` (physics-interpolation teleport ghosts — 8 reset sites) · FIXEAST `a37d106` (corrupt throw/east frames regenerated via PixelLab, Director-authorized) · PLAYERTAB `bb1976a` (new debug-menu Player tab + per-action lock knobs) · art default flipped OFF.
+- **Wave 2 (RG1):** verify matrix green + `changelog.txt` M1.7 block + published `qusto/the-far-yard:html5 @ m1-20260628-867410f` (publish-blocker fix: `push_itch.sh` APIKEYS root resolution). **RG2/RG3 remain Director-gated** (`design/M1_7_Tasks/G4_findings_M1.7.md`).
+
+---
+
+## M1.8 — Hub Art Dressing — ✓ BUILD DONE 2026-06-28..2026-07-02; HG1 published (re-gate HG2/HG3 Director-pending)
+
+Art-only iteration: shed the Hub's greybox skin (Layout-A vertical spine), loop behaviour byte-identical. Breakdown:
+`design/M1_8_Tasks/M1.8_Breakdown.md`. All-off fp `e943ac9c8bc1` + 89/89 held throughout; no save change; portal/shop
+`Interactable` ids + collision + `hub.gd` node paths invariant; copy-never-move from `art_workshop/`.
+- **H0 (`33f67d5`):** 16 ground tiles + 20 props copied → `Game/art/hub/`; `hub_ground.tres` TileSet.
+- **H1 (`81a3c13`, integrated `11b8ff4`):** hub re-skinned — TileMapLayer spine + functional-prop sprite swaps + 15 y-sorted dressing props.
+- **H2 (2026-07-01, orchestrator + PixelLab):** re-dress — 3 chained corner-Wang tilesets painted by vertex-map `hub_ground.gd` (720 cells), 6 props regenerated angle-consistent + front-facade shack + south fence, y-sort by base.
+- **H4 (2026-07-02, orchestrator + PixelLab):** 45° isometric re-dress — 48 iso tiles + `hub_ground_iso.tres` (DIAMOND_DOWN 64×32) + RNG-free zone painter (963 cells); shop/portal/colliders kept; H2 top-down kept in-repo as revert path. (First attempt falsely reported done — caught by Director, rebuilt + pck-verified; see `verify-before-reporting-done` memory.)
+- **HG1 (`9d613ed`):** verify + changelog + published `qusto/the-far-yard:html5` (`m1-20260629-9d613ed` → republished `m1-20260701-2457bc2`, `m1-20260702-3faeed0`).
+- **Open (not archived):** H3 (street-threshold prop, Director-gated) · HG2/HG3 verdict (`design/M1_8_Tasks/G4_findings_M1.8.md`) · 13 deviations awaiting Director disposition.
