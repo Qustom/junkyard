@@ -23,4 +23,17 @@ Verdict record: `design/M1_8_Tasks/G4_findings_M1.8.md`.*
 
 ---
 
-*(no un-assessed entries — M1.9 build waves append here)*
+- `[2026-07-02] S0/SpawnService — cap-group accounting is live-registry-derived, not the
+  monotonic {ceiling, count} counter sketched in S0 spec §6.1's illustrative pseudocode` ·
+  Counts are computed from the validity-swept live registry so spawn/despawn/free stay
+  coherent with `live_count()` (one source of truth); a node freed mid-run therefore
+  re-opens cap headroom for mid-run clients (S6b+). Never observable in Phase A (nothing
+  spawns mid-run; the policy `min()` binds first) — all fingerprints/positions verified
+  byte-identical. · **Recommendation: Reviewed** (mechanism-internal; "hard caps bound
+  live nodes" is arguably the truer reading of the breakdown's cap contract).
+- `[2026-07-02] S0/SpawnService — untyped locals in _compact()/clear_all()` · Assigning an
+  already-freed instance to a typed `Node` local raises a runtime script error on Godot
+  4.6 (caught by test_spawn_service's free-without-despawn case), so the registry sweep
+  reads entries into untyped locals guarded by `is_instance_valid`. Departs from the
+  "typed GDScript everywhere" convention on two locals, forced by engine semantics. ·
+  **Recommendation: Reviewed.**
