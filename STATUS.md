@@ -6,8 +6,13 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Wave 2 (S2 ∥ S5) BUILT + INTEGRATED on `main`. ▶ Next: Wave-2 close-out — 8 deviations (S2×4 + S5×4) await Director disposition; Wave 3 (S3) dispatches only after the sweep.** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
-**Last updated:** 2026-07-03 (Wave 2 integrated + verified on main: import · smoke · fp `e943ac9c8bc1` (determinism + corridor) · band flavors F1–F8 · pipeline parity · golden frame-trace parity · full hazard suite · spawn service · schema bijection · config 89/89 · rg1 loop/m12/m14/m15 — green. **m13 is a PRE-EXISTING headless timing flake** (~40% on pre-Wave-2 9cc00c1 too; passes on retry) → filed BUG-M13FLAKE (backlog + board), NOT a Wave-2 regression.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Waves 1–2 DONE + swept (close-outs archived); Wave 3 (S3) IN PROGRESS (dispatched).** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Last updated:** 2026-07-03 (Wave-2 close-out: 8 deviations dispositioned 7 Reviewed + 1 Addressed (run-clock seam → typed injected Callable, fixed + re-verified) — reapplied (S2/S5 spec amendment sections; S5 §2.2 in place) + archived. `DESIGN_DEVIATIONS.md` empty. m13 flake = pre-existing, BUG-M13FLAKE filed. Wave 3 dispatched: S3 → general-purpose (EncounterBuilder + RunConfig levers + both call-site switches; sole `main_game.gd` writer).)
+
+## In progress
+| Task | Since | Agent(s) | Milestone | Note |
+|---|---|---|---|---|
+| S3 — EncounterBuilder + RunConfig generic levers + both call-site integrations | 2026-07-03 | general-purpose | M1.9 (Wave 3) | Branch `general-purpose/S3`. Sole `main_game.gd` writer. `@export_storage` levers (89 holds); fp byte-identical THROUGH the new call sites; preset cohort parity; `test_encounter_builder`. |
 
 ## Wave 2 — Done (2026-07-03)
 | Task | Agent | Merged | Proof |
