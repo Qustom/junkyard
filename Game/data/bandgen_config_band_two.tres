@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BandGenConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/bandgen_config.gd" id="0"]
+
+[resource]
+script = ExtResource("0")
+target_piece_count = 16
+branch_chance = 0.15
+max_place_attempts = 16
+loop_back_count = 0
+soft_floor_percent = 80
+max_band_attempts = 8

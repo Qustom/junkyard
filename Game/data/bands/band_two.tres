@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="BandProfile" load_steps=19 format=3]
+
+[ext_resource type="Script" path="res://data/bands/band_profile.gd" id="1"]
+[ext_resource type="Resource" path="res://data/bandgen_config_band_two.tres" id="2"]
+[ext_resource type="Resource" path="res://data/piece_catalog_ext.tres" id="3"]
+[ext_resource type="Resource" path="res://systems/depth/depth_curve_band_two.tres" id="4"]
+[ext_resource type="Resource" path="res://data/junk/junk_catalog.tres" id="5"]
+[ext_resource type="Script" path="res://data/bands/flavors/set_piece_inject_config.gd" id="6"]
+[ext_resource type="Script" path="res://data/bands/flavors/set_piece_entry.gd" id="7"]
+[ext_resource type="Script" path="res://data/bands/flavors/wear_decay_config.gd" id="8"]
+[ext_resource type="Script" path="res://data/zone_piece_data.gd" id="9"]
+[ext_resource type="PackedScene" path="res://bands/pieces/piece_room_xl.tscn" id="10"]
+[ext_resource type="Resource" path="res://data/oppositions/pursuer.tres" id="11"]
+[ext_resource type="Resource" path="res://data/oppositions/pingpong.tres" id="12"]
+[ext_resource type="Resource" path="res://data/oppositions/bomb.tres" id="13"]
+[ext_resource type="Resource" path="res://data/oppositions/spike.tres" id="14"]
+
+[sub_resource type="Resource" id="zpd_vault_room_xl"]
+script = ExtResource("9")
+scene = ExtResource("10")
+piece_id = &"piece_room_xl"
+weight = 1.0
+
+[sub_resource type="Resource" id="set_piece_entry_vault"]
+script = ExtResource("7")
+piece = SubResource("zpd_vault_room_xl")
+min_depth_norm = 0.6
+max_per_band = 1
+unique = true
+
+[sub_resource type="Resource" id="set_piece_inject_cfg"]
+script = ExtResource("6")
+entries = Array[ExtResource("7")]([SubResource("set_piece_entry_vault")])
+max_total = 1
+
+[sub_resource type="Resource" id="wear_decay_cfg"]
+script = ExtResource("8")
+state = &"flooded"
+decay_level = 0.3
+breach_budget = 2
+block_budget = 1
+depth_bias = 0.0
+breach_width = 2
+
+[resource]
+script = ExtResource("1")
+id = &"band_two"
+display_name = "The Sump"
+backend = "socket"
+backend_config = ExtResource("2")
+archetype = "branchy"
+archetype_params = {}
+piece_pool = ExtResource("3")
+piece_pool_ext = null
+principles = Array[Resource]([])
+flavors = Array[Resource]([SubResource("set_piece_inject_cfg"), SubResource("wear_decay_cfg")])
+depth_curve = ExtResource("4")
+junk_catalog = ExtResource("5")
+opposition_deck = Array[Resource]([ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14")])
+band_depth = 2
+palette_tint = Color(0.82, 0.66, 0.42, 1)
