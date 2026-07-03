@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3 uid="uid://c6s6achargerhaz1"]
+
+[ext_resource type="Script" path="res://scenes/hazards/charger_hazard.gd" id="1"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_charger"]
+radius = 16.0
+
+[node name="Charger" type="CharacterBody2D" groups=["hazard"]]
+collision_layer = 16
+collision_mask = 2
+script = ExtResource("1")
+
+[node name="LaneRect" type="Polygon2D" parent="."]
+visible = false
+color = Color(0.95, 0.25, 0.15, 0.22)
+
+[node name="Tell" type="Polygon2D" parent="."]
+color = Color(0.45, 0.4, 0.35, 1)
+polygon = PackedVector2Array(20, 0, -14, -14, -8, 0, -14, 14)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_charger")
