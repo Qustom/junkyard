@@ -402,6 +402,30 @@ const LVL_LOOT_AREA_UNIT: int = 96
 @export var throw_max_range: float = 320.0
 
 
+# =============================================================================
+# S3 (M1.9) — generic opposition levers (exploration v2 "RunConfig integration").
+# ADDITIVE + neutral-by-default: empty array/dict = no def loaded, no override
+# applied — the all-off control and every legacy preset are byte-untouched.
+# Declared @export_storage (serialized to .tres, NOT editor-visible) so
+# config_menu's 89-row has_full_coverage() reflection (STORAGE && EDITOR) is
+# unaffected in Wave 3 (empirically verified on 4.6.3 — usage 4098, EDITOR bit
+# absent; spec §7.1 C1); S4 promotes both to plain @export + bound rows in
+# Wave 4 (count model: 89 frozen legacy + 2 levers = 91).
+# =============================================================================
+## ADDITIVE def enable-list (a sweep/debug lever): each listed OppositionDef id
+## (res://data/oppositions/<id>.tres) is loaded and appended, id-deduped, to the
+## dive's effective opposition deck through the EncounterBuilder's deck machinery
+## — on a deck-less band (band 1) it seeds a one-def deck at the def's authored
+## spawn card. It never REMOVES a band author's deck entry. Empty = neutral.
+@export_storage var oppositions_enabled: Array[StringName] = []
+## def_id -> { param_key -> value } sweep overrides, applied to DEF-DRIVEN params
+## (deck lane + extras) at ctx-merge time; legacy-knob-driven values stay
+## authoritative for the legacy lane in M1.9 (no double-driving — S3 §7.2
+## Q6(ii)). String or StringName def-id keys accepted; leaves are primitives.
+## Empty = neutral.
+@export_storage var param_overrides: Dictionary = {}
+
+
 ## The hardcoded corridor piece-id set (J4) the corridor-rarity lever down-weights and the
 ## corridor-time telemetry classifies on. Keyed on PlacedPiece.piece_id / ZonePieceData.piece_id
 ## (the generator-populated id, NOT the pre-_ready size_cells). The aspect-ratio fallback is
@@ -452,6 +476,10 @@ func effective_room_count(baseline_count: int) -> int:
 ## the `run_started` row's `data` (additive payload — NOT a schema bump). Flat by
 ## design: keys are the field names, values are JSON primitives (int/float/bool/
 ## String/Array of float). TEL wires the call; R0 only provides the method.
+## ONE sanctioned exception (S3, M1.9 — breakdown amendment 10): the
+## "param_overrides" stamp is NESTED one level (def_id -> { param_key -> value },
+## String keys, primitive leaves) because a def sweep is intrinsically
+## two-dimensional; it stays JSON-safe and empty (`{}`) on every neutral config.
 func to_flat_dict() -> Dictionary:
 	return {
 		# meta
@@ -563,7 +591,38 @@ func to_flat_dict() -> Dictionary:
 		"hpp_kills": hpp_kills,
 		"hbomb_kills": hbomb_kills,
 		"hspike_kills": hspike_kills,
+		# S3 (M1.9) — generic opposition levers (additive payload; SG2 segments def
+		# sweeps). Neutral configs stamp an empty Array + empty Dictionary.
+		"oppositions_enabled": _stringname_array_to_strings(oppositions_enabled),
+		"param_overrides": _param_overrides_flat(),
 	}
+
+
+## Array[StringName] → plain Array of String so the flat dict stays JSON-portable
+## (JSON.stringify would coerce StringNames anyway; plain Strings keep the snapshot
+## consumer-agnostic, like _packed_to_float_array).
+func _stringname_array_to_strings(names: Array[StringName]) -> Array:
+	var out: Array = []
+	for n in names:
+		out.append(String(n))
+	return out
+
+
+## param_overrides → the JSON-safe nested stamp (the ONE sanctioned nested
+## to_flat_dict() value — see the docstring): String def-id keys, one level of
+## { param_key -> primitive } beneath. Non-Dictionary entries are dropped (a
+## malformed override is a config-authoring error, not a telemetry crash).
+func _param_overrides_flat() -> Dictionary:
+	var out: Dictionary = {}
+	for def_id: Variant in param_overrides:
+		var entry: Variant = param_overrides[def_id]
+		if not (entry is Dictionary):
+			continue
+		var flat_entry: Dictionary = {}
+		for k: Variant in (entry as Dictionary):
+			flat_entry[String(k)] = (entry as Dictionary)[k]
+		out[String(def_id)] = flat_entry
+	return out
 
 
 ## PackedFloat32Array → plain Array[float] so the flat dict is JSON-safe

@@ -19,14 +19,14 @@ extends Node2D
 ## Greybox norm: the band pieces, junk, gate and player are existing greybox scenes;
 ## the main menu is a minimal default-theme Control. No art is authored here.
 
-const PIECE_CATALOG_PATH := "res://data/piece_catalog.tres"
-## I1 (M1.2): the EXTENDED piece catalog (baseline pieces + the new larger greybox
-## pieces). Used ONLY when lvl_enabled — a config-dependent catalog swap (Resolved G)
-## so adding pieces never moves the all-off baseline fingerprint(): with lvl off the
-## baseline catalog is used and the band byte-matches M1.0/M1.1. Each catalog is
-## fingerprint-tested independently in test_level_scale_determinism.gd.
-const PIECE_CATALOG_EXT_PATH := "res://data/piece_catalog_ext.tres"
-const BANDGEN_CONFIG_PATH := "res://data/bandgen_config.tres"
+## M1.9 (S3): the band is now generated from a BandProfile through BandPipeline (the S1
+## orchestrator). The default profile IS today's baseline as data — band_greybox.tres
+## references the LIVE bandgen_config/piece_catalog(+ext)/depth_curve/junk_catalog .tres
+## (same cached objects, never copies), so the all-off fingerprint (e943ac9c8bc1) is
+## byte-identical through the pipeline (test_band_pipeline_parity). The I1 lvl_enabled
+## ext-catalog swap lives INSIDE the pipeline now (profile.piece_pool_ext — S3 §7.2
+## Q6(iv)); the legacy generation consts/fixtures this replaced are deleted.
+const DEFAULT_BAND_PROFILE_PATH := "res://data/bands/band_greybox.tres"
 const JUNK_CATALOG_PATH := "res://data/junk/junk_catalog.tres"
 const DEPTH_CURVE_PATH := "res://systems/depth/depth_curve.tres"
 const GATE_SCENE_PATH := "res://entities/gate/extract_gate.tscn"
@@ -70,12 +70,17 @@ const DEFAULT_CELL_SIZE_PX := 16
 ## stays byte-identical to M1.4.
 const THROWN_ITEM_SCENE_PATH := "res://entities/thrown_item/thrown_item.tscn"
 
-# Loaded fixtures (loaded once; pure data, never mutated here).
-var _piece_catalog: Array[ZonePieceData] = []          # baseline catalog (lvl OFF)
-var _piece_catalog_ext: Array[ZonePieceData] = []      # extended catalog (lvl ON) — I1
-var _cfg: BandGenConfig
+# Loaded fixtures (loaded once; pure data, never mutated here). M1.9 (S3): kept only as
+# null-fallbacks — the profile's depth_curve/junk_catalog (same live .tres objects for
+# band_greybox) are the bound source now.
 var _junk_catalog: JunkCatalog
 var _depth_curve: DepthCurve
+
+## M1.9 (S3): the dive's resolved BandProfile (run-state; re-resolved every
+## start_new_run). The _spawn_new_hazards façade reads it so the builder sees the SAME
+## profile the band was generated from (bare-instance test harnesses, which never run
+## start_new_run, fall back to _resolve_band_profile()).
+var _band_profile: BandProfile = null
 
 # Per-run scene plumbing.
 # K7 (M1.4): one OR MORE extract gates per band (was the single var _gate). The all-off
@@ -146,20 +151,13 @@ func _ready() -> void:
 
 
 func _load_fixtures() -> void:
-	var pc = load(PIECE_CATALOG_PATH)
-	if pc != null:
-		_piece_catalog = pc.pieces
-	# I1: the extended catalog is OPTIONAL — if it's missing we silently fall back to
-	# the baseline catalog even when lvl is on (so a broken/absent ext catalog never
-	# breaks the loop; it just means "no bigger pieces this run").
-	var pce = load(PIECE_CATALOG_EXT_PATH)
-	if pce != null:
-		_piece_catalog_ext = pce.pieces
-	_cfg = load(BANDGEN_CONFIG_PATH) as BandGenConfig
+	# M1.9 (S3): the generation fixtures (bandgen config + piece catalogs) moved onto the
+	# BandProfile (band_greybox.tres references the same live .tres objects); only the
+	# loot-plan fallbacks remain here.
 	_junk_catalog = load(JUNK_CATALOG_PATH) as JunkCatalog
 	_depth_curve = load(DEPTH_CURVE_PATH) as DepthCurve
-	if _piece_catalog.is_empty() or _cfg == null or _junk_catalog == null or _depth_curve == null:
-		push_error("MainGame: missing fixtures; cannot generate bands.")
+	if _junk_catalog == null or _depth_curve == null:
+		push_error("MainGame: missing fixtures; cannot plan loot.")
 
 
 # --- The loop entry point (G3-owned) -----------------------------------------
@@ -197,22 +195,25 @@ func start_new_run() -> void:
 	# (or stage_run_config), so the determinism baseline is unaffected. Never null.
 	var run_cfg: RunConfig = GameState.dive_config_or_default()
 
-	# 1. Generate + grade + plan (B2 → B3) — pure functions of (seed + config).
-	#    I1 (M1.2): pick the catalog by lvl_enabled (Resolved G — config-dependent
-	#    catalog so the all-off baseline fingerprint never moves). lvl off → baseline
-	#    catalog (byte-matches M1.0/M1.1); lvl on → extended catalog (the new larger
-	#    greybox pieces). Falls back to baseline if the ext catalog is absent.
-	var catalog := _piece_catalog
-	if run_cfg != null and run_cfg.lvl_enabled and not _piece_catalog_ext.is_empty():
-		catalog = _piece_catalog_ext
-	var generator := BandGenerator.new()
-	var band := generator.generate(seed, _cfg, catalog, run_cfg)
+	# 1. Generate + grade (B2 → B3) — pure functions of (profile + seed + config).
+	#    M1.9 (S3): THE band-gen call-site switch — the profile-driven BandPipeline (S1)
+	#    replaces the direct BandGenerator call. The pipeline owns backend selection, the
+	#    I1 lvl_enabled ext-catalog swap (profile.piece_pool_ext, §7.2 Q6(iv) — same
+	#    config-dependent swap as before, so the all-off fp never moves), the S5 flavor
+	#    stages (band_greybox has none → the byte-identical parity path), and grading +
+	#    return distance. rc threads the legacy levers (r4_*, lvl_*, corridor weights) to
+	#    the generator's interior hooks unchanged (test_band_pipeline_parity P5). The
+	#    profile comes from the routing seam (_resolve_band_profile — S8 rewires the key
+	#    map in Wave 5); the SocketSealer stays at materialisation (it needs parented
+	#    pieces).
+	_band_profile = _resolve_band_profile()
+	if _band_profile == null:
+		push_error("MainGame: no band profile at %s; cannot generate." % DEFAULT_BAND_PROFILE_PATH)
+		return
+	var band := BandPipeline.new().generate(_band_profile, seed, run_cfg)
 	if band == null or band.pieces.is_empty():
 		push_error("MainGame: band generation produced no pieces (seed %d)." % seed)
 		return
-	var grader := DepthGrader.new()
-	grader.grade(band)
-	grader.compute_return_distance(band)
 	# BUG2: capture the depth model before `band` (a throwaway local) is discarded.
 	_build_cell_depth_map(band)
 
@@ -233,11 +234,22 @@ func start_new_run() -> void:
 	# J3 (M1.3): the loot-per-area sub-knob (OFF by default / never preset-on). At 0.0 the
 	# planner draws byte-for-byte as M1.2; > 0 scales per-piece junk count by room area.
 	var loot_density: float = run_cfg.lvl_loot_density_per_area if run_cfg != null else 0.0
-	var plan := placer.plan(band, _depth_curve, _junk_catalog, false, cell_size_px, loot_density)
+	# M1.9 (S3): depth curve + junk catalog bind from the PROFILE (band_greybox references
+	# the same live .tres objects the old fixtures loaded → byte-identical plan); the
+	# fixture members remain as null-fallbacks only.
+	var depth_curve: DepthCurve = _band_profile.depth_curve \
+		if _band_profile.depth_curve != null else _depth_curve
+	var junk_catalog: JunkCatalog = _band_profile.junk_catalog \
+		if _band_profile.junk_catalog != null else _junk_catalog
+	var plan := placer.plan(band, depth_curve, junk_catalog, false, cell_size_px, loot_density)
 
 	# 2. Materialise the band geometry into the world (instances at cell offsets),
 	#    scaling each piece + its spacing by the effective cell size.
 	_band_cell_size_px = _materialise_band(band, cell_size_px)
+	# M1.9 (S3): tier-1 band identity (D-RAT-4) — the profile's whole-band modulate tint.
+	# band_greybox ships neutral white == zero visual change; S7's band_two authors a
+	# real tint. Render-only: never feeds fingerprint().
+	_band_container.modulate = _band_profile.palette_tint
 
 	# 3. Spawn the interactive junk pickups from the plan (C2).
 	_spawner = JunkSpawner.new()
@@ -318,15 +330,12 @@ func start_new_run() -> void:
 
 
 # --- K5i (M1.4): new-hazard spawn seam (ping-pong / bomb / spikes) ------------
-
-## M1.9 (S0): new-hazard OppositionDef paths (the def is the SINGLE source of the scene —
-## the legacy HPP/HBOMB/HSPIKE scene-path consts are deleted, OQ-11 resolved; each def's
-## host_scene ExtResource pulls the same .tscn unchanged). load()ed LAZILY inside the spawn
-## loop — only when that type is enabled — so an all-off run loads nothing (no def, no
-## scene, no service node) and stays byte-identical.
-const HPP_DEF_PATH := "res://data/oppositions/pingpong.tres"      # K5a PingPongHazard
-const HBOMB_DEF_PATH := "res://data/oppositions/bomb.tres"        # K5b BombHazard
-const HSPIKE_DEF_PATH := "res://data/oppositions/spike.tres"      # K5c SpikeHazard
+# M1.9 (S3): the POLICY half (descriptor table, fair-share split, depth-scaled counts,
+# per-kind ctx) moved into EncounterBuilder (systems/spawning/encounter_builder.gd);
+# the MECHANISM half moved into SpawnService in S0. What remains here is the thin
+# façade (_spawn_new_hazards — kept-signature, the golden harness drives it), the
+# profile-resolution seam, two re-export consts and a ctx forwarder for the committed
+# golden tests.
 
 ## K5i: band-wide ceiling across ALL THREE new hazard types COMBINED (OQ-3, Director-flagged
 ## value 48; RG1 must measure the worst-case combined tick time). SEPARATE from R1's
@@ -340,10 +349,6 @@ const HSPIKE_DEF_PATH := "res://data/oppositions/spike.tres"      # K5c SpikeHaz
 ## is a FORWARDING re-export so the committed golden tests (test_new_hazard_spawn.gd:44,
 ## test_rg1_m14_verify.gd:299/:403) keep reading it off the MainGame script unmodified.
 const NEW_HAZARD_BAND_CEILING: int = SpawnService.NEW_HAZARD_BAND_CEILING
-
-## K5i: per-instance angular stride for the ping-pong's deterministic initial direction —
-## the golden angle (~137.5°) so successive instances fan out without repeating, NO RNG.
-const NEW_HAZARD_GOLDEN_ANGLE: float = 2.39996322972865332   # PI * (3 - sqrt(5))
 
 ## BUG7 (M1.4 Wave-5): no new hazard may spawn on or dangerously near the player's entry.
 ## The player is placed AT _entry_spawn_position(band) BEFORE _spawn_new_hazards runs, so a
@@ -379,170 +384,55 @@ func _ensure_spawn_service() -> SpawnService:
 	return _spawn_service
 
 
-## K5i: one descriptor per new hazard type — its telemetry kind, OppositionDef path (M1.9
-## S0: the def carries the scene; rows carry def_path only), and the FOUR spawn-seam knobs
-## read off rc. This is the ONLY per-type data; the spawn loop is written ONCE and
-## dispatched over this table. Order now only sets remainder priority for the fair-share
-## ceiling split (L6-followup); it is no longer a starvation order. This table is the
-## POLICY half (S3 moves it into the EncounterBuilder); the mechanism lives in SpawnService.
-func _new_hazard_descriptors(rc: RunConfig) -> Array[Dictionary]:
-	return [
-		{ "kind": &"pingpong", "def_path": HPP_DEF_PATH, "enabled": rc.hpp_enabled,
-		  "base": rc.hpp_base_count, "per_depth": rc.hpp_count_per_depth, "cap": rc.hpp_per_room_cap },
-		{ "kind": &"bomb", "def_path": HBOMB_DEF_PATH, "enabled": rc.hbomb_enabled,
-		  "base": rc.hbomb_base_count, "per_depth": rc.hbomb_count_per_depth, "cap": rc.hbomb_per_room_cap },
-		{ "kind": &"spike", "def_path": HSPIKE_DEF_PATH, "enabled": rc.hspike_enabled,
-		  "base": rc.hspike_base_count, "per_depth": rc.hspike_count_per_depth, "cap": rc.hspike_per_room_cap },
-	]
+## M1.9 (S3): resolve the dive's BandProfile off the routing seam (§7.2 Q2). The route
+## key comes from GameState's staging slot (dive_requested(band_id) → self-subscribed
+## stage → consume-on-read, S0's inert seam now consumed): S3 routes EVERY key —
+## &"near", &"" (nothing staged) and any unknown — to the greybox control profile.
+## S8 (Wave 5) rewires ONLY this function body with the real key→profile map
+## (&"near" → band_greybox, &"band_two" → band_two; unknown/empty falls back to the
+## greybox control). ONE named function so S8's edit is a one-liner against a
+## pre-agreed seam. BAND_ID (&"near") stays the run row's telemetry tag (Q2b — S8 owns
+## the band_id stamping story).
+func _resolve_band_profile() -> BandProfile:
+	var _route_key: StringName = GameState.consume_pending_dive_band()
+	return load(DEFAULT_BAND_PROFILE_PATH) as BandProfile
 
 
-## K5i (M1.4): spawn the three M1.4 hazard types into the graded band, each with a per-type
-## depth-scaled count placed through the EXISTING J3 cell helpers. FULLY GATED: rc == null →
-## return; each disabled descriptor → continue without loading its scene; with all three off
-## (K0 default) nothing is loaded/instantiated → all-off == M1.3 byte-for-byte (fp UNMOVED).
-## Placement is PURE run-state on the already-graded band: NO global RNG, never feeds
-## fingerprint() (like R1). The loop iterates PIECES (so the PlacedPiece is in scope to build
-## each type's spawn_ctx), strides n hazards across that piece's own sorted floor cells, and
-## a SINGLE band-wide accumulator (NEW_HAZARD_BAND_CEILING) bounds K5a+K5b+K5c together.
-## Nodes go into _band_container so _clear_band() frees them; setup(rc, player, spawn_ctx)
-## binds the config snapshot + the per-kind context. Called from start_new_run() right after
-## _spawn_r1_hazards (the K5i single-writer seam).
-## BUG7: `spawn_pos` is the player's entry world position (threaded from start_new_run, where
-## the player is already placed AT it). The seam NEVER spawns a hazard in the depth-0 entry
-## piece, nor on any cell within NEW_HAZARD_SPAWN_SAFE_CELLS of spawn_pos, so base_count >= 1
-## can no longer spawn-kill the player on frame 0 (mirrors _exit_candidate_cells's exclusion).
-## spawn_pos defaults to a sentinel; when not supplied it is recomputed from band topology so
-## the exclusion still applies (deterministic, NO RNG — the fingerprint stays untouched).
+## K5i (M1.4) — M1.9 (S3): THE THIN FAÇADE. Kept-signature (the golden harness
+## test_new_hazard_spawn.gd drives this in 8 places, §7.1 C2): resolve the BUG7 entry
+## position (recompute from topology when the caller didn't thread it — test :184 relies
+## on the recompute), arm the per-dive SpawnService, register the shared K5 cap group,
+## and delegate ALL policy (descriptor table, fair-share, depth-scaled counts, deck +
+## extras lanes) to EncounterBuilder.populate(). FULLY GATED: rc == null or an
+## all-off/neutral config returns BEFORE _ensure_spawn_service() — no def, no scene,
+## NO service node → all-off is byte-identical (fp UNMOVED), exactly as pre-S3.
 func _spawn_new_hazards(rc: RunConfig, band: Band, spawn_pos: Vector2 = Vector2.INF) -> void:
 	if rc == null:
 		return
-	# BUG7: resolve the entry-spawn position so the service can exclude the player's start
-	# from new-hazard placement. Recompute from topology if the caller didn't thread it
-	# (e.g. the headless seam test) — still deterministic, pure run-state. M1.9 (S0): the
-	# exclusion MATH/ENFORCEMENT relocated into SpawnService (begin_band + valid_cells);
-	# this seam only resolves the value.
+	# The builder sees the SAME profile the band was generated from (start_new_run set
+	# _band_profile); a bare-instance harness call (no start_new_run) resolves the
+	# default greybox profile here — empty deck → the pure legacy parity lane.
+	var profile: BandProfile = _band_profile if _band_profile != null \
+		else _resolve_band_profile()
+	var builder := EncounterBuilder.new()
+	if builder.is_inert(profile, rc):
+		return   # all-off: zero policy work → zero mechanism (S0's loads-nothing rule)
 	var entry_pos: Vector2 = spawn_pos if spawn_pos != Vector2.INF else _entry_spawn_position(band)
-	var pieces := _density_pieces_sorted(band)   # depth asc, then (y,x) — the J3 stable order
-
-	# L6-followup (M1.5): FAIR-SHARE the shared band ceiling across the enabled types instead of
-	# the old type-ordered starvation (pingpong→bomb→spike, where a dense early type ate the whole
-	# ceiling). Pre-filter to the types that will actually spawn (enabled + non-neutral + def
-	# loads — M1.9 S0: the lazy load is now the DEF, whose host_scene ExtResource pulls the same
-	# .tscn), then give each an equal slice of NEW_HAZARD_BAND_CEILING (earlier types in the
-	# descriptor order take the integer remainder, so the slices sum to exactly the ceiling). No
-	# early type can starve a later one when the combined per-depth demand exceeds the ceiling
-	# (the 30-room spike-starvation fix). When each type's demand is UNDER its slice (e.g. the
-	# ~9/9/9 the 19-room preset produced) the slice never binds → placement unchanged. PURE
-	# run-state, NO RNG: all-off has no enabled type → `active` empty → return BEFORE any
-	# service call → no def, no scene, no service node → fp UNMOVED.
-	var active: Array[Dictionary] = []
-	for desc in _new_hazard_descriptors(rc):
-		if not desc["enabled"]:
-			continue   # type off → never load its def/scene (all-off-equivalent for that type)
-		if desc["base"] <= 0 and desc["per_depth"] <= 0.0:
-			continue   # neutral knobs → no node for this type (all-off-equivalent)
-		var def := load(desc["def_path"]) as OppositionDef
-		if def == null or def.host_scene == null:
-			push_error("MainGame: opposition def missing at %s." % desc["def_path"])
-			continue
-		active.append({ "kind": desc["kind"], "def": def, "base": desc["base"],
-			"per_depth": desc["per_depth"], "cap": desc["cap"] })
-	if active.is_empty():
-		return
-
-	# M1.9 (S0): arm the per-dive SpawnService for THIS band (container, projection scale,
-	# BUG7 exclusion inputs, the config the LOCKED setup() handshake threads) and register
-	# the shared K5 cap group. The service is the MECHANISM (instantiate/validate/register/
-	# emit); everything below remains the POLICY (fair-share, depth-scaled counts) until S3.
 	var svc := _ensure_spawn_service()
 	svc.begin_band(_band_container, _band_cell_size_px, entry_pos, rc)
 	svc.set_cap_group(&"new_hazards", SpawnService.NEW_HAZARD_BAND_CEILING)
-
-	var n_active: int = active.size()
-	var base_share: int = NEW_HAZARD_BAND_CEILING / n_active
-	var remainder: int = NEW_HAZARD_BAND_CEILING % n_active
-	var spawned_total: int = 0                   # band-wide accumulator ACROSS all new types
-
-	for ti in n_active:
-		if spawned_total >= NEW_HAZARD_BAND_CEILING:
-			break
-		var d: Dictionary = active[ti]
-		# This type's fair slice of the ceiling; earlier descriptor-order types absorb the
-		# remainder so the per-type slices sum to exactly NEW_HAZARD_BAND_CEILING.
-		var type_budget: int = base_share + (1 if ti < remainder else 0)
-		var type_spawned: int = 0
-		var base: int = d["base"]
-		var per_depth: float = d["per_depth"]
-		var per_room_cap: int = d["cap"]
-		var def: OppositionDef = d["def"]
-		var kind: StringName = d["kind"]
-
-		# Walk pieces in the J3 stable depth-sorted order so the truncation is reproducible
-		# (deeper pieces are starved first within a type when its slice or the ceiling runs out).
-		for p in pieces:
-			if spawned_total >= NEW_HAZARD_BAND_CEILING:
-				break
-			if type_spawned >= type_budget:
-				break   # this type has used its fair slice — leave the rest for the others
-			var depth: int = p.depth_index
-			# BUG7: never place a new hazard in the depth-0 entry piece — that's where the player
-			# spawns, so a base_count >= 1 hazard there is a frame-0 spawn-kill. Skipping it keeps
-			# "shallow entry is safe, then it stirs" (I2 §2.4 arc); deeper pieces still get hazards.
-			if depth <= 0:
-				continue
-			# "More with depth": base at depth 0, +per_depth per within-band depth (J3-style floor).
-			var n: int = base + int(floor(per_depth * float(depth)))
-			if per_room_cap > 0:
-				n = mini(n, per_room_cap)
-			n = mini(n, type_budget - type_spawned)                # this type's fair slice
-			n = mini(n, NEW_HAZARD_BAND_CEILING - spawned_total)   # shared remaining budget
-			if n <= 0:
-				continue
-			# BUG7 belt-and-braces: drop any cell within the safe radius of the entry spawn (a
-			# deep piece can still straddle the entry in world space). M1.9 (S0): the filter code
-			# RELOCATED into SpawnService.valid_cells() but is invoked at this EXACT statement
-			# position, BEFORE the stride — filter-then-stride order is byte-parity-critical
-			# (a refuse-at-spawn design would shift every stride index → different cells).
-			var cells: Array[Vector2i] = svc.valid_cells(_density_sorted_cells(p))
-			if cells.is_empty():
-				continue
-			var room_bounds: Rect2 = _piece_floor_bounds_world(cells)   # for ping-pong clamp
-			var stride: int = maxi(cells.size() / maxi(n, 1), 1)
-			for k in n:
-				var cell: Vector2i = cells[(k * stride) % cells.size()]
-				# The ctx stays POLICY-built (the per-kind entity channel, unchanged) plus the
-				# S0 service-read reserved keys (&"spawned" emit payload; primitives only).
-				var ctx: Dictionary = _new_hazard_spawn_ctx(kind, p, k, spawned_total, room_bounds)
-				ctx["depth"] = p.depth_index
-				ctx["run_t_ms"] = 0   # band build ≈ run start; the service never invents a clock
-				# The mechanism (instantiate → parent → place → interp-reset → register →
-				# setup(rc, player, ctx) → opposition_event &"spawned") now lives in the service.
-				# The accumulators stay POLICY-side counters of SUCCESSFUL spawns.
-				if svc.spawn(def, cell, ctx) != null:
-					spawned_total += 1
-					type_spawned += 1
+	builder.populate(band, profile, rc, svc)
 
 
-## K5i (M1.4): build the per-kind spawn_ctx Dictionary for one placed instance (the LOCKED
-## family setup(cfg, player, spawn_ctx) third param). Each entity reads only its own keys:
-##   ping-pong: "initial_dir" (deterministic per-index golden-angle fan, NO RNG) +
-##              "room_bounds" (the piece's floor-cell bbox in WORLD space, so it reflects
-##              inside the real room).
-##   spikes:    "phase_salt" (deterministic per-instance phase = depth_index * 131 + k).
-##   bomb:      {} (its blast is radial; it ignores spawn_ctx).
-## `index` is the global per-type spawn index (for the angle fan); `k` is the within-room index.
+## M1.9 (S3): thin forwarder — the per-kind ctx builder RELOCATED to
+## EncounterBuilder.legacy_ctx (with the golden-angle const). Kept, same
+## signature/arity, because the golden harness calls it directly off the mg instance
+## (test_new_hazard_spawn.gd:152/:158/:164 — §7.1 C2). NOTE the corrected doc (§7.1):
+## `index` is the CROSS-TYPE band-wide accumulator (spawned_total), not a per-type
+## index; `k` is the within-room index.
 func _new_hazard_spawn_ctx(kind: StringName, p: PlacedPiece, k: int, index: int,
 		room_bounds: Rect2) -> Dictionary:
-	match kind:
-		&"pingpong":
-			return {
-				"initial_dir": Vector2.from_angle(float(index) * NEW_HAZARD_GOLDEN_ANGLE),
-				"room_bounds": room_bounds,
-			}
-		&"spike":
-			return { "phase_salt": p.depth_index * 131 + k }
-		_:   # bomb (and any future type that needs no context)
-			return {}
+	return EncounterBuilder.legacy_ctx(kind, p, k, index, room_bounds)
 
 
 ## K5i (M1.4): the encompassing Rect2 of a piece's floor cells, projected to WORLD space via
@@ -769,30 +659,20 @@ func _is_corridor(id: StringName) -> bool:
 ## Pieces in a stable, deterministic order for density placement: depth_index ascending, then
 ## by offset_cell (y, x) as a tiebreak so two pieces at the same depth keep a fixed order.
 ## (The band-ceiling truncation then bites the deepest/last pieces, reproducibly.)
+## M1.9 (S3): thin forwarder — the SINGLE copy lives in EncounterBuilder (§2.6.d: the
+## builder's K5 walk and the retained R1/J2/J3 lanes must not drift apart on two sort
+## lambdas). Kept, same signature, so the R1 lane + the committed golden tests
+## (test_per_room_density / test_new_hazard_spawn / test_rg1_m13_verify) call one
+## implementation unmodified.
 func _density_pieces_sorted(band: Band) -> Array[PlacedPiece]:
-	var pieces: Array[PlacedPiece] = []
-	for p in band.pieces:
-		if p.depth_index < 0:        # ungraded guard (mirrors _build_cell_depth_map)
-			continue
-		pieces.append(p)
-	pieces.sort_custom(func(a: PlacedPiece, b: PlacedPiece) -> bool:
-		if a.depth_index != b.depth_index:
-			return a.depth_index < b.depth_index
-		if a.offset_cell.y != b.offset_cell.y:
-			return a.offset_cell.y < b.offset_cell.y
-		return a.offset_cell.x < b.offset_cell.x)
-	return pieces
+	return EncounterBuilder.pieces_depth_sorted(band)
 
 
 ## A piece's walkable floor cells in the SAME stable (y, x) order JunkPlacer uses, so the
 ## density placement draw is reproducible regardless of authored cell order.
+## M1.9 (S3): thin forwarder to the hoisted single copy (see _density_pieces_sorted).
 func _density_sorted_cells(p: PlacedPiece) -> Array[Vector2i]:
-	var cells := p.floor_cells.duplicate()
-	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		if a.y != b.y:
-			return a.y < b.y
-		return a.x < b.x)
-	return cells
+	return EncounterBuilder.piece_sorted_cells(p)
 
 
 ## Band-global cell → world pixel, centred (same projection as _hazard_spawn_position).
