@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://b5dspawnservice001"]
+
+[ext_resource type="Script" path="res://tests/test_spawn_service.gd" id="1"]
+
+[node name="TestSpawnService" type="Node"]
+script = ExtResource("1")

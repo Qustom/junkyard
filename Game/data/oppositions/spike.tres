@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="OppositionDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/oppositions/opposition_def.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/spike_hazard.tscn" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"spike"
+display_name = "Spike Trap"
+archetype = "fixture"
+host_scene = ExtResource("2")
+credit_cost = 1
+spawn_weight = 1.0
+min_band = 0
+cap_group = &"new_hazards"
+per_room_cap = 0
+per_band_cap = 0
+params = {}
+param_schema = Array[Dictionary]([])
+lethality = "lethal"
+kills = true

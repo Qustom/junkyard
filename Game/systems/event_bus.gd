@@ -193,7 +193,10 @@ signal hazard_pursuer_state(state: StringName, depth: int, run_t_ms: int)
 
 # --- App flow / scene router (M2 emits dive_requested; App emits the rest) -----
 ## The player chose to depart on a dive (Hub departure-portal interact). The App
-## router swaps in the dive scene. band_id = which band to dive (M1.6 single &"near").
+## router swaps in the dive scene. M1.9 (S8 routing, pre-declared by S0): `band_id`
+## is the dive routing key. GameState stages it on emission (_pending_dive_band);
+## main_game resolves it to a BandProfile at dive start (unknown/empty →
+## band_greybox). Emitters: the hub DeparturePortals (one per band).
 signal dive_requested(band_id: StringName)
 ## The Hub scene is now live in the tree (fired by the router AFTER the swap, so
 ## HUD/audio/Telemetry observers read a settled Hub). Fires on every hub entry (from
@@ -247,3 +250,34 @@ signal debug_player_art_toggled(enabled: bool)
 # set, so the 89-knob count + determinism fingerprint are untouched. lock_mode = 0
 # (CLIP_DRIVEN) / 1 (FIXED); pickup_lock_s / throw_lock_s are per-action lock seconds.
 signal debug_player_anim_config_changed(lock_mode: int, lock_on_pickup: bool, play_pickup_on_reject: bool, pickup_lock_s: float, throw_lock_s: float)
+
+# === M1.9 signals (sole event_bus.gd edit this milestone, owner = S0) =========
+# Pre-declared up front so S2/S3/S4/S6/S8 only EMIT/CONNECT — they never edit this
+# file (the M1.1 pre-declare rule, M1.9 Breakdown §Scope). Payloads PRIMITIVES ONLY
+# (straight to JSONL). Legacy per-type opposition signals above (hazard_awoke,
+# hazard_caught, new_hazard_killed, bomb_pulse_started, throw_killed_hazard,
+# hazard_pursuer_state) DUAL-EMIT alongside these throughout the migration —
+# retirement is post-gate (SG3 watch-item), never in M1.9.
+
+# --- Generic opposition telemetry (v2 §EventBus contract) ---------------------
+## Any opposition lifecycle event. id = OppositionDef.id (== the legacy kind, so
+## historical telemetry joins cleanly). event vocabulary (S0 locks the set):
+## &"spawned" / &"awoke" / &"telegraph" / &"hit_player" / &"killed_by_throw" /
+## &"state". The SERVICE emits &"spawned" centrally (every client's spawn is logged
+## identically); entities/components emit the rest from S2 on. Owner: S0 declares;
+## SpawnService + S2 components emit.
+signal opposition_event(id: StringName, event: StringName, depth: int, run_t_ms: int)
+## The dedicated death channel — an opposition ACTUALLY ended the run (the *_kills-
+## gated fail_run fired), kept separate from opposition_event exactly as L1 kept
+## throw_killed_hazard separate from new_hazard_killed (line ~175) so kill-direction
+## never poisons death counts. NOT emitted by anything in S0 (the kill sites live in
+## entity internals — S2's dual-emit; see S0 design §5). Owner: S0 declares; S2 emits.
+signal opposition_killed_player(id: StringName, depth: int, run_t_ms: int)
+
+# --- S4 debug live-edit (tooling telemetry marker) ----------------------------
+## A debug-menu live tweak dirtied the ACTIVE run (e.g. respawn-with-new-params:
+## source = &"respawn_params"). Telemetry subscribes (S4): sets its _debug_dirty
+## flag, emits an auditable debug_dirtied row, and the run's run_ended row stamps
+## debug_dirty so a live-tweaked run is never compared as a clean experiment.
+## Owner: S0 declares; S4's debug menu emits, Telemetry consumes.
+signal debug_run_dirtied(source: StringName, run_t_ms: int)

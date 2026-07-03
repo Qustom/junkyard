@@ -319,22 +319,27 @@ func start_new_run() -> void:
 
 # --- K5i (M1.4): new-hazard spawn seam (ping-pong / bomb / spikes) ------------
 
-## K5i (M1.4): new-hazard scene paths (LOCKED, matching the merged K5a/b/c entities).
-## load()ed LAZILY inside the spawn loop — only when that type is enabled — so an all-off
-## run loads nothing and is byte-identical to M1.3.
-const HPP_SCENE_PATH := "res://scenes/hazards/pingpong_hazard.tscn"      # K5a PingPongHazard
-const HBOMB_SCENE_PATH := "res://scenes/hazards/bomb_hazard.tscn"        # K5b BombHazard
-const HSPIKE_SCENE_PATH := "res://scenes/hazards/spike_hazard.tscn"      # K5c SpikeHazard
+## M1.9 (S0): new-hazard OppositionDef paths (the def is the SINGLE source of the scene —
+## the legacy HPP/HBOMB/HSPIKE scene-path consts are deleted, OQ-11 resolved; each def's
+## host_scene ExtResource pulls the same .tscn unchanged). load()ed LAZILY inside the spawn
+## loop — only when that type is enabled — so an all-off run loads nothing (no def, no
+## scene, no service node) and stays byte-identical.
+const HPP_DEF_PATH := "res://data/oppositions/pingpong.tres"      # K5a PingPongHazard
+const HBOMB_DEF_PATH := "res://data/oppositions/bomb.tres"        # K5b BombHazard
+const HSPIKE_DEF_PATH := "res://data/oppositions/spike.tres"      # K5c SpikeHazard
 
 ## K5i: band-wide ceiling across ALL THREE new hazard types COMBINED (OQ-3, Director-flagged
 ## value 48; RG1 must measure the worst-case combined tick time). SEPARATE from R1's
 ## R1_DENSITY_BAND_CEILING (R1 keeps its own 64 budget); this bounds K5a+K5b+K5c together so
 ## three stacked per-depth budgets can't flood the band with _physics_process nodes. L6-followup
-## (M1.5): the ceiling is now split FAIR-SHARE across the enabled types (each gets an equal slice;
+## (M1.5): the ceiling is split FAIR-SHARE across the enabled types (each gets an equal slice;
 ## the descriptor order only decides who absorbs the integer remainder), so a dense early type can
 ## no longer starve a later one — see _spawn_new_hazards. When a type's demand is under its slice
 ## the split never binds, so low-density bands are unaffected.
-const NEW_HAZARD_BAND_CEILING: int = 48
+## M1.9 (S0): the const RELOCATED to SpawnService (the mechanism owns the cap group); this
+## is a FORWARDING re-export so the committed golden tests (test_new_hazard_spawn.gd:44,
+## test_rg1_m14_verify.gd:299/:403) keep reading it off the MainGame script unmodified.
+const NEW_HAZARD_BAND_CEILING: int = SpawnService.NEW_HAZARD_BAND_CEILING
 
 ## K5i: per-instance angular stride for the ping-pong's deterministic initial direction —
 ## the golden angle (~137.5°) so successive instances fan out without repeating, NO RNG.
@@ -347,20 +352,46 @@ const NEW_HAZARD_GOLDEN_ANGLE: float = 2.39996322972865332   # PI * (3 - sqrt(5)
 ## skipping the depth-0 entry piece: any candidate cell whose world centre is within this many
 ## CELL-WIDTHS of spawn_pos is excluded — a couple of cells clears the largest hazard kill
 ## radius. Pure run-state, NO RNG (never feeds fingerprint(), like the rest of the seam).
-const NEW_HAZARD_SPAWN_SAFE_CELLS: float = 2.5
+## M1.9 (S0): the value RELOCATED to SpawnService.SPAWN_SAFE_CELLS (the exclusion
+## ENFORCEMENT lives with the placement validation now — SpawnService.valid_cells());
+## this is a FORWARDING re-export so the golden harness (test_new_hazard_spawn.gd:172)
+## keeps reading it off the MainGame script unmodified.
+const NEW_HAZARD_SPAWN_SAFE_CELLS: float = SpawnService.SPAWN_SAFE_CELLS
+
+## M1.9 (S0): the per-dive SpawnService — the policy-free spawn MECHANISM (instantiate /
+## validate / registry / caps / lifecycle / setup handshake / &"spawned" emit). Created
+## LAZILY as a child of THIS node (never _band_container: _clear_band() frees the
+## container's children and the golden harness counts them), so the all-off path — which
+## returns before _ensure_spawn_service() — never creates it and the all-off scene tree
+## stays byte-identical. Group-resolved via &"spawn_service" for mid-run clients (S6b,
+## the debug menu). Run-state only; torn down with the dive scene.
+var _spawn_service: SpawnService = null
 
 
-## K5i: one descriptor per new hazard type — its telemetry kind, scene path, and the FOUR
-## spawn-seam knobs read off rc. This is the ONLY per-type data; the spawn loop is written
-## ONCE and dispatched over this table. Order now only sets remainder priority for the fair-share
-## ceiling split (L6-followup); it is no longer a starvation order.
+## Lazily create (or return) the per-dive SpawnService. Works on a bare out-of-tree
+## MainGame script instance too (the golden-harness path): add_child on an out-of-tree
+## parent is legal, and the service resolves the player off the BAND CONTAINER's tree.
+func _ensure_spawn_service() -> SpawnService:
+	if _spawn_service == null or not is_instance_valid(_spawn_service):
+		_spawn_service = SpawnService.new()
+		_spawn_service.name = "SpawnService"
+		add_child(_spawn_service)
+	return _spawn_service
+
+
+## K5i: one descriptor per new hazard type — its telemetry kind, OppositionDef path (M1.9
+## S0: the def carries the scene; rows carry def_path only), and the FOUR spawn-seam knobs
+## read off rc. This is the ONLY per-type data; the spawn loop is written ONCE and
+## dispatched over this table. Order now only sets remainder priority for the fair-share
+## ceiling split (L6-followup); it is no longer a starvation order. This table is the
+## POLICY half (S3 moves it into the EncounterBuilder); the mechanism lives in SpawnService.
 func _new_hazard_descriptors(rc: RunConfig) -> Array[Dictionary]:
 	return [
-		{ "kind": &"pingpong", "path": HPP_SCENE_PATH, "enabled": rc.hpp_enabled,
+		{ "kind": &"pingpong", "def_path": HPP_DEF_PATH, "enabled": rc.hpp_enabled,
 		  "base": rc.hpp_base_count, "per_depth": rc.hpp_count_per_depth, "cap": rc.hpp_per_room_cap },
-		{ "kind": &"bomb", "path": HBOMB_SCENE_PATH, "enabled": rc.hbomb_enabled,
+		{ "kind": &"bomb", "def_path": HBOMB_DEF_PATH, "enabled": rc.hbomb_enabled,
 		  "base": rc.hbomb_base_count, "per_depth": rc.hbomb_count_per_depth, "cap": rc.hbomb_per_room_cap },
-		{ "kind": &"spike", "path": HSPIKE_SCENE_PATH, "enabled": rc.hspike_enabled,
+		{ "kind": &"spike", "def_path": HSPIKE_DEF_PATH, "enabled": rc.hspike_enabled,
 		  "base": rc.hspike_base_count, "per_depth": rc.hspike_count_per_depth, "cap": rc.hspike_per_room_cap },
 	]
 
@@ -385,41 +416,47 @@ func _new_hazard_descriptors(rc: RunConfig) -> Array[Dictionary]:
 func _spawn_new_hazards(rc: RunConfig, band: Band, spawn_pos: Vector2 = Vector2.INF) -> void:
 	if rc == null:
 		return
-	# BUG7: resolve the entry-spawn position + its band-global cell so we can exclude the
-	# player's start from new-hazard placement. Recompute from topology if the caller didn't
-	# thread it (e.g. the headless seam test) — still deterministic, pure run-state.
+	# BUG7: resolve the entry-spawn position so the service can exclude the player's start
+	# from new-hazard placement. Recompute from topology if the caller didn't thread it
+	# (e.g. the headless seam test) — still deterministic, pure run-state. M1.9 (S0): the
+	# exclusion MATH/ENFORCEMENT relocated into SpawnService (begin_band + valid_cells);
+	# this seam only resolves the value.
 	var entry_pos: Vector2 = spawn_pos if spawn_pos != Vector2.INF else _entry_spawn_position(band)
-	var safe_dist_px: float = NEW_HAZARD_SPAWN_SAFE_CELLS * float(_band_cell_size_px)
-	# Resolve the player once via the "player" group (already grouped in player.tscn). Use the
-	# band container's tree (it is parented before this runs, both in-game and under test) so the
-	# lookup never depends on THIS node being in the tree — null is fine (entities are null-safe).
-	var tree := _band_container.get_tree()
-	var player: Node2D = tree.get_first_node_in_group(&"player") as Node2D if tree != null else null
 	var pieces := _density_pieces_sorted(band)   # depth asc, then (y,x) — the J3 stable order
 
 	# L6-followup (M1.5): FAIR-SHARE the shared band ceiling across the enabled types instead of
 	# the old type-ordered starvation (pingpong→bomb→spike, where a dense early type ate the whole
-	# ceiling). Pre-filter to the types that will actually spawn (enabled + non-neutral + scene
-	# loads), then give each an equal slice of NEW_HAZARD_BAND_CEILING (earlier types in the
+	# ceiling). Pre-filter to the types that will actually spawn (enabled + non-neutral + def
+	# loads — M1.9 S0: the lazy load is now the DEF, whose host_scene ExtResource pulls the same
+	# .tscn), then give each an equal slice of NEW_HAZARD_BAND_CEILING (earlier types in the
 	# descriptor order take the integer remainder, so the slices sum to exactly the ceiling). No
 	# early type can starve a later one when the combined per-depth demand exceeds the ceiling
 	# (the 30-room spike-starvation fix). When each type's demand is UNDER its slice (e.g. the
 	# ~9/9/9 the 19-room preset produced) the slice never binds → placement unchanged. PURE
-	# run-state, NO RNG: all-off has no enabled type → `active` empty → no nodes → fp UNMOVED.
+	# run-state, NO RNG: all-off has no enabled type → `active` empty → return BEFORE any
+	# service call → no def, no scene, no service node → fp UNMOVED.
 	var active: Array[Dictionary] = []
 	for desc in _new_hazard_descriptors(rc):
 		if not desc["enabled"]:
-			continue   # type off → never load its scene (all-off-equivalent for that type)
+			continue   # type off → never load its def/scene (all-off-equivalent for that type)
 		if desc["base"] <= 0 and desc["per_depth"] <= 0.0:
 			continue   # neutral knobs → no node for this type (all-off-equivalent)
-		var scene := load(desc["path"]) as PackedScene
-		if scene == null:
-			push_error("MainGame: new-hazard scene missing at %s." % desc["path"])
+		var def := load(desc["def_path"]) as OppositionDef
+		if def == null or def.host_scene == null:
+			push_error("MainGame: opposition def missing at %s." % desc["def_path"])
 			continue
-		active.append({ "kind": desc["kind"], "scene": scene, "base": desc["base"],
+		active.append({ "kind": desc["kind"], "def": def, "base": desc["base"],
 			"per_depth": desc["per_depth"], "cap": desc["cap"] })
 	if active.is_empty():
 		return
+
+	# M1.9 (S0): arm the per-dive SpawnService for THIS band (container, projection scale,
+	# BUG7 exclusion inputs, the config the LOCKED setup() handshake threads) and register
+	# the shared K5 cap group. The service is the MECHANISM (instantiate/validate/register/
+	# emit); everything below remains the POLICY (fair-share, depth-scaled counts) until S3.
+	var svc := _ensure_spawn_service()
+	svc.begin_band(_band_container, _band_cell_size_px, entry_pos, rc)
+	svc.set_cap_group(&"new_hazards", SpawnService.NEW_HAZARD_BAND_CEILING)
 
 	var n_active: int = active.size()
 	var base_share: int = NEW_HAZARD_BAND_CEILING / n_active
@@ -437,7 +474,7 @@ func _spawn_new_hazards(rc: RunConfig, band: Band, spawn_pos: Vector2 = Vector2.
 		var base: int = d["base"]
 		var per_depth: float = d["per_depth"]
 		var per_room_cap: int = d["cap"]
-		var scene: PackedScene = d["scene"]
+		var def: OppositionDef = d["def"]
 		var kind: StringName = d["kind"]
 
 		# Walk pieces in the J3 stable depth-sorted order so the truncation is reproducible
@@ -461,28 +498,29 @@ func _spawn_new_hazards(rc: RunConfig, band: Band, spawn_pos: Vector2 = Vector2.
 			n = mini(n, NEW_HAZARD_BAND_CEILING - spawned_total)   # shared remaining budget
 			if n <= 0:
 				continue
-			var cells: Array[Vector2i] = _density_sorted_cells(p)   # stable (y, x) order
 			# BUG7 belt-and-braces: drop any cell within the safe radius of the entry spawn (a
-			# deep piece can still straddle the entry in world space). Mirrors how
-			# _exit_candidate_cells excludes the entry cell. Pure topology filter, NO RNG.
-			cells = cells.filter(func(c: Vector2i) -> bool:
-				return _density_cell_to_world(c).distance_to(entry_pos) >= safe_dist_px)
+			# deep piece can still straddle the entry in world space). M1.9 (S0): the filter code
+			# RELOCATED into SpawnService.valid_cells() but is invoked at this EXACT statement
+			# position, BEFORE the stride — filter-then-stride order is byte-parity-critical
+			# (a refuse-at-spawn design would shift every stride index → different cells).
+			var cells: Array[Vector2i] = svc.valid_cells(_density_sorted_cells(p))
 			if cells.is_empty():
 				continue
 			var room_bounds: Rect2 = _piece_floor_bounds_world(cells)   # for ping-pong clamp
 			var stride: int = maxi(cells.size() / maxi(n, 1), 1)
 			for k in n:
 				var cell: Vector2i = cells[(k * stride) % cells.size()]
-				var pos: Vector2 = _density_cell_to_world(cell)
-				var hz := scene.instantiate() as Node2D
-				_band_container.add_child(hz)
-				hz.global_position = pos
-				# M1.7 interp-ghost fix: reset so the hazard doesn't render one interpolated frame
-				# from origin to its spawn cell (hazard spawn ghost). Render-only.
-				hz.reset_physics_interpolation()
-				hz.setup(rc, player, _new_hazard_spawn_ctx(kind, p, k, spawned_total, room_bounds))
-				spawned_total += 1
-				type_spawned += 1
+				# The ctx stays POLICY-built (the per-kind entity channel, unchanged) plus the
+				# S0 service-read reserved keys (&"spawned" emit payload; primitives only).
+				var ctx: Dictionary = _new_hazard_spawn_ctx(kind, p, k, spawned_total, room_bounds)
+				ctx["depth"] = p.depth_index
+				ctx["run_t_ms"] = 0   # band build ≈ run start; the service never invents a clock
+				# The mechanism (instantiate → parent → place → interp-reset → register →
+				# setup(rc, player, ctx) → opposition_event &"spawned") now lives in the service.
+				# The accumulators stay POLICY-side counters of SUCCESSFUL spawns.
+				if svc.spawn(def, cell, ctx) != null:
+					spawned_total += 1
+					type_spawned += 1
 
 
 ## K5i (M1.4): build the per-kind spawn_ctx Dictionary for one placed instance (the LOCKED
@@ -1187,6 +1225,11 @@ func _world_to_cell(world_pos: Vector2) -> Vector2i:
 func _clear_band() -> void:
 	_gates.clear()
 	_spawner = null
+	# M1.9 (S0): reset the SpawnService's registry + cap accounting with the band. Order-
+	# insensitive alongside the container-child free below — both paths queue_free and the
+	# service guards with is_instance_valid, so double-freeing is impossible.
+	if _spawn_service != null and is_instance_valid(_spawn_service):
+		_spawn_service.clear_all()
 	for child in _band_container.get_children():
 		child.queue_free()
 
