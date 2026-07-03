@@ -6,7 +6,7 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.8 (Hub Art Dressing — Layout A vertical spine) — **Wave 1 + HG1 done; H2 re-dress iteration DONE (2026-07-01).** The Director flagged the Wave-1 look (per-tile black borders, misaligned tiles, wrong object angles); H2 re-authored the ground as seamless PixelLab corner-Wang tilesets painted by a vertex-map `hub_ground.gd` (720 cells, fills the camera), regenerated 6 props angle-consistent (+ NEW front-facade shack, south fence line), y-sort re-anchored to sprite base. Contracts invariant; full suite green. **Next = publish H4 to itch → DIRECTOR PLAYTEST → HG2 (readability) → HG3 (verdict: 45° iso vs top-down).** *(M1.7 build+RG1 done + published; its RG2/RG3 Director-pending, non-blocking.)*
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02, opened ahead of M1.8's HG3 verdict, which stays pending/non-blocking) — **version-authoring in progress (four-phase process)**. Previous: M1.8 (Hub Art Dressing) — **Wave 1 + HG1 done; H2 re-dress iteration DONE (2026-07-01).** The Director flagged the Wave-1 look (per-tile black borders, misaligned tiles, wrong object angles); H2 re-authored the ground as seamless PixelLab corner-Wang tilesets painted by a vertex-map `hub_ground.gd` (720 cells, fills the camera), regenerated 6 props angle-consistent (+ NEW front-facade shack, south fence line), y-sort re-anchored to sprite base. Contracts invariant; full suite green. **Next = publish H4 to itch → DIRECTOR PLAYTEST → HG2 (readability) → HG3 (verdict: 45° iso vs top-down).** *(M1.7 build+RG1 done + published; its RG2/RG3 Director-pending, non-blocking.)*
 **Last updated:** 2026-07-02 (M1.8 H4 45° iso re-dress integrated — iso ground + props removed, shop/portal kept; H2 top-down kept in-repo as revert path. Earlier: H2 hub re-dress integrated: fp `e943ac9c8bc1` + 89/89 unmoved, hub contract 720 cells OK; changelog M1.8 block updated in place; 7 new deviations (2 supersede Wave-1 entries) await the HG3 close-out. Worklog `…-H2-hub-redress-orchestrator.md`.)
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
@@ -17,7 +17,24 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — republish H2 → DIRECTOR PLAYTEST → HG2 → HG3
+## ▶ M1.9 — Scalable Opposition + Band systems (version-authoring IN PROGRESS, 2026-07-02)
+
+> **Director directive (2026-07-02):** implement the two explored scalable architectures —
+> `design/explorations/exploration-20260702/hazards/0-scalable-opposition-system.md` (v2, SpawnService/EncounterBuilder
+> split) and `design/explorations/exploration-20260625/procgen-bands/0-scalable-band-generation-system.md`
+> (BandProfile pipeline) — then prove them with **2 new hazards + 1 new band**, with a **portal to the new band on
+> the hub** for now. Thorough breakdown requested.
+>
+> **Where this is:** Phase 0 folder + Phase 1 breakdown (`design/M1_9_Tasks/M1.9_Breakdown.md`) authored; Phase 2
+> per-task design fan-out + Phase 3 fresh-eyes resolution dispatched; **Director-review items surfaced — build waves
+> DO NOT start until Phase 4 wire-up completes** (Director dispositions folded in, TASKS.md + board wired).
+>
+> **⚠ M1.8 close-out still open (non-blocking, carried):** 13 deviations in `design/DESIGN_DEVIATIONS.md` await
+> Director disposition at the HG3 close-out; the H4 iso build's Director playtest + HG2/HG3 verdict are pending.
+
+---
+
+## (M1.8 — pending Director playtest; superseded as current milestone by M1.9) republish H2 → DIRECTOR PLAYTEST → HG2 → HG3
 
 > **✓ H2 HUB RE-DRESS DONE (2026-07-01, Director-directed `/goal`).** Ground re-authored as 3 chained PixelLab
 > corner-Wang tilesets (asphalt↔dirt↔litter↔scrap, gradient-map retoned to Band-0) painted by a **vertex-map**
