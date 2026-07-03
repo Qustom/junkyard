@@ -6,14 +6,14 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **build Wave 1 IN PROGRESS (S0 ∥ S1 dispatched, parallel worktrees).** *(M1.8 CLOSED 2026-07-02 — verdict + 17-deviation close-out in `design/M1_8_Tasks/G4_findings_M1.8.md`; only M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
-**Last updated:** 2026-07-02 (Wave 1 dispatched: S0 → general-purpose (SpawnService + OppositionDef + EventBus pre-declare; sole writer main_game/event_bus/game_state), S1 → general-purpose (BandProfile + BandPipeline + band_greybox.tres; systems/bandgen + data/bands only). Board: both In Progress.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Wave 1 (S0 ∥ S1) BUILT + INTEGRATED on `main`. ▶ Next: Wave-1 close-out — 2 S0 deviations await Director disposition; Wave 2 (S2 ∥ S5) dispatches only after the sweep.** *(M1.8 CLOSED 2026-07-02; M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
+**Last updated:** 2026-07-02 (Wave 1 integrated + verified on main: import · smoke · fp `e943ac9c8bc1` (bandgen determinism + corridor lever) · `test_band_pipeline_parity` 9-seed byte-match · `test_spawn_service` · `test_new_hazard_spawn` UNMODIFIED · rg1 m14/loop — all green. `design/DESIGN_DEVIATIONS.md` holds 2 S0 entries, both recommended Reviewed.)
 
-## In progress
-| Task | Since | Agent(s) | Milestone | Note |
-|---|---|---|---|---|
-| S0 — SpawnService + OppositionDef data layer + EventBus pre-declare | 2026-07-02 | general-purpose | M1.9 (Wave 1) | Worktree branch `general-purpose/S0`. Sole writer of `main_game.gd`/`event_bus.gd`/`game_state.gd` this wave. DoD: fp `e943ac9c8bc1` byte-identical, rg1/new-hazard tests green UNMODIFIED, `test_spawn_service` green. |
-| ~~S1 — BandProfile + BandPipeline + `band_greybox.tres`~~ | 2026-07-02 | general-purpose | M1.9 (Wave 1) | **DONE 2026-07-02** — merged to `main` (branch `general-purpose/S1`, commit `9a8c6fb`). Parity byte-match 9 seeds (fp `e943ac9c8bc1`), bandgen suite + smoke green on integrated main, purely additive scope. Worklog `worklogs/2026-07-02-S1-general-purpose.md`. Deviations: none. |
+## Wave 1 — Done (2026-07-02)
+| Task | Agent | Merged | Proof |
+|---|---|---|---|
+| S0 — SpawnService + OppositionDef data layer + EventBus pre-declare | general-purpose | `84785cf` (branch `general-purpose/S0`) | Worklog `worklogs/2026-07-02-S0-general-purpose.md`; full matrix green incl. golden `test_new_hazard_spawn` unmodified + new `test_spawn_service`; 2 deviations logged (cap accounting registry-derived; untyped sweep locals) — awaiting Director. |
+| S1 — BandProfile + BandPipeline + `band_greybox.tres` | general-purpose | `9a8c6fb` (branch `general-purpose/S1`) | Worklog `worklogs/2026-07-02-S1-general-purpose.md`; parity byte-match 9 seeds, purely additive. Deviations: none. |
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
