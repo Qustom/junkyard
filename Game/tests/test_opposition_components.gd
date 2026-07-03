@@ -51,6 +51,18 @@ var _capture: bool = false
 var _failures: Array[String] = []
 var _done: bool = false
 
+## S2 dual-emit contract check (added with the refactor commit — the goldens stay
+## LEGACY-ONLY so the pre-refactor capture remains the parity baseline): every
+## legacy emit must be accompanied, in order, by exactly one generic
+## opposition_event twin with the S0 §5 vocabulary + the def id, sharing the
+## depth + the host's run clock; opposition_killed_player must NOT fire in any
+## trace (every trace runs *_kills = false). Expected rows are derived from the
+## legacy emits as they land; -1 run_t means "not comparable" (hazard_awoke has no
+## run_t in its legacy payload).
+var _expected_twins: Array[Array] = []
+var _actual_twins: Array[Array] = []
+var _killed_player_rows: int = 0
+
 
 func _ready() -> void:
 	_capture = OS.get_environment("S2_TRACE_CAPTURE") == "1"
@@ -60,6 +72,8 @@ func _ready() -> void:
 	EventBus.new_hazard_killed.connect(_on_new_hazard_killed)
 	EventBus.bomb_pulse_started.connect(_on_bomb_pulse_started)
 	EventBus.hazard_pursuer_state.connect(_on_hazard_pursuer_state)
+	EventBus.opposition_event.connect(_on_opposition_event)
+	EventBus.opposition_killed_player.connect(_on_opposition_killed_player)
 
 
 ## One trace per entity covering its interesting mode (Resolved Decisions):
@@ -204,6 +218,9 @@ func _next_trace() -> void:
 	_hz.setup(t["cfg"], _player, t["ctx"])
 	_frame = 0
 	_lines = PackedStringArray()
+	_expected_twins = []
+	_actual_twins = []
+	_killed_player_rows = 0
 
 
 func _record_line() -> void:
@@ -237,9 +254,31 @@ func _finish_trace() -> void:
 			print("S2 TRACE CAPTURED: %s (%d frames)" % [path, _lines.size()])
 	else:
 		_compare_golden(id, path)
+	_check_dual_emit(id)
 	if is_instance_valid(_hz):
 		_hz.queue_free()
 	_hz = null
+
+
+## The S0 §5 dual-emit mapping, asserted 1:1 IN ORDER against the legacy emit log
+## (twin follows its legacy row synchronously, so the sequences align). Payloads are
+## primitives by signal signature; ids must equal the def ids.
+func _check_dual_emit(id: String) -> void:
+	if _actual_twins.size() != _expected_twins.size():
+		_failures.append("%s: dual-emit count %d != legacy emit count %d"
+			% [id, _actual_twins.size(), _expected_twins.size()])
+		return
+	for i: int in _expected_twins.size():
+		var want: Array = _expected_twins[i]
+		var got: Array = _actual_twins[i]
+		var run_t_ok: bool = int(want[3]) == -1 or int(want[3]) == int(got[3])
+		if StringName(want[0]) != StringName(got[0]) or StringName(want[1]) != StringName(got[1]) \
+				or int(want[2]) != int(got[2]) or not run_t_ok:
+			_failures.append("%s: twin %d mismatch — expected %s got %s" % [id, i, str(want), str(got)])
+			return
+	if _killed_player_rows != 0:
+		_failures.append("%s: opposition_killed_player fired %d times (kills=false traces must never)"
+			% [id, _killed_player_rows])
 
 
 func _compare_golden(id: String, path: String) -> void:
@@ -277,19 +316,32 @@ func _summarize_and_quit() -> void:
 
 func _on_hazard_awoke(depth: int, trigger: StringName) -> void:
 	_frame_emits.append("hazard_awoke(%d,%s)" % [depth, trigger])
+	_expected_twins.append([&"pursuer", &"awoke", depth, -1])
 
 
 func _on_hazard_caught(depth: int, run_t_ms: int) -> void:
 	_frame_emits.append("hazard_caught(%d,%d)" % [depth, run_t_ms])
+	_expected_twins.append([&"pursuer", &"hit_player", depth, run_t_ms])
 
 
 func _on_new_hazard_killed(kind: StringName, depth: int, run_t_ms: int) -> void:
 	_frame_emits.append("new_hazard_killed(%s,%d,%d)" % [kind, depth, run_t_ms])
+	_expected_twins.append([kind, &"hit_player", depth, run_t_ms])
 
 
 func _on_bomb_pulse_started(depth: int, run_t_ms: int) -> void:
 	_frame_emits.append("bomb_pulse_started(%d,%d)" % [depth, run_t_ms])
+	_expected_twins.append([&"bomb", &"telegraph", depth, run_t_ms])
 
 
 func _on_hazard_pursuer_state(state: StringName, depth: int, run_t_ms: int) -> void:
 	_frame_emits.append("hazard_pursuer_state(%s,%d,%d)" % [state, depth, run_t_ms])
+	_expected_twins.append([&"pursuer", &"state", depth, run_t_ms])
+
+
+func _on_opposition_event(id: StringName, event: StringName, depth: int, run_t_ms: int) -> void:
+	_actual_twins.append([id, event, depth, run_t_ms])
+
+
+func _on_opposition_killed_player(_id: StringName, _depth: int, _run_t_ms: int) -> void:
+	_killed_player_rows += 1

@@ -15,7 +15,49 @@ min_band = 0
 cap_group = &"new_hazards"
 per_room_cap = 0
 per_band_cap = 0
-params = {}
-param_schema = Array[Dictionary]([])
+params = {
+"base_count": 0,
+"blast_radius": 0.0,
+"count_per_depth": 0.0,
+"proximity_radius": 0.0,
+"pulse_seconds": 0.0
+}
+param_schema = Array[Dictionary]([{
+"default": 0,
+"gloss": "CFG_FIELD_HBOMB_BASE_COUNT",
+"key": "base_count",
+"max": 10,
+"min": 0,
+"type": "int"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_HBOMB_COUNT_PER_DEPTH",
+"key": "count_per_depth",
+"max": 5.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_HBOMB_PROXIMITY_RADIUS",
+"key": "proximity_radius",
+"max": 64.0,
+"min": 0.0,
+"trap_if_neutral": true,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_HBOMB_PULSE_SECONDS",
+"key": "pulse_seconds",
+"max": 30.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_HBOMB_BLAST_RADIUS",
+"key": "blast_radius",
+"max": 64.0,
+"min": 0.0,
+"type": "float"
+}])
 lethality = "lethal"
 kills = true

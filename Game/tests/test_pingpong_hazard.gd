@@ -20,6 +20,7 @@ extends Node
 
 const PINGPONG_SCENE_PATH := "res://scenes/hazards/pingpong_hazard.tscn"
 const PINGPONG_SCRIPT_PATH := "res://scenes/hazards/pingpong_hazard.gd"
+const COMPONENTS_DIR := "res://scenes/hazards/components"
 
 var _killed_events: Array = []
 
@@ -185,11 +186,30 @@ func _run() -> int:
 	hz_f.queue_free()
 
 	# --- (e) NO global-RNG call in the entity source ------------------------
-	var src := FileAccess.get_file_as_string(PINGPONG_SCRIPT_PATH)
-	if src.is_empty():
-		failures.append("(e) could not read entity source for RNG audit")
-	elif "RNG." in src:
-		failures.append("(e) entity source references the global RNG autoload (must be RNG-free)")
+	# S2 (M1.9): the entity's behavior now lives in the shared component scripts,
+	# so the source scan sweeps them too (the one sanctioned S2 test-side addition —
+	# S2 spec §2.3 / §4: "the script-source grep must now also sweep the component
+	# scripts"). Same rule, wider net: no script in the set may call the global RNG
+	# autoload — per-instance variation is spawn_ctx-supplied, deterministic.
+	var rng_scan_paths: Array[String] = [PINGPONG_SCRIPT_PATH]
+	var comp_dir := DirAccess.open(COMPONENTS_DIR)
+	if comp_dir == null:
+		failures.append("(e) could not open %s for the component RNG sweep" % COMPONENTS_DIR)
+	else:
+		var comp_files := comp_dir.get_files()
+		var comp_count := 0
+		for cf in comp_files:
+			if cf.ends_with(".gd"):
+				rng_scan_paths.append("%s/%s" % [COMPONENTS_DIR, cf])
+				comp_count += 1
+		if comp_count < 9:
+			failures.append("(e) component sweep found only %d component scripts (expected >= 9)" % comp_count)
+	for path in rng_scan_paths:
+		var src := FileAccess.get_file_as_string(path)
+		if src.is_empty():
+			failures.append("(e) could not read %s for RNG audit" % path)
+		elif "RNG." in src:
+			failures.append("(e) %s references the global RNG autoload (must be RNG-free)" % path)
 
 	if failures.is_empty():
 		print("K5a OK — PingPongHazard verified: empty spawn_ctx constructs safely (default RIGHT heading), "

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://b5s2defschema001"]
+
+[ext_resource type="Script" path="res://tests/test_opposition_def_schema.gd" id="1"]
+
+[node name="TestOppositionDefSchema" type="Node"]
+script = ExtResource("1")

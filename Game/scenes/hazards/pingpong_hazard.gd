@@ -1,165 +1,115 @@
 class_name PingPongHazard
 extends CharacterBody2D
-## PingPongHazard (K5a, M1.4) — a throwaway greybox "bouncer": a colored shape that
-## travels in a straight line at a constant speed, bounces off walls, and ends the run
-## if it touches the player. No state machine, no chase, no awaken — it is live from
-## spawn. Confined to its room via wall-bounce + an optional room-rect clamp (OQ-1).
-## Mirrors HazardEntity's structure (CharacterBody2D, setup() snapshot, Tell polygon,
-## distance-test kill).
+## PingPongHazard (K5a, M1.4 · componentized S2, M1.9) — a throwaway greybox
+## "bouncer": a colored shape that travels in a straight line at a constant speed,
+## bounces off walls, and ends the run if it touches the player. No state machine,
+## no chase, no awaken — it is live from spawn.
+##
+## S2 (M1.9): the internals now live in the shared opposition component set —
+## StraightBounceMove (BUG8 heading-source-of-truth travel/bounce/clamp, verbatim) +
+## LethalContact (&"radius" mode: fixed CONTACT_RADIUS distance test, BUG6 latch,
+## emit-always, L5 hpp_kills gate) + ThrowInteraction (&"die"). The host keeps the
+## family skeleton unchanged: the per-frame guard, the self-timed run clock, the
+## fixed component tick order, and the config snapshot. OBSERVABLE BEHAVIOR IS
+## BYTE/FRAME-IDENTICAL to the pre-component entity (golden frame-trace gated).
 ##
 ## Collision: body on layer `hazard` (5), masks `world` (2) ONLY — identical to
 ## HazardEntity. Walls (the `world` layer) bounce it; it does NOT mask `player`
-## (the kill is a script distance test, deterministic) nor `hazard` (bouncers never
-## block each other — they pass through, no inter-hazard pinball).
+## (the kill is a script distance test, deterministic) nor `hazard`.
 ##
-## ALL-OFF: with hpp_enabled = false the spawn seam (K5i) never instantiates this node,
-## so the M1.0 baseline is byte-for-byte unchanged. This entity NEVER calls the global
-## RNG autoload — any per-instance variation (the initial heading) is supplied by K5i
-## via spawn_ctx as a deterministic function of spawn index, so the fingerprint is
-## never moved (entities are pure run-state at materialisation).
+## ALL-OFF: with hpp_enabled = false the spawn seam never instantiates this node,
+## so the M1.0 baseline is byte-for-byte unchanged. This entity NEVER calls the
+## global RNG autoload — any per-instance variation (the initial heading) is
+## supplied via spawn_ctx as a deterministic function of spawn index.
 
 ## Greybox tell color — DISTINCT from R1 (grey-blue/red) and the other M1.4 hazards.
-## Amber "live projectile" read — "a thing in motion that will hurt you" (OQ-7, the
-## final palette is a Director/character-animator call ratified at RG1).
+## Amber "live projectile" read — "a thing in motion that will hurt you".
 const COLOR_LIVE := Color(0.95, 0.65, 0.15)     # amber
 
-## Contact radius (px): distance at/under which touching the player kills. Self-contained
-## greybox constant (NOT a RunConfig knob — keeps the CFG knob count pinned, like
-## HazardEntity's NONFATAL_* constants). Floored at the visual body sum so "touch" reads
-## honestly: player_r 14 + hazard_r 10 = 24 (run_config.gd:69-71).
+## Contact radius (px): distance at/under which touching the player kills.
+## Self-contained greybox constant (NOT a RunConfig knob — keeps the CFG knob count
+## pinned; S2 Resolved Decisions Q7: feel constants move with their block, never
+## into params). Floored at the visual body sum: player_r 14 + hazard_r 10 = 24.
 const CONTACT_RADIUS := 24.0
 
-## One-shot squash juice on bounce: scale up briefly so each bounce reads as an impact.
-## Pure juice — if the tree is paused/headless the color+motion carry the state.
-## Scope-safe (no sprite sheets / AnimationTree).
+## One-shot squash juice on bounce: pure presentation (headless/paused-safe).
 const SQUASH_SCALE := 1.15
 const SQUASH_TIME := 0.06
 
 var _cfg: RunConfig                 # snapshot of GameState.active_run_config at setup
-var _player: Node2D                 # resolved at setup via the "player" group
-var _speed: float = 0.0             # snapshot of hpp_speed (px/s)
-var _dir: Vector2 = Vector2.RIGHT   # intended unit heading — the SOURCE OF TRUTH for the bounce.
-                                    # BUG8: reflect THIS off wall normals, never the post-slide
-                                    # velocity (which move_and_slide projects ALONG the wall —
-                                    # feeding it back into the bounce collapsed the heading to
-                                    # wall-parallel in corners → grinding/stalling).
-var _killed_latched: bool = false   # one-shot telemetry latch (BUG6 pattern) — NOT a fail_run guard
-var _spawn_time: float = 0.0        # self-timed run clock for the telemetry run_t_ms (R1 §4 pattern)
+var _player: Node2D                 # resolved at setup via setup()'s arg
+var _spawn_time: float = 0.0        # self-timed run clock for run_t_ms (host-owned)
 
-# OQ-1 (confinement): the room's world-space bounds, set from spawn_ctx. The empty Rect2
-# (no area) == "no clamp" (pure wall-bounce confinement). When non-empty the entity also
-# reflects at the rect edges so a bouncer can never leak through a doorway into the next room.
-var _room_bounds: Rect2 = Rect2()
+var _move: StraightBounceMove = null
+var _lethal: LethalContact = null
+var _throw: ThrowInteraction = null
 
 @onready var _tell: Polygon2D = $Tell
 
 
-## Bind config + player + the per-instance spawn context. Called by K5i's spawn seam right
-## after add_child (mirrors HazardEntity.setup). LOCKED cross-cutting signature (Phase-3):
-## setup(cfg, player, spawn_ctx) — all three M1.4 hazards share it; each reads only its keys.
-## ping-pong reads: spawn_ctx["initial_dir"] (Vector2, default RIGHT) and
-## spawn_ctx["room_bounds"] (Rect2, default empty = pure-wall confinement). An empty dict
-## constructs safely (defaults below) so an unwired instance is still valid.
+func _ready() -> void:
+	# Q4: adopt .tscn-declared components when present, instance defaults otherwise.
+	# The refs below fix the tick order regardless of child declaration order.
+	_move = OppositionComponent.acquire(self, StraightBounceMove) as StraightBounceMove
+	_lethal = OppositionComponent.acquire(self, LethalContact) as LethalContact
+	_throw = OppositionComponent.acquire(self, ThrowInteraction) as ThrowInteraction
+	_move.on_bounce = _squash_on_bounce
+
+
+## Bind config + player + the per-instance spawn context (LOCKED family signature —
+## setup(cfg, player, spawn_ctx); each entity reads only its keys). ping-pong reads:
+## spawn_ctx["initial_dir"] (Vector2, default RIGHT) and spawn_ctx["room_bounds"]
+## (Rect2, default empty = pure-wall confinement). An empty dict constructs safely.
 func setup(cfg: RunConfig, player: Node2D, spawn_ctx: Dictionary = {}) -> void:
 	_cfg = cfg
 	_player = player
-	_speed = maxf(cfg.hpp_speed, 0.0) if cfg != null else 0.0
-	_room_bounds = spawn_ctx.get("room_bounds", Rect2())
-	_killed_latched = false
 	_spawn_time = 0.0
-	var initial_dir: Vector2 = spawn_ctx.get("initial_dir", Vector2.RIGHT)
-	_dir = initial_dir.normalized() if initial_dir.length() > 0.001 else Vector2.RIGHT
-	velocity = _dir * _speed
+	var p := _resolve_params(cfg)
+	_move.bind(self, player, p, spawn_ctx)     # seeds velocity = dir * speed (legacy setup)
+	_lethal.bind(self, player, p, spawn_ctx)   # resets the BUG6 latch (re-setup safe)
+	_throw.bind(self, player, p, spawn_ctx)
 	if _tell != null:
 		_tell.color = COLOR_LIVE
 
 
+## S2 resolve order: LEGACY KNOBS ONLY (the no-double-driving contract — defs mirror
+## inertly; nothing reads OppositionDef.params at runtime in M1.9's legacy lane).
+func _resolve_params(cfg: RunConfig) -> Dictionary:
+	return {
+		"speed": maxf(cfg.hpp_speed, 0.0) if cfg != null else 0.0,
+		"contact_radius": CONTACT_RADIUS,
+		"kills": cfg.hpp_kills if cfg != null else true,
+		"def_id": &"pingpong",
+		"emit_family": &"new_hazard_killed",
+		"lethal_mode": &"radius",
+		"latch_rearm": true,
+		"throw_mode": &"die",
+	}
+
+
 func _physics_process(delta: float) -> void:
 	if _player == null or _cfg == null or not is_instance_valid(_player):
-		return
+		return                                 # the family guard, verbatim
 	_spawn_time += delta
-
-	# --- Travel + bounce ----------------------------------------------------
-	# Drive from the intended heading _dir (NOT the post-slide velocity). Each frame:
-	#   velocity = _dir * _speed → move_and_slide() → reflect _dir off the wall normal(s).
-	# BUG8 FIX: the previous code reflected the POST-move_and_slide velocity, which
-	# move_and_slide had already projected ALONG the wall (tangential). In a glancing hit
-	# or a corner that tangential vector points nearly wall-parallel, so bounce() couldn't
-	# restore the real incoming heading — the bouncer ground along the wall and stalled at
-	# a corner. Reflecting the intended heading _dir keeps the ping-pong angle exact and the
-	# speed constant forever (the tangential mutation never feeds back into the bounce).
-	velocity = _dir * _speed
-	move_and_slide()
-	var hits := get_slide_collision_count()
-	if hits > 0:
-		# A corner = two (or more) contacts in one frame. Summing the slide normals (each a
-		# unit vector) yields the resultant "away from the corner" normal; reflecting _dir off
-		# it reverses the bouncer out of the corner instead of trapping it between two walls.
-		var n := Vector2.ZERO
-		for i in hits:
-			var col := get_slide_collision(i)
-			if col != null:
-				n += col.get_normal()
-		if n.length() > 0.001:
-			n = n.normalized()
-			# Reflect only when still heading INTO the (resultant) wall (dot < 0), so we never
-			# double-flip on a frame where the heading already points away (prevents jitter).
-			if _dir.dot(n) < 0.0:
-				_dir = _dir.bounce(n).normalized()
-				velocity = _dir * _speed
-				_squash_on_bounce()
-
-	# --- Room-rect clamp (OQ-1): hard-confine to the room rect as belt-and-braces.
-	# Reflect at the rect edges so a bouncer can never leak through a doorway into the
-	# next room even when wall-bounce alone would let it. No-op when _room_bounds is the
-	# empty Rect2 (pure-wall mode).
-	if _room_bounds.has_area():
-		_confine_to_room()
-
-	# --- Lethal contact test (deterministic distance test, like HazardEntity) ----
-	# CONTACT_RADIUS is fixed; touching the player kills outright. One-shot telemetry
-	# latch (BUG6 pattern): emit new_hazard_killed exactly once on the rising edge, but
-	# ALWAYS let fail_run run (its _run_ended guard owns run-end idempotency — we never
-	# gate the call itself).
-	var in_contact: bool = global_position.distance_to(_player.global_position) <= CONTACT_RADIUS
-	if in_contact and not _killed_latched:
-		_killed_latched = true
-		_on_contact()
-	elif not in_contact:
-		_killed_latched = false
+	_move.tick(delta)      # velocity=_dir*_speed → move_and_slide → BUG8 reflect → clamp
+	_lethal.tick(delta)    # radius test → BUG6 latch → emit-always → kills-gated fail_run
 
 
-## A lethal touch lands. Emit the K0-declared telemetry row, then route the death through
-## the EXISTING fatal path (no new reason, no local "already ended" bool that PREVENTS it).
-func _on_contact() -> void:
-	var run_t_ms: int = int(_spawn_time * 1000.0)
-	var depth: int = GameState.current_depth_index   # live within-band depth (BUG2)
-	EventBus.new_hazard_killed.emit(&"pingpong", depth, run_t_ms)   # emit-always: contact occurred
-	# L5: only the kill is gated (mirrors hazard_entity.gd's r1_catch_kills). Default true =
-	# today's lethal behaviour; false = the bouncer keeps travelling/bouncing but does NOT end
-	# the run (the non-lethal preset the verify driver uses). _killed_latched still de-dupes the
-	# emit on the rising edge and re-arms on the falling edge, so re-entry re-tests cleanly.
-	if _cfg.hpp_kills:
-		GameState.fail_run(&"death")   # existing end path; its _run_ended guard de-dupes.
+## The host-owned self-timed run clock (both signal families share this timestamp).
+func run_clock_ms() -> int:
+	return int(_spawn_time * 1000.0)
 
 
-## OQ-1 clamp: if the body crossed a room-rect edge this frame, snap it back inside and
-## reflect the perpendicular component. Pure run-state math, no physics — complementary to
-## the wall-bounce above (wall-bounce handles concave/L interiors).
-## BUG8: flip the perpendicular component of _dir (the heading source of truth), not just
-## velocity — velocity is recomputed from _dir at the top of every frame, so a velocity-only
-## flip here would be discarded next frame and the bouncer would walk back through the edge.
-## velocity is kept synced so it reads consistent within this same frame.
-func _confine_to_room() -> void:
-	var p := global_position
-	if p.x < _room_bounds.position.x or p.x > _room_bounds.end.x:
-		_dir.x = -_dir.x
-		p.x = clampf(p.x, _room_bounds.position.x, _room_bounds.end.x)
-	if p.y < _room_bounds.position.y or p.y > _room_bounds.end.y:
-		_dir.y = -_dir.y
-		p.y = clampf(p.y, _room_bounds.position.y, _room_bounds.end.y)
-	global_position = p
-	velocity = _dir * _speed
+## Stable telemetry/def id (Q5 rider — service-spawned nodes never fall back to the
+## auto-uniquified node name).
+func get_def_id() -> StringName:
+	return &"pingpong"
+
+
+## The thrown-item death seam (Q5 locked shape). Mode &"die" returns false — the
+## thrower performs the free, byte-identical to the pre-seam behaviour.
+func resolve_throw_death(killer_ctx: Dictionary) -> bool:
+	return _throw.resolve_throw_death(killer_ctx)
 
 
 # --- Greybox tell juice (inline placeholder, no sprite sheets / AnimationTree) ------
