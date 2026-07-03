@@ -15,7 +15,71 @@ min_band = 0
 cap_group = &""
 per_room_cap = 0
 per_band_cap = 0
-params = {}
-param_schema = Array[Dictionary]([])
+params = {
+"catch_radius": 0.0,
+"catch_radius_per_depth": 0.0,
+"chase_speed": 0.0,
+"depth_threshold": 0,
+"linger_seconds": 0.0,
+"patrol_speed": 0.0,
+"spawn_room_only": false,
+"speed_per_depth": 0.0
+}
+param_schema = Array[Dictionary]([{
+"default": 0,
+"gloss": "CFG_FIELD_R1_DEPTH_THRESHOLD",
+"key": "depth_threshold",
+"max": 10,
+"min": 0,
+"type": "int"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_R1_LINGER_SECONDS",
+"key": "linger_seconds",
+"max": 30.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_R1_CHASE_SPEED",
+"key": "chase_speed",
+"max": 120.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_R1_SPEED_PER_DEPTH",
+"key": "speed_per_depth",
+"max": 100.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_R1_CATCH_RADIUS",
+"key": "catch_radius",
+"max": 64.0,
+"min": 0.0,
+"trap_if_neutral": true,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_R1_CATCH_RADIUS_PER_DEPTH",
+"key": "catch_radius_per_depth",
+"max": 100.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": false,
+"gloss": "CFG_FIELD_R1_SPAWN_ROOM_ONLY",
+"key": "spawn_room_only",
+"type": "bool"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_R1_PATROL_SPEED",
+"key": "patrol_speed",
+"max": 120.0,
+"min": 0.0,
+"type": "float"
+}])
 lethality = "lethal"
-kills = true
+kills = false

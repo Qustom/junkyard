@@ -85,12 +85,27 @@ func _on_body_entered(body: Node) -> void:
 ## Hit a hazard-layer body → kill it + destroy the item (consumed, NOT re-dropped).
 ## kind = the body's type for the telemetry row (&"pursuer" for the R1 HazardEntity,
 ## &"pingpong" for the K5 bouncer, else the node name lower-cased as a fallback).
+##
+## S2 (M1.9, Resolved Decisions Q5 — the LOCKED delegation seam): the emit site is
+## unchanged and FIRST (throw_killed_hazard keeps its exact site, payload, kind
+## resolution, and Time.get_ticks_msec() clock source), then the S2 generic
+## &"killed_by_throw" twin, then the duck-typed death dispatch: a body implementing
+## `resolve_throw_death(killer_ctx) -> bool` may handle its own death (true = "do
+## not free me again" — S6b's Splitter splits then frees itself); false/absent =
+## today's queue_free(), verbatim, same frame, same call order.
 func _hit_hazard(body: Node) -> void:
 	_spent = true
 	var item_id: StringName = _item.id if _item != null else &""
 	var kind: StringName = _hazard_kind(body)
 	EventBus.throw_killed_hazard.emit(item_id, kind, _depth, _run_t_ms())
-	body.queue_free()        # R1/ping-pong have no health → free outright (kill)
+	EventBus.opposition_event.emit(kind, &"killed_by_throw", _depth, _run_t_ms())
+	var handled := false
+	if body.has_method(&"resolve_throw_death"):
+		handled = body.resolve_throw_death({
+			"item_id": item_id, "kind": kind,
+			"depth": _depth, "run_t_ms": _run_t_ms()})   # primitives-only killer_ctx
+	if not handled:
+		body.queue_free()    # R1/ping-pong have no health → free outright (kill)
 	_item = null             # consumed on a kill
 	queue_free()
 
@@ -107,13 +122,18 @@ func _miss() -> void:
 
 
 ## The telemetry `kind` for a killed hazard body. Typed checks first (the locked
-## scope: pursuer + ping-pong), then a group/name fallback so any future hazard body
-## still logs a sensible kind without editing this file.
+## scope: pursuer + ping-pong — byte-identical results for the legacy hazards), then
+## the S2 duck-typed def-id check (Q5 rider: service-spawned nodes get auto-
+## uniquified sibling names, so the raw-name fallback would log a mangled kind like
+## &"@splitter@3" — get_def_id() gives S6a/S6b stable telemetry kinds for free),
+## then the name fallback so any other body still logs a sensible kind.
 func _hazard_kind(body: Node) -> StringName:
 	if body is HazardEntity:
 		return &"pursuer"
 	if body is PingPongHazard:
 		return &"pingpong"
+	if body.has_method(&"get_def_id"):
+		return StringName(body.call(&"get_def_id"))
 	return StringName(String(body.name).to_lower())
 
 

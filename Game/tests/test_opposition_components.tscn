@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://b5s2oppcomptrace1"]
+
+[ext_resource type="Script" path="res://tests/test_opposition_components.gd" id="1"]
+
+[node name="TestOppositionComponents" type="Node"]
+script = ExtResource("1")

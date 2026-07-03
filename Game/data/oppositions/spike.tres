@@ -15,7 +15,41 @@ min_band = 0
 cap_group = &"new_hazards"
 per_room_cap = 0
 per_band_cap = 0
-params = {}
-param_schema = Array[Dictionary]([])
+params = {
+"arm_length": 0.0,
+"base_count": 0,
+"count_per_depth": 0.0,
+"rotation_speed": 0.0
+}
+param_schema = Array[Dictionary]([{
+"default": 0,
+"gloss": "CFG_FIELD_HSPIKE_BASE_COUNT",
+"key": "base_count",
+"max": 10,
+"min": 0,
+"type": "int"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_HSPIKE_COUNT_PER_DEPTH",
+"key": "count_per_depth",
+"max": 5.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_HSPIKE_ROTATION_SPEED",
+"key": "rotation_speed",
+"max": 360.0,
+"min": -360.0,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_HSPIKE_ARM_LENGTH",
+"key": "arm_length",
+"max": 64.0,
+"min": 0.0,
+"trap_if_neutral": true,
+"type": "float"
+}])
 lethality = "lethal"
 kills = true
