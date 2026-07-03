@@ -4,7 +4,7 @@
 - **Subagent:** game-director-designer (profile/deck/curve + tint-only environment-artist half delivered inline per D-RAT-4)
 - **Milestone:** M1.9 (Wave 4)
 - **Branch:** game-director-designer/S7
-- **Commit:** b25e00b6f2dcc689d3c31c2bba3f677fd0a2430a
+- **Commit:** 025d37a18b0cb445b9bb0e308bd46ee5d734d541 (all S7 files; worklog SHA-fill follow-up on top)
 
 ## What changed
 Authored the second dive band **entirely as data** — the band-side proof that "adding a
