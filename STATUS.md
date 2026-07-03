@@ -6,8 +6,14 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **design LOCKED, Phase 4 wired, workspace clean. ▶ Next: dispatch build Wave 1 (S0 ∥ S1).** *(M1.8 CLOSED 2026-07-02 — verdict + 17-deviation close-out in `design/M1_8_Tasks/G4_findings_M1.8.md`; only M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
-**Last updated:** 2026-07-02 (M1.8 closed out: 17 deviations dispositioned 15 Reviewed + 2 Addressed, reapplied (N1 amendment · layout-doc as-built · breakdown count) + archived; iso hub retained, H2 top-down = revert path; `hub_ground_iso.tres` uid normalization committed (import+smoke green) — working tree clean. Earlier: M1.9 four-phase authoring complete, D-RAT-1..4 ratified, TASKS/board/STATUS wired.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **build Wave 1 IN PROGRESS (S0 ∥ S1 dispatched, parallel worktrees).** *(M1.8 CLOSED 2026-07-02 — verdict + 17-deviation close-out in `design/M1_8_Tasks/G4_findings_M1.8.md`; only M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
+**Last updated:** 2026-07-02 (Wave 1 dispatched: S0 → general-purpose (SpawnService + OppositionDef + EventBus pre-declare; sole writer main_game/event_bus/game_state), S1 → general-purpose (BandProfile + BandPipeline + band_greybox.tres; systems/bandgen + data/bands only). Board: both In Progress.)
+
+## In progress
+| Task | Since | Agent(s) | Milestone | Note |
+|---|---|---|---|---|
+| S0 — SpawnService + OppositionDef data layer + EventBus pre-declare | 2026-07-02 | general-purpose | M1.9 (Wave 1) | Worktree branch `general-purpose/S0`. Sole writer of `main_game.gd`/`event_bus.gd`/`game_state.gd` this wave. DoD: fp `e943ac9c8bc1` byte-identical, rg1/new-hazard tests green UNMODIFIED, `test_spawn_service` green. |
+| S1 — BandProfile + BandPipeline + `band_greybox.tres` | 2026-07-02 | general-purpose | M1.9 (Wave 1) | Worktree branch `general-purpose/S1`. Touches ONLY `systems/bandgen/` + `data/bands/` + new tests. DoD: `test_band_pipeline_parity` byte-match 9-seed matrix, bandgen suite green, all-off fp unmoved. |
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
