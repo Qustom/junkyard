@@ -3,7 +3,7 @@
 **Milestone:** M1.9 (Scalable Opposition + Band Systems) · **Wave:** 5 (alone — hub + app routing)
 **Task id:** S8 · **blockedBy:** S3 (BandPipeline call-site in `main_game`), S7 (`band_two.tres` exists), **plus S0's Wave-1 pre-declare of the routing seam this doc resolves**
 **Assignee:** general-purpose (programmer) · **Author:** game-director-designer (Phase-2 design)
-**Status:** design (Phase 2) — Open Questions pending Phase-3 resolution / Director ratification
+**Status:** design (Phase 3 resolved — see §Resolved Decisions; OQ-3 [tint + prompt text] awaits the Director's S7 pitch pick)
 
 > **What this doc is.** The Phase-2 design for M1.9's reachability task: a second
 > `DeparturePortal` on the hub that routes the dive into `band_two`, while the existing
@@ -79,7 +79,7 @@ Every hop below was read directly from the working tree at `main` (M1.8 H4 state
 | 5 | The App router swaps scenes | `Game/scenes/app/app.gd:55` (connect), `:97-101` (handler) | `_on_dive_requested(_band_id: StringName)` — **the arg is received and DISCARDED** (underscore-prefixed). The router `_goto(DIVE_PATH, &"dive")` by path and holds no state ("owns NO game-state truth", `app.gd:8-10`). |
 | 6 | The dive self-starts | `Game/scenes/game/main_game.gd:39` + `:181` | `const BAND_ID := &"near"` (`:39` — "M1 has a single greybox band"). `_ready` → `start_new_run()`; config resolved at `:198` (`GameState.dive_config_or_default()`), band generated at `:208-209` (`BandGenerator.new().generate(seed, _cfg, catalog, run_cfg)` — **the line S3 rewires to `BandPipeline.generate(profile, seed)`**), run started at `:287-289` (`stage_run_config(run_cfg)` → `start_run(BAND_ID, seed)` → `enter_band(BAND_ID)`). |
 | 7 | GameState binds the run | `Game/systems/game_state.gd:128-170` | `start_run(band_id, seed)`: `current_band = band_id` (`:134`), config bound (`:145`), `RNG.seed_from(seed)` (`:169`), **`EventBus.run_started.emit(band_id, seed)`** (`:170`). |
-| 8 | Telemetry stamps the row | `Game/systems/telemetry/telemetry.gd:129-156` | `_on_run_started(band_id, seed)` assembles the `run_started` row with **`"band_id": String(band_id)`** (`:150`) beside the build id (`:151`), the flat config stamp (`:152`), inert-oppositions (`:153`), and quota meta (`:154-155`). |
+| 8 | Telemetry stamps the row | `Game/systems/telemetry/telemetry.gd:129-156` | `_on_run_started(band_id, seed)` assembles the `run_started` row with **`"band_id": String(band_id)`** (`:149`) beside the build id (`:151`), the flat config stamp (`:152`), inert-oppositions (`:153`), and quota meta (`:154-155`). |
 
 ### 2.2 The load-bearing finding: the plumbing already exists at both ends
 
@@ -93,7 +93,7 @@ discards the arg *by design* (it owns no truth), and the dive scene self-starts 
 `_ready` with a **hardcoded** `BAND_ID := &"near"` — there is no carrier for the choice
 across the scene swap. So S8's real deliverable is **one staging slot + one mapping**,
 not a new signal. The "telemetry band-stamp" half of the task is **already implemented**
-at `telemetry.gd:150`; S8's job is to make the value *real* (and decide its vocabulary —
+at `telemetry.gd:149`; S8's job is to make the value *real* (and decide its vocabulary —
 OQ-2).
 
 ### 2.3 The precedent for the carrier: `_dive_config`
@@ -335,7 +335,7 @@ lockout; the scene swap frees both.
 ### 4.3 Telemetry stamp — verify, don't build
 
 Hop 8 (§2.1) already stamps `"band_id": String(band_id)` on the `run_started` row
-(`telemetry.gd:150`), sourced from the `run_started` signal arg. With §4.1 in place the
+(`telemetry.gd:149`), sourced from the `run_started` signal arg. With §4.1 in place the
 value becomes the real routing key: `"near"` for portal-1 dives (unchanged vs every row
 since M1.6 — the control cohort needs no re-baselining), `"band_two"` for portal-2 dives.
 It already sits beside the config stamp (`run_config`, `:152`) and the S4-added
@@ -379,7 +379,7 @@ stamp the resolved profile id as an additive `band_profile` field is OQ-2.)
 #    seed AND == itself across two runs (deterministic, band.gd:56-58).
 # 5. Stamp: subscribe to run_started before (4) -> received band_id == &"band_two";
 #    repeat unstaged -> band_id == &"near". (The JSONL row mirrors the signal arg
-#    verbatim, telemetry.gd:150 — asserting the signal asserts the row's source.)
+#    verbatim, telemetry.gd:149 — asserting the signal asserts the row's source.)
 # 6. Wipe isolation: stage &"band_two", GameState.wipe_meta() -> staged key untouched
 #    (wipe is meta-only); then consume -> &"band_two".
 ```
@@ -505,3 +505,135 @@ Pre-declared earlier by S0 (Wave 1, per §3): the `dive_requested` doc-comment a
    `run_started`'s vocabulary (both say `"near"`/`"band_two"`). Recommendation: same key
    as `start_run` (§4.1 pseudocode does this); resolver should confirm no consumer
    assumes `current_band == &"near"` anywhere (grep found none — only the emit sites).
+
+---
+
+## Resolved Decisions (Phase 3)
+
+Resolved 2026-07-02 by a fresh-eyes Phase-3 resolver (not the Phase-2 author), with the
+orchestrator's cross-task adjudications folded in as ratified. **Q1, Q2, Q4–Q8 are
+closed** — the body of this spec (§2–§7) commits to these answers and the implementing
+agent reads a single definite spec for them. **Q3 (glow tint + prompt text) is the one
+remaining Director call**, coupled to S7's identity-pitch pick.
+
+### Fresh-eyes verification of the load-bearing claims (all re-checked against `main`, 2026-07-02)
+
+The entire §2.1 routing chain was re-read hop-by-hop and **holds**: `dive_requested(band_id:
+StringName)` at `event_bus.gd:197`; the portal's `@export var band_id: StringName = &"near"`
+(`departure_portal.gd:22`) and `EventBus.dive_requested.emit(band_id)` (`:55`); the router's
+discarded `_band_id` (`app.gd:97`); `const BAND_ID := &"near"` (`main_game.gd:39`) and
+`start_run(BAND_ID, seed)` / `enter_band(BAND_ID)` (`:288-289`); `run_started.emit(band_id,
+seed)` (`game_state.gd:170`); the `_dive_config`/`_staged_run_config` staging precedents
+(`game_state.gd:82-91`, consume-on-read at `:145-146`); `test_app_router.gd:68` emitting
+`&"near"`. **Corrections (minor, non-structural):**
+
+- **Telemetry stamp is `telemetry.gd:149`, not `:150`** — `:150` is the `"seed"` key; the
+  neighbours cited (`build` `:151`, `run_config` `:152`) are correct. §2.1 hop 8, §2.2,
+  §4.3, and §5.2-5 should read `:149`. Substance unaffected.
+- §2.4's "hub.gd:43 → evaluate_quota_on_return" — `hub.gd:43` is `_resolve_return_quota()`,
+  which wraps the `GameState.evaluate_quota_on_return()` call. Substance unaffected.
+- `Game/data/bands/` does not exist yet on `main` — expected (S1 creates it in Wave 2,
+  S7 authors `band_two.tres` in Wave 4); §4.1's `BAND_PROFILE_DIR` is forward-correct.
+
+**Portal-position check against the CURRENT (H4 iso) hub — `(220, -150)` CONFIRMED clear:**
+`hub.tscn` anchors verified (`PlayerSpawn (0,120)` `:48-49`, `DeparturePortal (0,-150)`
+`:54-55`, `ShopAnchor`/`HubShop (-220,-150)` `:57-61`, walls `±368/±232` `:32-45`). The iso
+dirt yard is `|x| ≤ 340, |y| ≤ 216` (`hub_ground.gd:44-45`, `_is_dirt` `:70`) — `(220,-150)`
+is packed dirt with ≥ 96 px of clearance to the grass-transition boundary band, so the gate
+never sits on an edge/patchy tile. The hub's east half contains **no other placed node**
+(the only structures are the shop west, gate center — the scene tree has nothing at x > 0
+besides the center gate), and 220 px of portal-1 separation vs the ~36 px detector reach
+(`interaction_detector.gd:6-8`) rules out prompt ambiguity. Same `y = -150` puts it in the
+gate/shop y-sort band as designed. The "cold-violet" claim for portal 1's glow was verified
+against the actual asset: `portal_glow.png`'s dominant opaque pixel is `(193, 85, 255)` —
+violet — so every Q3 tint candidate below has strong hue separation from the control portal.
+
+### The decisions
+
+- **Q1 — Signal shape (THE S0 CROSS-TASK CONTRACT). RESOLVED — ★ RATIFIED (orchestrator
+  cross-contract adjudication): §3's A+C hybrid is adopted verbatim as the cross-task
+  contract. NO new EventBus signal, NO arity change — reuse `dive_requested(band_id)`.**
+  S0's Wave-1 pre-declare is exactly §3's two pieces: (a) the `dive_requested` doc-comment
+  amendment in `event_bus.gd`, and (b) the inert GameState staging seam —
+  `_pending_dive_band: StringName = &""`, GameState self-subscribing to `dive_requested`
+  in `_ready()`, and `consume_pending_dive_band()` with consume-on-read semantics.
+  S0's originally-proposed `band_route_selected` signal is **DROPPED** (S0's design doc is
+  being reconciled to this contract). *Rationale:* this doc's analysis won on merit — the
+  payload already exists at both ends of the chain (§2.2), a sibling signal forks the
+  launch flow against the frozen M1.6 8-signal set, and a portal-side GameState write
+  breaks the dumb-interactable pattern. S0 may dispatch against this contract.
+
+- **Q2 — Routing-key vocabulary. RESOLVED (ratified): keep `&"near"` as portal 1's key,
+  mapped to `band_greybox` via `BAND_ROUTES`; band 2's routing key is `&"band_two"` →
+  `Game/data/bands/band_two.tres`.** Exactly §4.1 as written. *Rationale:* telemetry
+  `band_id` continuity with every M1.6–M1.8 row (SG2 needs no re-keying of the control
+  cohort), `departure_portal.tscn` zero-byte, `test_app_router` untouched. The two-vocabulary
+  cost is one 2-row const Dictionary — acceptable. The additive `"band_profile"` stamp on
+  `run_started` is **DEFERRED** — do not add it until SG2 demonstrably wants it.
+
+- **Q3 — Prompt text + glow tint. NEEDS DIRECTOR REVIEW (tone — coupled to S7's pitch
+  pick).** One-liner: *pick S7's band-2 identity pitch; S8's tint and prompt text follow
+  from it mechanically.* The tint pairs to the pitch's palette (verified against S7 §3.1;
+  all three separate cleanly from portal 1's verified violet glow):
+  - **Pitch A "The Sump"** (sepia-amber, GDD-canonical, S7's recommendation) → **ember-orange
+    `Color(1.0, 0.58, 0.24)`** (this doc's §4.2 proposal) — warm gate for the warm band.
+  - **Pitch B "The Overflow"** (cold teal-grey) → teal `Color(0.30, 0.85, 0.75)`.
+  - **Pitch C "The Annex"** (institutional green-grey) → acid-green `Color(0.55, 0.95, 0.35)`.
+  **Recommendation: Pitch A's ember-orange**, matching S7's own recommended pitch. Prompt
+  text ships as the `"Dive — Band 2"` placeholder and is replaced by the ratified band name
+  (e.g. `"Dive — The Sump"`) at S8 integration — a one-line `hub.tscn` override either way,
+  so this call does **not** block S0/S3, only S8's final polish pass.
+
+- **Q4 — Hub label / HUD band indicator. RESOLVED: no — nothing beyond the portal prompt
+  in M1.9.** Judged resolvable on scope merit rather than pure UX taste: the prompt names
+  the band at the exact decision moment, spatial position (west shop / center control /
+  east band 2) disambiguates, `HubLabel` stays untouched, and the addition is purely
+  additive later if S7's identity work motivates it. Confirmed by orchestrator adjudication.
+
+- **Q5 — HG3 revert risk. RESOLVED: portal 2 survives an iso→top-down revert by
+  construction.** Verified against the real artifacts: the placement is an instance
+  transform in `hub.tscn` (H4's worklog records the revert as "one `tile_set` swap +
+  painter revert" — node positions carry), both portals instance the one
+  `departure_portal.tscn`, and the yard bounds (`YARD_X/Y` = wall colliders) are the same
+  rectangle in both dressings, so `(220, -150)` stays interior ground either way. Keep the
+  §2.5 residual: one visual spot-check post-revert; worst case is a position nudge.
+
+- **Q6 — Return-from-band-2 flow. RESOLVED (ratified): nothing special — the return flow
+  is unchanged.** Extract/death/timeout all auto-return via the existing `run_ended`
+  observation, and because the staging slot is **consumed at dive start**, the selection
+  implicitly resets to the control band on every return — the next dive requires a fresh
+  portal interact. Band-chaining stays out of M1.9 scope. Confirmed by orchestrator
+  adjudication.
+
+- **Q7 — Debug-menu band selector. RESOLVED (ratified): no menu knob.** Band choice is
+  not a `RunConfig` field and must stay off the MANIFEST/coverage/fingerprint surface;
+  tests stage the key directly (`EventBus.dive_requested.emit(&"band_two")` or the
+  GameState seam). Director band-forcing from the P-menu, if SG2 ever wants it, is a new
+  task in the `debug_player_art_toggled` signal class — not S8. Confirmed by orchestrator
+  adjudication.
+
+- **Q8 — `enter_band` vocabulary. RESOLVED: the routing key, same as `start_run`.**
+  `enter_band(band_key)` keeps `band_entered(band_id, depth)` consistent with
+  `run_started` (both say `"near"`/`"band_two"`). Fresh-eyes re-grep confirms the safety
+  premise: **no reader of `GameState.current_band` exists anywhere in `Game/`** — the only
+  hits are its declaration (`game_state.gd:61`) and its `start_run` assignment; Telemetry's
+  `_on_band_entered` (`telemetry.gd:159-163`) just stringifies the arg. §4.1's pseudocode
+  stands as written.
+
+### Integration note — §4.1 aligns to S3's `_resolve_band_profile()` seam (ratified)
+
+S3 (Wave 3) lands the profile-resolution seam **in `main_game.gd`** as a single named
+function, per S3's resolved Q2(a) (`design/M1_9_Tasks/S3_encounter_builder_integration.md`
+§3.4/§6): `_resolve_band_profile() -> BandProfile` returning `band_greybox.tres` by const
+path, called at the pipeline site and at `EncounterBuilder.populate(...)`. **S8's Wave-5
+rewire is therefore a rewrite of that one function** — §4.1's `_resolve_band()` logic
+(consume the GameState seam → `BAND_ROUTES` lookup → load, with the `&"near"`/
+`band_greybox` fail-safe default) moves *inside/alongside* `_resolve_band_profile()`, and
+the resolved **key** additionally replaces `BAND_ID` at the `start_run`/`enter_band` call
+sites (`main_game.gd:288-289`). Resolve the profile **once per run start** and reuse it for
+both the pipeline and the builder call (consume-on-read means a second resolution inside
+one run start would fall back to the default — do not call `consume_pending_dive_band()`
+twice). S3 also keeps `BAND_ID = &"near"` for the default dive's `start_run` tag in Wave 3
+(S3's Q2b), so the telemetry cohort label never forks mid-version; S8 owns the band-stamp
+story in Wave 5. Until S8 lands, nothing reads the GameState staging slot except S3's
+default-only seam — the pre-declare stays inert exactly as §3 requires.

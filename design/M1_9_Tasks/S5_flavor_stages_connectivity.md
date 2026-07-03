@@ -3,7 +3,7 @@
 **Milestone:** M1.9 (Scalable Opposition + Band Systems) · **Workstream:** band migration Phase B · **Wave:** 2 (parallel worktree, ∥ S2)
 **Task id:** S5 · **blockedBy:** S1 (BandProfile + BandPipeline + `band_greybox.tres`)
 **Assignees:** general-purpose (implementation + tests) · **Author:** game-director-designer (Phase-2 design fan-out)
-**Status:** design (Phase 2 — Open Questions in §9 await Phase-3 fresh-eyes resolution + Director ratification)
+**Status:** design **locked** (Phase 3 resolved — §10 folds in the fresh-eyes resolution + the orchestrator's cross-contract adjudications; Q4's breach-led-decay headline + Q5's breach-legibility watch-item are surfaced to the Director at wave close-out / SG2, non-blocking for the Wave-2 build)
 
 > **What this doc is.** The per-task design doc for S5 per `M1.9_Breakdown.md` §Wave 2: the two cheapest flavor stages from the band exploration — `SetPieceInject` ([e4](../explorations/exploration-20260625/procgen-bands/e4-set-piece-injection.md)) and `WearDecay` ([e5](../explorations/exploration-20260625/procgen-bands/e5-wear-decay-state.md)) — plus the explicit **connectivity-guarantee stage** the architecture doc promotes to a pipeline invariant ([0-scalable-band-generation-system.md](../explorations/exploration-20260625/procgen-bands/0-scalable-band-generation-system.md) §"Determinism & connectivity contracts"). It is **design only** — no game code, no `.tres` ships from this doc. The programmer builds against it in Wave 2. §9 lists the open questions with recommendations; nothing in the body is Director-ratified yet.
 
@@ -63,7 +63,7 @@ The architecture doc's pipeline is `backend → archetype → principles → fla
 
 ### 1.5 Exactly where they run relative to seal/grade
 
-Two as-built facts force the order. (1) e4's depth gating needs `depth_norm`, which only `DepthGrader.grade()` assigns — but the architecture doc runs flavors *before* grade. Resolution: `DepthGrader` is a pure, RNG-free, idempotent graph function (`depth_grader.gd:4-10`), so the pipeline runs a cheap **provisional grade** before the flavor loop and re-grades after any piece-list mutation; the final grade after sealing remains the canonical one. (2) `SocketSealer` is geometry-keyed off the band-global FLOOR set built from `floor_cells` (`socket_sealer.gd:57-84`), so it must run **after** all floor mutation — it then auto-seals a set-piece's unused sockets and caps around blocked doorways for free, with zero new seal code.
+Two as-built facts force the order. (1) e4's depth gating needs `depth_norm`, which only `DepthGrader.grade()` assigns — but the architecture doc runs flavors *before* grade. Resolution: `DepthGrader` is a pure, RNG-free, idempotent graph function (`depth_grader.gd:4-10`), so the pipeline runs a cheap **provisional grade** before the flavor loop and re-grades after any piece-list mutation; the pipeline's existing tail grade (S1's `grade` + `compute_return_distance`) remains the canonical one — it is equivalent to a post-seal grade because the seal never touches `floor_cells` (§10 C1). (2) `SocketSealer` is geometry-keyed off the band-global FLOOR set built from `floor_cells` (`socket_sealer.gd:57-84`), so it must run **after** all floor mutation — it then auto-seals a set-piece's unused sockets and caps around blocked doorways for free, with zero new seal code. **As-built this already holds without S5 moving anything: S1's pipeline does NOT invoke the sealer** ("the SEAL stays a MATERIALISATION concern (main_game.gd:881) and is NOT invoked here" — S1 §pipeline pseudocode), and materialisation is downstream of `BandPipeline.generate`, hence downstream of every flavor stage. See §10 correction **C1**.
 
 ```
 BandPipeline.generate(profile, seed):
@@ -76,9 +76,13 @@ BandPipeline.generate(profile, seed):
             if stage.MUTATES_PIECES:  DepthGrader.grade(band)   # re-grade for later gates
             ConnectivityGuarantee: ASSERT after pure-socket stages,
                                    CARVE (journal revert) after floor-reshaping ones   # §5
-    SocketSealer.seal_unused_sockets(band)                      # existing, geometry-keyed
-    DepthGrader.grade(band); DepthGrader.compute_return_distance(band)   # canonical grade
+    DepthGrader.grade(band); DepthGrader.compute_return_distance(band)   # canonical grade (S1's existing tail)
     return band                                                 # JunkPlacer/opposition downstream, unchanged
+    # NOTE (§10 C1): SocketSealer.seal_unused_sockets(band) is NOT called here — per S1
+    # as-built, the seal stays a MATERIALISATION concern (main_game.gd:881), which runs
+    # downstream of this whole function and therefore still after all floor mutation.
+    # The seal is grade-neutral (floor_cells are captured pre-seal, socket_sealer.gd:30-31),
+    # so canonical-grade-before-seal is equivalent to the grade-after-seal sketched in Phase 2.
 ```
 
 `JunkPlacer` runs downstream off the graded band and iterates `band.pieces` — **an injected set-piece gets depth-appropriate loot automatically**, no S5 work. (Its *curated* loot/opposition interior is deferred — §1.6.)
@@ -234,13 +238,13 @@ Deferred from e5's knob list: `rubble_density` (needs props — no asset), `dest
 
 ### 4.2 The as-built topology finding: breaches MUST run before blocks
 
-e5 noted "breaches-then-blocks ordering needs care." As-built it is **mandatory, not care**: the generator produces a **tree** (linear spine, or R4-branchy — still acyclic; `loop_back_count` is dormant). In a tree, *every* doorway is a bridge — so *every* block disconnects the band and reject-on-disconnect rejects **all** of them. Blocks can only ever land where a **prior breach has created a cycle** providing the alternate route. Consequences baked into the design: (1) the stage runs its breach pass first, block pass second — hardcoded, not authored; (2) a config with `block_budget > 0` and `breach_budget == 0` is a legal no-op for blocks (log a `push_warning` so the author learns why); (3) e5's "decay_level feels capped" flag is *structural* here, and the honest tuning story for `band_two` is breach-led decay. Recorded as the headline design note for the Director (§9 Q4).
+e5 noted "breaches-then-blocks ordering needs care." As-built it is **mandatory, not care**: the generator produces a **tree** (linear spine, or R4-branchy — still acyclic; `loop_back_count` is a dormant export with zero consumer code, verified §10 V3). In a tree, *every* doorway is a bridge — so *every* block disconnects the band and reject-on-disconnect rejects **all** of them. (Precision note, §10 C2: acyclicity is an *empirical* property of the mated grow loop, not a theorem — `band.fits` rejects overlap only, never adjacency, so an unmated flush floor-to-floor seam creating a cycle is geometrically possible; the §6.2-5 test therefore asserts the tree precondition explicitly rather than assuming it.) Blocks can only ever land where a **prior breach has created a cycle** providing the alternate route. Consequences baked into the design: (1) the stage runs its breach pass first, block pass second — hardcoded, not authored; (2) a config with `block_budget > 0` and `breach_budget == 0` is a legal no-op for blocks — log a `push_warning` so the author learns why, but gate the warning on the pre-decay adjacency graph actually being a tree (edges == `pieces.size() - 1`) so it never mis-fires on a future cyclic band (§10 Q4); (3) e5's "decay_level feels capped" flag is *structural* here, and the honest tuning story for `band_two` is breach-led decay. Recorded as the headline design note for the Director (§9 Q4).
 
 ### 4.3 Op mechanics (as-built geometry)
 
 **Doorway enumeration (block candidates).** A *doorway* = the set of FLOOR cells of piece *i* 4-adjacent to FLOOR cells of piece *j* (the exact walkable-adjacency definition shared by `is_band_connected`, `DepthGrader._build_adjacency`, and the sealer's guard). Enumerate per unordered pair `(i<j)` from a **pre-decay snapshot** (breach-created adjacencies are excluded — blocking a breach you just cut is churn), sort pairs ascending, sort each doorway's cells by `(y, x)`.
 
-**Block** = pick a doorway (rng over the sorted list, `depth_bias`-weighted by the deeper piece's `depth_norm`); for **every** cell on the *i*-side of the seam (doorways are 2 cells wide — walling one lane leaves it passable): write WALL via the sealer's proven write (`geo.set_cell(global - offset_cell, 0, WALL_ATLAS)` into the owner's `Geometry`), erase the cell from the owner's `floor_cells`. **Tentatively** — then run the cell-level connectivity check (§5); if disconnected, revert (restore tile + floor_cells) and retire that doorway. Every committed op is pushed onto a **journal** (`{op, piece, cells, prior_atlas}`) — the CARVE fallback's revert surface.
+**Block** = pick a doorway (rng over the sorted list, `depth_bias`-weighted by the deeper piece's `depth_norm`); for **every** cell on the *i*-side of the seam (a full-overlap doorway is 2 cells wide and partial-overlap mates can leave 1-wide seams — `socket_sealer.gd` BUG4 note, §10 C3 — so walling anything less than the whole seam can leave it passable): write WALL via the sealer's proven write (`geo.set_cell(global - offset_cell, 0, WALL_ATLAS)` into the owner's `Geometry`), erase the cell from the owner's `floor_cells`. **Tentatively** — then run the cell-level connectivity check (§5); if disconnected, revert (restore tile + floor_cells) and retire that doorway. Every committed op is pushed onto a **journal** (`{op, piece, cells, prior_atlas}`) — the CARVE fallback's revert surface.
 
 **Breach** = find a *wall-pair*: as-built pieces are solid-walled rects mated flush, so a non-doorway seam is **two** wall cells thick (each piece's own perimeter wall) — e5's "one perimeter WALL cell" only exists in the 1-thick idealisation. A breach candidate is a pair of 4-adjacent wall cells `(w1 ∈ piece A, w2 ∈ piece B)` where `w1` has a FLOOR neighbour in A and `w2` a FLOOR neighbour in B, aligned on the seam axis; convert **`breach_width` parallel pairs** (2-wide = doorway width = guaranteed player-traversable) to FLOOR (`set_cell(..., 0, Vector2i(0,0))`), append the cells to their owner pieces' `floor_cells`, journal the op. Candidates sorted by `(min cell y, x)`; runs of `breach_width` adjacent pairs precomputed; rng picks over the sorted run list. Breaches can only add edges — no connectivity risk — but they still journal (uniform CARVE surface).
 
@@ -334,7 +338,7 @@ Profiles are built **in code** (`BandProfile.new()` + config resources) against 
 2. **SetPieceInject determinism:** same seed+profile → same `fingerprint()` **twice** (fresh pipeline instances); fp ≠ control fp; injected `piece_id` present; count ≤ caps; `unique` respected; every injected piece's host socket satisfied `min_depth_norm` (checked against the re-graded band); a `min_depth_norm = 1.1` gate injects nothing (graceful-skip path).
 3. **WearDecay determinism + fp-invariance:** same seed+profile → same `floor_fingerprint()` twice; **`fingerprint()` byte-equals the control's** (piece list untouched — the off-fingerprint claim, asserted not assumed); different seed → different `floor_fingerprint()` (sanity).
 4. **WearDecay cannot strand (the DoD test):** aggressive config (`decay_level = 1.0`, budgets maxed) across the full seed matrix → `ConnectivityGuarantee.is_fully_connected(band)` true after the pipeline; additionally every piece (incl. `deepest_piece`, the extraction anchor) is reached and `DepthGrader` left no `depth_index == pieces.size()` sentinel (its unreachable marker, `depth_grader.gd:41-43`).
-5. **Tree-topology fact pinned:** `breach_budget = 0, block_budget = 8, decay_level = 1.0` → **zero** journal entries of type block (every block rejected on the acyclic band) and `floor_fingerprint()` equals control — the §4.2 finding as a regression test.
+5. **Tree-topology fact pinned (as a conditional, per §10 C2):** first assert the **precondition** — the pre-decay piece-adjacency graph is a tree (edge count == `pieces.size() - 1`); then `breach_budget = 0, block_budget = 8, decay_level = 1.0` → **zero** journal entries of type block (every block rejected on the acyclic band) and `floor_fingerprint()` equals control — the §4.2 finding as a regression test. If a future seed/config trips the precondition (accidental unmated adjacency, or `loop_back_count` activation), the test fails loudly at the precondition instead of the zero-blocks assertion silently going stale.
 6. **CARVE unit test:** hand-block a doorway *bypassing* the inline reject (direct `_set_wall` + journal), assert `is_fully_connected` false, run `enforce(CARVE, journal)` → true, tiles + `floor_cells` restored.
 7. **Ordering/composition:** `[SetPieceInject, WearDecay]` in one profile → deterministic fp + floor-fp twice; the set-piece is placed before decay ops (decay can touch the vault's doorway — the e4×e5 "decayed vault" multiplier working).
 8. **Salt independence:** two `WearDecay` entries in one `flavors` array draw distinct sub-streams (index-mixed seeds) — floor-fp differs from the single-entry run, deterministically.
@@ -365,7 +369,7 @@ Profiles are built **in code** (`BandProfile.new()` + config resources) against 
 
 ---
 
-## 9. Open Questions (for Phase-3 fresh-eyes resolution; Director items flagged)
+## 9. Open Questions (CLOSED — all nine resolved in §10; Director-visibility items ride the close-out, non-blocking)
 
 1. **`Band` vs `BandBuild` hook point — coordination with S1 (technical).** This doc commits to stages operating on the **post-assembly `Band`** inside `BandPipeline.generate`, pre-seal/pre-final-grade (§1.3/§1.5), because Phase A wraps `_generate_once` unrefactored and the `Band` already carries pieces/occupancy/open-sockets/resolved_seed. S1's design doc is being authored in parallel — if S1 lands a different pipeline shape (e.g. an early thin `BandBuild`), the stage signature's first parameter follows S1's noun; internals are geometry-only either way. **Recommend:** ratify Band-as-build-state for M1.9; defer `BandBuild` to the first non-socket backend (Phase D).
 2. **What IS a set-piece in M1.9 data terms (technical/content).** Options: (a) tagged `ZonePieceData` rows in `piece_catalog.tres` — rejected: entries enter `_build_weight_table` and move the control fingerprint; (b) **new `SetPieceEntry` resource in the stage config's own pool (§3.1) — recommended**: control-safe by construction, per-band authoring per the Dead Cells model, and the natural future carrier for client-(c) curated opposition placements (deferred, §1.6). Needs a yes/no on the deferred-hook framing.
@@ -379,4 +383,78 @@ Profiles are built **in code** (`BandProfile.new()` + config resources) against 
 
 ---
 
-*Spec authored for M1.9 S5 (Phase-2 design fan-out). Design only — no code, no `.tres`. Phase-3 fresh-eyes resolve §9 into a `Resolved Decisions` section (Director dispositions the flagged items) before Wave-2 dispatch; the implementing agent then reads a single locked design. Deviations during the build go to `design/DESIGN_DEVIATIONS.md` for the wave close-out sweep.*
+## 10. Resolved Decisions (Phase 3 — fresh-eyes resolution, 2026-07-02)
+
+Resolved by a Phase-3 fresh-eyes agent (not the Phase-2 author) against the as-built code, the band explorations (e4/e5/architecture doc), S1's Phase-2 design, and the orchestrator's **cross-contract adjudications** (fixed inputs, marked *[adjudicated]* below). The body of this spec (§0–§8) now commits to these answers, with the §1.5/§4.2/§4.3/§6.2 corrections applied inline. The implementing agent reads a single locked design; the two Director-visibility items (Q4 headline, Q5 legibility watch-item) are **non-blocking** and travel with the worklog/close-out, not the dispatch.
+
+### Verifications & claim corrections (as-built spot-checks)
+
+- **V1 — `fingerprint()` hashes the piece list only: VERIFIED.** `band.gd:58-62` is exactly the ordered `piece_id@offset#mated` sha256 — no floor cells, no tiles. §1.4's classification table stands.
+- **V2 — retained open-socket frontier: VERIFIED.** `band.gd:26-29` retains `open_sockets` verbatim ("so a later loop-closing pass … has everything it needs"); `OpenSocket` carries `owner: PlacedPiece` / `dir` / `cell` / `depth` (`open_socket.gd`), so §3.3's `sock.owner.depth_norm` gate works once the provisional grade has run.
+- **V3 — `loop_back_count` is dormant: VERIFIED.** It exists only as an export (`data/bandgen_config.gd:27`, `.tres` value 0) with **zero consumer code** in the generator — its only other appearances are comments. Bands are generated as mated trees today.
+- **V4 — the sub-stream pattern citation: VERIFIED.** `junk_placer.gd:57-59` is literally `rng.seed = _substream_seed(...)` then `rng.state = rng.seed`; §3.3/§4.4's pseudocode mirrors the as-built pattern exactly. `_sort_frontier`'s order (depth, cell.y, cell.x, dir, index) and the `_hash_combine` boost mix (`band_generator.gd:352-362`) are as cited. Seed matrix = `tests/test_bandgen_determinism.gd::SEEDS` (9 seeds).
+- **C1 — CORRECTED: the seal is NOT in the pipeline.** §1.5's Phase-2 pseudocode invoked `SocketSealer.seal_unused_sockets(band)` inside `BandPipeline.generate`; S1's as-built design explicitly keeps the seal **at materialisation** (`main_game.gd:881` — "NOT invoked here"). Fixed inline: S5's flavor loop fills S1's vacant "STAGES 3-5" slot; S1's existing tail grade is the canonical grade (equivalent to a post-seal grade because the seal never touches `floor_cells`, `socket_sealer.gd:30-31`); the seal keeps running at materialisation, still downstream of every floor mutation. **S5 moves no seal code and still never touches `main_game.gd`.**
+- **C2 — SOFTENED: "every doorway is a bridge" is empirical, not a theorem.** `band.fits` rejects overlap only, never adjacency, so an unmated flush floor-to-floor seam (an accidental doorway → a cycle) is geometrically possible; `socket_sealer.gd`'s BUG4 note and `depth_grader.gd`'s "branches/loops are handled the moment B2 enables them" both anticipate non-tree adjacency. Consequence: test §6.2-5 now asserts the tree **precondition** explicitly (edges == n−1) before asserting zero blocks, and the §4.2 author warning is tree-gated.
+- **C3 — CORRECTED: doorways are not always 2 cells wide.** BUG4 records partially-overlapped mates, so a seam can be 1 cell. The block mechanic was already robust (it writes **every** i-side seam cell); only §4.3's parenthetical was an idealisation — fixed inline.
+
+### Q1 — Hook point: `Band` vs `BandBuild` — **RESOLVED** *[adjudicated]*
+
+**Decision: stages operate on the post-assembly `Band` inside `BandPipeline.generate` — after `BandGenerator.generate`, before S1's tail (final grade / return-distance), i.e. in S1's explicitly vacant "STAGES 3-5" slot — with the provisional grade supplying the depth gates.** The signature is `apply(band, profile, stage_seed)` with `band` in the contract's `build` slot. `BandBuild` is deferred to the first non-socket backend (Phase D); stage internals speak only floor-cell/socket geometry, so the port is a parameter swap. S1's doc is being reconciled to exactly this hook, and its Phase-A guard (`push_error` + `return null` on a non-empty `flavors` array, S1 pseudocode) is precisely the code S5 replaces with the flavor loop. *Rationale:* the `Band` already carries pieces/occupancy/open-sockets/resolved_seed; inventing a `BandBuild` now is the `_generate_once` churn Phase A exists to avoid. Amended per **C1**: the loop's tail is S1's existing grade, not a relocated seal.
+
+### Q2 — Set-piece data shape — **RESOLVED** *[adjudicated]*
+
+**Decision: a new `SetPieceEntry` pool resource inside the stage config (§3.1) — never the base `piece_catalog.tres`.** Anything in the base catalog enters `_build_weight_table` and moves the control fingerprint; a config-owned pool is control-safe by construction. **The deferred-hook framing is ratified as-is:** no opposition field ships on `SetPieceEntry` in M1.9 (YAGNI until opposition client (c) exists); the `ignore_room_cap` ctx escape stays reserved in the `SpawnService` per the breakdown's cross-cutting contracts, and `svc.spawn` is never called from a stage this version.
+
+### Q3 — Attach vs e4's swap lean — **RESOLVED** *[adjudicated]*
+
+**Decision: ATTACH — append the set-piece to a depth-gated retained open socket via the untouched grow-loop helpers (§3.2/§3.3).** Swap (e4's lean) requires re-mating a mid-spine neighborhood and is strictly more expensive as-built. **Record as a deviation-from-e4 in `design/DESIGN_DEVIATIONS.md` at wave close-out** (already in DoD §8.6); revisit swap only if S7's playtest says detour-vaults read as skippable. Two S7 reconciliation consequences (see also A2): (a) S7 §3.4/§3.7 currently describes a *mark-the-deepest-room* rule — it must be re-authored to attach; (b) S7 §3.7 rule 5 (exempt set-piece cells from decay blocking) is **dropped as unnecessary**: an attached set-piece is a dead-end whose single doorway is a bridge, so any block on it disconnects and is rejected by the inline guard — the vault cannot be stranded, and decay *touching* it is the desired e4×e5 multiplier (test §6.2-7).
+
+### Q4 — Blocks structurally rare on tree bands — **RESOLVED for the M1.9 build; Director visibility mandatory at close-out**
+
+**Decision: accept breach-led decay for M1.9. Do NOT pull `loop_back_count` forward.** Activating loop closure is new generator logic, which the §0 guardrails ("socket backend only, no `_generate_once` surgery") prohibit this version — it is not merely "scope growth," it is out of contract. The breach-before-block hardcode is **not over-fitted to tree topology** (fresh-eyes stress-test): breach-first is weakly dominant on *any* topology — breaches only add edges, and each block is individually guarded by the topology-agnostic reject-on-disconnect check — so if `loop_back_count` ever activates, blocks simply start landing on authored cycles with no breach needed and the hardcoded order stays correct. What *was* tree-coupled has been generalised inline: the `breach_budget == 0` author warning is now tree-gated (§4.2), and test §6.2-5 asserts its acyclicity precondition explicitly (**C2**). **The "M1.9 decay is breach-led (shortcut energy), blocks only land behind breaches" finding is the headline design note in the S5 worklog's deviations section and the SG3 gate material — the Director must see it, but it does not block the build** (the stage supports both mixes; tuning is S7/SG3 territory).
+
+### Q5 — WearDecay's greybox visual tell — **RESOLVED (watch-item flagged)**
+
+**Decision: ship the per-piece `Geometry` modulate tint on decay-touched pieces** (`&"collapsed"` warm grey-brown / `&"flooded"` blue-green): zero new assets, fingerprint-neutral (modulate touches no tile data), one line per touched piece. Blocks/breaches remain self-representing (real WALL/FLOOR tiles with collision). This stays within the established greybox-retone placeholder precedent, so it is not escalated; **e5's breach-legibility question (does a breach read as passable without a tell?) is parked as an SG2 playtest watch-item**, where the Director already presides — a distinct breach tile is an S7/environment-artist follow-up only if the playtest flags it (S7's Tier-2 accent tile is already authored as optional).
+
+### Q6 — Decay scaling source — **RESOLVED**
+
+**Decision: `decay_level` stays profile-authored; `depth_bias` provides within-band deeper-is-more-ruined; Exposure coupling is deferred to the milestone that builds Exposure.** No Exposure system exists in M1 (GDD-only), and e5 itself flagged the coupling as a vision item. Nothing in the config schema forecloses the coupling later (a future stage can compute an effective `decay_level` from Exposure before constructing the config).
+
+### Q7 — Stage ordering rules — **RESOLVED** *[adjudicated]*
+
+**Decision: execution order = `flavors` array order (profile-authored); connectivity interleaving is pipeline-enforced off the `RESHAPES_FLOOR`/`MUTATES_PIECES` traits — including ASSERT-vs-CARVE mode selection — and is never authorable; breach-before-block is hardcoded inside `WearDecay`.** The hard-sort/priority-field alternative is **rejected**: it adds an authoring surface with no M1.9 need, and the only cross-stage ordering preference (inject before decay, the e4×e5 multiplier) is correctly *guidance*, pinned working by test §6.2-7 rather than enforced.
+
+### Q8 — Cell-level vs piece-level connectivity bar — **RESOLVED**
+
+**Decision: cell-level flood-fill is the invariant's definition (§5), confirmed.** Strictly stronger than the generator's piece-level `is_band_connected` (which stays untouched as the grow loop's internal retry check); cost is one dict-BFS over ~10²–10³ cells per reshaping stage, negligible headless and at dive start; precedent is on its side — `SocketSealer` and `DepthGrader` already operate on exactly this floor-cell 4-adjacency, so the invariant, the seal, and the depth graph all agree on one walkability definition.
+
+### Q9 — Breach width — **RESOLVED**
+
+**Decision: `breach_width = 2` default, knob exposed.** 2 is the canonical socket width (`open_socket.gd` `width_cells` default 2; `_read_piece`'s marker meta default 2), guaranteed player-traversable at 16 px cells, and reads as a "real" opening; 1-wide stays reachable via the knob for a future moodier state but is not authored anywhere in M1.9 (S7 leaves it at default).
+
+### A1 — `floor_fingerprint()` as an additive determinism bar (fresh-eyes stress-test, §6.1) — **RESOLVED with guardrails**
+
+The additive method is sound, but the confusion risk with the control bar is real and must be named precisely. The **control determinism bar** is `Band.fingerprint()` (piece-list sha256, `band.gd:58-62`) as pinned by **`Game/tests/test_bandgen_determinism.gd`** (its `SEEDS` matrix; same-seed→same-fp, diff-seed→diff-fp, seal-invariance assertions) and re-asserted by S1's `test_band_pipeline_parity`; the *other* pinned fp in the wave contract — `e943ac9c8bc1` — is the **RunConfig-level all-off control**, a different artifact entirely. `floor_fingerprint()` is neither: it is the **wear-aware supplementary bar** that exists precisely because `fingerprint()` is blind to WearDecay (V1). Guardrails, binding on the implementation: **(a)** its docstring must state it is NOT the layout-control fingerprint and must never replace `fingerprint()` in any control/parity assertion; **(b)** `test_bandgen_determinism.gd` and `test_band_pipeline_parity` are not edited — `floor_fingerprint()` is asserted only in `test_band_flavors.gd`; **(c)** it is computed from `floor_cells` (the pre-seal walkable truth), which makes it stable whether called before or after the materialisation seal — state this in the docstring; **(d)** the name stands (adequately distinct); no aliasing or wrapping of `fingerprint()`.
+
+### A2 — Cross-doc parameter alignment with S7 (`band_two`) — **RESOLVED** *[adjudicated: S5's schema is canonical]*
+
+S7 §3.4/§3.7 was authored against a provisional param sketch; **S5's §3.1/§4.1 schema is the canonical surface** and S7 reconciles at its build (S7 is blockedBy S5, so no file conflict). The mapping S7 folds in:
+
+| S7 sketch | S5 canonical | S7 value → |
+|---|---|---|
+| `defs` | `SetPieceInjectConfig.entries: Array[SetPieceEntry]` | one entry wrapping the chosen landmark piece |
+| `max` | `max_total` | `1` |
+| `min_depth_norm` (config-level) | `SetPieceEntry.min_depth_norm` (per-entry) | `0.6` |
+| `intensity` | `WearDecayConfig.decay_level` | `0.25` |
+| `block_routes: true` | `block_budget > 0` | default `2` |
+| `open_breaches: true` | `breach_budget > 0` | default `2` |
+| `state: &"flooded"` | supported as-is | Pitch A/B |
+| `state: &"disused"` (Pitch C) | **not an S5 state** | maps to `&"collapsed"`, or S7 requests an S5 state extension if Pitch C wins |
+| *(unset)* | `depth_bias`, `breach_width`, salts | S5 defaults |
+
+Two further S7 reconciliation notes riding Q3: the mark-based placement rule and the decay-exemption rule are superseded (Q3), and S7's "off-stream flavors never move the fingerprint" phrasing needs its SetPieceInject half updated — attach-ratified injection is **layout-affecting** (moves band_two's fp deterministically), which the breakdown explicitly permits under the `(seed + config)` contract; S7's determinism test asserts same-seed reproducibility, not fp equality with a mark-based build, so no S7 test changes.
+
+---
+
+*Spec authored for M1.9 S5 (Phase-2 design fan-out); §10 Resolved Decisions folded in by the Phase-3 fresh-eyes resolver (2026-07-02) with the orchestrator's cross-contract adjudications. Design only — no code, no `.tres`. The implementing agent reads this as a single locked design (§0–§8 as corrected + §10). Q4's headline and Q5's watch-item go to the Director with the wave close-out / SG2 material; deviations during the build go to `design/DESIGN_DEVIATIONS.md` for the close-out sweep.*

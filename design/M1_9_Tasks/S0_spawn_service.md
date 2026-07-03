@@ -795,3 +795,185 @@ Every unresolved call, with trade-offs. Phase 3 (fresh eyes) resolves on merit; 
   **Recommend: delete the three consts, descriptor rows carry `def_path` only** (the def is the
   single source of the scene). `HAZARD_SCENE_PATH` (`:120`) stays — R1's seam is untouched
   (OQ-3). *Technical.*
+
+---
+
+## 9. Resolved Decisions (Phase 3 — fresh-eyes resolution, 2026-07-02)
+
+Resolved by a Phase-3 fresh-eyes resolver (not this spec's author) on technical/design merit,
+folding in the **orchestrator's cross-contract adjudications** made across the 10 parallel M1.9
+Phase-2 designs. The questions below are now closed; where a resolution amends the body (§0–§7),
+the amendment is stated here and **wins over the body text** — an implementing agent reads §9 as
+the final word on each conflict. No open Director calls remain inside S0's Wave-1 scope; the one
+genuinely Director-facing item (numeric merge of the two ceilings) is post-gate and already on
+SG3's watch-list.
+
+### Fresh-eyes verification of the body's load-bearing claims
+
+Spot-verified 2026-07-02 against the working tree: the §1.2/§1.3 line anchors are accurate
+(`_spawn_new_hazards` `:385-485` with the BUG7 filter at `:468-469` and player resolve at
+`:396-397`; consts `:325-327`/`:337`/`:350`; ctx builder `:496-507`; `_clear_band` `:1187`;
+`R1_DENSITY_BAND_CEILING` at `run_config.gd:37`; the EventBus signal lines `:89`/`:90`/`:149`/
+`:151`/`:175`/`:181`/`:197`; the entity contracts `hazard_entity.gd:119-131`/`:236-240`/
+`:319-323` and `pingpong_hazard.gd:63-74`/`:137-143`; `BASELINE_FP` at
+`test_corridor_lever.gd:34`). Three corrections/strengthenings:
+
+1. **The forwarding-const requirement is stronger than the body says.** The harness reads
+   `mg_script.NEW_HAZARD_BAND_CEILING` at `test_new_hazard_spawn.gd:44` (body says `:45` —
+   off-by-one, immaterial), **and additionally `test_rg1_m14_verify.gd:299` and `:403` read the
+   same const off the MainGame script**. Two committed test files depend on it, so §6.3's
+   "keep a forwarding const on MainGame" is **mandatory**, not conditional.
+2. **`run_config.gd` lives at `Game/data/run_config/run_config.gd`** (not under `systems/`).
+   The body's bare `run_config.gd:NNN` cites are all line-accurate; this note just pins the path
+   for the implementer.
+3. **OQ-11's deletion is verified safe:** `HPP_SCENE_PATH`/`HBOMB_SCENE_PATH`/`HSPIKE_SCENE_PATH`
+   are referenced nowhere outside `main_game.gd` itself (repo-wide grep, tests included).
+
+### The decisions
+
+- **OQ-1 — Service lifetime/parent. RESOLVED: per-dive node, lazily created child of the
+  MainGame node (never `_band_container`), group-resolved via `&"spawn_service"`.** As
+  recommended. An autoload would put a live-node registry (pure run-state) in a meta-lifetime
+  singleton — the run/meta smear the TDD forbids; the per-dive node gets teardown free with the
+  scene swap, and lazy creation keeps both the all-off tree and the bare-script test harness
+  byte-identical (the all-off path exits at `:421` before `_ensure_spawn_service()` ever runs).
+  The `_band_container` parent is ruled out on two verified facts: `_clear_band()` frees the
+  container's children and the golden harness counts them.
+
+- **OQ-2 — `.tres` home. RESOLVED: `Game/data/oppositions/` (new folder).** Confirmed by
+  orchestrator cross-contract adjudication #6 (all 10 designs reference this path). It matches
+  the umbrella taxonomy (a spike trap is not an "enemy"), gives S3's `oppositions_enabled`
+  loader one canonical scan root, and leaves `data/enemies/` free for M2 combat content.
+
+- **OQ-3 — R1 unification scope. RESOLVED: option (ii), defer R1 routing to S3.** Confirmed by
+  orchestrator adjudication #3, which also settles the breakdown's "unifying the two ceilings"
+  parenthetical the body flagged for ratification: **K5's 48-ceiling enforcement moves through
+  the service in S0** (the `&"new_hazards"` cap group); **R1's 64-ceiling + both R1 spawn loops
+  stay parallel/legacy through all of M1.9** — "unify" means *mechanical/registry* unification
+  only. Whether the two *numbers* ever merge into one pool is a post-gate balance call (SG3
+  watch-item, Director's). Consequence: `spawn_world(def, pos, ctx)` from OQ-10 does **not**
+  exist in S0 or M1.9 — mid-run position-based clients use the `world_to_cell` helper instead
+  (see OQ-10).
+
+- **OQ-4 — Band-routing signal shape. RESOLVED: `band_route_selected` is DROPPED — no new
+  routing signal exists in M1.9.** Orchestrator adjudication #1, overriding this doc's §4
+  proposal: S8's Phase-2 design verified end-to-end that `dive_requested(band_id: StringName)`
+  has carried the band id since M1.6 (`event_bus.gd:197`; the App router receives and discards
+  it, `app.gd:97-101`), so the request side needs nothing and the "resolution receipt" earns no
+  second signal — the resolution is a GameState staging read, and Telemetry's `band_id`
+  run-stamp rides `start_run(band_key, seed)` (S8 §4.1), not a subscription. **S0's Wave-1
+  routing pre-declare shrinks to exactly** (per `S8_hub_portal_routing.md` §3, which this
+  resolution defers to as the shape authority):
+  1. **`event_bus.gd`** — a **doc-comment amendment only** on `dive_requested` (no new signal,
+     no arity change): *"`band_id` is the dive routing key. GameState stages it on emission
+     (`_pending_dive_band`); `main_game` resolves it to a `BandProfile` at dive start
+     (unknown/empty → `band_greybox`). Emitters: the hub DeparturePortals (one per band)."*
+  2. **`systems/game_state.gd`** — the **inert staging seam**: private
+     `var _pending_dive_band: StringName = &""` (run-state, never persisted); GameState
+     **self-subscribes** in `_ready()` (`EventBus.dive_requested.connect(...)`, one-line handler
+     `_pending_dive_band = band_id`, beside the existing `player_died`/`dive_clock_timeout`
+     connects); public `consume_pending_dive_band() -> StringName` — consume-on-read (returns
+     the staged key and clears it; `&""` = nothing staged), mirroring the `_staged_run_config`
+     pattern (`game_state.gd:145-146`). **Inert until S3** — nothing reads the slot in Waves
+     1–2, so behavior and the all-off fingerprint are untouched by the pre-declare itself.
+
+  **Body amendments this forces:** §4's code block loses the entire `band_route_selected`
+  paragraph + signal (the `opposition_event`/`opposition_killed_player` half stands verbatim);
+  §0 constraint 5 widens to "S0 is the sole Wave-1 writer of `main_game.gd`, `event_bus.gd`,
+  **and `systems/game_state.gd`**" (S8 §3 designates S0 the seam's Wave-1 writer; S1 still
+  touches none of the three); §6.3's deltas table gains a row —
+  `Game/systems/game_state.gd`: **Append** the inert staging seam (field + self-subscribe +
+  `consume_pending_dive_band()`); DoD item 8 becomes: *"EventBus block matches §4-as-amended
+  (the two `opposition_*` signals only, verbatim) + the `dive_requested` doc-comment amendment
+  + the GameState staging seam present and inert."* DoD item 7 gains one cheap tail check
+  (verify-what-you-ship — S0 lands this code three waves before its first consumer):
+  **staging round-trip** — emit `dive_requested(&"band_two")` → `consume_pending_dive_band()`
+  returns `&"band_two"` → a second consume returns `&""`. (S8's Wave-5 contract test re-proves
+  it end-to-end; this just refuses to ship dead-on-arrival plumbing.)
+
+- **OQ-5 — Cap precedence. RESOLVED as proposed:** the **minimum binds** (a spawn passes every
+  applicable tier); check order per_band → cap_group → per_room; `0` = tier absent at every
+  level (matches the `per_room_cap > 0` guard at `:458`); `ignore_room_cap` skips **only** the
+  per-room tier, never band/group ceilings. The reserved per-room identity key is locked now so
+  S3/S6 agree: **`"room_key": String`, produced as `str(p.offset_cell)`** — the placed piece's
+  `offset_cell: Vector2i` is intrinsic, stable, and already the piece identity the fingerprint
+  serializes (`band.gd:61`); a walk-index would be fragile across policies and meaningless to
+  mid-run clients. Not consumed in S0 (per-room stays in the policy count math, §3.1). The
+  dead-knob `.tres` lint (per_band_cap > group ceiling) goes to S2/S4's net, as the body says.
+
+- **OQ-6 — `host_scene: PackedScene`. RESOLVED: PackedScene export + lazy def-load,** as
+  recommended. It is the `data/item.gd` data-as-Resources convention with editor picker +
+  dependency tracking, and the all-off loads-nothing rule survives because defs are loaded
+  exactly where scenes are loaded today (§3.3, verified: the enabled/neutral `continue`s at
+  `:410-414` precede the `load` at `:415`). S4's def enumeration cost is hypothetical at 6 defs;
+  revisit with a sidecar schema resource only if measured.
+
+- **OQ-7 — `opposition_killed_player` emitter in Waves 1–2. RESOLVED: nobody — declared-but-
+  silent until S2.** Confirmed by orchestrator adjudication #7. The kill/contact distinction
+  exists only at the entity's `*_kills` gate (verified: `hazard_entity.gd:319-323`,
+  `pingpong_hazard.gd:137-143` — the legacy signals fire on *contact* regardless of the gate),
+  so no S0-side bridge can emit it correctly; entities are S2's charter. Subscribers arrive in
+  S4; a declared-silent signal for one wave is the K0 pre-declare pattern working as designed.
+
+- **OQ-8 — `&"spawned"` payload sourcing. RESOLVED: reserved ctx keys (`"depth"`, `"run_t_ms"`,
+  defaults 0),** as recommended. The service never invents a clock (the entities' self-timing
+  precedent, `hazard_entity.gd:315-318`) and never reads GameState mid-`start_new_run` where
+  depth bookkeeping is being reset. Generation-time callers pass `p.depth_index` + `0`; mid-run
+  callers (S6b) self-supply both, exactly as they already self-time.
+
+- **OQ-9 — `spawn_batch` ships caller-less. RESOLVED: yes, as the thin per-request loop of
+  §6.1; partial batches are the contract** (per-request independence, `null`s in place, order
+  preserved). No atomicity/all-or-nothing semantics until a real batch client demonstrates the
+  need — S6b's split spawns are 2–3 independent children, not a transaction.
+
+- **OQ-10 — Surface widenings. RESOLVED: the S0 surface is the breakdown's six methods PLUS**
+  (all confirmed in-charter mechanism plumbing; document in the worklog as spec-sanctioned):
+  - `valid_cells(cells) -> Array[Vector2i]` — **confirmed by orchestrator adjudication #2**:
+    the queryable BUG7 filter is a hard requirement (S3 depends on filter-then-stride byte
+    parity; §1.3's sequence-point argument is verified correct against `:464-475`).
+  - `live_total() -> int`, `begin_band(...)`, `set_cap_group(...)` — lifecycle/accounting as
+    specified in §3.1/§6.1.
+  - **`live_instances(def_id: StringName) -> Array[Node]`** — orchestrator adjudication #4:
+    S4's respawn-with-new-params tier needs to enumerate a def's live nodes. Returns the
+    validity-swept array (same `_compact` sweep as `live_count`).
+  - **Per-instance spawn-cell bookkeeping + `spawn_cell_of(node: Node) -> Vector2i`** —
+    adjudication #4: the registry records each instance's spawn cell at `spawn()` (registry
+    entries become `{node, cell}` per def id, or a parallel `node → cell` map — implementer's
+    pick), so S4 can respawn *at the same cell* without re-deriving placement. Returns
+    `Vector2i.MAX` for an unregistered node.
+  - **Public projection pair `cell_to_world(cell: Vector2i) -> Vector2` and
+    `world_to_cell(pos: Vector2) -> Vector2i`** — orchestrator adjudication #5: S6b's mid-run
+    splits spawn at the parent's *world position* and must snap it to a cell for
+    `spawn(def, cell, ctx)`. `cell_to_world` is §6.1's `_cell_to_world` made public (same
+    `:761-763` math); `world_to_cell` is its floor-division inverse
+    (`Vector2i((pos / float(_cell_size_px)).floor())`).
+  - **`spawn_world(...)` does NOT exist** — mooted by OQ-3(ii); a world-pos client composes
+    `spawn(def, world_to_cell(pos), ctx)`.
+
+  **Body amendments:** §6.1's registry gains the cell bookkeeping (`_register(def, hz, cell)`),
+  the two query methods, and the public projection pair; DoD item 7 gains asserts for
+  `live_instances` contents and `spawn_cell_of` round-trip (spawn at cell C → `spawn_cell_of`
+  returns C; unregistered node → `Vector2i.MAX`) and a `world_to_cell(cell_to_world(c)) == c`
+  identity check.
+
+- **OQ-11 — Legacy scene-path consts. RESOLVED: delete `HPP_SCENE_PATH`/`HBOMB_SCENE_PATH`/
+  `HSPIKE_SCENE_PATH`; descriptor rows carry `def_path` only.** Verified safe — no reference
+  outside `main_game.gd` (grep, tests included). `HAZARD_SCENE_PATH` (`:120`) stays with R1's
+  untouched seam per OQ-3. The def is the single source of the scene from S0 on.
+
+### Cross-contract confirmations folded in (no OQ attached)
+
+- **Def ids** (orchestrator adjudication #6): the four S0 ids are the legacy telemetry kinds
+  exactly as §3.3 authors them (`&"pingpong"`, `&"bomb"`, `&"spike"`, `&"pursuer"`); the M1.9
+  new-content ids are locked as `&"charger"`, `&"splitter"`, `&"splitter_child"` (S6a/S6b author
+  those `.tres` in `Game/data/oppositions/` — S0 ships only the four).
+- **Cap-group posture** (adjudication #3 restated at the mechanism level): §3.1's Phase-A
+  enforcement line stands verbatim — group cap `&"new_hazards"` = 48 through the service,
+  belt-and-braces with the untouched policy min(), never observed to bind first in Phase A.
+- **Dual-emit table (§5) and the no-bridge rejection stand unamended** — consistent with
+  adjudication #7.
+
+*Phase-3 resolution by fresh-eyes resolver, 2026-07-02. All resolutions are on technical merit
+or orchestrator cross-contract adjudication; the sole Director-facing residue (numeric ceiling
+merge) is explicitly post-gate on SG3's watch-list. Implementation deviations from §9 go to
+`design/DESIGN_DEVIATIONS.md` for the Wave-1 close-out sweep.*

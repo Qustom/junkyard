@@ -370,3 +370,201 @@ Refresh: `_refresh_def_sections()` re-projects `_cfg.oppositions_enabled` / `par
 8. **`oppositions_enabled` vs. `BandProfile.opposition_deck` precedence** *(coordination, S3/S7 — surfaced here because the menu's staging-note copy must state the truth).* If band 2's deck spawns Charger while the cfg lever is empty, "empty = no def loaded" holds for the *baseline band via the default portal* but not globally. Likely resolution (S3's design owns it): the cfg lever gates/augments the **default band-1 populator** (the sweep instrument + the all-off control), while a profile's deck is authoritative per-band content; `param_overrides` applies to both paths (merged at spawn by def id). S4 must echo the ratified semantics in the tab's staging note and in the trap detector's scope (only cfg-enabled defs are trap-checked).
 9. **Should a `debug_kill` (K-key) also set `debug_dirty`?** §3.6 says no (it ends the run; its row already self-identifies, `telemetry.gd:226-233`) — but if SG2 prefers one uniform "any debug action dirties the run" rule, it's a two-line change. **Recommend: no for M1.9**; note for SG2's analysis brief.
 10. **Respawn-cell bookkeeping.** §4 assumes the service registry can return live instances + their spawn cells (`live_instances(id)` / a `spawn_cell` meta). If S0's as-built registry stores only counts, S4 needs either a registry accessor (tiny S0-API addition — preferred) or a fallback (snap the node's current position to the grid — drifts for movers). **Recommend: registry accessor**; confirm at S0 integration, before Wave 4 dispatch.
+
+---
+
+## 8. Resolved Decisions (Phase 3 — fresh-eyes resolution, 2026-07-02)
+
+> Resolved by a Phase-3 fresh-eyes agent (NOT the Phase-2 author), with every load-bearing claim
+> spot-verified against the as-built `config_menu.gd` (1294 lines), `test_config_menu.gd`,
+> `run_config.gd`, `telemetry.gd`/`telemetry_schema.gd`, `event_bus.gd`, the M1.9 Breakdown, the
+> v2 exploration §"Debug menu" axis, and the S0/S2/S3 Phase-2 designs. Orchestrator cross-contract
+> adjudications (S3 lever-landing shape, S2 schema ownership, S0 registry API, def folder, EventBus
+> pre-declare scope, enable-list precedence) are folded in below as fixed inputs. **All ten questions
+> resolve on technical/design merit — none needs Director review.** The body of this spec (§1–§6)
+> is to be read as amended by §8.0's corrections; the implementer follows §8 where it and an earlier
+> section disagree.
+
+### 8.0 Claim corrections (as-built spot-verification)
+
+1. **§3.4 Layer 1's premise is wrong as written — and the fix is S4's to make.** The doc claims the
+   two S3 generic levers "are `@export` RunConfig fields, so they appear in `_exported_config_fields()`."
+   As adjudicated (and per S3's own resolved design, S3 §2.6.f/§3.3), **S3 lands them `@export_storage`**
+   — serialized but *invisible* to the `STORAGE ∧ EDITOR` reflection filter (`config_menu.gd:449`,
+   `test_config_menu.gd:175`) — precisely so the 89-pin holds untouched through Wave 3. When S4 starts,
+   the levers are NOT in the reflected set. **S4 owns the surfacing decision** (orchestrator adjudication;
+   S3's doc notes the handoff) — resolved in Q3 below: S4 **promotes both levers to plain `@export`**
+   in Wave 4, in the same commit that binds their sentinel rows, so the assertion never goes red on
+   `main`. This **amends §5's "Do NOT touch `run_config.gd`"**: S4 may make exactly the two-annotation
+   flip (`@export_storage` → `@export` on `oppositions_enabled` + `param_overrides`) and nothing else
+   in that file; S4 is thereby `run_config.gd`'s sole Wave-4 writer (no Wave-4 sibling touches it —
+   S6a/S6b/S7 own only their new files + `.tres`, per the breakdown's file-disjointness).
+2. **§4 pseudocode contradicts §3.4 on the sentinel bindings.** The pseudocode binds both
+   `_rows["oppositions_enabled"]` and `_rows["param_overrides"]` to the same `parent` node; §3.4
+   correctly requires **distinct sentinel controls** — use two distinct marker nodes (e.g. the
+   staging-note Label and the defs-root container, or two dedicated named Controls). Coverage math
+   keys off field *names* so identity would not break it, but distinctness keeps the
+   `test_config_menu.gd:117-121` leak-test pattern and the refresh routing unambiguous. §3.4 wins.
+3. **Minor mechanism precision (§2.4/§3.6):** there is no `debug_kill` *signal*. The K-key emits
+   `EventBus.player_died(&"death")` (from `game_state.gd`); Telemetry's `_on_player_died`
+   (`telemetry.gd:86`, handler `:228-235`) writes the `Schema.DEBUG_KILL` row. The pattern S4 copies
+   is therefore "signal → self-identifying row + flush," which the §3.6 design already does correctly.
+4. **§3.5/OQ-5 understates a contract edit:** `to_flat_dict()`'s docstring explicitly promises flat
+   JSON primitives — "int/float/bool/String/Array of float" (`run_config.gd:447-454`). A nested-dict
+   value is a deliberate contract change: **S3 must amend that docstring line** when adding the
+   `param_overrides` row (see Q5), not ship it silently against the stated contract.
+5. **Confirmations:** every other cited anchor checks out against the as-built files — `MANIFEST`
+   `:84-162`, `SECTIONS` `:59-78`, `TABS` `:192-205` (8 tabs), `FIELD_RANGE`/`FIELD_STEP` `:209-285`/
+   `:290-300`, `_build_row` dispatch `:877-905`, `has_full_coverage()` `:414-437` (two-direction
+   fail-loud), `_exported_config_fields()` `:446-455`, the test's 89-pin `:53-54` with audit trail
+   `:44-52`, `_set_field` `:1087-1091`, `_push_value_to_control` `:1136`, `_refresh_trap_warning`
+   `:1227-1239`, `PLAYER_DEBUG_KEY` `:185`, `R4_VISION_KEY` `:168`, `to_flat_dict()` `run_config.gd:455`,
+   `inert_enabled_oppositions()` `:597`, `run_started` stamps `telemetry.gd:152-153`, and the "no
+   Telemetry subscriber today" claim for `throw_killed_hazard`/`hazard_pursuer_state`/
+   `bomb_pulse_started` (none appear in `telemetry.gd:59-86`'s connect list). The def folder is
+   **confirmed `res://data/oppositions/`** (S0 OQ-2, adjudicated) — drop §4's "(confirm as-built)" hedge.
+
+### 8.1 Verdicts on the ten Open Questions
+
+- **Q1 — Where do generated sections live?** **RESOLVED: the new Oppositions tab (9th), as designed
+  (§3.1).** The mis-edit trap is real: during migration the same four hazards have *two* editable
+  surfaces (legacy `r1_`/`hpp_`/`hbomb_`/`hspike_` knob rows AND generated def rows), and putting both
+  in one Hazards scroll invites tuning the dead one. Tab additions are proven coverage-neutral
+  (M1.6 RD-2, M1.7 Player tab — "PURE PRESENTATION," `config_menu.gd:187-205`). Revisit tab-homing
+  only at post-gate legacy-knob retirement, as the doc says.
+
+- **Q2 — Show all authored defs or only enabled?** **RESOLVED: all authored, enablement staged
+  (§3.2).** An enabled-only view makes the all-off default an inescapable empty tab — the surface's
+  primary job is *turning defs on*. Display-loading a `.tres` touches no generation state; the all-off
+  fingerprint is a generation-path property (`EncounterBuilder`/`SpawnService` load nothing when the
+  lever is empty), so fp `e943ac9c8bc1` is structurally safe. Cost is negligible at M1.9's ≤7 defs.
+  See §8.3 for the determinism pins this answer requires (scan order, duplicate ids).
+
+- **Q3 — Does the 89 count-pin change, and to what?** **RESOLVED: bound-rows-91 — the pin becomes a
+  two-part model totalling 91, and S4 performs the `@export` promotion (§8.0.1).** Concretely, in
+  `test_config_menu.gd`:
+  1. assert the exported set **minus the two named levers** (`oppositions_enabled`, `param_overrides`)
+     has size **89** — the M1.1–M1.8 hand-authored surface, frozen; the historical pin stays meaningful
+     as exactly the number it always measured;
+  2. assert the removed set is **exactly** `{oppositions_enabled, param_overrides}` → total exported
+     = **91**; a third generic lever fails loudly twice (set-membership + total).
+  Per-def knobs never enter this count (they are not RunConfig `@export` fields); Layer 3's per-def
+  bijection covers them, so **new defs change no asserted number** — the breakdown's "knob count may
+  grow" guardrail is satisfied structurally.
+  **Why bound-rows-91 over the storage+sentinel-89 alternative** (keep `@export_storage`, keep the
+  literal 89, add a separate hand assertion that the levers exist and are wired): storage-only levers
+  create a *permanent class of real RunConfig knobs invisible to the reflection net*. A future third
+  generic lever added `@export_storage` would bypass `has_full_coverage()` entirely and could go
+  silently unreachable — the exact M1.1-era failure mode the net exists to catch, and the drift vector
+  §3.4 itself warns against. Promotion puts the levers back inside the fail-loud enumeration; the
+  `@export_storage` phase was always S3's *interim* stealth to keep `main` green between waves, not a
+  destination. (S3's §Resolved handoff note — "S4 surfaces both" — is consistent with this reading.)
+
+- **Q4 — Search/pinning at 6+ defs?** **RESOLVED: defer.** M1.9 peaks at ~7 defs; collapsible
+  sections, collapsed-unless-active, sorted by id is sufficient. Search/filter + recently-touched
+  pinning (the exploration's 40-def sketch) is an M2+ follow-up task when the def count earns it.
+
+- **Q5 — `param_overrides` stamp shape?** **RESOLVED: one additive `param_overrides` key holding the
+  sparse nested dict, keyed by String (not StringName) def ids, values JSON primitives.** Flattened
+  `po_<def>_<param>` keys are an unbounded, def-coupled key-space that breaks the "additive keys, never
+  a schema bump" pattern every time content ships. `JSON.stringify` handles the nested dict natively;
+  sparse staging (§3.5) means the stamp records only actual deviations. `oppositions_enabled` stamps as
+  `Array[String]`. **S3 owns the `to_flat_dict()` edit and MUST amend the docstring contract line to
+  admit the one nested-dict value (§8.0.4)**; S4's tests assert both keys appear on `run_started` and
+  round-trip the staged values.
+
+- **Q6 — Where does `trap_if_neutral` live?** **RESOLVED (adjudicated): on `param_schema` entries;
+  S2 owns the schema shape.** S2's ratified entry shape (`{key, type, default, min, max, step?, gloss}`,
+  S2 §3.3) gains one optional field — `trap_if_neutral: bool` (absent = false) — authored by S2 on each
+  def's load-bearing param. A hand-list in `opposition_lint.gd` would recreate exactly the hand-authored
+  drift surface this task exists to close. "Neutral" = `0` / `0.0` / `false` for M1.9 (sufficient for
+  every shipped param; a per-entry `neutral_value` field is a future extension, not built now). The
+  S2 lint may WARN if a def has no trap-flagged entry; never fail (some defs may genuinely have no
+  single load-bearing magnitude).
+
+- **Q7 — Explicit respawn button vs auto-respawn on edit?** **RESOLVED: explicit button only (§3.7).**
+  Auto-respawn makes every mid-dive widget touch silently dirty the run — the opposite of the hygiene
+  model, where dirtying must be deliberate and auditable (one `debug_dirtied` row per intentional
+  action). It also breaks the clean split the doc gets for free: widget edits stay pure next-run
+  staging (identical semantics to editing `r1_chase_speed` mid-dive today, `apply_and_get_config()`
+  read at next `start_new_run`), world mutation flows only through the one guarded action.
+
+- **Q8 — `oppositions_enabled` vs `BandProfile.opposition_deck` precedence?** **RESOLVED (adjudicated,
+  = S3 Q6 ruling): `oppositions_enabled` is an *additive enable-list*; the band's `opposition_deck` is
+  the band's authoritative population source; config never subtracts from a deck.** `param_overrides`
+  applies to BOTH paths, merged at spawn by def id. Consequences S4 must implement:
+  - **Staging-note copy** states the truth: sections stage *config-enabled* defs for the NEXT run,
+    added on top of the band's own deck; empty levers = the config adds nothing (band decks still
+    apply). For the default band-1 portal (`band_greybox`, empty deck) empty levers therefore still
+    mean *no def loads* — the all-off control statement holds exactly where the control runs.
+  - **Trap-detector scope:** `inert_enabled_defs()` checks only ids in `cfg.oppositions_enabled`
+    (§3.4's design is already correct). Deck-driven defs are author-owned content, verified at S7
+    authoring/test time — the menu never warns about a band's own deck.
+
+- **Q9 — Should `debug_kill` also set `debug_dirty`?** **RESOLVED: no for M1.9 (§3.6 stands).**
+  `debug_kill` *ends* the run — it does not perturb the statistics of the run's remainder, which is
+  what `debug_dirty` marks; its row already self-identifies the death (`Schema.DEBUG_KILL`), and SG2
+  can already segment those runs on `cause=death ∧ debug_kill-row-present`. Folding it in would
+  conflate "artificially ended" with "artificially perturbed" and cost SG2 resolution. **Carry a note
+  into SG2's analysis brief** naming the two orthogonal filters; revisit post-gate only if SG2 asks
+  for a uniform rule.
+
+- **Q10 — Respawn-cell bookkeeping?** **RESOLVED (adjudicated): S0's registry provides
+  `live_instances(def_id)` + per-instance spawn-cell bookkeeping.** Confirmed into S0's spec by the
+  orchestrator — no fallback path needed; §4's `node.get_meta(&"spawn_cell")` sketch follows whatever
+  concrete accessor S0's as-built registry ships (the registry is `_live: Dictionary` keyed
+  `def_id → Array[Node]`, so the accessor is a thin read). The position-snap fallback is dead — do
+  not implement it.
+
+### 8.2 `debug_run_dirtied` — EventBus signal, folded into S0's Wave-1 pre-declare (cross-task amendment)
+
+**RESOLVED: keep the signal, and it becomes part of S0's Wave-1 `event_bus.gd` pre-declare list** —
+an explicit **cross-task amendment to S0's spec** the orchestrator applies before Wave-1 dispatch:
+S0 pre-declares `debug_run_dirtied(source: StringName, run_t_ms: int)` alongside `opposition_event` /
+`opposition_killed_player` / the band-routing signal. S4 then only emits (menu) and connects (Telemetry),
+touching `event_bus.gd` never — §5's "Do NOT touch `event_bus.gd`" stands as written.
+
+Why the signal beats the signal-free alternative (a direct `Telemetry.mark_debug_dirty()` call):
+- **Telemetry's ingestion contract is 100% EventBus today** (`telemetry.gd` header: "Listens on
+  EventBus"; every row source in `_ready`, `:59-86`, is a signal connect). A push-style public method
+  would be the autoload's first direct-call ingestion seam — a second pattern to maintain for zero
+  structural gain.
+- **The dirty *moment* is observable by tests and future subscribers without Telemetry enabled** —
+  a headless test connects to the signal directly; SG2-era tooling or an on-screen "RUN DIRTY" badge
+  can subscribe later without touching Telemetry.
+- **Future debug actions scale onto it** (the exploration's client (d) spawn-at-cursor, later live-edit
+  tiers) — each is one more emitter of the same signal with a new `source` tag.
+- The pre-declare rule exists precisely so a Wave-4 consumer never edits `event_bus.gd` mid-parallel-wave;
+  the cost is one pre-declared signal line in S0's already-planned sole edit.
+
+(The menu's header note "no EventBus" (`config_menu.gd:7`, `:1089`) described the pre-run staging
+surface; the S4 respawn action is a deliberate, guarded debug actor — the implementer updates that
+header comment to scope the rule to the staging path.)
+
+### 8.3 Determinism + headless pins for the generated tab (binding on the implementer and the tests)
+
+1. **Never rely on directory-listing order.** `ResourceLoader.list_directory()` (4.3+; correct choice
+   for exported-pack `.remap` indirection) does not contractually guarantee a platform-stable order.
+   `_load_defs()` sorts the **filename list** before loading (deterministic scan → deterministic
+   `push_error` order for bad files), then sorts the loaded defs by `String(def.id)` — the display +
+   coverage-iteration order. §4's `sort_custom` stays mandatory, not defensive.
+2. **Duplicate def ids fail loud.** Two `.tres` resolving to the same `def.id` is coverage drift:
+   `push_error` naming both files, keep the first (filename order), and have `has_full_def_coverage()`
+   return false — same fail-loud posture as the bijection net. A duplicate must fail the headless test,
+   not silently last-write-win.
+3. **The test pins the order.** `test_config_menu.gd` (or the new def-coverage test) asserts the
+   generated section order equals the sorted-by-id def list — so a future listing-order change on any
+   platform/export path cannot reorder the Director's surface or flake the test.
+4. **Zero-defs headless build stays a first-class case** (§3.1's placeholder label): the test matrix
+   runs 0 defs / 4 defs / 6+ defs (fixture) as §6.3 already specifies, each as a SCENE
+   (`godot --headless --path Game res://tests/...tscn`), never `--script`, never concurrent.
+
+---
+
+*Phase-3 resolution complete: Q1–Q10 all RESOLVED (none escalated to the Director). Cross-task
+amendments for the orchestrator to apply before dispatch: (a) S0 Wave-1 pre-declare gains
+`debug_run_dirtied(source: StringName, run_t_ms: int)` (§8.2); (b) S2's `param_schema` entry shape
+gains optional `trap_if_neutral: bool` (§8.1 Q6, adjudicated); (c) S3 amends the `to_flat_dict()`
+docstring contract when adding the `param_overrides` nested-dict row (§8.0.4/Q5); (d) S4's own §5
+Do-NOT-touch list is amended per §8.0.1 — S4 makes exactly the two-lever `@export_storage` → `@export`
+flip in `run_config.gd` as Wave 4's sole writer of that file.*

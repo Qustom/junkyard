@@ -3,7 +3,7 @@
 **Milestone:** M1.9 (Scalable Opposition + Band Systems) · **Workstream:** bands · **Wave:** 1 (parallel worktree, alongside S0)
 **Task id:** S1 · **blockedBy:** none · **Blocks:** S5 (flavor stages), S3 (call-site integration), S7 (`band_two`)
 **Assignee:** general-purpose (programmer)
-**Author:** Phase-2 per-task design · **Status:** design (Open Questions pending Phase-3 fresh-eyes resolution)
+**Author:** Phase-2 per-task design · **Status:** design **locked** — Phase-3 fresh-eyes resolution folded in (§10, 2026-07-02); build against §2–§8 as amended by §10
 
 > **What this doc is.** The Phase-2 design for S1 per `M1.9_Breakdown.md` §"Wave 1" — **band migration Phase A** of
 > `design/explorations/exploration-20260625/procgen-bands/0-scalable-band-generation-system.md`. It expands the
@@ -634,6 +634,135 @@ optionally the preset — Director call at the gate)". If the Director wants new
 deck* rather than via preset knobs, `band_greybox` gains a deck at S7/S8 time. **Recommendation: keep `[]`
 now; band-2-exclusive per breakdown open-question 5's recommendation.** *Vision/fun — Director ratifies at
 the breakdown level; S1 just needs the field authored empty.*
+
+---
+
+## 10. Resolved Decisions (Phase 3 — fresh-eyes resolution, 2026-07-02)
+
+Resolved by a Phase-3 fresh-eyes agent (not this doc's author), after re-reading `M1.9_Breakdown.md`, the
+band exploration (`0-scalable-band-generation-system.md`), S5 §1.3/§1.5 (hook point), S3 §2.6.a/§3.4
+(`_resolve_band_profile`), and spot-verifying every load-bearing claim against the as-built code.
+**Orchestrator cross-contract adjudications** (fixed at fan-in across S0/S1/S3/S5) are folded in below as
+RESOLVED and marked *(orchestrator-adjudicated)*. The questions are now closed; §2–§8 are to be read with
+these answers applied. **No open item blocks the S1 build wave** — the two Director-flavored edges (Q4c
+naming, Q8 deck adoption) are resolved for S1's scope with the genuine Director call correctly parked at
+its own gate.
+
+### 10.0 Verification notes + claim corrections
+
+- **Spot-verified accurate** (2026-07-02, against the working tree): `generate(seed, cfg, catalog, rc = null)`
+  at `band_generator.gd:46-47`; reseed-first `RNG.seed_from(seed)` at `:88`; retry loop `:60-79`; signals
+  emitted inside the generator at `:48,71,76-78`; `_derive_seed` `:352`; `_build_weight_table` `:250`;
+  `_select_frontier_index` `:308-315`; `_width_ok`/`_tags_ok` stubs `:221-227`; `Band.fingerprint()`
+  `band.gd:58-62`; seed matrix `test_bandgen_determinism.gd:36` (values as quoted); retry-purity and R4
+  `(seed + config)` assertions present as cited; the call-site sequence `main_game.gd:198-240` exactly as
+  §1.2 describes (catalog swap `:205-207`, generate `:209`, grade `:213-215`, junk plan `:236`); seal at
+  materialisation `main_game.gd:881`; `_cfg = load(BANDGEN_CONFIG_PATH)` at `:158`; `BAND_ID := &"near"`
+  at `:39`; path constants `:22-31`; `PieceCatalog.pieces` ordered-array docstring (incl. the
+  unordered-filesystem-scan warning §Q4b leans on); all five referenced `.tres` fixtures exist on disk.
+  The doc's as-built research is sound; no line-reference corrections needed.
+- **One reconciliation correction (breakdown vs as-built), ratified in this doc's favour:** the
+  breakdown's S1 goal line says the pipeline "calls today's `BandGenerator` + existing **seal**/grade
+  stages unchanged" — but as built, the generation block (`main_game.gd:209-215`) never seals;
+  `SocketSealer` runs at materialisation (`:881`). §3's correction (grade + return-distance in the
+  pipeline, **seal stays materialisation-side**) is the accurate reading and **governs**. S3's design
+  independently pins the same fact (S3 §2.6.a(iii): the sealer runs on parented pieces at materialise
+  time). Note for Wave 2: S5 §1.5's pipeline sketch draws `SocketSealer.seal_unused_sockets` *inside* the
+  pipeline — that is S5's illustrative Wave-2 sketch, **not** S1's Phase-A contract; S5/S3 reconcile it at
+  their own waves (see Q6).
+
+### 10.1 The questions
+
+- **Q1 — Archetype seam.** **RESOLVED: option (a)** *(orchestrator-adjudicated)* — `archetype` is
+  declarative, validated metadata; the binding knobs live in `backend_config` (a branchy band = a
+  `BandGenConfig` with `branch_chance > 0`, which is how S7 authors `band_two`); **no generator
+  backend/archetype refactor in M1.9**. The §2 consistency guard **ships**: `validate()` (or the pipeline
+  pre-flight) emits `push_warning` — warning, never error — when `archetype == "linear"` but
+  `backend_config.branch_chance > 0.0` (and vice versa), because RunConfig r4 levers can legitimately make
+  a linear-declared profile branch during a sweep. Option (b) (`archetype_params` mutating a duplicated
+  config) is rejected for M1.9 — a second source of truth in the parity-critical wave; revisit the
+  dispatch seam at Phase C when `hub`/`grid` force a real `shape()` pass.
+
+- **Q2 — `depth_curve`/`junk_catalog` binding.** **RESOLVED: documentary-but-authored in S1; bound at S3**
+  *(orchestrator-adjudicated)* — the fields point at the live resources (§4) so the profile is complete as
+  data; nothing reads them until S3 rewires `start_new_run` to pull curve/catalog/piece_pool from the
+  active profile and retires `main_game.gd:22-31`'s path constants. The parity test's P0 same-cached-object
+  assertions keep "documentary" from drifting. **`.tres` location/id contract (aligned with S3):** the
+  file lives at **`res://data/bands/band_greybox.tres`** with **`id = &"band_greybox"`** — S3's
+  `DEFAULT_BAND_PROFILE_PATH := "res://data/bands/band_greybox.tres"` and its `_resolve_band_profile()`
+  seam load it by exactly that path, and P0 asserts the id, so the contract is test-pinned from Wave 1.
+  `opposition_deck`/`band_depth` likewise bind at S3 (EncounterBuilder budget + deck).
+
+- **Q3 — RunConfig coexistence.** **RESOLVED: `rc` threading is CONTRACTUAL** *(orchestrator-adjudicated)*
+  — the signature is **`BandPipeline.generate(profile, seed, rc = null)`**, pure pass-through to the
+  generator's interior hooks (room count, corridor weights, r4 branching), with **P5 mandatory** in the
+  parity test. S3 flagged a dropped `rc` as a hard stop (S3 §2.6.a(i): the legacy levers must keep reaching
+  the socket backend or the preset band layout forks); the doc already designed this — confirmed. The
+  determinism key is `(profile + seed + rc)`. **Residual lvl catalog swap: option (a), added at S3, not
+  now** *(orchestrator-adjudicated)* — an optional `piece_pool_ext: PieceCatalog` profile field lands with
+  S3's call-site switch so `rc.lvl_enabled` semantics survive as profile data; S1 ships the breakdown's
+  exact field list, and the parity test does not exercise the swap. S3's design must protect
+  `make_default_play_preset` parity (`lvl_enabled = true`) through the switch.
+
+- **Q4a — Where `band_profile.gd` lives.** **RESOLVED: `Game/data/bands/band_profile.gd`** — the schema
+  script sits with its content (`data/junk/junk_item.gd`, `data/shop/shop_item.gd` precedent) and keeps S1
+  inside its file-scope constraint.
+
+- **Q4b — Profile discovery.** **RESOLVED: explicit `const` paths at the consumer** — matches every
+  existing loader (`main_game.gd:22-36`) and S3's `DEFAULT_BAND_PROFILE_PATH`; deterministic; S8 needs
+  exactly two. Directory scans rejected (unordered — `PieceCatalog`'s own docstring). A `BandCatalog.tres`
+  registry is deferred until >2 bands or an unlock system needs enumeration — **noted forward to S8's
+  design** as a future follow-up, not built.
+
+- **Q4c — Profile `id` vs telemetry band stamp.** **RESOLVED — and this REVERSES the doc's
+  recommendation** *(orchestrator-adjudicated)*: the run row's `band_id` **stays the ROUTE key** —
+  `&"near"` keeps mapping to the `band_greybox` dive so the telemetry cohort label never forks
+  mid-version (continuity across M1.x data; S3 Q2b independently reached the same call). Band 2 gets route
+  key **and** profile id `&"band_two"`. `BAND_ID := &"near"` (`main_game.gd:39`) survives M1.9; the
+  profile's `id = &"band_greybox"` is the *content* identity only. An **additive `band_profile` stamp**
+  on `run_started` (carrying `profile.id` alongside the route key) is **deferred** — a post-M1.9
+  follow-up, flagged to S8/SG2, not built this version.
+
+- **Q4d — `tileset` field.** **RESOLVED: omit from the Phase-A schema.** S7 differentiates `band_two`
+  visually via palette-retone / tinted piece pool (per the breakdown's S7 goal); if S7's design wants a
+  `tileset` handle it is a one-line additive schema field then. No speculative field now.
+
+- **Q5 — `opposition_deck` typing.** **RESOLVED: `Array[Resource]`** *(orchestrator-adjudicated)* —
+  worktree independence is decisive: S0's `OppositionDef` lands the same wave in a parallel worktree, and
+  a `class_name` dependency would break S1's branch in isolation. Retightening to `Array[OppositionDef]`
+  is a **noted post-integration follow-up, NOT an M1.9 must** (softer than the doc's "retighten at S3" —
+  S3 *may* do the one-line narrowing if convenient, but nothing in M1.9 depends on it; `.tres` files don't
+  re-serialise on an export-type narrowing).
+
+- **Q6 — Seal ownership + the flavor-stage hook point.** **RESOLVED** *(orchestrator-adjudicated, per S5
+  §1.3/§1.5)*: **the seal stays materialisation-side through M1.9** (`main_game.gd:881`; S3 §2.6.a(iii)
+  pins it — the sealer runs on parented pieces at materialise time). Flavor/principle stages operate on
+  the **post-assembly `Band` INSIDE `BandPipeline.generate`** — after the `BandGenerator.generate`
+  delegation, **before seal and before the final grade** — with a **provisional `DepthGrader` pass**
+  supplying the depth gates when stages are present (S5's §1.5 shape; grade is pure/idempotent, so the
+  provisional pass is free). Because the pipeline runs before materialisation, the stage hook is
+  structurally pre-seal without moving the seal — adjudication satisfied, no relocation, no idempotent
+  double-seal. **No `BandBuild` in M1.9** — the `Band` is the build state. **S1's concrete obligation
+  (Phase-A shape: hook present, no stages shipped):** the pipeline body carries an explicitly marked
+  stage-hook slot between the backend delegation (+ its guards) and the grade/return-distance block — a
+  `# STAGE HOOK (S5): principles/flavors + provisional grade land here` comment at minimum — and keeps
+  §3's fail-loud guard rejecting stage-bearing profiles until S5 replaces guard + slot with the real loop
+  (S5 is the sole Wave-2 writer of the pipeline file, per S5 §2.3). Pipeline-owned sealing is deferred to
+  the first stage that needs post-seal geometry, or Phase D.
+
+- **Q7 — Error-handling style.** **RESOLVED: `push_error` + `null` return** for all content/authoring
+  errors — `assert` strips in release/web builds (an authoring error on itch must not become undefined
+  behaviour), P7 needs assertable failure paths headlessly, and it matches `main_game`'s own style
+  (`:162,211`). `assert` remains reserved for programmer invariants (e.g. the generator's uniform-cell-size
+  assert). Exactly as recommended.
+
+- **Q8 — `band_greybox` deck.** **RESOLVED (for S1's scope): author `opposition_deck = []`.** Band 1's
+  cohort stays legacy-knob-driven through the gate (breakdown contract; S3's legacy lane reads an empty
+  deck as "use the K5 fair-share adapter"), so empty is the truthful Phase-A value and S1 needs nothing
+  else. The genuine Director call — whether the new hazards ever enter band 1 via a deck or the preset —
+  is **parked at its proper gate** (breakdown open-question 5 / SG3 verdict, recommendation:
+  band-2-exclusive for a clean A/B at SG2). It is not an S1 blocker and no S1 rework follows from either
+  verdict: the field exists either way.
 
 ---
 

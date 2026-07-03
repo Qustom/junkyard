@@ -3,7 +3,7 @@
 **Milestone:** M1.9 (Scalable Opposition + Band Systems) · **Workstream:** opposition migration Phase B · **Wave:** 2 (parallel with S5 — file-disjoint)
 **Task id:** S2 · **blockedBy:** S0 (SpawnService + `OppositionDef` data layer + EventBus pre-declare)
 **Assignees:** general-purpose (component extraction + defs + tests)
-**Author:** game-director-designer (Phase-2 design fan-out) · **Status:** design (open questions pending Phase-3 resolution)
+**Author:** game-director-designer (Phase-2 design fan-out) · **Status:** design LOCKED (Phase-3 resolutions folded in — see §Resolved Decisions)
 
 > **What this doc is.** The Phase-2 per-task design for S2 per `M1.9_Breakdown.md` §Wave 2: refactor the 4 shipped hazard entities' internals into shared `class_name`-typed components, and complete each `OppositionDef`'s `params` + `param_schema` mirroring today's knobs exactly. **Behavior and telemetry must stay observably identical** — this is the riskiest migration step (it rewrites the per-frame logic of every lethal entity at once), so the whole design is organized around *transplant, don't rewrite* and around the test gates that prove parity. It is design only — no game code ships from this doc; the programmer builds against it. Source architecture: exploration-20260702 v2 (`param_schema` rationale, §"Data layer") and exploration-20260625 v1 (component taxonomy, §"Composition model").
 
@@ -372,3 +372,102 @@ Not touched: `main_game.gd`, `event_bus.gd`, `run_config.gd`, `config_menu.gd`, 
 ---
 
 *Phase-3 resolvers: questions 1, 2, 4, 6, 7, 8 are technical-merit calls (resolve with rationale); question 3 is scope-shaped (resolve, but flag the verdict in the resolution block for Director visibility since it moves S2's risk size); question 5 touches the single-writer-per-file discipline across waves (resolve against the wave map, flag if the S3-carry alternative is chosen).*
+
+---
+
+## Resolved Decisions (Phase 3)
+
+*Resolved 2026-07-02 by a fresh-eyes Phase-3 resolver (not the Phase-2 author), against the real entity code (`Game/scenes/hazards/*.gd`, `Game/entities/thrown_item/thrown_item.gd`, `Game/data/run_config/run_config.gd`, `Game/ui/config/config_menu.gd`) and the sibling Phase-2 designs (S0, S3, S4, S6b). Orchestrator cross-contract adjudications (fixed) are folded in where marked. All eight questions close as RESOLVED — none needs a Director call; the two flagged-for-visibility items (Q3 scope, Q5 cross-wave seam) were fixed by orchestrator adjudication and are recorded, not re-opened. The build brief is this doc + this section; where this section corrects the body, this section wins.*
+
+### Claim corrections (fact-check against as-built)
+
+Spot-verified: the entity anatomy tables (§2.1) are line-accurate for all four scripts; `R1_DENSITY_BAND_CEILING = 64` (`run_config.gd:37`), `NEW_HAZARD_BAND_CEILING = 48` (`main_game.gd:337`), `_new_hazard_spawn_ctx` (`main_game.gd:496`), `_spawn_r1_hazards` (`main_game.gd:534`), the K5 knob groups (`run_config.gd:298/319/345`), the `FIELD_RANGE` bounds (`config_menu.gd:33-55`, bound `:208-285`), the 89-row coverage assertion (`has_full_coverage()`, `config_menu.gd:414-440`), `&"pursuer"` at `thrown_item.gd:114`, and the `test_pingpong_hazard` no-RNG source scan (`:187-192`, currently scanning only the entity script — the component sweep is a real test edit, correctly flagged) all check out. Four corrections:
+
+1. **Gloss keys in the §3.3 tables are wrong — no `CFG_GLOSS_R1_DEPTH_THRESHOLD`-style keys exist.** The as-built per-field label keys are **`CFG_FIELD_<KNOB_UPPER>`** (`config_menu.gd:884` — `tr("CFG_FIELD_%s" % field.to_upper())`; rows live in `Game/ui/config/config_strings.csv`, e.g. `CFG_FIELD_R1_DEPTH_THRESHOLD`, `CFG_FIELD_HPP_SPEED`, `CFG_FIELD_HSPIKE_ARM_LENGTH` — all verified present). `CFG_GLOSS_*` keys are **per-SECTION** glosses only (`CFG_GLOSS_R1`, `config_menu.gd:61`). **Decision:** every `gloss` cell in the §3.3 tables reads `CFG_FIELD_<legacy knob upper>` (e.g. `depth_threshold` → `CFG_FIELD_R1_DEPTH_THRESHOLD`, `speed` → `CFG_FIELD_HPP_SPEED`). This is maximum reuse — zero new CSV rows, byte-identical label text with the legacy menu — and is compatible with S4's convention (S4 §UX: the schema `gloss` field is the CSV-*key* carrier; S4's `CFG_DEF_PARAM_<ID>_<KEY>` + humanized fallback applies only when `gloss` is absent, i.e. to future defs).
+2. **R1 knob count is 18, not 17.** `run_config.gd:57-126` exports 18 `r1_*` knobs. Correct accounting: **8 → `params`** (the §3.3 pursuer table) **+ 1 → typed def field** (`r1_catch_kills` → `kills`) **+ 9 stay RunConfig-only** (the 8 excluded policy knobs + `r1_enabled`). The §3.3 exclusion list is already correct; only §2.1's "17 knobs — 8 entity-read, 9 spawn/density policy" summary miscounts (it drops `r1_catch_kills`).
+3. **§3.3's description of S3's flip overstates S3.** Per S3's Phase-2 design (`S3_encounter_builder_integration.md:259` + §6 Q6-ii), the **legacy lane's entity knobs stay `rc`-snapshot-driven through M1.9** — S3's legacy adapter maps only the spawn-card numbers (`id/enabled/base/per_depth/room_cap` read off `rc.hpp_*/hbomb_*/hspike_*`, S3 §3.2), and `param_overrides` reaches **def-driven (deck-lane) params only**. There is no M1.9 wave in which `_resolve_params` flips to `def.params` for the four legacy hazards on band 1. Consequence folded into Q2 below (mirror-parity assertion lifetime).
+4. **Minor line-ref drift in §2.1's throw-kill seam bullet:** the group check is `thrown_item.gd:79`, the `body.queue_free()` is `:93` (the cited `:79-92` clips it); the typed kind checks span `:113-116`. Not load-bearing — the semantics as described are correct.
+
+**Cross-doc seam note (S3 alignment, verified per the adjudication):** the param **key names** `base_count`/`count_per_depth` align with what S3's deck lane expects, but S3's pseudocode accesses them as typed def fields (`d.base_count`, S3 §3.1:199) while S0's `OppositionDef` has **no such typed fields** (S0 §pseudocode: spawn-card counts are not on the Resource) and S2 authors them **in `params`** (§3.3, correct — they must be schema-visible for S4's generated menu). S3's build brief must read them as `d.params["base_count"]` / `d.params["count_per_depth"]` (or add sugar accessors on `OppositionDef` — S3's call; the data placement is S2's and stands).
+
+### Q1 — Components as child `Node`s vs `RefCounted`: **RESOLVED — child `Node`s, host-ticked, no own physics callbacks** *(orchestrator adjudication #2, confirmed)*
+
+Nodes with the §3.1 contract: the host keeps the **only** `_physics_process`; components expose `tick(delta)` and are called in an explicit fixed order; `bind()` receives **resolved primitives only** (never a `RunConfig`, never a `GameState` read) — the snapshot discipline made structural. Node cost at the shipped ceilings (≈112 live hazards worst case) is noise when the children have no per-frame callbacks of their own. `.tscn`-composability and remote-tree debuggability are what S6a/S7's "content is data" story needs. RefCounted is revisited only if SG2's tick-time measurement flags it (it won't at these counts).
+
+**Sufficiency caveat (the frame-order-drift question, judged hard — this is load-bearing for the build):** host-ticked fixed order eliminates *tree-order* nondeterminism, but it is **necessary, not sufficient** for frame-identical behavior. The kill class it does NOT cover is **accumulator/guard placement drift**, and the doc's own §3.2 pseudocode contains a live specimen: it moves the `_catch_cooldown` decrement into `LethalContact.tick()` while the host keeps R1's stun early-return — but in the real code the decrement (`hazard_entity.gd:165-166`) fires **before** the stun branch (`:167-172`), so a stunned R1 keeps counting its cooldown down; in the pseudocode's decomposition a stunned frame skips `LethalContact.tick()` entirely, the cooldown ends ~`NONFATAL_STUN_SECONDS` later, and the next catch frame drifts — invisible to the fp check and plausibly to the existing suite. **Binding rule for the programmer:** the host's per-frame *skeleton* — every guard, early return, mode switch, and **every accumulator increment/decrement site** — is transplanted line-for-line into the host `_physics_process`; a component tick boundary may cut only where the original had no intervening read/write. Concretely for R1: `_time_in_band`, `_catch_cooldown`, and `_stun` bookkeeping **stay host-side** (the stun/cooldown timers are host state; `LethalContact` reads them via the host, or is handed the conjunction result), and the stun early-return sits exactly where it sits today. The §3.2 pseudocode is illustrative and yields to this rule.
+
+### Q2 — `params` vs legacy-knob coexistence: **RESOLVED — option (a), legacy knobs sole behavior source; defs mirror inertly with the parity assertion** *(orchestrator adjudication #3, confirmed — one lifetime correction)*
+
+As designed in §3.3: `_resolve_params(cfg)` reads only `cfg.*` in S2; `params`/`param_schema` are authored to the `RunConfig.new()` code defaults; nothing reads `params` at runtime; the §3.4 check-3 mirror-parity assertion pins the two surfaces together. Options (b)/(c) correctly rejected (one risky thing per wave; per-key fallback invites silent divergence). **Correction (per claim-correction 3):** the assertion is **not** "deleted when S3 flips the resolve order" — S3 never flips it for the legacy lane. The mirror-parity check **lives for all of M1.9** (it is exactly what keeps the S4-generated menu's displayed defaults honest while the legacy knobs still drive band-1 behavior) and is retired only when the defs actually become the behavior source (the post-gate legacy-retirement follow-up, SG3 watch-item). S3's legacy-adapter consumption of the defs (id/host_scene/caps) is unaffected.
+
+### Q3 — R1 migrates in S2 or defers: **RESOLVED — R1's entity internals migrate in S2; its J2/J3 spawn/density policy family stays legacy through M1.9** *(orchestrator adjudication #4, fixed — recorded for Director visibility per the Phase-2 footnote, not re-opened)*
+
+As recommended in the body: the pursuer's per-frame code transplants like the K5 trio (it is `spawn_ctx`-driven behavior below the locked `setup()`); deferring it would leave exactly the components S6a/S6b reuse (`ChaseMove`, `PatrolMove`, `DepthLingerTrigger`, the non-fatal `LethalContact` branch) unextracted and ship a half-migrated roster into S4's generated menu. The J2/J3 spread/density family (§3.3 exclusion list) stays RunConfig-only and its `main_game.gd` lanes stay untouched — independently ratified by S3's Q4 (the J2/J3 plans are pinned by the byte-frozen `test_per_room_density` golden; moving them buys zero M1.9 capability). Def id `&"pursuer"`. The worklog flags the policy family as deliberately unmapped.
+
+### Q4 — Scene rewiring vs script composition: **RESOLVED — scripts compose in `_ready()`; all four `.tscn`s byte-untouched**
+
+Technical merit is one-sided: rewiring churns 4 scene files exactly where parity review needs the diff quiet, risks the typed-root identity that `thrown_item.gd:113-116` and every `instantiate() as X` test depend on, and buys nothing this wave (no legacy hazard is authored in-editor). The base contract's discover-before-instance rule stands: the host first adopts `.tscn`-declared component children of the expected types, then instances defaults for the missing ones — S6a/S6b hosts may be authored either way, and the legacy four simply never exercise the branch in S2. One sharpening: the discovery path must be **order-stable** (the host's `_components` array is built in the host's fixed tick order regardless of child declaration order), or scene-authored hosts would reintroduce tick-order drift.
+
+### Q5 — The `ThrowInteraction` seam / `thrown_item.gd` edit: **RESOLVED — lands in S2; S6b never touches `thrown_item.gd`** *(orchestrator adjudication #1, fixed — exact seam shape agreed here, aligned with S6b §3.1)*
+
+S6b's design expects a `resolve_throw_death`-style delegation (S6b §3.1: consult the body, `true` = "I handled my own death — do not free me again", `false`/absent = today's `queue_free()`), and explicitly defers the surface's exact shape to S2. **The locked shape:**
+
+- **`thrown_item.gd` (`_hit_hazard`, the one edit outside `scenes/hazards/`):** emit site unchanged and first — `throw_killed_hazard` keeps its exact site, payload, kind resolution, and `Time.get_ticks_msec()` timestamp (moving the emit into a component would silently change the clock source; it does not move). Then the dual-emit twin `opposition_event(kind, &"killed_by_throw", depth, run_t_ms)` (per S0 §5's mapping table, which assigns this row to S2). Then the dispatch:
+  ```gdscript
+  var handled := false
+  if body.has_method(&"resolve_throw_death"):
+      handled = body.resolve_throw_death({
+          "item_id": item_id, "kind": kind,
+          "depth": _depth, "run_t_ms": _run_t_ms() })   # primitives-only killer_ctx
+  if not handled:
+      body.queue_free()                                  # today's behaviour, verbatim
+  ```
+- **Host side (S2):** `resolve_throw_death(killer_ctx: Dictionary) -> bool` is a **host method** (duck-typed — no component-type coupling in `thrown_item.gd`), a one-liner delegating to the host's `ThrowInteraction` component. In mode `die` it **returns `false`** — so `ThrownItem` performs the free, on the same frame, in the same call order, byte-identical to today. S6b's Splitter overrides it to split + free itself and return `true` (exactly its §3.2 pseudocode). Adopting S6b's method name/shape (not the body's `on_thrown_hit(item_id)`) is deliberate: S6b is the consumer and its doc is already written against it; the `killer_ctx` Dictionary carries S2's `item_id` plus room to grow without re-touching the seam.
+- **Recommended rider (cheap, in the same edit):** in `_hazard_kind`, after the two typed checks and **before** the name fallback, add a duck-typed `get_def_id()` check. Byte-identical for the legacy four (the typed checks hit first and return the same values); gives S6a/S6b stable telemetry kinds for free — the raw name fallback is a latent trap for service-spawned nodes (Godot auto-uniquifies duplicate sibling names, so a second Splitter would log a mangled kind like `&"@splitter@3"` — a broken telemetry series). Flagged to S6a/S6b briefs.
+- **Gate:** `test_throw_mechanic` green unedited + §3.4 check 4. Wave discipline: `thrown_item.gd`'s sole M1.9 writer is S2 (S0/S3/S6b never touch it).
+
+### Q6 — Dual-emit timing: **RESOLVED — dual-emit from S2** *(orchestrator adjudication #6, confirmed; S0 ships `&"spawned"` only)*
+
+Verified safe: S0's design pre-declares the signals but wires **no Telemetry subscriber** — subscribers arrive in S4 (S0 §5 "Telemetry *subscribers* migrate in S4; through Waves 1–3 the legacy rows remain the system of record", reaffirmed at S0's OQ notes) — so S2's emits produce **zero new telemetry rows** in Waves 2–3. S2 emits, per S0 §5's mapping table: `opposition_event` twins for `hazard_awoke`→`&"awoke"`, `hazard_caught`→`&"hit_player"`, `new_hazard_killed`→`&"hit_player"` (emit-always), `bomb_pulse_started`→`&"telegraph"`, `hazard_pursuer_state`→`&"state"`, `throw_killed_hazard`→`&"killed_by_throw"` (from `thrown_item.gd`, per Q5 — note this widens §1's "only new artifacts" line by one file, per contract), **plus** `opposition_killed_player(def_id, depth, run_t_ms)` emitted **only when the `*_kills` gate actually fires `fail_run`** — the kill/contact distinction lives at the entity gate, which is exactly why no bridge could do this and S2 must (S0 §5 rejected-alternative). Both signal families share the host's self-timed clock (§3.1). The component/schema test asserts payloads are primitives-only and ids equal def ids; SG1's telemetry-continuity check confirms zero row-count drift for Waves 2–3.
+
+### Q7 — Promote feel constants to `params`: **RESOLVED — no**
+
+Consts move with their component, unchanged, not in `params`/`param_schema` (`CONTACT_RADIUS`, `NONFATAL_*`, `STALL_FRACTION`, `PATROL_*`, `ARM_COUNT`, `ARM_HALF_WIDTH`, colors, tween timings). "Params mirror today's knobs exactly" is the whole parity story: promotion mid-migration would break the mirror-parity assertion's ground truth, grow the Director's knob surface unrequested (the CFG knob count is deliberately pinned — see `run_config.gd`'s "CFG 36-knob count pinned" comments), and add schema rows S4's trap detector would then need dispositions for. Promotion is a Director-gated S4/SG3 follow-up, per the body.
+
+### Q8 — Pursuer def id: **RESOLVED — `&"pursuer"`** *(orchestrator adjudication #4, confirmed)*
+
+Verified: `&"pursuer"` is the kind `thrown_item.gd:114` already writes into `throw_killed_hazard` rows; `hazard_awoke`/`hazard_caught`/`hazard_pursuer_state` rows are pursuer-implicit (no kind field), so `&"pursuer"` breaks no existing series and the generic signals inherit an unbroken deaths-by-id axis for SG2. `&"r1"`/`&"hazard"` would fork the series — a rename is a telemetry-series break and therefore a Director call nobody is making.
+
+### `trap_if_neutral` — schema-entry shape + per-def flags *(orchestrator adjudication #5: the metadata lives ON `param_schema` entries; S4 consumes it)*
+
+**Schema entry shape (locked, supersedes §3.3's shorthand):**
+
+```gdscript
+{ "key": String,                 # must name a real params key (bijection check 1)
+  "type": String,                # "bool" | "int" | "float" | "enum"
+  "default": Variant,            # == params[key] in S2 (check 2)
+  "min": Variant, "max": Variant,# numeric only; FIELD_RANGE-mirrored (see §3.3 tables)
+  "step": float,                 # OPTIONAL — omit to inherit S4's per-type default
+                                 # (1.0 int / 0.1 float / 0.01 when max-min <= 1.0)
+  "gloss": String,               # OPTIONAL CSV key — S2 authors CFG_FIELD_* reuse keys
+                                 # (claim-correction 1); absent => S4 humanizes the key
+  "options": Array[String],      # enum only (none in the four S2 defs)
+  "trap_if_neutral": bool }      # OPTIONAL, default false — S4's generalized config-trap
+                                 # detector warns when the def is enabled but this
+                                 # param's effective value is neutral (0/false)
+```
+
+The §3.4 bijection test validates the optional fields when present (unknown extra fields fail loud — the same discipline as an orphan schema row). **Per-def flags (one per def, on the mechanism-critical magnitude — the knob whose neutral value makes an enabled, spawned def unable to do its job):** pursuer → `catch_radius` (0 ⇒ can never catch — the M1.1 caught=0 defect class; note the legacy `r1_catch_radius_too_small` floor-trap stays in `inert_enabled_oppositions()`, `run_config.gd:597-625`, which S2 does not touch), pingpong → `speed` (0 ⇒ a stationary "bouncer"), bomb → `proximity_radius` (0 ⇒ inert by code contract, `bomb_hazard.gd:80-81`), spike → `arm_length` (0 ⇒ no lethal reach). Count-neutrality (`base_count`/`count_per_depth` both 0) is deliberately **not** flagged here — it is the builder's P2 active pre-filter semantics (enabled ∧ neutral counts = legitimately inert, S3 §3.2) and conjunction-shaped traps stay hand-authored lines in S4's `opposition_lint.gd`.
+
+### Golden frame-trace parity harness — **KEEP** (verdict on §2.3's "recommended, cheap" gate)
+
+**Keep, and promote it from "recommended" to part of S2's definition of done (§5 item 5 already lists it — it stands).** Reasoning, judged against its cost:
+
+- **It is the only oracle for risks 1–3.** The fp check never sees entities (§0); the existing suite asserts semantics at key frames (awaken fires, kill latches once, positions at spawn) but not the trajectory between them. The Q1 stun/cooldown specimen is the proof by example: a decomposition that emits every signal exactly once and passes every semantic assert can still move the second-catch frame — only a frame trace catches it.
+- **Cost is genuinely low.** Determinism is already this codebase's habit: the entities are RNG-free by test-enforced contract, physics is fixed-step, and byte-grade goldens are established practice (`test_per_room_density`'s byte-frozen golden, `test_new_hazard_spawn`'s position asserts). N≈300 frames × 4 entity types headless is seconds.
+- **Workflow (binding):** the goldens are captured from the **pre-refactor** scripts — the S2 agent's *first* commit on its branch is the harness + captured goldens against unmodified entities (proving the harness green on the old code), then the refactor commits must keep it green. Capture `global_position` (exact — `var_to_str`/full-precision, never rounded), FSM state, and the emit log per frame, under a fixed cfg + a scripted player-position sequence + `Engine.time_scale`-free fixed delta. **Scope guards to keep it non-brittle:** no walls in the trace scene (or one fixed rect) so `move_and_slide` contact math stays platform-stable; trace only logic state, never tween-animated presentation (scale/color/modulate are juice by contract, §2.2 TelegraphFSM); one trace per entity covering its interesting mode (R1: dormant→awake→chase→nonfatal-catch→cooldown; pingpong: bounce + clamp; bomb: idle→arm→detonate; spike: spin + arm-hit).
+- **Disposal clause stands:** it may be dropped or demoted post-gate if it proves brittle (that's a one-line test deletion, and the worklog says why). If the traces cannot match exactly, that is a **deviation to surface to the Director**, never a tolerance to widen — as the body says.
+
+---
+
+*Phase-3 resolution complete (2026-07-02). All Open Questions closed RESOLVED; orchestrator adjudications #1–#6 folded in; no item requires a Director verdict beyond the already-fixed adjudications. The programmer builds against §0–§5 as corrected by this section (claim corrections 1–4, the Q1 skeleton-transplant rule, the Q5 seam shape, the schema-entry shape above). Deviations during the build go to `design/DESIGN_DEVIATIONS.md` for the Wave-2 close-out sweep.*

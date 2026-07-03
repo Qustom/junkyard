@@ -25,9 +25,12 @@ See `CLAUDE.md` → "The orchestrator loop".
 > (BandProfile pipeline) — then prove them with **2 new hazards + 1 new band**, with a **portal to the new band on
 > the hub** for now. Thorough breakdown requested.
 >
-> **Where this is:** Phase 0 folder + Phase 1 breakdown (`design/M1_9_Tasks/M1.9_Breakdown.md`) authored; Phase 2
-> per-task design fan-out + Phase 3 fresh-eyes resolution dispatched; **Director-review items surfaced — build waves
-> DO NOT start until Phase 4 wire-up completes** (Director dispositions folded in, TASKS.md + board wired).
+> **Where this is:** Phases 0–3 DONE (2026-07-02). Breakdown + 10 per-task designs (S0–S8) authored, fresh-eyes
+> resolved (every doc carries a BINDING "Resolved Decisions (Phase 3)" section), cross-task contracts adjudicated
+> into the breakdown's "Phase-3 cross-task amendments" block. **▶ NEXT: Director dispositions the flagged
+> vision/fun/tone items (presented in-session 2026-07-02: band identity pick, hazard fun-bundle, band tuning + art
+> budget) → then Phase 4 wire-up (TASKS.md + board + STATUS reset) → build Wave 1 (S0 ∥ S1).** Build waves DO NOT
+> start until Phase 4 completes.
 >
 > **⚠ M1.8 close-out still open (non-blocking, carried):** 13 deviations in `design/DESIGN_DEVIATIONS.md` await
 > Director disposition at the HG3 close-out; the H4 iso build's Director playtest + HG2/HG3 verdict are pending.

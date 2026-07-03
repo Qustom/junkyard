@@ -677,9 +677,163 @@ scene/script/defs; the headless smoke test + `test_splitter` are green; a **Desi
 
 ---
 
+---
+
+## Resolved Decisions (Phase 3)
+
+Resolved 2026-07-02 by a **fresh-eyes game-director-designer** (not the §1–§9 author), per the
+four-phase process. Technical questions (Q7–Q10) are resolved on merit and are now closed. Fun/tone/
+scope calls (Q1–Q6) remain **NEEDS DIRECTOR REVIEW** — each is sharpened below into a one-line Director
+question with an endorsed recommendation. Four orchestrator cross-contract adjudications are folded in as
+**RESOLVED (fixed)**. Claim corrections against the real as-built code + the S0/S2 sibling designs are
+listed last — the programmer builds against *these* where they differ from the §1–§9 body.
+
+### Orchestrator cross-contract adjudications (fixed — folded as RESOLVED)
+
+- **A1 — The throw-death seam is S2's `on_thrown_hit`, and S6b never touches `thrown_item.gd`.**
+  The delegation seam lands in **S2** (S2 §2.2 `ThrowInteraction`, S2 OQ-5). Its real shape is
+  **`on_thrown_hit(item_id)` (void)**, not S6b §3.1's proposed `resolve_throw_death(killer_ctx) -> bool`.
+  `thrown_item.gd` keeps emitting `throw_killed_hazard` at `:92` (kind continuity), and at `:93` becomes
+  `if body.has_method(&"on_thrown_hit"): body.on_thrown_hit(item_id) else: body.queue_free()` — so a body
+  that owns an `on_thrown_hit` is responsible for its **own** free (the legacy four's `ThrowInteraction`
+  in mode `die` reproduces today's free byte-identically; the Splitter's does the split-then-free). S6b
+  **consumes** this — it does not author or edit `thrown_item.gd`. **Align §3.1/§3.2:** replace
+  `resolve_throw_death(killer_ctx) -> bool` with the Splitter host exposing `on_thrown_hit(item_id)`
+  (which calls `_do_split()` then `_free_self()`); no return-bool contract. Exact ownership of the
+  `throw_killed_hazard`/`&"killed_by_throw"` emit inside the seam is **S2's** call (verify at brief time).
+
+- **A2 — Ids, location, default, deck (confirmed as written).** Def ids `&"splitter"` /
+  `&"splitter_child"`; both `.tres` at `Game/data/oppositions/`; **off by default** (not in
+  `oppositions_enabled`); **`band_two` deck only** (`splitter` deck-listed, `splitter_child` never in any
+  deck). The §0/§2.1/§7 body already states this — confirmed, no change.
+
+- **A3 — `&"split"` / `&"split_refused"` ride the generic `opposition_event` channel (confirmed).**
+  The doc's §5 proposal stands. `opposition_event` is pre-declared by **S0**, dual-emitted for the legacy
+  hazards from **S2** onward (S2 OQ-6), **S6b emits** `&"split"` / `&"split_refused"` on it, and **S4**
+  adds the Telemetry subscriber (config-marked rows). S6b touches neither `event_bus.gd` nor `telemetry/`.
+  The `&"spawned"` rows for parent *and* each child are emitted **centrally by `SpawnService.spawn()`**
+  (S0 `spawn.gd:521-522`) — confirmed; S6b writes no `&"spawned"` emit.
+
+- **A4 — Cap semantics: per-def `per_band_cap` + the K5 `&"new_hazards"` 48 registry domain; R1's 64 is
+  separate.** Both splitter defs live in the **`cap_group = &"new_hazards"`** pool (ceiling **48**,
+  `NEW_HAZARD_BAND_CEILING`, relocated onto the service by S0) — that group cap is the hard anti-swarm
+  ceiling. `per_band_cap = 8` is enforced **per def** (S0's `per_band_cap` is a per-def field, `:317`), so
+  it caps `splitter` and `splitter_child` **independently**, not as a summed 8 (see Correction C5). R1's
+  `R1_DENSITY_BAND_CEILING = 64` (`run_config.gd:37`) is a *separate density path* and stays untouched
+  through M1.9 (S0 OQ-3). **Action for the defs:** add the `cap_group = &"new_hazards"` field to both
+  `.tres` (the §2.1/§2.2 tables omit it) — `per_band_cap` alone is unsafe while S0's cap-precedence
+  (S0 OQ-5) is unresolved; the group cap is the guaranteed enforcement line.
+
+### Technical resolutions (Phase-3, on merit)
+
+- **Q7 — Child cell derivation: RESOLVED → deterministic-per-split from the parent cell, no `RNG`.**
+  Endorse the doc's recommendation, but with a **sharpened rationale that corrects §1.4's overstatement**:
+  children are run-state (client (b)) and feed **nothing** into `fingerprint()`, so using the global
+  `RNG` would *not* move the fingerprint — determinism-from-parent is a **cleanliness + testability**
+  choice, **not** a fingerprint-safety requirement. It is chosen because (i) it makes `test_splitter`
+  assertable (same throw at the same parent cell → same child cells), and (ii) it keeps the RNG-free
+  discipline uniform. §1.4's "honoring the no-global-`RNG` contract by the strictest reading" is fine as a
+  *tie-breaker*, but the doc should not imply the fingerprint depends on it. `_ring_offset(k, n, spread)`
+  is a pure function of `(k, n, spread)`.
+
+- **Q8 — `self_cell` + the `world_to_cell` contract: RESOLVED → use `svc.world_to_cell(...)`, but this is
+  a confirmed S0-surface ADDITION, not an existing method.** The parent computes its live cell via
+  `svc.world_to_cell(global_position)`. **Correction to the adjudication's premise:** the S0 service as
+  currently drafted exposes only the **private** `_cell_to_world` (forward projection,
+  `spawn_service.gd:560`) and lists **no public `world_to_cell`** (inverse) in its API surface (S0
+  §"boundary methods", `:235-254`). The inverse math already exists as `main_game.gd:_world_to_cell`
+  (`:1179`); resolving Q8 in the affirmative therefore **requires S0 to expose a public `world_to_cell`
+  (and, for symmetry, `cell_to_world`)** by relocating that method. This is a small, mechanical S0 add —
+  **surface it to S0 as a confirmed contract request**, do not assume it exists. The §2.4 `ctx["cell"]`
+  snapshot fallback is **dropped** (the parent drifts; `world_to_cell` is the correct source once S0 adds
+  it). The `.tres` linter must also resolve the **cross-def reference** `splitter.params → splitter_child`
+  by id — a dangling child id is a fail-loud error (confirmed as a linter requirement).
+
+- **Q9 — Children at `self_cell` vs adjacent free cells: RESOLVED → distinct adjacent free graded-floor
+  cells on the deterministic `child_spread` ring; fall back to nearest-free, drop if none.** Endorse the
+  doc's recommendation. Catch is a **script distance-test, not a physics overlap**, so stacking children
+  at one cell is not *fatal* (and same-frame multi-catch is absorbed by `GameState._run_ended`
+  idempotency), but it reads as one blob and defeats the "it made copies" tell. Place each child at the
+  nearest **`svc.valid_cells`-approved** free graded-floor cell to `self_cell + _ring_offset(k)`
+  (S0 exposes `valid_cells()` for exactly this pre-filter, `spawn_service.gd:552`); `svc.spawn` re-checks
+  the cell and returns `null` on an invalid/occupied/over-cap cell → that child is simply dropped (no
+  retry). This is consistent with the run-state nature of the spawn — no fingerprint concern either way.
+
+- **Q10 — Splitter host: RESOLVED → S6b authors a NEW `splitter.tscn`/`splitter.gd`; S2 does NOT stub it;
+  movement reuses S2's `ChaseMove`.** S2's file list (S2 §4) creates the nine components + rewrites the
+  four existing hazard scripts — it does **not** stub a splitter host. So S6b authors `splitter.tscn` +
+  `splitter.gd` as a new thin host. The host composes exactly three S2 components:
+  **`ChaseMove`** (the slow toward-player steer — S2 §2.2 explicitly lists `ChaseMove` "Reused by: R1;
+  Splitter (slow pursuit variant)"; there is **no** separate "toward-player mode" — `ChaseMove` *is* the
+  chase, `PatrolMove` is the separate pacing block the Splitter does **not** use), **`LethalContact`**
+  (mode `radius`, `*_kills`-gated + BUG6 latch), and **`ThrowInteraction`** (the `on_thrown_hit` hook,
+  overridden to split). The Splitter has **no DORMANT/awaken state** — it is live-from-spawn like the
+  pingpong, so it uses **no** `DepthLingerTrigger` and **no** `TelegraphFSM` (the split "burst" is a
+  character-animator `Tween`, juice-only). This keeps S6b at the Phase-E ideal: two defs + a small host +
+  the `_do_split` hook + the test.
+
+### Claim corrections (verified against real source + sibling designs)
+
+- **C1 — `thrown_item.gd:92-93` claim is ACCURATE (confirmed, no change).** `:92` emits
+  `EventBus.throw_killed_hazard`, `:93` is an **unconditional** `body.queue_free()`. §1.5's citation is
+  correct. (Post-S2 this `:93` becomes the delegated dispatch — see A1.)
+- **C2 — The L1 signal-separation cite is ACCURATE (confirmed, no change).** `event_bus.gd:171-175` is
+  the `throw_killed_hazard` declaration whose comment states it is **DEDICATED** and must not fuse with
+  `new_hazard_killed` (`:149`) because the kill directions are opposite. §1.5/§5 cite it correctly.
+- **C3 — Seam method name (§3.1, §3.2):** `resolve_throw_death(killer_ctx) -> bool` → **`on_thrown_hit(item_id)`**
+  (void), per A1. The host's `on_thrown_hit` calls `_do_split()` then `_free_self()`; there is no
+  return-bool contract, and `thrown_item.gd` frees the body only when it has **no** `on_thrown_hit`.
+- **C4 — Component names (§0, §1.5, §2.3, §3.2):** the doc's generic "**Movement**" and "**Lethality**"
+  components are, in S2's real vocabulary, **`ChaseMove`** and **`LethalContact`**. Use the real
+  `class_name`s. `ChaseMove` *is* the toward-player steer (no "mode"); there is no "Movement" component.
+- **C5 — `per_band_cap` is per-def; the §4.2 combined-count assertion is over-specified.** S0's
+  `per_band_cap` caps **each def independently**, so
+  `live_count(&"splitter") + live_count(&"splitter_child") <= 8` (as §2.5/§4.2 assert) is **not** what the
+  registry enforces. Restate the test as: **(a)** `live_count(&"splitter_child") <= 8` (the per-def cap
+  refuses the over-cap children), **(b)** the `&"new_hazards"` group never exceeds **48** (the hard
+  anti-swarm ceiling, A4), and **(c)** each refused `svc.spawn` returns `null` and emits one
+  `&"split_refused"` row. If the Director specifically wants a *tight combined 8-thing splitter budget*,
+  that is a dedicated `cap_group = &"splitter"` registered at ceiling 8 (a one-line
+  `set_cap_group(&"splitter", 8)`) — but a def belongs to exactly one `cap_group` in S0, so choosing
+  `&"splitter"` would remove the family from the shared 48 pool. **Recommendation: keep `&"new_hazards"`
+  (48) as the enforced group** (per A4) and treat `per_band_cap = 8` as the per-id soft cap.
+- **C6 — Child `ctx` must carry `depth` + `run_t_ms` for the central `&"spawned"` emit.**
+  `SpawnService.spawn()` emits `opposition_event(def.id, &"spawned", int(ctx.get("depth", 0)),
+  int(ctx.get("run_t_ms", 0)))` (S0 `spawn.gd:521-522`). The §3.2 `child_ctx` omits both keys, so each
+  child's `&"spawned"` row would log `depth = 0`, `ms = 0`. **Add `"depth"` and `"run_t_ms"` to
+  `child_ctx`** (the parent already computes both for its own `&"split"` emit).
+
+### Fun / tone / scope — NEEDS DIRECTOR REVIEW (recommendation attached)
+
+- **Q1 — Movement feel.** *Director: ship the Splitter as a slow toward-player pursuer (reuses `ChaseMove`,
+  zero new code), not a passive drifter?* **Recommend YES (endorse §2.3).** The pursuit is what
+  manufactures the throw-temptation the entire lesson rides on; a drifter you can freely ignore removes the
+  regret beat that makes "don't kill it" land. Playtest-tunable at SG2.
+- **Q2 — `split_on` default.** *Director: default `split_on = throw_death` (only a thrown-item kill
+  splits), not `any_death`?* **Recommend YES (endorse).** It is the design thesis — the *throw verb*
+  backfires. In M1 there are no non-throw removals, so the two are functionally identical today;
+  `throw_death` costs nothing now and sets the intent for when clean environmental deaths exist.
+- **Q3 — `child_count` default.** *Director: 2 (Asteroids-classic) or 3?* **Recommend 2 (endorse).**
+  Cleaner read, slower approach to the cap, easier A/B at the first gate; sweep to 3 later.
+- **Q4 — `child_despawn_s` default.** *Director: children persist until band-end/killed (`0`, no mercy
+  timer), or self-despawn on a timer?* **Recommend `0`/no timer (endorse).** The lasting mess *is* the
+  consequence of choosing to throw; the `&"new_hazards"` 48 cap already bounds the swarm and children free
+  with the band. Knob present for a timed-variant sweep.
+- **Q5 — Children give salvage/reward?** *Director: children are pure cost, no reward, permanently?*
+  **Recommend YES / pure cost (endorse).** Rewarding split-clearing would make players *farm* splits,
+  inverting the avoidance lesson; M1 has no per-kill reward wiring anyway, so pure-cost is also the
+  path of least resistance.
+- **Q6 — `generations` default.** *Director: `1` (parent → terminal children, exactly one split)?*
+  **Recommend YES (endorse).** The shallow, always-clearable Asteroids tree; `2`+ risks swarm-to-cap
+  tedium. Knob min 0 / max 3 for later sweeps. (Sets the difficulty ceiling, so worth an explicit nod.)
+
+---
+
 *Spec authored by game-director-designer for M1.9 S6b. Design-only — no game code, no `.tres`. The
-programmer + character-animator build against this. Open questions above are for Phase-3 fresh-eyes
-resolution; fun/tone calls (Q1–Q6) are surfaced to the Director. Deviations from the built design go to
-`DESIGN_DEVIATIONS.md` for the Wave-4 close-out sweep.*
+programmer + character-animator build against this. §1–§9 are the Phase-2 design; the **Resolved
+Decisions (Phase 3)** block above is the locked-except-for-Director-calls layer — where it corrects the
+body, it wins. Fun/tone calls (Q1–Q6) are surfaced to the Director; the four orchestrator adjudications
+(A1–A4) are fixed. Deviations from the built design go to `DESIGN_DEVIATIONS.md` for the Wave-4 close-out
+sweep.*
 </content>
 </invoke>

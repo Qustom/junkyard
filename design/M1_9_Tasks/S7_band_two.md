@@ -284,6 +284,101 @@ Each states the trade-off. Vision/fun/tone/scope calls are flagged **needs Direc
 
 ---
 
+## Resolved Decisions (Phase 3)
+
+*Fresh-eyes resolution (game-director-designer, NOT the S7 author). Technically-resolvable questions are decided on merit; genuine vision/tone/fun calls are sharpened into one-line Director questions with a recommendation. All as-built numbers this spec cites were re-verified against the real resources under `Game/` — corrections are called out. The orchestrator's fixed cross-contract adjudications are folded in as RESOLVED at the top.*
+
+### R0 — Fixed cross-contract adjudications (folded in as RESOLVED, not open)
+
+These were adjudicated by the orchestrator and are **locked** — the S7 build honors them verbatim:
+
+- **Profile id + file:** `band_two.tres` carries `id = &"band_two"` and lives at `Game/data/bands/band_two.tres`. (Confirms §3.2's `&"band_two"`.)
+- **Route key:** the dive-routing key for this band is `&"band_two"` (S8's portal maps to it).
+- **Portal 1 unchanged:** the existing (portal 1 / `&"near"`) path keeps mapping to `band_greybox` — byte-identical, per S3 Q2b's `BAND_ID = &"near"` continuity note. band_two is purely additive.
+- **Deck defs location:** the deck references `OppositionDef` resources at `Game/data/oppositions/` by the ids below; the physical defs land in S0/S6a/S6b and are integration-checked at S8/SG1. (`Game/data/oppositions/` does not exist yet — M1.9 Wave 1 is unbuilt at authoring time; this is expected, not a defect.)
+- **Instability normalization:** `band_depth = 2`, with `instability(1) = 1.0` as the band-1 baseline, so **band 2 receives the first budget lift** → `I(2) = 1.15`. This resolves OQ… and the §2.2 form (see R-Instability below).
+
+### R-Instability — the budget scalar, normalized (RESOLVED, technical + folds the fixed adjudication)
+
+**Decision:** the single budget scalar is `I(band_depth) = 1.0 + 0.15·(band_depth − 1)` — band 1 → **1.00**, band 2 → **1.15**. band_two's deck-lane credit budget is therefore `floor(BASE_CREDITS · 1.15) = floor(24 · 1.15) = floor(27.6) = 27` credits (`BASE_CREDITS = 24` per S3 §3.1).
+
+**Claim corrections this forces:**
+1. **§2.2 is right; S3's function must be normalized to match.** S7 §2.2 already uses the band-1 = 1.0 form (`I_base · 1.15^(band_depth−1)`). But S3 §3.1's actual `instability(band_depth) = 1.0 + 0.15·band_depth` gives band 1 = 1.15 / band 2 = 1.30 — it is **not** normalized and **conflicts** with the fixed adjudication. **Cross-task coordination (flag to S3 at brief):** S3's `instability()` must adopt the normalized linear form `1.0 + 0.15·(band_depth − 1)` (band 1 = 1.0). At band 2 the linear and S7's multiplicative forms coincide exactly (both 1.15); they only diverge at band 3+ (which M1.9 never generates), so pick S3's linear function as the single call site and treat §2.2's `1.15^(band_depth−1)` as the illustrative-equivalent.
+2. **§3.6 "budget ≈ I_base·1.15·scale(depth)" is wrong — drop the `·scale(depth)`.** S3's deck-lane budget is **flat**: `int(floor(BASE_CREDITS · I))` = 27, computed **once** per band. Depth does **not** scale the budget — it scales per-piece spawn *counts* (`n = base_count + floor(count_per_depth · depth_index)`), a separate lever. Correct §3.6's budget line to "band_depth 2 ⇒ `floor(24·1.15)=27` credits, flat; deeper pieces spend more only because they request more instances."
+3. **`band_depth` threading (minor, coordination):** S3 §3.1 reads both `band.band_depth` and `profile.band_depth`. For the gate/budget to work, the pipeline must copy `profile.band_depth` onto the returned `Band` (or the deck lane reads `profile.band_depth` throughout). Not an S7 deliverable — flag to S1/S3 so band_two's `band_depth=2` actually reaches the deck lane.
+
+### R-Deck — the deck is `Array[OppositionDef]`, not per-entry wrappers (RESOLVED, technical — reconciles §3.6 to S3)
+
+**Decision:** `opposition_deck: Array[OppositionDef]` is an **ordered array of def references**. `min_band`, `credit_cost`, `base_count`, `count_per_depth`, and `spawn_weight` are **fields on each `OppositionDef`** (authored by S0 for the 4 shipped, by S6a/S6b for charger/splitter) — **not** columns S7 re-authors on a deck-entry wrapper. S7 authors *the ordered array + the id list*, and confirms the needed field values are set on those defs at S8/SG1 integration. Reconcile §3.6's table to read as "def ids in draw order," with the numeric columns annotated as "authored on the def (verify at integration)."
+
+**Corrections to §3.6 forced by S3:**
+- **`spawn_weight` is INERT in M1.9** (S3 Q6-iii resolved: reserved). The draw is a **deterministic walk of the authored array order, id-deduped (first occurrence wins), RNG-free** — the "Draw weight" column documents *future* intent only and does **not** affect any M1.9 draw. Relabel it "weight (reserved — inert in M1.9)."
+- **Exclusivity lives on the def, not the deck.** "Charger/Splitter band-2-exclusive" is realized by `min_band = 2` **on `charger.tres`/`splitter.tres`** (S6a/S6b author it); the 4 shipped defs carry `min_band = 1`. The deck lane filters `band.band_depth ≥ def.min_band`, so band_two (2) includes all six and band 1 — which uses the **legacy lane (empty deck)**, never the deck lane — never sees charger/splitter regardless. The clean A/B holds structurally.
+- **Draw order = the array order** `[pursuer, pingpong, bomb, spike, charger, splitter]` as authored (this ordering is the band author's priority list, per S3 `_deck_order`).
+
+### R-Flavors — S7's flavor value tables must match S5's ACTUAL config schemas (RESOLVED, technical — this is the biggest correction)
+
+S7 §3.4/§3.7's flavor params were written against a mental model that **does not match S5's as-designed stages**. Reconcile to S5's real schemas (S5 §3.1, §4.1):
+
+**SetPieceInject — S7's `{defs, max, min_depth_norm, salt}` is wrong. Use S5's `SetPieceInjectConfig`:**
+```
+SetPieceInjectConfig:  entries: Array[SetPieceEntry]   max_total: int   salt: int (0x53455450)
+SetPieceEntry:         piece: ZonePieceData   min_depth_norm: float   max_per_band: int   unique: bool
+```
+- `defs` → **`entries`** (`Array[SetPieceEntry]`); `max` → **`max_total = 1`**; `min_depth_norm = 0.6` lives **on the `SetPieceEntry`**, not the config.
+- **Mechanism correction (load-bearing):** S5 does **NOT** "swap" or "mark" an in-spine piece. It **appends a brand-new set-piece as a dead-end room attached to a depth-gated retained open socket** (`band.open_sockets`, filtered to `host.depth_norm ≥ min_depth_norm`, via the untouched grow-loop helpers). So S7 §3.4's "swap/mark," §3.7's "walks pieces … to swap/mark," and the whole "Marking vs swapping" framing (§3.7.4) are **not** how S5 works — delete them. The set-piece is a **real appended room**, `MUTATES_PIECES = true`, and it *does* move band_two's fingerprint deterministically (correct and fine — it's not greybox's fingerprint).
+- **§3.7.5 ("set-piece cells exempt from WearDecay") is an invented mechanism** — S5 has no set-piece/decay-exemption hook. **Delete it.** Reachability of the dead-end set-piece is protected by **S5's Stage-5 connectivity guarantee**, not an exemption: a WearDecay block on the set-piece's sole attaching doorway would strand it and is therefore **rejected/reverted** by the connectivity check (and blocks only ever land behind a prior breach on a tree band anyway — see below). No special-casing needed.
+- **What S7 actually authors:** one `SetPieceEntry` wrapping an **existing** large piece scene (room_xl or chamber — no bespoke scene, per OQ3 recommendation), `min_depth_norm = 0.6`, `max_per_band = 1`, `unique = true`; `SetPieceInjectConfig.max_total = 1`.
+
+**WearDecay — S7's `{state, intensity, block_routes, open_breaches, salt}` is wrong. Use S5's `WearDecayConfig`:**
+```
+WearDecayConfig:  state: StringName (&"collapsed"|&"flooded")   decay_level: float
+                  breach_budget: int   block_budget: int   depth_bias: float
+                  breach_width: int (2)   salt: int (0x57454152)
+```
+- There is **no** `intensity`, `block_routes`, or `open_breaches` field. Map S7's intent onto the real knobs: "how decayed" → **`decay_level`** (S5 default 0.5); "may block a path" → **`block_budget`**; "may open a shortcut" → **`breach_budget`**. `intensity 0.25` → set `decay_level ≈ 0.3` (modest) instead.
+- **Breach-led, not block-led (S5 §4.2 — a structural fact, not a preference):** band_two is a **tree** (linear or branchy — still acyclic; `loop_back_count = 0`, confirmed in `bandgen_config`). On a tree **every doorway is a bridge**, so a block with no prior breach *always* disconnects and is *always* rejected. Blocks land **only** where a breach first created a cycle. **Therefore band_two's decay is breach-led** (secret-shortcut energy) with occasional detour-blocks behind breaches. Authoring consequence: to get *any* blocks, `breach_budget > 0` must lead; a `block_budget > 0, breach_budget = 0` config is a legal no-op (S5 logs a warning). This is exactly the "WearDecay is breach-led on tree bands" reconciliation the brief calls for.
+- **`&"disused"` (§3.4, Pitch C) is not a defined S5 state.** S5 defines only `&"collapsed"` (default) and `&"flooded"`. Map Pitch C to `&"collapsed"`; if a distinct "disused" fiction is wanted it needs an S5 state-tag addition (out of S7 scope) — recommend just using `&"collapsed"` for Pitch C.
+- **Reconciled band_two WearDecay value table (Pitch A "The Sump" / flooded):** `state = &"flooded"`, `decay_level = 0.3`, `breach_budget = 2`, `block_budget = 1` (breach-led), `depth_bias = 0.0` (uniform; raise later if deep-is-more-ruined is wanted), `breach_width = 2`, `salt = 0x57454152`.
+- **Flavor order** `[SetPieceInject, WearDecay]` is correct and matches S5's authored guidance (inject the landmark, then decay can ruin it, then Stage-5 connectivity runs last). Keep it.
+
+### R-OQ1-schema — BandProfile `tileset`/`palette_tint` fields (RESOLVED, technical)
+
+**Decision:** **S7 (or a coordinated S1 addition) must add the `tileset: TileSet` and `palette_tint: Color` exports** — they are **not** guaranteed to exist. **Correction to §2.3/OQ1's "if S1 shipped it":** at authoring time **S1 is unbuilt** (`Game/systems/bandgen/band_profile.gd` and `Game/data/bands/band_greybox.tres` do not exist yet), so nothing can be "checked against S1 as-built." The authoritative reference is the **breakdown's S1 goal field list** (`id, backend, backend_config, archetype+params, piece_pool, principles[], flavors[], depth_curve, junk_catalog, opposition_deck, band_depth`) — which **omits** `tileset` and `palette_tint`. So they must be added. This is a trivial two-export addition with **no save impact** (BandProfile is content, not saved state). Preferred owner: fold into S1's schema at S1-build time (one PR, one schema); fallback: S7 adds them under its glue seam. Field names as written (`tileset`, `palette_tint`) are fine.
+
+### R-OQ4 — own reward curve vs shared (RESOLVED, technical, low-stakes)
+
+**Decision:** **author the own curve `depth_curve_band_two.tres`** (per the spec's recommendation). Verified on merit:
+- The shared `depth_curve.tres` greybox values were confirmed exactly as §2.1/§3.5 claim: **value 1.0→1.8, density 2.0→2.3, tier stepped 1→4** (`Game/systems/depth/depth_curve.tres`). So the deltas in §3.5 are honest.
+- **Tier 2→5 is content-valid:** the shared junk pool (`Game/data/junk/`) actually stocks items at **tiers 1–5** (tier-5 items exist), so band_two's tier ceiling of 5 resolves to real loot and its floor of 2 legitimately excludes the two tier-1 items — "band 2 loot is better" lands without new items. (Had the pool topped out at tier 4, the tier-5 gate would silently yield nothing; it doesn't — safe.)
+- Keep §3.5's numbers (value 1.15→2.1, density 2.2→2.6, tier 2→5). **No Director call needed** unless the Director wants band-2 loot held flat until the full I→loot coupling (M2) — surface that only as an optional note, not a blocker.
+
+### R-OQ7 — shipped-hazard deck ids (RESOLVED, technical)
+
+**Decision:** the 4 shipped-hazard ids are **`&"pursuer"`, `&"pingpong"`, `&"bomb"`, `&"spike"` — confirmed against the legacy telemetry kinds** (`&"pingpong"/&"bomb"/&"spike"` at `main_game.gd:359-363`; `&"pursuer"` documented as the R1 kill kind at `event_bus.gd:171`). Plus `&"charger"`/`&"splitter"` (S6a/S6b). S7's §3.6 ids are correct as written; the only integration step is confirming S0 stamps these exact ids on the `OppositionDef.tres` set (checked at S8/SG1). No Director call.
+
+### Verified-correct claims (no change)
+
+- `bandgen_config.tres` greybox column (target 12, branch 0.0, max_place 16, loop_back 0, soft_floor 80, max_band 8) — **confirmed exact** (`Game/data/bandgen_config.tres`); §3.3's band_two deltas (target 16, branch 0.15) are legitimate config-only changes.
+- `piece_catalog_ext.tres` = **10 pieces**, ids exactly the §2.3 list; `piece_catalog.tres` = **6** — **confirmed**.
+- `greybox.tres` = 2-tile atlas (0:0 floor, 1:0 wall), wall carries the 16×16 physics polygon on `physics_layer_0`, `collision_layer = 2`, 16px cells — **confirmed**; §4's retone constraints (identical geometry/physics/coords) are sound.
+- `band_generator.gd:310` reads `cfg.branch_chance` as the M1 baseline path — **confirmed**; a branchy band is genuinely a config value.
+
+---
+
+## Director review queue (vision / tone / fun — NOT self-resolved)
+
+Sharpened to one-line decisions with a recommendation. None gate the build's *mechanics* (all six share §3.2–§3.6); they shape identity/feel and can be dispositioned at the Wave-4 close-out.
+
+- **D1 — Band identity pick.** Ship **Pitch A "The Sump"** (GDD-canonical band-2 "Temporal," sepia-amber, motivates both flavors), or the colder alternates **B "The Overflow"** (teal, flood-lean) / **C "The Annex"** (institutional green, order-not-decay)? **Rec: A.** *(Pitch C's `&"disused"` decay state would need an S5 state-tag add — see R-Flavors; C maps cleanest to `&"collapsed"`.)*
+- **D2 — Difficulty step size (OQ2).** Is a whole band apart *felt* at the locked **+15%** budget bump (`I(2)=1.15`, 27 vs 24 credits), or should band 2 use a sharper multiplier / higher `BASE_CREDITS`? **Rec: ship +15% (fidelity to the TDD's locked +15%/band) and let SG2 deaths-by-band / run-length tell you whether to widen it — don't pre-tune.**
+- **D3 — Set-piece: reuse vs bespoke (OQ3).** Prove the stage by **reusing** an existing large piece (room_xl/chamber) as the landmark (pure data, honors "content=data"), or author a **bespoke Sump set-piece** scene (reads far more like a distinct biome, but is new authored geometry — arguably outside M1.9's thesis)? **Rec: reuse for M1.9; log "bespoke Sump set-piece" as an M1.10/M2 content follow-up.**
+- **D4 — Hazard exclusivity (OQ5 = breakdown OQ5).** Keep Charger/Splitter **band-2-exclusive** (`min_band=2` on their defs → clean SG2 A/B: band 1 = old, band 2 = old + 2 new), or also enable them in band 1's default preset now? **Rec: band-2-exclusive for M1.9; let SG3 decide whether they graduate into band 1.**
+- **D5 — Band length vs band 1 (OQ6).** Run band_two **longer** (`target_piece_count = 16` vs greybox 12 — "deeper = more committing"), or **shorter** (a punchy ~15-min band per the GDD)? And does the level-scale preset (`lvl_room_count=30`) apply to band_two at all (S8 routing decides)? **Rec: ship `target=16` (slightly longer), keep the level-scale preset orthogonal, and let SG2 run-length telemetry guide it.**
+- **D6 — Visual tier (OQ1 art sliver).** Ship **Tier 1 tint only** (zero art, guaranteed — `palette_tint` sepia), **Tier 2 retoned tileset** (one placeholder png + `greybox_band_two.tres`, richer), or **both**? **Rec: Tier 1 always (proves the data path with zero art risk) + Tier 2 if the environment-artist has budget this wave — they coexist.** *(The `tileset`/`palette_tint` schema fields themselves are RESOLVED above — must be added regardless of tier.)*
+
+---
+
 *Spec authored by game-director-designer for M1.9 S7. Design + data-spec only — no game code; the `.tres` values here are authored during S7's build. The programmer adds the one tileset-assign glue line; the environment-artist ships the retone/tint placeholder. Deviations from this spec go to `DESIGN_DEVIATIONS.md` for the Wave-4 close-out sweep. Open questions OQ2/OQ3/OQ5/OQ6 (and the OQ1 art-budget sliver) need the Director; OQ1-schema/OQ4/OQ7 are fresh-eyes-resolvable on technical merit.*
 </content>
 </invoke>
