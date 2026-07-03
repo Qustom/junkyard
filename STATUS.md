@@ -6,14 +6,14 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Wave 1 DONE + swept; Wave 2 (S2 ∥ S5) IN PROGRESS (dispatched, parallel worktrees).** *(M1.8 CLOSED 2026-07-02; M1.7/M1.6 RG2/RG3 remain Director-pending, non-blocking.)*
-**Last updated:** 2026-07-02 (Wave 2 dispatched: S2 → general-purpose (component extraction + param_schema; entity scripts + oppositions data, NOT main_game), S5 → general-purpose (SetPieceInject + WearDecay + connectivity stage in the S1 hook; bandgen + bands data only). Board: both In Progress.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Wave 2 (S2 ∥ S5) BUILT + INTEGRATED on `main`. ▶ Next: Wave-2 close-out — 8 deviations (S2×4 + S5×4) await Director disposition; Wave 3 (S3) dispatches only after the sweep.** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Last updated:** 2026-07-03 (Wave 2 integrated + verified on main: import · smoke · fp `e943ac9c8bc1` (determinism + corridor) · band flavors F1–F8 · pipeline parity · golden frame-trace parity · full hazard suite · spawn service · schema bijection · config 89/89 · rg1 loop/m12/m14/m15 — green. **m13 is a PRE-EXISTING headless timing flake** (~40% on pre-Wave-2 9cc00c1 too; passes on retry) → filed BUG-M13FLAKE (backlog + board), NOT a Wave-2 regression.)
 
-## In progress
-| Task | Since | Agent(s) | Milestone | Note |
-|---|---|---|---|---|
-| S2 — Opposition component extraction + `param_schema` | 2026-07-02 | general-purpose | M1.9 (Wave 2) | Branch `general-purpose/S2`. Riskiest step: golden frame-trace parity, fp byte-identical, hazard suite green, params↔schema bijection. Does NOT touch `main_game.gd`. |
-| ~~S5 — Band flavor stages + connectivity guarantee~~ | 2026-07-02 | general-purpose | M1.9 (Wave 2) | **DONE 2026-07-02** — merged to `main` (commit `0aa085c`). New `test_band_flavors` F1–F8 green 9 seeds; parity test UNMODIFIED green; fp `e943ac9c8bc1` unmoved; strand-proof at max decay green. Worklog `worklogs/2026-07-02-S5-general-purpose.md`. 4 deviations logged (all rec. Reviewed; WearDecay breach-led headline flagged for Director visibility) — sweep at Wave-2 close-out. |
+## Wave 2 — Done (2026-07-03)
+| Task | Agent | Merged | Proof |
+|---|---|---|---|
+| S2 — Opposition component extraction + `param_schema` | general-purpose | `e851a8c` (branch `general-purpose/S2`) | Worklog `worklogs/2026-07-02-S2-general-purpose.md`; golden frame-trace parity byte-identical (5 traces, goldens captured pre-refactor); dual-emit twins 1:1; defs completed + bijection test; throw seam + LethalContact external seam landed. 4 deviations logged. |
+| S5 — Band flavor stages + connectivity guarantee | general-purpose | `0aa085c` (branch `general-purpose/S5`) | Worklog `worklogs/2026-07-02-S5-general-purpose.md`; `test_band_flavors` F1–F8 green 9 seeds; parity UNMODIFIED green; strand-proof at max decay. 4 deviations logged (WearDecay breach-led headline flagged for Director). |
 
 ## Wave 1 — Done (2026-07-02)
 | Task | Agent | Merged | Proof |

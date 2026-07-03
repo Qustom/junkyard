@@ -209,6 +209,10 @@ From the M1 wave-5 close-out (`DESIGN_DEVIATIONS_HISTORY.md` §"M1 wave 5"). Nei
 - Milestone: M1.8 (follow-up)   Assignee: environment-artist   BlockedBy: Director OK
 - The one missing Layout-A spec prop (`SS`); not loop-critical (no functional street exit yet). Generate only on explicit Director go. Watch-item context: `design/M1_8_Tasks/G4_findings_M1.8.md`.
 
+### BUG-M13FLAKE — `test_rg1_m13_verify` intermittently misses telemetry rows headless
+- Milestone: backlog (QA)   Assignee: qa-playtest-coordinator   BlockedBy: none
+- Pre-existing timing flake (confirmed on pre-Wave-2 `main` 9cc00c1, ~40% failure rate across repeated headless runs, 2026-07-03): m13 intermittently reports missing nav/exposure/timeout telemetry rows ("emitted none of […]"), passes on retry. NOT an M1.9 regression. Diagnose the timed-segment race and stabilize (deterministic clock or generous margins). Board item created 2026-07-03.
+
 ### FU1 — GdUnit4 `test_jsonl_writer`
 - Milestone: M1 (follow-up)   Assignee: qa-playtest-coordinator   BlockedBy: none
 - Spec: `M1_As_Built.md` §Telemetry + `systems/telemetry/jsonl_writer.gd`
