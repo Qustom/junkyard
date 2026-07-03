@@ -15,7 +15,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 | S4 — Generated debug-menu sections + coverage 91 + sweep hygiene | 2026-07-03 | general-purpose | M1.9 (W4) | Branch `general-purpose/S4`. Sole `run_config.gd` Wave-4 writer (levers → plain `@export`, 89→91); param_overrides stamp = DOTTED rows; `debug_run_dirtied` emitter; respawn-tier live edit. |
 | S6a — Charger "The Wrecker" | 2026-07-03 | general-purpose (+ animator-grade tell as placeholder) | M1.9 (W4) | Branch `general-purpose/S6a`. ChargeLane component + `charger.tres`; D-RAT-2 bundle (dash-invuln def default true, wall-crash bonus-stun 1.0); off by default. |
 | S6b — Splitter | 2026-07-03 | general-purpose (+ animator-grade placeholders) | M1.9 (W4) | Branch `general-purpose/S6b`. `splitter.tres` + `splitter_child.tres`; mid-run `svc.spawn` on throw-death via S2's `resolve_throw_death` seam; D-RAT-2 (2 children, gen 1, no salvage). |
-| S7 — band_two "The Sump" | 2026-07-03 | game-director-designer (lead; tint-only art per D-RAT-4) | M1.9 (W4) | Branch `game-director-designer/S7`. Profile + branchy archetype + S5 flavors on + deck + `band_depth=2`; D-RAT-1 (Sump identity) + D-RAT-3 (16 pieces/0.15 branch/+15% budget/reused vault piece). |
+| ~~S7 — band_two "The Sump"~~ | 2026-07-03 | game-director-designer | M1.9 (W4) | **DONE 2026-07-03** — merged (`025d37a`). `test_band_two_profile` C0–C6 green 9 seeds; greybox fp untouched; tint `Color(0.82,0.66,0.42)`. **⚠ ORCHESTRATOR INTEGRATION STEP after S6a+S6b merge: complete the deck 4→6** (add charger/splitter ExtResources to `band_two.tres`, order `[pursuer,pingpong,bomb,spike,charger,splitter]`; confirm `min_band=2` on both). 2 deviations logged. |
 
 ## Wave 3 — Done (2026-07-03)
 | Task | Agent | Merged | Proof |
