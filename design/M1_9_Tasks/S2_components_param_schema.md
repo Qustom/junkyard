@@ -471,3 +471,19 @@ The §3.4 bijection test validates the optional fields when present (unknown ext
 ---
 
 *Phase-3 resolution complete (2026-07-02). All Open Questions closed RESOLVED; orchestrator adjudications #1–#6 folded in; no item requires a Director verdict beyond the already-fixed adjudications. The programmer builds against §0–§5 as corrected by this section (claim corrections 1–4, the Q1 skeleton-transplant rule, the Q5 seam shape, the schema-entry shape above). Deviations during the build go to `design/DESIGN_DEVIATIONS.md` for the Wave-2 close-out sweep.*
+
+---
+
+## Wave-2 close-out amendments (as-built, Director-dispositioned 2026-07-03)
+
+- **TelegraphFSM is presentation-only** (Director: **Reviewed**) — the §2.2 table's assignment of the
+  bomb's PULSING→EXPLODED *timing* to TelegraphFSM is superseded by the Q1 tiebreak: FSM timing
+  accumulators stay host-side (guards/timers transplant line-for-line); TelegraphFSM owns visuals only.
+- **Live `GameState.current_depth_index` reads stay at the legacy sites inside components**
+  (Director: **Reviewed**) — the config-snapshot ban covers CONFIG, not the BUG2 live within-band
+  depth run-state; documented in `opposition_component.gd`'s contract header.
+- **Cross-host run-clock seam is a typed injected `Callable`** (Director: **Addressed** → fixed at
+  close-out) — `OppositionComponent` binds `_run_clock = Callable(host, &"run_clock_ms")` once at
+  `bind()`; no per-call duck dispatch (`host.call(&...)` removed). Golden parity re-verified.
+- **Golden harness strengthenings stand** (Director: **Reviewed**) — second pursuer trace
+  (room-bound patrol) + dual-emit twin assertions (refactor-commit-side; goldens legacy-only).

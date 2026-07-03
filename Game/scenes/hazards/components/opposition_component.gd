@@ -28,6 +28,7 @@ extends Node
 
 var host: Node2D = null      # the entity root (CharacterBody2D / Node2D)
 var player: Node2D = null    # resolved once by the host at setup
+var _run_clock: Callable = Callable()  # the host's run_clock_ms, bound once at bind()
 
 
 ## Bind resolved params + the per-instance spawn context (the LOCKED spawn_ctx
@@ -37,6 +38,7 @@ var player: Node2D = null    # resolved once by the host at setup
 func bind(host_: Node2D, player_: Node2D, p: Dictionary, ctx: Dictionary) -> void:
 	host = host_
 	player = player_
+	_run_clock = Callable(host_, &"run_clock_ms")
 	_configure(p, ctx)
 
 
@@ -63,7 +65,8 @@ static func acquire(host_: Node2D, component_script: GDScript) -> OppositionComp
 
 ## The host-owned self-timed run clock (R1 §4 pattern — both signal families share
 ## one timestamp, S2 §3.1). Every host implements `run_clock_ms() -> int` off its
-## own accumulator; the duck call is the one cross-host seam (hosts share no common
-## script base — CharacterBody2D vs Node2D roots).
+## own accumulator; the cross-host seam is the `_run_clock` Callable bound once at
+## bind() (hosts share no common script base — CharacterBody2D vs Node2D roots —
+## Wave-2 close-out, Director Addressed 2026-07-03: no per-call duck dispatch).
 func _host_run_t_ms() -> int:
-	return int(host.call(&"run_clock_ms"))
+	return int(_run_clock.call())

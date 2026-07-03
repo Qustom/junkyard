@@ -452,3 +452,35 @@ Full verdict record: `design/M1_8_Tasks/G4_findings_M1.8.md`. Entries verbatim-s
   with zero exceptions; S0 spec §10 records the as-built shape.
 
 **M1.9 Wave-1 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 2 (S2 ∥ S5).**
+
+---
+
+## M1.9 Wave-2 close-out (2026-07-03) — 8 entries (S2×4 + S5×4): 7 Reviewed + 1 Addressed
+
+- **S2/TelegraphFSM — presentation-only; FSM timing accumulators stay host-side** (2026-07-02) —
+  **Reviewed.** Q1 transplant-verbatim tiebreak wins over the §2.2 table. **Reapply:** S2 spec
+  §Wave-2 close-out amendments.
+- **S2/components — live `current_depth_index` reads stay at legacy sites** (2026-07-02) —
+  **Reviewed.** Config-snapshot ban covers CONFIG, not BUG2 live run-state. **Reapply:** S2 spec
+  amendments (+ already documented in `opposition_component.gd` contract).
+- **S2/base contract — duck-typed `host.call(&"run_clock_ms")` seam** (2026-07-02) — **Addressed.**
+  Director required a typed alternative; fixed at close-out with an injected `Callable` bound once
+  at `bind()` (`_run_clock = Callable(host, &"run_clock_ms")`), no per-call duck dispatch. Golden
+  frame-trace parity + hazard suite + fp + smoke re-verified green. **Reapply:** S2 spec amendments.
+- **S2/golden harness — scope strengthenings (second pursuer trace; dual-emit twins refactor-side)**
+  (2026-07-02) — **Reviewed** (nothing weakened; goldens legacy-only). **Reapply:** S2 spec amendments.
+- **S5/SetPieceInject — attach-at-open-socket, not e4's swap lean** (2026-07-02) — **Reviewed**
+  (per §10 Q3; revisit swap only if S7 playtest reads detour-vaults as skippable). **Reapply:** S5
+  spec §11.
+- **S5/WearDecay — M1.9 decay is breach-led (blocks only behind breaches on tree bands)**
+  (2026-07-02, Director-visibility item) — **Reviewed** (accepted per D-RAT-1/§10 Q4;
+  `loop_back_count` stays out of scope; band_two tunes breach budgets — width-2 runs scarce,
+  0–2/band). **Reapply:** S5 spec §11.
+- **S5/BandPipeline — unknown flavor config = fail-loud `null`, not "skip and generate"**
+  (2026-07-02) — **Reviewed.** **Reapply:** S5 spec §2.2 amended in place + §11.
+- **S5/stage traits — overridable methods, not consts (GDScript can't shadow base consts)**
+  (2026-07-02) — **Reviewed.** **Reapply:** S5 spec §11.
+
+**M1.9 Wave-2 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 3 (S3, sole
+`main_game.gd` writer).** Side record: BUG-M13FLAKE filed (pre-existing m13 headless timing flake,
+not an M1.9 regression).

@@ -109,7 +109,7 @@ func apply(band: Band, profile: BandProfile, stage_seed: int) -> void: pass
 
 ### 2.2 Config resources (what `profile.flavors` actually holds)
 
-`BandProfile.flavors: Array[Resource]` is authored in a `.tres`, and `.tres` can only hold `Resource`s — so the array holds **stage-config Resources**, not the RefCounted stages. The pipeline maps config-type → stage (a `match`/`is` dispatch): `SetPieceInjectConfig → SetPieceInjectStage.new(cfg)`, `WearDecayConfig → WearDecayStage.new(cfg)`. Unknown config type = `push_error` + skip (fail-loud, band still generates).
+`BandProfile.flavors: Array[Resource]` is authored in a `.tres`, and `.tres` can only hold `Resource`s — so the array holds **stage-config Resources**, not the RefCounted stages. The pipeline maps config-type → stage (a `match`/`is` dispatch): `SetPieceInjectConfig → SetPieceInjectStage.new(cfg)`, `WearDecayConfig → WearDecayStage.new(cfg)`. Unknown config type = `push_error` + **`null`** (fail-loud, generation refused — *amended at Wave-2 close-out, Director Reviewed 2026-07-03: "skip and still generate" was unsatisfiable alongside S1's parity guard P7, which pins unknown-flavor → `null` for control safety; an unknown stage in an authored profile is an authoring error*).
 
 Every config carries `@export var salt: int` (defaults: `0x53455450` "SETP", `0x57454152` "WEAR"). The per-stage seed is `_stage_seed(resolved_seed, salt, index) = hash_combine(hash_combine(resolved_seed, salt), index)` using the generator's boost-style mix (`band_generator.gd:352-362`) — the array index disambiguates two instances of the same stage in one profile.
 
@@ -458,3 +458,19 @@ Two further S7 reconciliation notes riding Q3: the mark-based placement rule and
 ---
 
 *Spec authored for M1.9 S5 (Phase-2 design fan-out); §10 Resolved Decisions folded in by the Phase-3 fresh-eyes resolver (2026-07-02) with the orchestrator's cross-contract adjudications. Design only — no code, no `.tres`. The implementing agent reads this as a single locked design (§0–§8 as corrected + §10). Q4's headline and Q5's watch-item go to the Director with the wave close-out / SG2 material; deviations during the build go to `design/DESIGN_DEVIATIONS.md` for the close-out sweep.*
+
+---
+
+## 11. Wave-2 close-out amendments (as-built, Director-dispositioned 2026-07-03)
+
+All four S5 deviations dispositioned **Reviewed**:
+
+- **Set-pieces attach at a retained open socket** (dead-end detour off the spine), per §10 Q3 —
+  swap stays a possible revisit only if S7's playtest says detour-vaults read as skippable.
+- **M1.9 decay is breach-led** (the §4.2 headline): on tree bands, blocks land only behind breaches
+  (a breach must first create a cycle). Band_two's ruin tuning is breach-heavy — tune `breach_budget`
+  first (S7 note: width-2 breach runs are scarce on greybox bands, 0–2 per band; tune budgets, not
+  width). `loop_back_count` stays out of M1.9 scope.
+- **Unknown flavor config = fail-loud `null`** (§2.2 amended in place above).
+- **Stage traits are overridable methods** (`mutates_pieces()` / `reshapes_floor()` / `journal()`),
+  not consts — GDScript cannot shadow a base-class const in a subclass; contract semantics identical.
