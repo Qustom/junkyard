@@ -28,6 +28,11 @@ extends Node
 ##                         tier only binds when both per_room_cap > 0 and a key is given.
 ##   "ignore_room_cap": bool — v2's explicit set-piece escape hatch: skips ONLY the
 ##                         per-room tier, never band/group ceilings. No S0 caller.
+##   "ignore_entry_safety": bool — mid-run gameplay-spawn escape (FBM19/FB1): skips ONLY
+##                         the BUG7 entry-safe _cell_valid refusal — that radius exists to
+##                         stop generation-time spawn-camping, not to swallow reaction
+##                         spawns (splitter shards) at a mid-run death point. Never skips
+##                         cap tiers. Caller: S6b's _do_split.
 
 ## K5i band-wide ceiling across ALL new-hazard types combined — RELOCATED here from
 ## main_game.gd (S0). main_game keeps a forwarding const so the committed golden tests
@@ -102,8 +107,10 @@ func spawn(def: OppositionDef, cell: Vector2i, ctx: Dictionary = {}) -> Node:
 	if _container == null:
 		push_error("SpawnService: spawn() before begin_band() — no container.")
 		return null
-	if not _cell_valid(cell):        # BUG7 re-check (belt-and-braces; non-binding when
-		return null                  # the policy pre-filtered via valid_cells())
+	# BUG7 re-check (belt-and-braces; non-binding when the policy pre-filtered via
+	# valid_cells()). "ignore_entry_safety" skips ONLY this refusal (see ctx-key list).
+	if not bool(ctx.get("ignore_entry_safety", false)) and not _cell_valid(cell):
+		return null
 	if not _caps_allow(def, ctx):
 		return null
 	var hz := def.host_scene.instantiate() as Node2D

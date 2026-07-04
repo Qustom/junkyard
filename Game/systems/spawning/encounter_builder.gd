@@ -21,7 +21,9 @@ extends RefCounted
 ##     min_band against profile.band_depth (breakdown amendment 10); deterministic
 ##     authored-order draw (spawn_weight RESERVED this version — §7.2 Q6(iii)); per-def
 ##     spawn-card counts read off d.params["base_count"]/["count_per_depth"] (amendment
-##     10); the service's caps are the hard stop and a refused spawn never spends budget.
+##     10); the service's caps are the hard stop and a refused spawn never spends budget;
+##     placements are EVEN-SPREAD across the eligible piece depth range per def
+##     (FBM19/FB2 — deepest pieces reachable by construction, see _populate_deck).
 ## The generic levers overlay both lanes (§3.3): rc.oppositions_enabled is an ADDITIVE
 ## enable-list riding the deck machinery (never subtracts a band author's deck — §7.2
 ## Q6(i)); rc.param_overrides re-tunes DEF-DRIVEN params only, at ctx-merge time (§7.2
@@ -271,13 +273,27 @@ func _legacy_active_specs(rc: RunConfig) -> Array[Dictionary]:
 # --- Deck lane: the credit machine (exploration v2, concretized per §7) ---------------
 
 ## Deck-driven population. Deterministic and RNG-free: authored deck order IS the draw
-## order (id-deduped upstream; spawn_weight RESERVED — §7.2 Q6(iii)); pieces walk the
-## same stable shallow-first order as the legacy lane (one discipline); counts come off
+## order (id-deduped upstream; spawn_weight RESERVED — §7.2 Q6(iii)); counts come off
 ## the def's spawn card in `params` (amendment 10), overlaid by the S9 deck-entry
 ## overrides then rc.param_overrides at ctx-merge time (precedence: def params <
 ## deck-entry overrides < rc.param_overrides — §7.2 Q6(ii) + breakdown deck-driven-def
 ## conventions). The budget binds spend; the SERVICE's caps (per_room/per_band/
 ## cap_group) are the hard stop — a refused spawn never spends.
+##
+## FBM19/FB2 (Director-directed): DEF-MAJOR + DEPTH-SPREAD. The original piece-major
+## shallow-first walk let the credit budget + per-band caps exhaust on the shallow
+## pieces, so every deck placement clustered at the band entry and the deep half held
+## nothing new. Now each def's placements are EVEN-SPREAD across the eligible piece
+## depth range (the J2 even_spread precedent, main_game._hazard_spawn_depths mode 1):
+## per def, the plan size is bounded UP FRONT by the budget and its own per_band_cap
+## (load-bearing — an unbounded plan would burn its deep slots on refusals and
+## re-cluster shallow), then placement i targets piece round(i/(n-1) * (P-1)) over the
+## depth-sorted eligible list — t=1 maps to the DEEPEST piece by construction; a
+## single placement lands mid-band. Still zero RNG, stable order (authored def order,
+## shallow→deep within a def), same per-piece valid_cells/filter-then-stride
+## discipline. Neutral cards (demand 0) are skipped unchanged; the legacy lane and
+## the all-off/band_greybox controls are untouched by construction (this lane only
+## runs on deck bands / the extras lever).
 func _populate_deck(band: Band, deck: Array[OppositionDef], band_depth: int,
 		rc: RunConfig, svc: SpawnService, deck_overrides: Dictionary = {}) -> void:
 	var budget: int = int(floor(float(BASE_CREDITS) * instability(band_depth)))
@@ -287,38 +303,71 @@ func _populate_deck(band: Band, deck: Array[OppositionDef], band_depth: int,
 			eligible.append(d)
 	if eligible.is_empty():
 		return
-	var spawned_total: int = 0   # lane-wide accumulator (threads the ping-pong fan, like legacy)
+	# The eligible piece table, computed ONCE (def-independent): the stable
+	# shallow-first walk, minus the entry piece (P5) and pieces with no BUG7-valid
+	# cells. Cells + bounds keep the one-compute filter-then-stride discipline.
+	var pieces: Array[PlacedPiece] = []
+	var piece_cells: Array = []              # Array of Array[Vector2i], parallel to pieces
+	var piece_bounds: Array[Rect2] = []
 	for p in pieces_depth_sorted(band):
-		if budget <= 0:
-			break
 		if p.depth_index <= 0:
 			continue   # entry safety (P5) holds for deck bands too
-		# Cells + bounds are per-PIECE (def-independent): filter-then-stride, one compute.
 		var cells: Array[Vector2i] = svc.valid_cells(piece_sorted_cells(p))
 		if cells.is_empty():
 			continue
-		var room_bounds: Rect2 = _floor_bounds_world(cells, svc)
-		for d in eligible:
-			if budget <= 0:
-				break
-			var params: Dictionary = _effective_params(d, rc, deck_overrides)
-			var n: int = int(params.get("base_count", 0)) \
+		pieces.append(p)
+		piece_cells.append(cells)
+		piece_bounds.append(_floor_bounds_world(cells, svc))
+	if pieces.is_empty():
+		return
+	var spawned_total: int = 0   # lane-wide accumulator (threads the ping-pong fan, like legacy)
+	for d in eligible:
+		if budget <= 0:
+			break
+		var params: Dictionary = _effective_params(d, rc, deck_overrides)
+		# The def's TOTAL spawn-card demand across the eligible pieces (base + ramp).
+		var demand: int = 0
+		for p in pieces:
+			demand += int(params.get("base_count", 0)) \
 				+ int(floor(float(params.get("count_per_depth", 0.0)) * float(p.depth_index)))
-			if n <= 0:
-				continue
-			var stride: int = maxi(cells.size() / maxi(n, 1), 1)
-			for k in n:
-				if budget < d.credit_cost:
-					break   # spending stops exactly at exhaustion
-				var cell: Vector2i = cells[(k * stride) % cells.size()]
-				var ctx: Dictionary = legacy_ctx(d.id, p, k, spawned_total, room_bounds)
-				ctx["depth"] = p.depth_index
-				ctx["run_t_ms"] = 0
-				ctx["room_key"] = str(p.offset_cell)   # per-room cap identity (S0 reserved key)
-				ctx["params"] = params                 # the ctx-merged def-driven knob bag
-				if svc.spawn(d, cell, ctx) != null:    # service refuses at its caps
-					budget -= d.credit_cost            # refusal does NOT decrement
-					spawned_total += 1
+		if demand <= 0:
+			continue   # neutral card — skipped, no spend (unchanged)
+		# Plan size = demand bounded by affordability + the def's own per-band cap.
+		var n_plan: int = demand
+		if d.credit_cost > 0:
+			n_plan = mini(n_plan, budget / d.credit_cost)
+		if d.per_band_cap > 0:
+			n_plan = mini(n_plan, d.per_band_cap)
+		if n_plan <= 0:
+			continue
+		# Pass 1 — assign placements to pieces by even spread (deepest reachable);
+		# the per-piece tallies feed the within-room cell stride in pass 2.
+		var assign: Array[int] = []
+		var per_piece: Dictionary = {}       # piece index -> assigned count
+		for i in n_plan:
+			var t: float = 0.5 if n_plan <= 1 else float(i) / float(n_plan - 1)
+			var pi: int = int(round(t * float(pieces.size() - 1)))
+			assign.append(pi)
+			per_piece[pi] = int(per_piece.get(pi, 0)) + 1
+		# Pass 2 — execute in shallow→deep order (assign is monotonic in i).
+		var k_within: Dictionary = {}        # piece index -> next within-room k
+		for pi in assign:
+			if budget < d.credit_cost:
+				break   # spending stops exactly at exhaustion
+			var p: PlacedPiece = pieces[pi]
+			var cells: Array[Vector2i] = piece_cells[pi]
+			var k: int = int(k_within.get(pi, 0))
+			k_within[pi] = k + 1
+			var stride: int = maxi(cells.size() / maxi(int(per_piece[pi]), 1), 1)
+			var cell: Vector2i = cells[(k * stride) % cells.size()]
+			var ctx: Dictionary = legacy_ctx(d.id, p, k, spawned_total, piece_bounds[pi])
+			ctx["depth"] = p.depth_index
+			ctx["run_t_ms"] = 0
+			ctx["room_key"] = str(p.offset_cell)   # per-room cap identity (S0 reserved key)
+			ctx["params"] = params                 # the ctx-merged def-driven knob bag
+			if svc.spawn(d, cell, ctx) != null:    # service refuses at its caps
+				budget -= d.credit_cost            # refusal does NOT decrement
+				spawned_total += 1
 
 
 ## The authored deck, typed + id-deduped (first occurrence wins) + fail-loud on broken

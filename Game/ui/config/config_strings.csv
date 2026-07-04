@@ -171,6 +171,7 @@ CFG_FIELD_CHARGER_RECOVER_S,Recovery (s) after a charge — the punish window
 CFG_FIELD_CHARGER_TELEGRAPH_S,Telegraph (s) before the dash launches
 CFG_FIELD_CHARGER_THROWABLE_WHILE_CHARGING,Throw-killable mid-dash (off = invulnerable while charging)
 CFG_FIELD_CHARGER_WALL_CRASH_RECOVER_MULT,Wall-crash recovery multiplier — bonus stun on a missed charge
+CFG_GLOSS_SPLITTER_AGGRO,Aggro radius (px) — idles until the player first gets this close; then chases forever; 0 = always chase
 CFG_GLOSS_SPLITTER_BASE_COUNT,Spawn card — base Splitters per eligible room (deck lane)
 CFG_GLOSS_SPLITTER_CATCH,Catch radius (px) — 0 = pure obstacle
 CFG_GLOSS_SPLITTER_CHILDREN,Children spawned on throw-death

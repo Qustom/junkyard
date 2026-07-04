@@ -24,7 +24,9 @@ extends Node
 ##       stops exactly at exhaustion; a REFUSED spawn does not decrement the budget.
 ##   (5) min_band gating off profile.band_depth (amendment 10).
 ##   (6) deterministic draw order: same (band, deck, rc) twice → identical ordered
-##       request lists; deck order = authored array order, id-deduped (first wins).
+##       request lists; deck order = authored array order (DEF-major since FBM19/FB2:
+##       each def's placements are even-spread shallow→deep, then the next def),
+##       id-deduped (first wins).
 ##   (7) levers: oppositions_enabled seeds the deck machinery on a deck-less band;
 ##       param_overrides reaches the count math + the ctx "params" merge; the authored
 ##       (neutral) card alone spawns nothing; empty levers are perfectly neutral.
@@ -33,6 +35,10 @@ extends Node
 ##   (9) Q6(iv): BandPipeline's lvl_enabled ext-catalog swap byte-matches the direct
 ##       generator on piece_catalog_ext; all-off through the pipeline pins e943ac9c8bc1.
 ##  (10) instability(): band 1 = exactly 1.0 (parity clean); band 2 = 1.15.
+##  (11) FBM19/FB2 depth spread on the REAL band_two deck: charger + splitter
+##       placements SPAN the eligible piece depth range (at least one placement in
+##       the deepest third — the pre-fix shallow-cluster bug would fail this), and
+##       the plan is deterministic (same seed + config twice → identical spawn set).
 
 const CELL := 16
 const CEILING := 48                              # independent mirror of the K5 ceiling
@@ -42,6 +48,7 @@ const BASELINE_FP := "e943ac9c8bc1"
 
 const PROFILE_PATH := "res://data/bands/band_greybox.tres"
 const CATALOG_EXT_PATH := "res://data/piece_catalog_ext.tres"
+const BAND_TWO_PATH := "res://data/bands/band_two.tres"
 
 
 ## The policy-blind recording service: inherits the REAL arming + BUG7 validation;
@@ -99,6 +106,7 @@ func _run() -> int:
 	_case_service_caps(failures)
 	_case_pipeline_swap(failures)
 	_case_instability(failures)
+	_case_band_two_depth_spread(failures)
 
 	if failures.is_empty():
 		print("S3 OK — EncounterBuilder verified: all-off inert (zero requests), preset "
@@ -108,7 +116,9 @@ func _run() -> int:
 			+ "profile.band_depth, deterministic id-deduped authored-order draw, "
 			+ "oppositions_enabled/param_overrides additive + neutral-when-empty, "
 			+ "service caps respected, pipeline lvl ext-swap byte-exact + all-off fp "
-			+ BASELINE_FP + " pinned, instability(1)=1.0/instability(2)=1.15.")
+			+ BASELINE_FP + " pinned, instability(1)=1.0/instability(2)=1.15, and the "
+			+ "FB2 depth spread (charger + splitter reach band_two's deepest third, "
+			+ "deterministic same-seed spawn set).")
 		return 0
 	for f in failures:
 		printerr("S3 FAIL: ", f)
@@ -298,13 +308,20 @@ func _case_draw_order(failures: Array[String]) -> void:
 				failures.append("(6) two identical populates diverge at index %d" % i)
 				break
 	# Dedup: the duplicated id draws once per piece (first occurrence's card: n=1, not 9).
-	# Per eligible piece the draw order is authored order: a, b.
+	# FBM19/FB2 def-major walk: ALL of a's placements (even-spread shallow→deep),
+	# then all of b's — authored order still leads the draw.
 	if svc1.requests.size() != 4:
 		failures.append("(6) expected 4 requests (a,b per eligible room, dupe deduped), got %d"
 			% svc1.requests.size())
-	elif not (svc1.requests[0]["id"] == &"synth_a" and svc1.requests[1]["id"] == &"synth_b"):
-		failures.append("(6) draw order is not the authored deck order (got %s, %s first)"
-			% [str(svc1.requests[0]["id"]), str(svc1.requests[1]["id"])])
+	else:
+		var got_ids: Array = [svc1.requests[0]["id"], svc1.requests[1]["id"],
+			svc1.requests[2]["id"], svc1.requests[3]["id"]]
+		if got_ids != [&"synth_a", &"synth_a", &"synth_b", &"synth_b"]:
+			failures.append("(6) draw order is not def-major authored order: %s" % str(got_ids))
+		# Within a def the spread is shallow→deep across the eligible pieces.
+		if int((svc1.requests[0]["ctx"] as Dictionary)["depth"]) != 1 \
+				or int((svc1.requests[1]["ctx"] as Dictionary)["depth"]) != 2:
+			failures.append("(6) per-def placements are not shallow→deep across the pieces")
 	_free_fake(svc1)
 	_free_fake(svc2)
 
@@ -425,6 +442,79 @@ func _case_instability(failures: Array[String]) -> void:
 			% EncounterBuilder.instability(1))
 	if not is_equal_approx(EncounterBuilder.instability(2), 1.15):
 		failures.append("(10) instability(2) == %f, expected 1.15" % EncounterBuilder.instability(2))
+
+
+# --- (11) FBM19/FB2: deck placements span the depth range on the REAL band_two --------------
+
+func _case_band_two_depth_spread(failures: Array[String]) -> void:
+	var profile := load(BAND_TWO_PATH) as BandProfile
+	if profile == null:
+		failures.append("(11) could not load %s" % BAND_TWO_PATH)
+		return
+	var band := BandPipeline.new().generate(profile, 12345, RunConfig.new())
+	if band == null:
+		failures.append("(11) band_two pipeline returned null")
+		return
+	var rc := RunConfig.new()
+	var svc := _fresh_fake(rc, Vector2.INF)
+	EncounterBuilder.new().populate(band, profile, rc, svc)
+
+	# Mirror the builder's eligible piece list (unarmed service → every floor cell
+	# valid): depth-sorted, entry (depth 0) excluded, non-empty pieces only.
+	var eligible: Array[PlacedPiece] = []
+	for p in EncounterBuilder.pieces_depth_sorted(band):
+		if p.depth_index <= 0 or p.floor_cells.is_empty():
+			continue
+		eligible.append(p)
+	if eligible.size() < 6:
+		failures.append("(11) band_two seed 12345 has only %d eligible pieces (no range to prove)"
+			% eligible.size())
+		_free_fake(svc)
+		_free_band(band)
+		return
+	var index_by_room: Dictionary = {}   # room_key -> eligible-list index (depth rank)
+	for i in eligible.size():
+		index_by_room[str(eligible[i].offset_cell)] = i
+	var deep_start: int = int(floor(float(eligible.size()) * 2.0 / 3.0))
+
+	# Both band-2 predators must reach the deepest third (the pre-FB2 shallow-cluster
+	# left the deep half of The Sump empty of the new hazards).
+	for id: StringName in [&"charger", &"splitter"]:
+		var idxs: Array[int] = []
+		for r in svc.requests:
+			if r["id"] != id:
+				continue
+			var rk := String((r["ctx"] as Dictionary).get("room_key", ""))
+			if not index_by_room.has(rk):
+				failures.append("(11) %s request carries an unknown room_key '%s'" % [id, rk])
+				continue
+			idxs.append(int(index_by_room[rk]))
+		if idxs.size() < 2:
+			failures.append("(11) %s placed %d times on band_two (need >= 2 to prove a spread)"
+				% [id, idxs.size()])
+			continue
+		var deepest: int = 0
+		var shallowest: int = eligible.size()
+		for i in idxs:
+			deepest = maxi(deepest, i)
+			shallowest = mini(shallowest, i)
+		if deepest < deep_start:
+			failures.append("(11) %s never reached the deepest third: max eligible index %d < %d"
+				% [id, deepest, deep_start])
+		if shallowest >= deep_start:
+			failures.append("(11) %s abandoned the shallow range entirely (spread, not shove)" % id)
+
+	# Placement determinism: the same (seed + config) twice → the identical ordered
+	# spawn set (requests compare by value, cells + ctx included).
+	var band2 := BandPipeline.new().generate(profile, 12345, RunConfig.new())
+	var svc2 := _fresh_fake(rc, Vector2.INF)
+	EncounterBuilder.new().populate(band2, profile, rc, svc2)
+	if svc.requests != svc2.requests:
+		failures.append("(11) same seed + config produced a different spawn set (determinism broken)")
+	_free_fake(svc)
+	_free_fake(svc2)
+	_free_band(band)
+	_free_band(band2)
 
 
 # --- the verbatim pre-S3 mirror (main_game._spawn_new_hazards @ 6fbded1, post-S0 shape) ----

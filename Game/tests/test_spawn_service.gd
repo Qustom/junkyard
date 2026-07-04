@@ -23,6 +23,8 @@ extends Node
 ##       valid_cells() AND refused by spawn(); an unarmed service filters nothing;
 ##   (f) spawn_batch returns per-request results in order (nulls in place);
 ##       ignore_room_cap ctx is honored (skips ONLY the per-room tier);
+##       ignore_entry_safety ctx (FBM19/FB1) skips ONLY the BUG7 entry-radius
+##       refusal — per_band_cap / cap_group / per-room tiers still bind with it set;
 ##   (g) no RNG: two identical request sequences produce identical node positions;
 ##       world_to_cell(cell_to_world(c)) == c identity;
 ##   (h) staging round-trip (the S8 seam S0 pre-declared): dive_requested(&"band_two")
@@ -201,6 +203,38 @@ func _run() -> int:
 	if svc_room.spawn(def_room, Vector2i(2, 0),
 			{ "room_key": "A", "ignore_room_cap": true }) == null:
 		failures.append("(f) ignore_room_cap did not skip the per-room tier")
+	# ignore_entry_safety (FBM19/FB1): skips ONLY the BUG7 entry-radius refusal.
+	var svc_esc := _fresh_service()
+	var cont_esc := _fresh_container()
+	svc_esc.begin_band(cont_esc, CELL, entry_pos, cfg)   # armed at (0,0)
+	var def_esc := _make_def(&"escaper", stub_scene)
+	def_esc.per_band_cap = 2
+	if svc_esc.spawn(def_esc, near_cell, {}) != null:
+		failures.append("(f) armed service accepted an entry-unsafe cell WITHOUT the escape")
+	if svc_esc.spawn(def_esc, near_cell, { "ignore_entry_safety": true }) == null:
+		failures.append("(f) ignore_entry_safety did not skip the entry-radius refusal")
+	if svc_esc.spawn(def_esc, far_cell, {}) == null:
+		failures.append("(f) entry-safe cell refused while under cap (test mis-set)")
+	# per_band_cap = 2 is now full — the escape must NOT bypass any cap tier.
+	if svc_esc.spawn(def_esc, near_cell, { "ignore_entry_safety": true }) != null:
+		failures.append("(f) ignore_entry_safety bypassed per_band_cap (must skip ONLY entry safety)")
+	# Nor the cap_group ceiling…
+	svc_esc.set_cap_group(&"esc_grp", 1)
+	var def_esc_g := _make_def(&"escaper_grouped", stub_scene)
+	def_esc_g.cap_group = &"esc_grp"
+	if svc_esc.spawn(def_esc_g, near_cell, { "ignore_entry_safety": true }) == null:
+		failures.append("(f) grouped escape spawn refused under an OPEN group (test mis-set)")
+	if svc_esc.spawn(def_esc_g, near_cell, { "ignore_entry_safety": true }) != null:
+		failures.append("(f) ignore_entry_safety bypassed the cap_group ceiling")
+	# …nor the per-room tier (the two escapes are independent).
+	var def_esc_r := _make_def(&"escaper_roomed", stub_scene)
+	def_esc_r.per_room_cap = 1
+	if svc_esc.spawn(def_esc_r, near_cell,
+			{ "ignore_entry_safety": true, "room_key": "R" }) == null:
+		failures.append("(f) roomed escape spawn refused under an OPEN room cap (test mis-set)")
+	if svc_esc.spawn(def_esc_r, near_cell,
+			{ "ignore_entry_safety": true, "room_key": "R" }) != null:
+		failures.append("(f) ignore_entry_safety bypassed the per-room tier")
 
 	# --- (g) no RNG: identical request sequences → identical positions; projections --
 	var seq: Array[Vector2i] = [Vector2i(4, 1), Vector2i(9, 2), Vector2i(3, 7)]
@@ -228,7 +262,8 @@ func _run() -> int:
 			+ "cap_group + per_band_cap refusal at ceiling, registry counts/instances/cells "
 			+ "(despawn + free-without-despawn sweep), clear_all teardown + accounting reset, "
 			+ "BUG7 entry-safe valid_cells()/spawn() refusal (unarmed passes through), "
-			+ "spawn_batch order + ignore_room_cap, deterministic (no RNG) placement, "
+			+ "spawn_batch order + ignore_room_cap + ignore_entry_safety (entry-radius-only, "
+			+ "caps still bind), deterministic (no RNG) placement, "
 			+ "projection identity, and the dive-band staging round-trip.")
 		return 0
 	for f in failures:

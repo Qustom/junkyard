@@ -28,9 +28,18 @@ extends CharacterBody2D
 ##
 ## Params (from the def's knob bag, ctx-merged by the deck lane; per-instance ctx
 ## overrides win — the v2 override tier the parent uses to hand children their
-## speed/generations): move_speed, catch_radius, child_count, child_speed_mult,
-## generations, split_on, child_spread, child_despawn_s (+ the base_count /
-## count_per_depth spawn-card keys read by the S3 builder, not by this host).
+## speed/generations): move_speed, catch_radius, aggro_radius, child_count,
+## child_speed_mult, generations, split_on, child_spread, child_despawn_s (+ the
+## base_count / count_per_depth spawn-card keys read by the S3 builder, not by this
+## host).
+##
+## AGGRO LATCH (FBM19/FB3, Director-directed): the splitter IDLES until the player
+## first comes within `aggro_radius` px, then latches aggro PERMANENTLY (no de-aggro
+## — once it has seen you, it follows). LethalContact still ticks while idle, so
+## walking into a dormant Fault is still a catch. `aggro_radius = 0` = legacy
+## always-chase (the neutral back-compat value; the child def ships 0 — shards are
+## born of player aggression and chase from frame one). Pure run-state distance
+## test, NO RNG.
 ##
 ## ALL-OFF: no deck lists it and `oppositions_enabled` is empty by default, so this
 ## scene is never instantiated — the e943ac9c8bc1 control is untouched. This entity
@@ -65,6 +74,8 @@ var _ctx: Dictionary = {}           # per-instance spawn context (v2 override ti
 var _params: Dictionary = {}        # effective knob bag: own def params <- ctx["params"]
 var _move_speed: float = 0.0        # resolved speed (ctx "move_speed" override wins)
 var _generations: int = 0           # remaining split depth (ctx "generations" wins)
+var _aggro_radius: float = 0.0      # FB3 wake distance (px); <= 0 = legacy always-chase
+var _aggroed: bool = false          # FB3 permanent latch — set once, never cleared
 var _despawn_left: float = 0.0      # child_despawn_s countdown; <= 0 = no mercy timer
 var _spawn_time: float = 0.0        # host-owned self-timed run clock (R1 §4 pattern)
 var _own_def: OppositionDef = null  # lazy-loaded by def_id (already resource-cached)
@@ -100,6 +111,8 @@ func setup(cfg: RunConfig, player: Node2D, spawn_ctx: Dictionary = {}) -> void:
 	_params = _resolve_effective_params(spawn_ctx)
 	_move_speed = float(spawn_ctx.get("move_speed", _params.get("move_speed", 0.0)))
 	_generations = int(spawn_ctx.get("generations", _params.get("generations", 0)))
+	_aggro_radius = float(_params.get("aggro_radius", 0.0))
+	_aggroed = _aggro_radius <= 0.0   # 0 = legacy always-chase; re-setup re-derives (S4 respawn)
 	_despawn_left = float(_params.get("child_despawn_s", 0.0))
 	var p := {
 		"chase_speed": _move_speed,       # slow pursuer — ChaseMove verbatim reuse
@@ -131,8 +144,16 @@ func _physics_process(delta: float) -> void:
 			_free_self()
 			return
 	var depth: int = GameState.current_depth_index   # ONE live depth read (BUG2)
-	_move.tick_chase(delta, depth)     # slow steer; walls stop it (refuge intact)
+	# FB3 aggro latch: idle until the player first comes within _aggro_radius, then
+	# chase forever (no de-aggro). Plain run-state distance test — deterministic, no RNG.
+	if not _aggroed \
+			and global_position.distance_to(_player.global_position) <= _aggro_radius:
+		_aggroed = true
+	if _aggroed:
+		_move.tick_chase(delta, depth)   # slow steer; walls stop it (refuge intact)
 	_lethal.tick(delta)                # radius test -> BUG6 latch -> emit -> L5 gate
+	                                   # (ticks while idle too — bumping a dormant
+	                                   # Fault is still a catch)
 	if _tell != null and def_id != CHILD_DEF_ID:
 		# Parent-only faint shiver — the "unstable" Fault read (presentation only).
 		_tell.position = Vector2(sin(_spawn_time * 9.0), cos(_spawn_time * 7.0)) * JITTER_PX
@@ -183,6 +204,14 @@ func _handle_throw_death(_killer_ctx: Dictionary) -> bool:
 ## (the safety ceiling doing its job); each refusal logs one &"split_refused" row
 ## (the SG2 cap-pressure signal). One &"split" row marks the split itself —
 ## hazard-lifecycle vocabulary, kept off both death channels (L1 precedent).
+##
+## FBM19/FB1: a split at the death point is GAMEPLAY, not room dressing — the child
+## ctx sets "ignore_entry_safety" + "ignore_room_cap" so placement policy meant for
+## generation-time spawn-camping (the BUG7 entry radius, per_room_cap=2) cannot
+## silently swallow shards mid-run (a parent killed near the band entry, or a second
+## parent dying in the same room, previously "just didn't split"). The REAL ceilings
+## still refuse: per_band_cap=8 + the &"new_hazards" group cap (D-RAT-2's "children
+## capped by the service registry" holds; &"split_refused" telemetry stays for those).
 func _do_split() -> void:
 	var svc := get_tree().get_first_node_in_group(&"spawn_service") as SpawnService
 	if svc == null:
@@ -210,6 +239,8 @@ func _do_split() -> void:
 			"cell": cell,
 			"depth": depth,                     # C6: the central &"spawned" emit payload
 			"run_t_ms": ms,
+			"ignore_entry_safety": true,        # FB1: shards spawn where the parent died
+			"ignore_room_cap": true,            # FB1: per_room_cap is generation dressing
 		}
 		if _ctx.has("room_key"):
 			child_ctx["room_key"] = _ctx["room_key"]   # honest per-room accounting

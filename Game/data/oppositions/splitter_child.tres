@@ -16,6 +16,7 @@ cap_group = &"new_hazards"
 per_room_cap = 2
 per_band_cap = 8
 params = {
+"aggro_radius": 0.0,
 "base_count": 0,
 "catch_radius": 20.0,
 "child_count": 2,
@@ -53,6 +54,13 @@ param_schema = Array[Dictionary]([{
 "gloss": "CFG_GLOSS_SPLITTER_CATCH",
 "key": "catch_radius",
 "max": 64.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_GLOSS_SPLITTER_AGGRO",
+"key": "aggro_radius",
+"max": 512.0,
 "min": 0.0,
 "type": "float"
 }, {
