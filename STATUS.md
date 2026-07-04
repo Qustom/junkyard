@@ -6,13 +6,20 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **BUILD PHASE S0–S9 COMPLETE + fully swept (5 wave close-outs, 34 deviations dispositioned). Wave 6 re-gate: SG1 (build + publish) IN PROGRESS → Director playtest → SG2 → SG3.** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
-**Last updated:** 2026-07-03 (Wave-5 close-out: 1 S8 deviation Reviewed + archived; S9 zero deviations. Full integrated matrix green (25 tests + smoke, m13 first-run). SG1 dispatched → qa-playtest-coordinator: verify matrix + `SG1_playtest_build.md` + changelog M1.8→M1.9 + itch publish.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **SG1 DONE + PUBLISHED (`m1-20260704-8412732`). ▶ Next: DIRECTOR PLAYTEST (human-gated) → SG2 → SG3.** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Last updated:** 2026-07-03 (SG1: full M1.9 verify matrix ALL GREEN — fp `e943ac9c8bc1` · 91/91 + per-def bijection · both portals · 7-def schema · m13 first-run · save schema UNCHANGED (meta v4/run v1). Changelog "The Sump" block written. Published to itch: `qusto/the-far-yard:html5 @ m1-20260704-8412732`. Docs: `design/M1_9_Tasks/SG1_playtest_build.md` (§5 = the playtest checklist).)
 
-## In progress
-| Task | Since | Agent(s) | Milestone | Note |
-|---|---|---|---|---|
-| SG1 — M1.9 playtest build + verify + changelog + itch publish | 2026-07-03 | qa-playtest-coordinator | M1.9 (W6) | Build-verify doc from the HG1 template; changelog M1.8→M1.9 feature delta; publish `qusto/the-far-yard:html5` via push_itch.sh (BUTLER path). |
+## ▶ DIRECTOR PLAYTEST (human-gated — the felt loop can't be verified headless)
+
+> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build `m1-20260704-8412732`.
+> Checklist (full version: `SG1_playtest_build.md` §5): both portals from the hub · band 1 = control feel
+> (unchanged M1.8) · **The Sump reads as a band apart** (branchy/flooded/vault/sepia tint/denser opposition) ·
+> **The Wrecker**: bait → dodge → punish; throws MISS mid-dash (intended); wall-crash = longer stun ·
+> **Splitter**: throw-kill splits into 2 (children terminal); non-throw kill doesn't · P-menu **Oppositions tab**:
+> tune + respawn (marks the run debug-dirty) · **Export telemetry** (in-game button) when done.
+> Then **SG2** (qa telemetry/balance analysis) → **SG3** verdict (go/iterate/pivot) in `G4_findings_M1.9.md`.
+> Watch-items for SG3: content=data proof cost (host shell, LethalContact seam) · promote charger/splitter to band 1? ·
+> legacy-signal retirement · ceiling numeric merge · CaveBackend/ScatterBackend next? · hub iso prop re-dress.
 
 ## In progress
 | Task | Since | Agent(s) | Milestone | Note |
