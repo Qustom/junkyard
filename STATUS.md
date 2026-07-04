@@ -9,14 +9,16 @@ See `CLAUDE.md` → "The orchestrator loop".
 **Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **SG1 DONE + PUBLISHED (`m1-20260704-8412732`). ▶ Next: DIRECTOR PLAYTEST (human-gated) → SG2 → SG3.** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
 **Last updated:** 2026-07-03 (SG1: full M1.9 verify matrix ALL GREEN — fp `e943ac9c8bc1` · 91/91 + per-def bijection · both portals · 7-def schema · m13 first-run · save schema UNCHANGED (meta v4/run v1). Changelog "The Sump" block written. Published to itch: `qusto/the-far-yard:html5 @ m1-20260704-8412732`. Docs: `design/M1_9_Tasks/SG1_playtest_build.md` (§5 = the playtest checklist).)
 
-## In progress
-| Task | Since | Agent(s) | Milestone | Note |
-|---|---|---|---|---|
-| FBM19 — Director playtest feedback fixes | 2026-07-03 | general-purpose | M1.9 (post-SG1 FB) | Branch `general-purpose/FBM19`. FB1 split reliability (entry-safe/room-cap escapes for shards); FB2 deck depth-spread (even across eligible pieces, J2 precedent); FB3 splitter `aggro_radius` latch param. Republish after merge. |
+> **✓ FBM19 feedback fixes LANDED + REPUBLISHED (2026-07-03/04, build `m1-20260704-72fd565`).** Director's 3 playtest
+> reports fixed on `main`@`5dec90c`: **FB1** split reliability — shards now bypass the BUG7 entry-safe refusal + per-room
+> cap via explicit ctx escapes (`ignore_entry_safety` new on SpawnService; per_band 8 + group 48 ceilings unchanged);
+> **FB2** deck lane is def-major with J2-style even-spread over eligible pieces — charger/splitter now reach the deepest
+> third (test-proven); **FB3** splitter `aggro_radius=160` latch param (0=legacy; child 0; Oppositions-tab tunable, gloss
+> added). Full matrix green; changelog descriptions updated in place. Worklog `…-FBM19-general-purpose.md`. Deviations: none.
 
 ## ▶ DIRECTOR PLAYTEST (human-gated — the felt loop can't be verified headless)
 
-> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build `m1-20260704-8412732`.
+> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260704-72fd565`** (FBM19 re-test build; supersedes `m1-20260704-8412732`). Re-check the 3 fixed items: splitter always splits on throw-kill (even at the band entrance / two in one room) · Wrecker+Splitter present deep into The Sump · splitter lurks until ~on-screen range then latches (tune `aggro_radius` in the Oppositions tab if 160 feels wrong).
 > Checklist (full version: `SG1_playtest_build.md` §5): both portals from the hub · band 1 = control feel
 > (unchanged M1.8) · **The Sump reads as a band apart** (branchy/flooded/vault/sepia tint/denser opposition) ·
 > **The Wrecker**: bait → dodge → punish; throws MISS mid-dash (intended); wall-crash = longer stun ·
