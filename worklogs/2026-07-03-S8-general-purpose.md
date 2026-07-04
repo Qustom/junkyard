@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.9 (Wave 5)
 - **Branch:** general-purpose/S8
-- **Commit:** <SHA-TO-FILL>
+- **Commit:** a357e474a0bdcf33b2eb7a5f9b2c0b20f72295f4
 
 ## What changed
 
