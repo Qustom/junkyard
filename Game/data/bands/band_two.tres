@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="BandProfile" load_steps=21 format=3]
+[gd_resource type="Resource" script_class="BandProfile" load_steps=23 format=3]
 
 [ext_resource type="Script" path="res://data/bands/band_profile.gd" id="1"]
 [ext_resource type="Resource" path="res://data/bandgen_config_band_two.tres" id="2"]
@@ -16,6 +16,7 @@
 [ext_resource type="Resource" path="res://data/oppositions/spike.tres" id="14"]
 [ext_resource type="Resource" path="res://data/oppositions/charger.tres" id="15"]
 [ext_resource type="Resource" path="res://data/oppositions/splitter.tres" id="16"]
+[ext_resource type="Script" path="res://data/bands/deck_entry.gd" id="17"]
 
 [sub_resource type="Resource" id="zpd_vault_room_xl"]
 script = ExtResource("9")
@@ -34,6 +35,14 @@ unique = true
 script = ExtResource("6")
 entries = Array[ExtResource("7")]([SubResource("set_piece_entry_vault")])
 max_total = 1
+
+[sub_resource type="Resource" id="deck_entry_charger"]
+script = ExtResource("17")
+def = ExtResource("15")
+param_overrides = {
+"throwable_while_charging": false,
+"wall_crash_recover_mult": 2.0
+}
 
 [sub_resource type="Resource" id="wear_decay_cfg"]
 script = ExtResource("8")
@@ -58,6 +67,6 @@ principles = Array[Resource]([])
 flavors = Array[Resource]([SubResource("set_piece_inject_cfg"), SubResource("wear_decay_cfg")])
 depth_curve = ExtResource("4")
 junk_catalog = ExtResource("5")
-opposition_deck = Array[Resource]([ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), ExtResource("15"), ExtResource("16")])
+opposition_deck = Array[Resource]([ExtResource("11"), ExtResource("12"), ExtResource("13"), ExtResource("14"), SubResource("deck_entry_charger"), ExtResource("16")])
 band_depth = 2
 palette_tint = Color(0.82, 0.66, 0.42, 1)

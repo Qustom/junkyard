@@ -22,6 +22,11 @@ extends Node
 ##   C6. deck gating: instability(1)=1.0 / instability(2)=1.15; every authored
 ##       deck def passes the min_band gate at band_depth 2
 ##
+## S9 amendment (D-RAT-2 delivery): the charger deck row is a DeckEntry wrapper
+## carrying { throwable_while_charging=false, wall_crash_recover_mult=2.0 };
+## C0/C6 unwrap wrappers via _deck_def() and C0 pins the wrapper's contents.
+## The merge/precedence behavior itself is test_deck_entry's job.
+##
 ## PARALLEL-MERGE NOTE: charger.tres / splitter.tres (S6a/S6b) do NOT exist in
 ## this worktree, so band_two's deck ships 4 shipped defs here; the two band-2
 ## predators are appended + integration-checked at S8/SG1 (deck.size 4 -> 6).
@@ -128,19 +133,47 @@ func _check_profile_contract(profile: BandProfile, failures: Array[String]) -> v
 			if wd.state != &"flooded":
 				failures.append("C0: WearDecay.state is '%s', expected &\"flooded\"" % wd.state)
 
-	# Deck: the 4 shipped defs present (charger/splitter join at S8/SG1).
+	# Deck: the 4 shipped defs present (charger/splitter join at S8/SG1). Rows are
+	# plain OppositionDefs OR S9 DeckEntry wrappers — unwrap before the id checks.
 	if profile.opposition_deck.size() < 4:
 		failures.append("C0: opposition_deck.size() is %d, expected >= 4 shipped defs"
 				% profile.opposition_deck.size())
 	var deck_ids: Array = []
-	for d in profile.opposition_deck:
-		if not (d is OppositionDef):
-			failures.append("C0: a deck entry is not an OppositionDef")
+	for r in profile.opposition_deck:
+		var d := _deck_def(r)
+		if d == null:
+			failures.append("C0: a deck entry is neither an OppositionDef nor a "
+					+ "DeckEntry wrapping one")
 			continue
-		deck_ids.append((d as OppositionDef).id)
+		deck_ids.append(d.id)
 	for want in SHIPPED_DECK_IDS:
 		if not deck_ids.has(want):
 			failures.append("C0: deck missing shipped def id '%s'" % want)
+
+	# S9 (D-RAT-2 delivery): EXACTLY the charger row is a DeckEntry, carrying
+	# EXACTLY the two ratified deck-only overrides; every other row stays a plain
+	# def ref (mixed-array back-compat).
+	var charger_wrapped := 0
+	for r in profile.opposition_deck:
+		if not (r is DeckEntry):
+			continue
+		var entry := r as DeckEntry
+		var d := entry.def as OppositionDef
+		if d == null or d.id != &"charger":
+			failures.append("C0/S9: unexpected DeckEntry wrapper on '%s' (only the charger row is rewrapped)"
+					% (str(d.id) if d != null else "<broken def>"))
+			continue
+		charger_wrapped += 1
+		if entry.param_overrides.get("throwable_while_charging", true) != false:
+			failures.append("C0/S9: charger DeckEntry missing throwable_while_charging=false")
+		if float(entry.param_overrides.get("wall_crash_recover_mult", 0.0)) != 2.0:
+			failures.append("C0/S9: charger DeckEntry wall_crash_recover_mult is %s, expected 2.0"
+					% str(entry.param_overrides.get("wall_crash_recover_mult")))
+		if entry.param_overrides.size() != 2:
+			failures.append("C0/S9: charger DeckEntry carries %d overrides, expected exactly the 2 D-RAT-2 values"
+					% entry.param_overrides.size())
+	if charger_wrapped != 1:
+		failures.append("C0/S9: charger DeckEntry wrapper count is %d, expected 1" % charger_wrapped)
 
 
 # --- C1. Determinism -------------------------------------------------------------
@@ -292,9 +325,10 @@ func _check_deck_gating(profile: BandProfile, failures: Array[String]) -> void:
 		failures.append("C6: instability(1) is %f, expected 1.0" % EncounterBuilder.instability(1))
 	if not is_equal_approx(EncounterBuilder.instability(2), 1.15):
 		failures.append("C6: instability(2) is %f, expected 1.15" % EncounterBuilder.instability(2))
-	# Every authored deck def passes the min_band gate at band_depth 2.
-	for d in profile.opposition_deck:
-		var def := d as OppositionDef
+	# Every authored deck def passes the min_band gate at band_depth 2 (S9: rows
+	# may be DeckEntry wrappers — the gate reads the UNWRAPPED def, so unwrap here).
+	for r in profile.opposition_deck:
+		var def := _deck_def(r)
 		if def == null:
 			continue
 		if not (profile.band_depth >= def.min_band):
@@ -303,6 +337,13 @@ func _check_deck_gating(profile: BandProfile, failures: Array[String]) -> void:
 
 
 # --- Helpers ---------------------------------------------------------------------
+
+## Unwrap one opposition_deck row to its def: a plain OppositionDef passes
+## through; an S9 DeckEntry yields its wrapped def; anything else -> null.
+func _deck_def(r: Resource) -> OppositionDef:
+	if r is DeckEntry:
+		return (r as DeckEntry).def as OppositionDef
+	return r as OppositionDef
 
 ## A band_two-shaped profile with a chosen flavors list (for C4 isolation).
 func _clone_profile(base: BandProfile, flavors: Array[Resource]) -> BandProfile:
