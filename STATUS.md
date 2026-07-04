@@ -9,6 +9,11 @@ See `CLAUDE.md` → "The orchestrator loop".
 **Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **SG1 DONE + PUBLISHED (`m1-20260704-8412732`). ▶ Next: DIRECTOR PLAYTEST (human-gated) → SG2 → SG3.** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
 **Last updated:** 2026-07-03 (SG1: full M1.9 verify matrix ALL GREEN — fp `e943ac9c8bc1` · 91/91 + per-def bijection · both portals · 7-def schema · m13 first-run · save schema UNCHANGED (meta v4/run v1). Changelog "The Sump" block written. Published to itch: `qusto/the-far-yard:html5 @ m1-20260704-8412732`. Docs: `design/M1_9_Tasks/SG1_playtest_build.md` (§5 = the playtest checklist).)
 
+## In progress
+| Task | Since | Agent(s) | Milestone | Note |
+|---|---|---|---|---|
+| FBM19 — Director playtest feedback fixes | 2026-07-03 | general-purpose | M1.9 (post-SG1 FB) | Branch `general-purpose/FBM19`. FB1 split reliability (entry-safe/room-cap escapes for shards); FB2 deck depth-spread (even across eligible pieces, J2 precedent); FB3 splitter `aggro_radius` latch param. Republish after merge. |
+
 ## ▶ DIRECTOR PLAYTEST (human-gated — the felt loop can't be verified headless)
 
 > Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build `m1-20260704-8412732`.
