@@ -140,10 +140,16 @@ stay (dual-emit) through the gate; single-writer-per-file per wave (`main_game.g
 - Goal: second `departure_portal.tscn` instance at (220,-150) (`interactable_id=&"portal_band_two"`, route key `&"band_two"`, ember-orange glow, Sump prompt); rewrite `_resolve_band_profile()` off `consume_pending_dive_band()`; portal 1 (`&"near"`→band_greybox) byte-identical; `band_id` already stamps run rows (verify).
 - Done when: existing portal path byte-identical (fp + `test_hub_contract`); `test_band_routing` green (new portal lands in band_two with its fp); smoke green; no save change; worklog + commit.
 
+### S9 — Deck-entry override wrapper (D-RAT-2 delivery) *(Wave-4 close-out, Director Addressed 2026-07-03)*
+- Milestone: M1.9 (Wave 5, ∥ S8)   Assignee: general-purpose   BlockedBy: S3, S6a, S7
+- Spec: none (close-out-planned task) — contract in this entry + `DESIGN_DEVIATIONS_HISTORY.md` §M1.9 Wave-4 (ORCH entry). Origin: D-RAT-2's Charger "deck `param_override → false`" had no data mechanism (deck = plain def refs per S7 §RD).
+- Goal: a `DeckEntry` Resource (`def: OppositionDef` + `param_overrides: Dictionary`) accepted in `BandProfile.opposition_deck` MIXED with plain defs (back-compat); the EncounterBuilder deck lane merges overrides at ctx time with precedence def params < deck-entry overrides < `rc.param_overrides`; rewrap band_two's charger row with the D-RAT-2 values (`throwable_while_charging=false`, `wall_crash_recover_mult=2.0`); tests (mixed-deck parity: a wrapper with empty overrides ≡ plain ref, byte-identical; precedence; band_two charger receives the D-RAT-2 values).
+- Done when: all-off + greybox fps byte-identical; `test_band_two_profile`/`test_encounter_builder`/`test_charger` green (charger def defaults still D-RAT-2-letter — the test pins them); new `test_deck_entry` green; worklog + commit.
+
 ### Wave 6 — Re-gate  *(standing playtest-gate steps)*
 
 ### SG1 — M1.9 playtest build + verify + changelog + itch publish
-- Milestone: M1.9 (Wave 6)   Assignee: qa-playtest-coordinator   BlockedBy: S0–S8 all Done
+- Milestone: M1.9 (Wave 6)   Assignee: qa-playtest-coordinator   BlockedBy: S0–S9 all Done
 - Spec: breakdown §SG1; template `design/M1_8_Tasks/HG1_playtest_build.md`
 - Goal: full M1.9 verify matrix (fp `e943ac9c8bc1` · 91-knob model · bandgen determinism · preset parity · both portals · suite); `changelog.txt` M1.8→M1.9 feature delta; publish to itch (`BUTLER=/mnt/c/wsl-libraries/butler/butler bash Game/tools/push_itch.sh`, human/network-gated).
 - Done when: verify matrix green; changelog committed; build live on `qusto/the-far-yard:html5`.
@@ -208,6 +214,10 @@ From the M1 wave-5 close-out (`DESIGN_DEVIATIONS_HISTORY.md` §"M1 wave 5"). Nei
 ### H3 — Street-exit threshold prop (PixelLab) — **DEFERRED (Director-gated, paid credits)** *(carried from M1.8, closed 2026-07-02)*
 - Milestone: M1.8 (follow-up)   Assignee: environment-artist   BlockedBy: Director OK
 - The one missing Layout-A spec prop (`SS`); not loop-critical (no functional street exit yet). Generate only on explicit Director go. Watch-item context: `design/M1_8_Tasks/G4_findings_M1.8.md`.
+
+### FU5 — Shared Actor-host shell (zero per-def host files) *(post-gate; Wave-4 close-out, Director Addressed 2026-07-03)*
+- Milestone: backlog (post-M1.9-gate)   Assignee: general-purpose   BlockedBy: M1.9 SG3 verdict
+- Origin: S6a dev 1 (`charger_hazard.gd` host shell was needed beyond "def + one component"). Director directed a shared host scene/script so a new def needs ZERO new host files — the per-entity shell (family guard, run clock, component acquire/tick order, emit sites, seams) becomes one generic parameterized host. Constraint: the def-schema host contract (bare instance reports `get_def_id()==def.id`) must survive, and golden frame-trace parity for all shipped hazards must hold.
 
 ### BUG-M13FLAKE — `test_rg1_m13_verify` intermittently misses telemetry rows headless
 - Milestone: backlog (QA)   Assignee: qa-playtest-coordinator   BlockedBy: none

@@ -568,3 +568,14 @@ gains optional `trap_if_neutral: bool` (§8.1 Q6, adjudicated); (c) S3 amends th
 docstring contract when adding the `param_overrides` nested-dict row (§8.0.4/Q5); (d) S4's own §5
 Do-NOT-touch list is amended per §8.0.1 — S4 makes exactly the two-lever `@export_storage` → `@export`
 flip in `run_config.gd` as Wave 4's sole writer of that file.*
+
+---
+
+## Wave-4 close-out amendments (as-built, Director-dispositioned 2026-07-03)
+
+All five S4 deviations **Reviewed**: count-agnostic def-matrix testing (0-defs fixture; 6-def case
+proven on integrated main); raw `<id>:<key>` trap tokens (debug surface — no per-def CSV key-space);
+the neutral-card trap resolved YES (`<id>:neutral_card` warn + `inert_enabled_defs` stamp); literal
+▸/▾ fold glyphs; tier-v1 respawn ctx = `{params, depth, run_t_ms}` only (post-gate live-edit tiers
+would moot the legacy-ctx gap). Post-close-out: charger/splitter gloss rows now exist in
+`config_strings.csv`, so those generated sections render real glosses.

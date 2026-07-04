@@ -6,8 +6,14 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Wave 4 BUILT + INTEGRATED (all 4 tasks merged; deck 4→6 completed; integrated matrix green, m13 pass-on-retry per BUG-M13FLAKE). ▶ Next: Wave-4 close-out — 18 deviations (S7×2 + S6b×6 + S6a×4 + S4×5 + ORCH×1 incl. the D-RAT-2 deck-override gap) await Director disposition; Wave 5 (S8) only after the sweep.** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
-**Last updated:** 2026-07-03 (Wave 4 integrated: menu proven at 6 defs (91/91 + per-def bijection), Charger + Splitter live behind min_band=2, band_two deck complete `[pursuer,pingpong,bomb,spike,charger,splitter]`, all fps byte-identical. ORCH deviation logged: D-RAT-2's charger deck-override has no data mechanism — recommended delivery via SG1 playtest preset `param_overrides`.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Waves 1–4 DONE + swept (Wave-4: 18 deviations, 13 Reviewed + 5 Addressed); Wave 5 (S8 ∥ S9) IN PROGRESS (dispatched).** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Last updated:** 2026-07-03 (Wave-4 close-out executed: 23 gloss rows landed in `config_strings.csv`; `trap_if_neutral` on splitter `catch_radius`; **S9 deck-entry override wrapper planned** (TASKS + board — the Director's D-RAT-2 delivery); **FU5 shared Actor-host shell** filed post-gate; specs amended; archived. Wave 5 dispatched: S8 second hub portal + routing ∥ S9 DeckEntry wrapper.)
+
+## In progress
+| Task | Since | Agent(s) | Milestone | Note |
+|---|---|---|---|---|
+| S8 — Second hub portal + band routing + telemetry band-stamp | 2026-07-03 | general-purpose | M1.9 (W5) | Branch `general-purpose/S8`. Portal 2 → `&"band_two"` (ember-orange, Sump prompt, D-RAT-1); `_resolve_band_profile()` off `consume_pending_dive_band()`; portal 1 byte-identical; `band_id` stamped. |
+| S9 — DeckEntry override wrapper (D-RAT-2 delivery) | 2026-07-03 | general-purpose | M1.9 (W5) | Branch `general-purpose/S9`. `DeckEntry` Resource mixed into `opposition_deck`; precedence def < deck-entry < rc; band_two charger rewrapped (`throwable_while_charging=false`, crash-mult 2.0). |
 
 ## In progress
 | Task | Since | Agent(s) | Milestone | Note |

@@ -837,3 +837,22 @@ body, it wins. Fun/tone calls (Q1–Q6) are surfaced to the Director; the four o
 sweep.*
 </content>
 </invoke>
+
+---
+
+## Wave-4 close-out amendments (as-built, Director-dispositioned 2026-07-03)
+
+- **Two host scenes** (Director: **Reviewed**) — the def-schema bare-instance contract forces
+  per-def scenes; `splitter_child.tscn` is a 3-line variant (one script, scene-authored identity).
+- **Spawn-card params on both defs** (Director: **Reviewed**) — parent 1/0.0, child 0/0.0 neutral;
+  required by the S3 deck lane.
+- **`trap_if_neutral` on `catch_radius`** (Director: **Addressed → flagged at close-out**) — the
+  parent def's `catch_radius` now carries the trap flag (the least-wrong candidate); the other
+  zeros remain designed sweep variants.
+- **`ctx["kills"]` override tier on the def-field L5 gate** (Director: **Reviewed**) — matches the
+  S6a standing convention.
+- **No floor-cell snapping for split children** (Director: **Reviewed**) — ring offsets +
+  service validation; refused shards drop; walled shards acceptable at greybox. Conditional
+  follow-up only if SG2 shows it reading badly (SpawnService floor-cell query, S0-owned).
+- **Gloss CSV rows** (Director: **Addressed → done at close-out**) — the 10 `CFG_GLOSS_SPLITTER_*`
+  rows landed in `config_strings.csv` at Wave-4 integration.

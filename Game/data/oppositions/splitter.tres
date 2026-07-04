@@ -54,6 +54,7 @@ param_schema = Array[Dictionary]([{
 "key": "catch_radius",
 "max": 64.0,
 "min": 0.0,
+"trap_if_neutral": true,
 "type": "float"
 }, {
 "default": 2,

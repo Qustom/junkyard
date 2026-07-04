@@ -509,3 +509,30 @@ not an M1.9 regression).
 
 **M1.9 Wave-3 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 4
 (S4 ∥ S6a ∥ S6b ∥ S7, file-disjoint parallel worktrees).**
+
+---
+
+## M1.9 Wave-4 close-out (2026-07-03) — 18 entries (S7×2 + S6a×4 + S6b×6 + S4×5 + ORCH×1): 13 Reviewed + 5 Addressed
+
+**Addressed (5):**
+- **ORCH — D-RAT-2 charger deck-override had no data mechanism** → **Addressed: S9 deck-entry
+  override wrapper** (M1.9 Wave 5, ∥ S8; TASKS §S9 + board). Band_two's charger row gets
+  `throwable_while_charging=false` + `wall_crash_recover_mult=2.0` via `DeckEntry`.
+- **S6a D1 — per-entity host shell** → **Addressed: FU5 shared Actor-host shell** (post-SG3
+  backlog + board). Shell stands for M1.9 as the honest measured cost.
+- **S6a D4 + S6b D6 — gloss CSV rows deferred** → **Addressed at close-out:** 23 rows
+  (13 charger + 10 splitter) appended to `config_strings.csv`; menu/schema/def tests re-verified.
+- **S6b D3 — no trap flag** → **Addressed at close-out:** `trap_if_neutral` added on the parent
+  splitter's `catch_radius`; schema tests green.
+
+**Reviewed (13):** S7 deck-ships-4 (completed 4→6 at integration, min_band=2 confirmed) · S7
+tint-only audit · S6a kills-in-params (STANDING CONVENTION for deck-driven defs; breakdown
+contracts updated) · S6a spawn-card authoring shape · S6b two host scenes (contract-forced) ·
+S6b spawn cards · S6b ctx-kills tier · S6b no floor-snapping (SG2-conditional follow-up noted) ·
+S4 count-agnostic matrix · S4 raw trap tokens · S4 neutral-card trap YES · S4 fold glyphs ·
+S4 tier-v1 respawn ctx.
+
+**Reapply:** Wave-4 close-out amendment sections in S6a/S6b/S4/S7 specs; breakdown §Cross-cutting
+contracts (deck-driven def conventions + S9); TASKS §S9 + §FU5; SG1 blockedBy now S0–S9.
+
+**M1.9 Wave-4 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 5 (S8 ∥ S9).**

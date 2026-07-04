@@ -414,3 +414,23 @@ The v1 sketch flags this as "fun emergent synergy but a scope-creep risk." Today
 - **`ChargeLane` rides S2's base component contract** (`S2_components_param_schema.md §3.1`): a host-mounted child `Node` with **no `_physics_process` of its own** — the Actor host ticks it in fixed order (`_move.tick(delta)` shape). The §2.2 pseudocode's `_physics_process(delta)` on `ChargeLane` must be **re-cast as `tick(delta)` called by the host**, and `setup(...)` re-cast as the base contract's `bind(host, player, params, ctx)` snapshot (`_configure`). Semantics unchanged; this is the S2 alignment (adjudication #2).
 - **Telemetry vocabulary = S0's locked generic set only** (adjudication #3): `opposition_event(&"charger", {&"spawned"(service) | &"telegraph" | &"state" | &"hit_player" | &"killed_by_throw"}, …)` + the gated `opposition_killed_player(&"charger", …)`. Emission lives in the reused components (**S2 emits, S4 subscribes**), not in bespoke `ChargeLane` calls to `EventBus` — the §2.2 direct `EventBus.opposition_event.emit` lines should route through the reused Telegraph/Lethality/host emit sites. See Corrections 1 & 2.
 - **`thrown_item.gd` untouched by S6a** (adjudication #4): verified — the group-toggle needs no edit; the def-id-stable throw-kill row comes from the reused S2 ThrowInteraction (Correction 3).
+
+---
+
+## Wave-4 close-out amendments (as-built, Director-dispositioned 2026-07-03)
+
+- **Host shell** (Director: **Addressed → post-gate task FU5**) — `charger_hazard.gd` ships as the
+  honest per-entity Actor-host cost (ChargeLane = the only new behavior script; zero shared edits).
+  FU5 (backlog, post-SG3) funds a shared parameterized host so future defs need zero host files.
+- **`kills` lives in params + schema** (Director: **Reviewed**) — STANDING CONVENTION for
+  deck-driven defs: the L5 gate is a params row (sweepable, menu-surfaced), typed field kept in
+  agreement.
+- **Spawn card `base_count=1`/`count_per_depth=0.0` on the def** (Director: **Reviewed**) — the
+  deck-lane authoring shape; the authored value IS the live default (def loads only when
+  deck/lever-listed; all-off unaffected). §2.1 sketch superseded.
+- **Gloss CSV rows** (Director: **Addressed → done at close-out**) — the 13 `CFG_FIELD_CHARGER_*`
+  rows landed in `config_strings.csv` at Wave-4 integration.
+- **D-RAT-2 deck override** (Director: **Addressed → S9**) — delivered via the `DeckEntry` wrapper
+  (M1.9 Wave 5): band_two's deck wraps charger with `throwable_while_charging=false`,
+  `wall_crash_recover_mult=2.0`; def defaults stay D-RAT-2-letter (`true`/`1.0`), pinned by
+  `test_charger`.

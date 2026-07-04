@@ -382,3 +382,16 @@ Sharpened to one-line decisions with a recommendation. None gate the build's *me
 *Spec authored by game-director-designer for M1.9 S7. Design + data-spec only — no game code; the `.tres` values here are authored during S7's build. The programmer adds the one tileset-assign glue line; the environment-artist ships the retone/tint placeholder. Deviations from this spec go to `DESIGN_DEVIATIONS.md` for the Wave-4 close-out sweep. Open questions OQ2/OQ3/OQ5/OQ6 (and the OQ1 art-budget sliver) need the Director; OQ1-schema/OQ4/OQ7 are fresh-eyes-resolvable on technical merit.*
 </content>
 </invoke>
+
+---
+
+## Wave-4 close-out amendments (as-built, Director-dispositioned 2026-07-03)
+
+- **Deck completed 4 → 6 at integration** (Director: **Reviewed**) — orchestrator added
+  charger/splitter ExtResources post-S6a/S6b-merge, order `[pursuer, pingpong, bomb, spike,
+  charger, splitter]`; `min_band=2` confirmed on charger/splitter/splitter_child; contract test
+  green with the full deck.
+- **Tint-only identity** (Director: **Reviewed**) — audit entry archived; D-RAT-4 stands.
+- **Charger D-RAT-2 deck values** (Director: **Addressed → S9**) — the Wave-5 `DeckEntry` wrapper
+  rewraps band_two's charger row with `throwable_while_charging=false` + `wall_crash_recover_mult=2.0`
+  (precedence: def params < deck-entry < rc.param_overrides).

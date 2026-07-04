@@ -158,3 +158,26 @@ CFG_GLOSS_DEF_PURSUER,def twin of the R1 pursuer (the legacy r1_ knobs still dri
 CFG_GLOSS_DEF_PINGPONG,def twin of the K5a ping-pong bouncer (legacy hpp_ knobs drive the legacy lane)
 CFG_GLOSS_DEF_BOMB,def twin of the K5b proximity bomb (legacy hbomb_ knobs drive the legacy lane)
 CFG_GLOSS_DEF_SPIKE,def twin of the K5c rotating spikes (legacy hspike_ knobs drive the legacy lane)
+CFG_FIELD_CHARGER_AGGRO_RANGE,Aggro range (px) — distance at which the Wrecker locks a charge lane
+CFG_FIELD_CHARGER_BASE_COUNT,Spawn card — base Wreckers per eligible room (deck lane)
+CFG_FIELD_CHARGER_CHARGE_MAX_DIST,Max charge distance (px) before it gives up and recovers
+CFG_FIELD_CHARGER_CHARGE_SPEED,Dash speed (px/s) during the charge
+CFG_FIELD_CHARGER_COOLDOWN_S,Cooldown (s) between charges
+CFG_FIELD_CHARGER_COUNT_PER_DEPTH,Spawn card — extra Wreckers per depth unit
+CFG_FIELD_CHARGER_KILLS,Lethal contact kills (off = harmless bump for sweeps)
+CFG_FIELD_CHARGER_LANE_WIDTH,Charge lane width (px) — the swept lethal corridor
+CFG_FIELD_CHARGER_LOCK_AT_TELEGRAPH_START,Lock lane at telegraph start (off = tracks the player until launch)
+CFG_FIELD_CHARGER_RECOVER_S,Recovery (s) after a charge — the punish window
+CFG_FIELD_CHARGER_TELEGRAPH_S,Telegraph (s) before the dash launches
+CFG_FIELD_CHARGER_THROWABLE_WHILE_CHARGING,Throw-killable mid-dash (off = invulnerable while charging)
+CFG_FIELD_CHARGER_WALL_CRASH_RECOVER_MULT,Wall-crash recovery multiplier — bonus stun on a missed charge
+CFG_GLOSS_SPLITTER_BASE_COUNT,Spawn card — base Splitters per eligible room (deck lane)
+CFG_GLOSS_SPLITTER_CATCH,Catch radius (px) — 0 = pure obstacle
+CFG_GLOSS_SPLITTER_CHILDREN,Children spawned on throw-death
+CFG_GLOSS_SPLITTER_CHILDSPEED,Child move speed (px/s)
+CFG_GLOSS_SPLITTER_COUNT_PER_DEPTH,Spawn card — extra Splitters per depth unit
+CFG_GLOSS_SPLITTER_DESPAWN,Child despawn timer (s) — 0 = never
+CFG_GLOSS_SPLITTER_GENERATIONS,Split generations — 0 = children never re-split
+CFG_GLOSS_SPLITTER_SPEED,Parent move speed (px/s) — 0 = stationary tell
+CFG_GLOSS_SPLITTER_SPLITON,Split trigger — throw-death only per D-RAT-2
+CFG_GLOSS_SPLITTER_SPREAD,Child ring spread (px) from the death cell
