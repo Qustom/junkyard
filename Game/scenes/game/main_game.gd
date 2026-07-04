@@ -35,8 +35,21 @@ const GATE_SCENE_PATH := "res://entities/gate/extract_gate.tscn"
 ## exercised and the loop stays at the M1.0 baseline.
 const RUN_CONFIG_PATH := "res://data/run_config/run_config.tres"
 
-## The band id GameState tags the run with. M1 has a single greybox band.
+## The DEFAULT route key — the band id GameState tags the control run with.
+## &"near" is the legacy M1.6 key portal 1 has always emitted; telemetry cohort
+## continuity (every M1.6–M1.8 run_started row says "near") depends on it.
 const BAND_ID := &"near"
+
+## S8 (M1.9): the dive routing table. Route KEY (what the hub portals emit via
+## dive_requested, and what start_run/enter_band tag the run + telemetry with)
+## → BandProfile id under BAND_PROFILE_DIR. Keys are DECOUPLED from profile file
+## names so portal 1 keeps its historical &"near" (scene byte-identical, telemetry
+## vocabulary continuous — S8 §RD Q2). Unknown/empty keys fall back to BAND_ID.
+const BAND_PROFILE_DIR := "res://data/bands/"
+const BAND_ROUTES: Dictionary = {
+	&"near": &"band_greybox",
+	&"band_two": &"band_two",
+}
 
 ## Spawn-piece fallback cell size if a piece doesn't report one (B1 authored 16).
 const DEFAULT_CELL_SIZE_PX := 16
@@ -81,6 +94,13 @@ var _depth_curve: DepthCurve
 ## profile the band was generated from (bare-instance test harnesses, which never run
 ## start_new_run, fall back to _resolve_band_profile()).
 var _band_profile: BandProfile = null
+
+## S8 (M1.9): the resolved ROUTE key for this dive (run-state; set by
+## _resolve_band_profile alongside _band_profile, re-resolved every start_new_run).
+## start_run/enter_band tag the run with it, so telemetry's run_started band_id IS
+## the route key (&"near" control / &"band_two" — never the profile id). Defaults
+## to the control key for harness paths that never resolve.
+var _band_route_key: StringName = BAND_ID
 
 # Per-run scene plumbing.
 # K7 (M1.4): one OR MORE extract gates per band (was the single var _gate). The all-off
@@ -297,8 +317,12 @@ func start_new_run() -> void:
 	# this run and generation + run agree. start_run resets run-state; if run_cfg were
 	# null start_run falls back to its own all-off default, so behaviour is identical.
 	GameState.stage_run_config(run_cfg)
-	GameState.start_run(BAND_ID, seed)
-	GameState.enter_band(BAND_ID)
+	# S8 (M1.9): tag the run with the resolved ROUTE key (set by _resolve_band_profile
+	# in step 1). Unstaged/control dives resolve to BAND_ID (&"near") — byte-for-byte
+	# the historical call — so the telemetry cohort label never forks; portal-2 dives
+	# tag &"band_two". run_started then stamps this key on the JSONL row (telemetry.gd).
+	GameState.start_run(_band_route_key, seed)
+	GameState.enter_band(_band_route_key)
 	# BUG2: resolve once immediately so frame-0 within-band depth is correct (the
 	# player is at the entry → depth 0) before the throttled driver takes over.
 	_depth_tick_accum = 0.0
@@ -384,18 +408,30 @@ func _ensure_spawn_service() -> SpawnService:
 	return _spawn_service
 
 
-## M1.9 (S3): resolve the dive's BandProfile off the routing seam (§7.2 Q2). The route
-## key comes from GameState's staging slot (dive_requested(band_id) → self-subscribed
-## stage → consume-on-read, S0's inert seam now consumed): S3 routes EVERY key —
-## &"near", &"" (nothing staged) and any unknown — to the greybox control profile.
-## S8 (Wave 5) rewires ONLY this function body with the real key→profile map
-## (&"near" → band_greybox, &"band_two" → band_two; unknown/empty falls back to the
-## greybox control). ONE named function so S8's edit is a one-liner against a
-## pre-agreed seam. BAND_ID (&"near") stays the run row's telemetry tag (Q2b — S8 owns
-## the band_id stamping story).
+## M1.9 (S3 seam, S8 rewired): resolve the dive's BandProfile off the routing seam.
+## The route key comes from GameState's staging slot (dive_requested(band_id) →
+## GameState self-subscribes and stages → consume-on-read here, so a stale choice can
+## never leak into a later run). BAND_ROUTES maps key → profile id (&"near" →
+## band_greybox, &"band_two" → band_two); &"" (nothing staged — tests, direct
+## start_new_run callers) and any unknown key fall back to the greybox control,
+## byte-identical to the pre-S8 path. The resolved KEY is kept on _band_route_key for
+## the start_run/enter_band tags (telemetry run_started band_id == the route key).
+## CONSUME-ON-READ: call this at most once per run start — a second call inside one
+## start falls back to the default (the seam is already consumed). A missing profile
+## file fail-safes to the control band (never a null return while band_greybox exists).
 func _resolve_band_profile() -> BandProfile:
-	var _route_key: StringName = GameState.consume_pending_dive_band()
-	return load(DEFAULT_BAND_PROFILE_PATH) as BandProfile
+	var key: StringName = GameState.consume_pending_dive_band()
+	if key == &"" or not BAND_ROUTES.has(key):
+		key = BAND_ID
+	var profile_id: StringName = BAND_ROUTES[key]
+	var profile := load(BAND_PROFILE_DIR + String(profile_id) + ".tres") as BandProfile
+	if profile == null:
+		push_error("MainGame: band profile '%s' missing under %s; falling back to the control band."
+				% [profile_id, BAND_PROFILE_DIR])
+		key = BAND_ID
+		profile = load(DEFAULT_BAND_PROFILE_PATH) as BandProfile
+	_band_route_key = key
+	return profile
 
 
 ## K5i (M1.4) — M1.9 (S3): THE THIN FAÇADE. Kept-signature (the golden harness

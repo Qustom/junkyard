@@ -54,6 +54,15 @@ position = Vector2(0, 120)
 [node name="DeparturePortal" parent="." instance=ExtResource("3")]
 position = Vector2(0, -150)
 
+[node name="DeparturePortalBandTwo" parent="." instance=ExtResource("3")]
+position = Vector2(220, -150)
+interactable_id = &"portal_band_two"
+band_id = &"band_two"
+prompt_text = "Dive — The Sump"
+display_name = "The Sump Portal"
+glow_tint = Color(1, 0.58, 0.24, 1)
+gate_tint = Color(1, 0.78, 0.62, 1)
+
 [node name="ShopAnchor" type="Marker2D" parent="."]
 position = Vector2(-220, -150)
 
