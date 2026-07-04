@@ -227,18 +227,36 @@ per-dive, not persisted).
 
 ### 6.1 Publish record
 
-- **Build id (itch userversion):** `m1-20260703-<sha>` (see §7 — the SG1 build commit).
-- **Build stamp (in-game `BuildVersion.short_sha`):** the SG1 build commit short SHA (stamped by
-  `tools/stamp_build.sh` at publish time; `build_info_gen.gd` is gitignored).
-- **Butler push confirmation:** see §7 — the `butler push` result line + `pushed qusto/the-far-yard:html5`.
+- **Build id (itch userversion):** `m1-20260704-8412732` (see §7 — the SG1 build commit `8412732`).
+- **Build stamp (in-game `BuildVersion.short_sha`):** `8412732` (stamped by `tools/stamp_build.sh` at
+  publish time; `build_info_gen.gd` is gitignored).
+- **Butler push confirmation:** `pushed qusto/the-far-yard:html5 @ m1-20260704-8412732` (re-used 97.95%,
+  build now processing — full log in §7).
 - **Live page:** `https://qusto.itch.io/the-far-yard` (Chrome/Edge only — SharedArrayBuffer/COEP;
   password-gated). Web telemetry returns via the in-game "Export telemetry" button.
 
 ---
 
-## 7. Publish log (filled after the network step)
+## 7. Publish log
 
-_Recorded post-publish (see the SG1 worklog for the running record)._
+- **SG1 build commit:** `84127328c638c5d10276efd22a82d431ed8acc8b` (short `8412732`) — the verified,
+  clean-tree commit the build was stamped + exported from.
+- **Build id (itch userversion):** `m1-20260704-8412732` (date is UTC; SHA matches the SG1 commit,
+  clean — no `+dirty`).
+- **In-game build stamp:** `BuildVersion.short_sha == "8412732"` (stamped by `tools/stamp_build.sh` into
+  the gitignored `build_info_gen.gd`).
+- **Publish command:** `BUTLER=/mnt/c/wsl-libraries/butler/butler bash Game/tools/push_itch.sh` (from repo
+  root). The godot web-export exit-crash after "DONE savepack" did NOT occur this run (clean export);
+  artifact-existence gate passed (`index.html` + `index.wasm` + `index.pck`).
+- **Butler push confirmation:**
+  - `• For channel 'html5': last build is 1765927, downloading its signature`
+  - `• Pushing 37.84 MiB (12 files, 0 dirs, 0 symlinks)`
+  - `✓ Re-used 97.95% of old, added 794.03 KiB fresh data`
+  - `✓ 490.62 KiB patch (98.73% savings)`
+  - `• Build is now processing, should be up in a bit.`
+  - `pushed qusto/the-far-yard:html5 @ m1-20260704-8412732`
+- **Live page:** `https://qusto.itch.io/the-far-yard` (Chrome/Edge only — SharedArrayBuffer/COEP;
+  password-gated). Web telemetry returns via the in-game "Export telemetry" button (P → Meta tab).
 
 ---
 

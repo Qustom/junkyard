@@ -4,7 +4,8 @@
 - **Subagent:** qa-playtest-coordinator
 - **Milestone:** M1.9 (Wave 6 — re-gate build step)
 - **Branch:** main (direct — bookkeeping + publish, no feature code; repo clean, S0–S9 fully merged)
-- **Commit:** <SHA-1 (docs+changelog)> ; <SHA-2 (publish record)>   ← filled below
+- **Commit:** `84127328c638c5d10276efd22a82d431ed8acc8b` (docs+changelog+matrix). A follow-up commit
+  records the itch publish id/log (the "SG1 M1.9: record itch publish …" commit — this file's final state).
 
 ## What changed
 Verified the integrated M1.9 build against the full SG1 verify matrix (all objective rows green),
@@ -43,8 +44,12 @@ publish capstone.
   touched Jun-27 (1a17442), before M1.9; no new migration step or fixture.
 
 ## Publish record
-- **Build id (itch userversion):** <filled after publish>
-- **Butler push:** <filled after publish>
+- **SG1 build commit:** `84127328c638c5d10276efd22a82d431ed8acc8b` (short `8412732`, clean tree).
+- **Build id (itch userversion):** `m1-20260704-8412732` (date UTC; SHA matches the SG1 commit, no +dirty).
+- **In-game stamp:** `BuildVersion.short_sha == "8412732"`.
+- **Butler push:** `pushed qusto/the-far-yard:html5 @ m1-20260704-8412732` (re-used 97.95% of build
+  1765927, added 794 KiB fresh; build now processing). Clean export — the known godot exit-crash did not
+  trip; artifact gate (index.html/.wasm/.pck) passed.
 - Live: https://qusto.itch.io/the-far-yard (Chrome/Edge, password-gated).
 
 ## Checks run
