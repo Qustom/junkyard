@@ -31,11 +31,14 @@ TWO NEW HAZARDS — Sump-only (new)
   punish it in the recovery window. In The Sump it is dash-INVULNERABLE — a thrown item
   MISSES it while it's dashing (that's intended), so you can't just facetank it; you kill
   it in the recovery window instead. Crashing it into a wall stuns it longer.
-* NEW — The Splitter. A slow pursuer that, when you kill it WITH A THROW, splits into 2
-  smaller children. The children don't split again. (Kill it any other way and it just
-  dies.) It makes throwing at it a choice, not a reflex.
+* NEW — The Splitter. A lurker: it sits where it spawned until you come close (roughly
+  on-screen range), then locks on and follows you for good. Kill it WITH A THROW and it
+  reliably splits into 2 smaller children right where it died — anywhere, even at the band
+  entrance. The children chase immediately and don't split again. (Kill it any other way
+  and it just dies.) It makes throwing at it a choice, not a reflex.
 * Both new hazards are exclusive to The Sump in this build — band 1 stays exactly as it was,
-  so you can feel the difference cleanly.
+  so you can feel the difference cleanly. They're seeded across the WHOLE band, shallow to
+  deep, so the pressure doesn't fade as you push further in.
 
 
 DEBUG / CONFIG MENU — a generated Oppositions tab (new)
