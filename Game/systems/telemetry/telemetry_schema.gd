@@ -64,6 +64,19 @@ const NEW_HAZARD_KILLED: String = "new_hazard_killed"        # K5a/b/c: fatal hi
 # HAZARD_CAUGHT). ADDITIVE event-type string — SCHEMA_VERSION STAYS 1.
 const DEBUG_KILL: String = "debug_kill"                      # debug_kill action → player_died
 
+# --- M1.9 (S4) generic opposition rows + sweep hygiene ------------------------
+# The S0-declared generic signals (opposition_event / opposition_killed_player) get
+# Telemetry subscribers in S4 so SG2 can count spawns/hits/deaths BY DEF ID without a
+# per-type row per new hazard. Entities DUAL-EMIT the legacy per-type signals alongside
+# these until post-gate retirement — analysis must count from ONE family (SG2 reads the
+# generic one). ADDITIVE event-type strings — SCHEMA_VERSION STAYS 1.
+const OPPOSITION_EVENT: String = "opposition_event"          # any opposition lifecycle moment, by id
+const OPPOSITION_KILLED_PLAYER: String = "opposition_killed_player"  # a def ACTUALLY ended the run
+# A debug-menu LIVE tweak (respawn-with-new-params) perturbed the active run mid-flight:
+# the moment is auditable here, and the run's run_ended row stamps debug_dirty: true so
+# SG2 filters the whole run from the gate cohort (S4 §3.6). ADDITIVE — SCHEMA STAYS 1.
+const DEBUG_DIRTIED: String = "debug_dirtied"                # debug_run_dirtied → run is experiment-dirty
+
 ## Every event-type string, for tests/validators that want to assert a row's
 ## `type` is known.
 const ALL_TYPES: Array[String] = [
@@ -89,6 +102,10 @@ const ALL_TYPES: Array[String] = [
 	NEW_HAZARD_KILLED,
 	# Debug/dev rows
 	DEBUG_KILL,
+	# M1.9 (S4) generic opposition rows + sweep hygiene
+	OPPOSITION_EVENT,
+	OPPOSITION_KILLED_PLAYER,
+	DEBUG_DIRTIED,
 ]
 
 ## The envelope keys every row carries (used by tests to assert structure).

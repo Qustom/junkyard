@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c4s4defmenucov"]
+
+[ext_resource type="Script" path="res://tests/test_def_menu_coverage.gd" id="1"]
+
+[node name="TestDefMenuCoverage" type="Node"]
+script = ExtResource("1")

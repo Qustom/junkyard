@@ -146,3 +146,15 @@ CFG_PLAYER_LOCK_MODE_CLIP,Clip-driven
 CFG_PLAYER_LOCK_MODE_FIXED,Fixed
 CFG_PLAYER_PICKUP_LOCK_S,Pickup lock (s)
 CFG_PLAYER_THROW_LOCK_S,Throw lock (s)
+CFG_TAB_OPPOSITIONS,Oppositions
+CFG_DEFS_STAGING_NOTE,"Sections stage config-enabled defs for the NEXT run, ADDED on top of the band's own deck. Empty = the config adds nothing (band decks still apply; on the default band-1 portal nothing loads — the all-off baseline)."
+CFG_DEFS_EMPTY,(no opposition defs found in data/oppositions)
+CFG_DEF_CHIP_ON,ENABLED · {n} overrides
+CFG_DEF_RESPAWN,Respawn live instances (marks run dirty)
+CFG_DEF_RESPAWN_TIP,"In-dive only, and only with live instances of this def"
+CFG_DEF_CLEAR_OVERRIDES,Clear overrides
+CFG_DEF_OVERRIDE_TIP,override staged; Reset clears
+CFG_GLOSS_DEF_PURSUER,def twin of the R1 pursuer (the legacy r1_ knobs still drive the legacy lane in M1.9)
+CFG_GLOSS_DEF_PINGPONG,def twin of the K5a ping-pong bouncer (legacy hpp_ knobs drive the legacy lane)
+CFG_GLOSS_DEF_BOMB,def twin of the K5b proximity bomb (legacy hbomb_ knobs drive the legacy lane)
+CFG_GLOSS_DEF_SPIKE,def twin of the K5c rotating spikes (legacy hspike_ knobs drive the legacy lane)

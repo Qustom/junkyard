@@ -3,9 +3,12 @@ extends Control
 ## ConfigMenu (CFG, M1.1) — the greybox pre-run config panel beside the Start Run
 ## menu. It owns ONE working RunConfig it mutates as the Director edits the knobs,
 ## and exposes that working config via apply_and_get_config() so MainGame can stage
-## it inside start_new_run() (ratified shape (a), §3.5 — the menu does NOT call
-## start_new_run or touch GameState/EventBus itself; it only reads + writes the R0
-## RunConfig schema and hands the result to the existing run-entry seam).
+## it inside start_new_run() (ratified shape (a), §3.5 — the STAGING path does NOT
+## call start_new_run or touch GameState/EventBus itself; it only reads + writes the
+## RunConfig schema and hands the result to the existing run-entry seam. The ONE
+## exception since M1.9/S4 is the deliberate, guarded live-edit respawn action,
+## which emits EventBus.debug_run_dirtied so Telemetry marks the run — see
+## _on_respawn_pressed).
 ##
 ## Design intent (CFG spec §1): the menu surfaces 100% of RunConfig's @export fields
 ## and nothing else, so each run is a labelled experiment the Director can sweep fast.
@@ -184,6 +187,23 @@ const R4_VISION_FIELDS := [
 ## and the determinism fingerprint cannot move. These are DEBUG view controls, not knobs.
 const PLAYER_DEBUG_KEY := "player_debug_"
 
+## M1.9 (S4) — the pseudo-section key for the GENERATED Oppositions tab (the
+## PLAYER_DEBUG_KEY mounting pattern: never a SECTIONS prefix, never in _prefix_of's
+## scan list, routed to its own builder in _build_section_into). UNLIKE the Player
+## tab, the generated widgets here ARE config editors: they stage the two S3 generic
+## levers (oppositions_enabled / param_overrides), which ARE @export RunConfig fields
+## after S4's promotion — so the surface is VISIBLE to coverage (the two sentinel
+## _rows bindings, §3.4 Layer 1) and each def's rows are asserted by the per-def
+## bijection net (has_full_def_coverage), never hidden from it.
+const OPPOSITION_DEFS_KEY := "opposition_defs_"
+
+## The canonical S0 def folder (adjudicated: res://data/oppositions). The menu
+## display-loads EVERY authored def (enablement is staged, §3.2) — loading a .tres
+## for display touches no generation state; the all-off fingerprint is a
+## generation-path property (EncounterBuilder/SpawnService load nothing when the
+## lever is empty), so fp e943ac9c8bc1 is structurally safe.
+const DEFS_DIR := "res://data/oppositions"
+
 ## M4 (M1.6) — tab taxonomy (RD-2, LOCKED). Each tab is a CSV title-key + an ordered
 ## list of SECTION KEYS to render inside its scroll. A section key is a SECTIONS prefix
 ## EXCEPT R4_VISION_KEY ("r4_vision_") which is the split-out, master-less Vision
@@ -196,6 +216,15 @@ const TABS := [
 	{"title_key": "CFG_TAB_TIMEQUOTA", "sections": ["timer_", "quota_"]},
 	{"title_key": "CFG_TAB_EXPRETURN", "sections": ["r2_", "r3_"]},
 	{"title_key": "CFG_TAB_THROWCAM",  "sections": ["throw_", "cam_", "exit_"]},
+	# M1.9 (S4) — the GENERATED Oppositions tab: one collapsible section per loaded
+	# OppositionDef, widgets dispatched from param_schema — a new def's section
+	# auto-appears with ZERO menu edits ("adding content is data, not engineering").
+	# Tab additions stay PURE PRESENTATION for the legacy net (M1.6/M1.7 precedent);
+	# the def surface's own coverage is the per-def bijection + the two lever
+	# sentinels. Inserted before Player (Meta stays last) — a NEW tab, not sections
+	# under Hazards, so the legacy knob rows and the same hazards' def rows never
+	# share one scroll during migration (the mis-edit trap, §8.1 Q1).
+	{"title_key": "CFG_TAB_OPPOSITIONS", "sections": [OPPOSITION_DEFS_KEY]},
 	# M1.7 — the VIEW-ONLY debug Player tab (art toggle + per-action anim-lock timing).
 	# PURE PRESENTATION + debug: PLAYER_DEBUG_KEY is not a SECTIONS prefix and produces no
 	# _rows entry, so coverage's 89-field bound set is unchanged. Inserted right before
@@ -325,6 +354,18 @@ var _player_lock_mode_opt: OptionButton = null
 var _player_pickup_lock_spin: SpinBox = null
 var _player_throw_lock_spin: SpinBox = null
 
+# M1.9 (S4): the generated Oppositions surface state.
+var defs_dir: String = DEFS_DIR           # test hook: set BEFORE add_child to aim at a fixture dir
+var _defs: Array[OppositionDef] = []      # loaded defs, sorted by String(id) (display + coverage order)
+var _def_load_error: bool = false         # duplicate-id drift → has_full_def_coverage() fails (§8.3.2)
+var _def_rows: Dictionary = {}            # def_id(String) -> { param_key -> control } — the per-def coverage ledger
+var _def_masters: Dictionary = {}         # def_id -> master CheckButton (staged enablement)
+var _def_chips: Dictionary = {}           # def_id -> the ENABLED·n-overrides / OFF chip Label
+var _def_bodies: Dictionary = {}          # def_id -> body VBox (dim + fold target)
+var _def_fold_buttons: Dictionary = {}    # def_id -> the ▸/▾ fold toggle Button
+var _def_folded: Dictionary = {}          # def_id -> bool (fold state; default folded unless active)
+var _def_respawn_buttons: Dictionary = {} # def_id -> the tier-v1 live-edit (respawn) Button
+
 
 func _ready() -> void:
 	# J1 (M1.3): the CFG rail BOOTS INTO the default play-preset (the Director's most-fun
@@ -332,6 +373,7 @@ func _ready() -> void:
 	# Reset (_on_reset_pressed -> _load_default) still returns the all-off baseline, so the
 	# permanent control (fp=e943ac9c8bc1) is one click away.
 	_cfg = _make_boot_config()
+	_load_defs()                          # M1.9 (S4): discover authored defs BEFORE the build
 	_build_ui()
 	_assert_full_coverage()               # build-time: no RunConfig knob left unreachable
 	_refresh_all()
@@ -360,6 +402,10 @@ func _unhandled_input(event: InputEvent) -> void:
 ## (nothing live to freeze). Restores ONLY a pause the overlay itself set (RD-3).
 func _toggle_overlay() -> void:
 	visible = not visible
+	if visible:
+		# M1.9 (S4): the tier-v1 live-edit buttons are enabled only in-dive with live
+		# instances — recompute on every open (the service is per-dive, group-resolved).
+		_refresh_respawn_buttons()
 	if not _pauses_dive():
 		return
 	if visible:
@@ -439,6 +485,56 @@ func has_full_coverage() -> bool:
 
 func _assert_full_coverage() -> void:
 	assert(has_full_coverage(), "ConfigMenu: RunConfig coverage assertion failed (see push_error).")
+	# M1.9 (S4): the per-def net — same fail-loud statement at def scope.
+	assert(has_full_def_coverage(), "ConfigMenu: per-def coverage assertion failed (see push_error).")
+
+
+## M1.9 (S4) §3.4 Layer 3 — the per-def bijection net: for EVERY loaded def,
+## params ↔ param_schema ↔ generated rows, all three mutually complete. This is the
+## legacy has_full_coverage() statement at def scope: every params key has a schema
+## entry (no unschema'd param — it would be unsweepable), every schema entry names a
+## real params key (no orphan schema — it would stage a dead override), and every
+## schema entry has exactly one generated control (no unreachable/extra row).
+## Fail-loud per def (push_error names the def id + the exact drift). Duplicate def
+## ids recorded at load time (§8.3.2) also fail here — coverage drift, never a
+## silent last-write-wins.
+func has_full_def_coverage() -> bool:
+	var ok := not _def_load_error
+	for def: OppositionDef in _defs:
+		var schema_keys: Dictionary = {}
+		for entry: Dictionary in def.param_schema:
+			var key := String(entry.get("key", ""))
+			if key == "" or schema_keys.has(key):
+				push_error("ConfigMenu: def '%s': param_schema entry missing/duplicate key: %s"
+					% [def.id, str(entry)])
+				ok = false
+				continue
+			schema_keys[key] = true
+		# (a) every params key has a schema entry.
+		for k: Variant in def.params:
+			if not schema_keys.has(String(k)):
+				push_error("ConfigMenu: def '%s': param '%s' has NO param_schema entry (unreachable knob)"
+					% [def.id, String(k)])
+				ok = false
+		# (b) every schema entry names a real params key.
+		for k: String in schema_keys:
+			if not def.params.has(k):
+				push_error("ConfigMenu: def '%s': param_schema entry '%s' names a non-existent param"
+					% [def.id, k])
+				ok = false
+		# (c) every schema entry has exactly one generated control, and no extra rows.
+		var rows: Dictionary = _def_rows.get(String(def.id), {})
+		for k: String in schema_keys:
+			if not rows.has(k):
+				push_error("ConfigMenu: def '%s': schema param '%s' has NO generated control"
+					% [def.id, k])
+				ok = false
+		for k: Variant in rows:
+			if not schema_keys.has(String(k)):
+				push_error("ConfigMenu: def '%s': generated control '%s' references no schema entry"
+					% [def.id, String(k)])
+				ok = false
+	return ok
 
 
 ## The set of RunConfig @export field names, as a Dictionary (field -> true) for O(1)
@@ -543,6 +639,9 @@ func _build_section_into(parent: Control, section_key: String) -> void:
 		return
 	if section_key == PLAYER_DEBUG_KEY:
 		_build_player_debug_section(parent)
+		return
+	if section_key == OPPOSITION_DEFS_KEY:
+		_build_opposition_defs_tab(parent)
 		return
 
 	var sec := _section_descriptor(section_key)
@@ -832,6 +931,491 @@ func _emit_player_anim_config() -> void:
 		_player_throw_lock_spin.value)
 
 
+# --- M1.9 (S4): the GENERATED Oppositions surface ------------------------------
+# One collapsible section per loaded OppositionDef, widgets dispatched from the
+# def's param_schema — the surface half of "adding content is data, not
+# engineering". Enablement + param edits STAGE the two S3 generic RunConfig levers
+# (next-run semantics identical to every legacy knob); the ONLY world mutation is
+# the explicit per-def respawn action (tier-v1 live edit), which emits
+# EventBus.debug_run_dirtied so Telemetry marks the run experiment-dirty.
+
+## Def discovery (§3.2 + §8.3 determinism pins): scan the def folder, filename-
+## sorted (never rely on listing order), load + type-check each .tres, skip a bad
+## file with push_error (fail loud, don't fail to build), record duplicate ids as
+## coverage drift (keep the FIRST in filename order), then sort by String(id) —
+## the display + coverage-iteration order. ResourceLoader.list_directory handles
+## exported-pack .remap indirection that raw DirAccess listings trip over.
+func _load_defs() -> void:
+	_defs.clear()
+	_def_load_error = false
+	var names: Array[String] = []
+	for f: String in ResourceLoader.list_directory(defs_dir):
+		if f.ends_with(".tres"):
+			names.append(f)
+	names.sort()
+	var seen: Dictionary = {}   # id(StringName) -> filename (duplicate detection)
+	for f: String in names:
+		var def := load(defs_dir.path_join(f)) as OppositionDef
+		if def == null or def.id == &"":
+			push_error("ConfigMenu: bad OppositionDef at %s (not an OppositionDef or empty id)"
+				% defs_dir.path_join(f))
+			continue
+		if seen.has(def.id):
+			push_error("ConfigMenu: duplicate OppositionDef id '%s' (%s and %s) — coverage drift; keeping the first"
+				% [def.id, String(seen[def.id]), f])
+			_def_load_error = true
+			continue
+		seen[def.id] = f
+		_defs.append(def)
+	_defs.sort_custom(func(a: OppositionDef, b: OppositionDef) -> bool:
+		return String(a.id) < String(b.id))
+
+
+## The Oppositions tab body: staging note + one generated section per def (sorted
+## by id) + the TWO DISTINCT lever sentinels (§3.4 Layer 1 / §8.0.2). With zero
+## defs the tab shows a placeholder — the menu must never fail to build headlessly
+## on an empty folder.
+func _build_opposition_defs_tab(parent: Control) -> void:
+	var note := Label.new()
+	note.name = "DefsStagingNote"
+	note.text = tr("CFG_DEFS_STAGING_NOTE")
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.modulate = Color(0.72, 0.76, 0.82)
+	note.add_theme_font_size_override("font_size", 11)
+	parent.add_child(note)
+
+	if _defs.is_empty():
+		var placeholder := Label.new()
+		placeholder.name = "DefsEmptyPlaceholder"
+		placeholder.text = tr("CFG_DEFS_EMPTY")
+		parent.add_child(placeholder)
+	for def: OppositionDef in _defs:
+		_build_def_section(parent, def)
+
+	# Bind the two generic levers into the LEGACY coverage net via two DISTINCT
+	# invisible sentinel controls (§8.0.2 — distinctness keeps the leak-test pattern
+	# and refresh routing unambiguous). They are real @export knobs after the S4
+	# promotion, so they MUST be bound or has_full_coverage() fails — correct
+	# behaviour, never suppressed. _push_value_to_control routes both fields to
+	# _refresh_def_sections() (which is exactly what Reset needs).
+	var enabled_sentinel := Control.new()
+	enabled_sentinel.name = "OppositionsEnabledSentinel"
+	enabled_sentinel.visible = false
+	parent.add_child(enabled_sentinel)
+	_rows["oppositions_enabled"] = enabled_sentinel
+	var overrides_sentinel := Control.new()
+	overrides_sentinel.name = "ParamOverridesSentinel"
+	overrides_sentinel.visible = false
+	parent.add_child(overrides_sentinel)
+	_rows["param_overrides"] = overrides_sentinel
+
+
+## One generated collapsible section (§3.3): header = fold ▸/▾ + master CheckButton
+## (STAGED enablement) + display_name + ENABLED·n-overrides/OFF chip; optional tr'd
+## gloss (CFG_GLOSS_DEF_<ID> — fallback empty: content must not require a CSV edit
+## to appear); body = one generated row per param_schema entry + the action row
+## (Clear overrides + the tier-v1 respawn button). Mirrors the legacy section
+## anatomy so the Director reads one visual language; genuinely collapsible
+## (6+ defs need folding), default collapsed unless the def is enabled/overridden.
+func _build_def_section(parent: Control, def: OppositionDef) -> void:
+	var id := String(def.id)
+	var box := PanelContainer.new()
+	box.name = "DefSection_%s" % id
+	parent.add_child(box)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	box.add_child(col)
+
+	var header := HBoxContainer.new()
+	header.name = "Header"
+	header.add_theme_constant_override("separation", 8)
+	col.add_child(header)
+
+	var fold := Button.new()
+	fold.name = "Fold"
+	fold.flat = true
+	fold.focus_mode = Control.FOCUS_NONE
+	fold.pressed.connect(_on_def_fold_pressed.bind(id))
+	header.add_child(fold)
+	_def_fold_buttons[id] = fold
+
+	var master := CheckButton.new()
+	master.name = "Master"
+	master.tooltip_text = id                     # the def id rides the tooltip
+	master.toggled.connect(func(on: bool) -> void: _stage_def_enabled(def, on))
+	header.add_child(master)
+	_def_masters[id] = master
+
+	var title := Label.new()
+	title.text = def.display_name if def.display_name != "" else id
+	title.tooltip_text = id
+	title.add_theme_font_size_override("font_size", 16)
+	header.add_child(title)
+
+	var chip := Label.new()
+	chip.name = "Chip"
+	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	header.add_child(chip)
+	_def_chips[id] = chip
+
+	# Optional per-def gloss: CSV key convention, EMPTY fallback (§3.3a — a def with
+	# no authored gloss still renders; the S2 lint may WARN, the menu never fails).
+	var gloss_key := "CFG_GLOSS_DEF_%s" % id.to_upper()
+	if tr(gloss_key) != gloss_key:
+		var gloss := Label.new()
+		gloss.text = tr(gloss_key)
+		gloss.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		gloss.modulate = Color(0.72, 0.76, 0.82)
+		gloss.add_theme_font_size_override("font_size", 11)
+		col.add_child(gloss)
+
+	var body := VBoxContainer.new()
+	body.name = "Body"
+	body.add_theme_constant_override("separation", 4)
+	col.add_child(body)
+	_def_bodies[id] = body
+	_def_folded[id] = not _def_section_active(def)
+
+	var rows: Dictionary = {}
+	for entry: Dictionary in def.param_schema:
+		var control: Control = _build_param_row(body, def, entry)
+		if control != null:
+			rows[String(entry.get("key", ""))] = control
+	_def_rows[id] = rows
+
+	# Action row: Clear overrides (back to authored defaults) + the tier-v1 live
+	# edit. NEITHER is in _def_rows — they are actions, not param controls, so they
+	# can't inflate the per-def coverage ledger (the Player-tab discipline).
+	var actions := HBoxContainer.new()
+	actions.name = "Actions"
+	actions.add_theme_constant_override("separation", 8)
+	body.add_child(actions)
+	var clear := Button.new()
+	clear.name = "ClearOverrides"
+	clear.text = tr("CFG_DEF_CLEAR_OVERRIDES")
+	clear.pressed.connect(_on_clear_def_overrides.bind(def))
+	actions.add_child(clear)
+	var respawn := Button.new()
+	respawn.name = "Respawn"
+	respawn.text = tr("CFG_DEF_RESPAWN")
+	respawn.disabled = true
+	respawn.tooltip_text = tr("CFG_DEF_RESPAWN_TIP")
+	respawn.pressed.connect(_on_respawn_pressed.bind(def))
+	actions.add_child(respawn)
+	_def_respawn_buttons[id] = respawn
+
+
+## Widget dispatch for one param_schema entry — _build_row's type→widget model
+## driven by the SCHEMA instead of RunConfig reflection (§3.3): "bool" →
+## CheckButton, "int"/"float" → the HSlider+SpinBox pair (entry min/max as the
+## slider range, entry step or the default-step rule), "enum" → OptionButton over
+## entry options. Unknown type → push_error + NO row (fail loud, same as
+## _build_row's fallthrough); the per-def net then reports the schema key with no
+## generated control. Returns the canonical control (registered in _def_rows).
+func _build_param_row(body: Control, def: OppositionDef, entry: Dictionary) -> Control:
+	var key := String(entry.get("key", ""))
+	var row := HBoxContainer.new()
+	row.name = "DefRow_%s_%s" % [String(def.id), key]
+	row.add_theme_constant_override("separation", 8)
+	body.add_child(row)
+
+	var label := Label.new()
+	var base_text := _def_param_label(def, entry)
+	label.text = base_text
+	label.custom_minimum_size = Vector2(160, 0)
+	row.add_child(label)
+
+	var ptype := String(entry.get("type", ""))
+	var control: Control = null
+	match ptype:
+		"bool":
+			control = _make_bool_widget(row,
+				func(on: bool) -> void: _stage_override(def, key, on))
+		"int", "float":
+			var is_int := ptype == "int"
+			var rng := Vector2(float(entry.get("min", 0.0)), float(entry.get("max", 100.0)))
+			var step := float(entry.get("step", 0.0))
+			if step <= 0.0:
+				step = 1.0 if is_int else 0.1
+				if not is_int and rng.y - rng.x <= 1.0:
+					step = 0.01   # the probability-step rule, generalized (§3.3)
+			control = _make_numeric_widget(row, rng, step, rng.x,
+				maxf(rng.y * 100.0, 100000.0),
+				func(v: float) -> void:
+					_stage_override(def, key, int(round(v)) if is_int else v))
+		"enum":
+			var items: Array = entry.get("options", [])
+			control = _make_enum_widget(row, items,
+				func(idx: int) -> void: _stage_override(def, key, idx))
+		_:
+			push_error("ConfigMenu: def '%s': no widget for param type '%s' (key '%s')"
+				% [def.id, ptype, key])
+			return null
+	# The row label rides the control as meta so the override '*' mark + tooltip
+	# can be refreshed without a parallel label ledger.
+	control.set_meta(&"row_label", label)
+	control.set_meta(&"label_base", base_text)
+	return control
+
+
+## Per-param label resolution (§3.3a — data-only content needs NO CSV edit):
+## 1. the schema entry's `gloss` field as a CSV key (S2 authors the legacy
+##    CFG_FIELD_* keys here, so migrated defs reuse the exact legacy label text);
+## 2. the CFG_DEF_PARAM_<ID>_<KEY> convention when authored;
+## 3. a humanized fallback from the key itself ("charge_speed" → "Charge Speed").
+func _def_param_label(def: OppositionDef, entry: Dictionary) -> String:
+	var gloss := String(entry.get("gloss", ""))
+	if gloss != "" and tr(gloss) != gloss:
+		return tr(gloss)
+	var key := String(entry.get("key", ""))
+	var csv_key := "CFG_DEF_PARAM_%s_%s" % [String(def.id).to_upper(), key.to_upper()]
+	if tr(csv_key) != csv_key:
+		return tr(csv_key)
+	return key.capitalize()
+
+
+# --- S4 staging (pre-run, config-marked — §3.5) --------------------------------
+
+## Master toggle → add/remove the def id in the working config's enable-list.
+## Duplicate-then-assign so a .tres-shared array is never aliased. STAGED: nothing
+## spawns until the next run stages the config (apply_and_get_config → start_new_run).
+func _stage_def_enabled(def: OppositionDef, on: bool) -> void:
+	var arr: Array[StringName] = _cfg.oppositions_enabled.duplicate()
+	if on and not arr.has(def.id):
+		arr.append(def.id)
+	elif not on:
+		arr.erase(def.id)
+	_cfg.oppositions_enabled = arr
+	if on:
+		_def_folded[String(def.id)] = false   # enabling auto-expands the section
+	_refresh_def_chip(def)
+	_set_def_body_state(def)
+	_refresh_trap_warning()
+
+
+## Param widget → SPARSE override write (§3.5): value == the authored default →
+## erase the key (and the def's sub-dict when empty); else stage it. Sparse staging
+## means the run_started stamp records only ACTUAL deviations — an enabled def with
+## no overrides is self-describingly "authored defaults". The def Resource is NEVER
+## written (the menu edits the working RunConfig only).
+func _stage_override(def: OppositionDef, key: String, value: Variant) -> void:
+	var po: Dictionary = _cfg.param_overrides.duplicate(true)
+	var id := String(def.id)
+	if _param_values_equal(value, def.params.get(key)):
+		if po.has(id) and po[id] is Dictionary:
+			(po[id] as Dictionary).erase(key)
+			if (po[id] as Dictionary).is_empty():
+				po.erase(id)
+	else:
+		if not (po.get(id) is Dictionary):
+			po[id] = {}
+		(po[id] as Dictionary)[key] = value
+	_cfg.param_overrides = po
+	_refresh_def_chip(def)
+	_refresh_def_row_marks(def)
+	_refresh_trap_warning()
+
+
+## Per-section "back to authored defaults": drop every staged override for this def.
+func _on_clear_def_overrides(def: OppositionDef) -> void:
+	var po: Dictionary = _cfg.param_overrides.duplicate(true)
+	po.erase(String(def.id))
+	po.erase(def.id)
+	_cfg.param_overrides = po
+	_refresh_def_section(def)
+	_refresh_trap_warning()
+
+
+## The def's staged override sub-dict (String or StringName def-id keys accepted —
+## mirrors EncounterBuilder._effective_params). {} when none staged.
+func _staged_overrides_for(def: OppositionDef) -> Dictionary:
+	var entry: Variant = _cfg.param_overrides.get(String(def.id),
+		_cfg.param_overrides.get(def.id, null))
+	return entry if entry is Dictionary else {}
+
+
+## The EFFECTIVE next-run value a generated widget shows (§3.3): the staged
+## override when present, else the authored def.params default.
+func _effective_value(def: OppositionDef, key: String) -> Variant:
+	return _staged_overrides_for(def).get(key, def.params.get(key))
+
+
+## Value equality with float tolerance (a SpinBox hands back floats; an int param's
+## authored default must still compare equal after a round-trip).
+func _param_values_equal(a: Variant, b: Variant) -> bool:
+	if (a is float or a is int) and (b is float or b is int):
+		return is_equal_approx(float(a), float(b))
+	return a == b
+
+
+# --- S4 refresh (model → view for the generated surface) -----------------------
+
+## Re-project the staged levers into EVERY generated master/widget/chip/mark —
+## the generated twin of _refresh_all's _rows walk, routed from the two lever
+## sentinels' _push_value_to_control branch (so _refresh_all()/Reset just work).
+func _refresh_def_sections() -> void:
+	for def: OppositionDef in _defs:
+		_refresh_def_section(def)
+	_refresh_respawn_buttons()
+
+
+func _refresh_def_section(def: OppositionDef) -> void:
+	var id := String(def.id)
+	var master: CheckButton = _def_masters.get(id, null)
+	if master != null:
+		master.set_pressed_no_signal(_cfg.oppositions_enabled.has(def.id))
+	var rows: Dictionary = _def_rows.get(id, {})
+	for key: Variant in rows:
+		_push_def_value_to_control(def, String(key), rows[key])
+	_refresh_def_chip(def)
+	_refresh_def_row_marks(def)
+	_set_def_body_state(def)
+
+
+## The generated-row _push_value_to_control: writes are no-signal so refresh never
+## re-stages (the _push_value_to_control discipline).
+func _push_def_value_to_control(def: OppositionDef, key: String, control: Control) -> void:
+	var value: Variant = _effective_value(def, key)
+	if control is CheckButton:
+		(control as CheckButton).set_pressed_no_signal(bool(value))
+	elif control is OptionButton:
+		(control as OptionButton).select(int(value))
+	elif control is SpinBox:
+		(control as SpinBox).set_value_no_signal(float(value))
+		var slider := (control as SpinBox).get_parent().get_node_or_null("Slider") as HSlider
+		if slider != null:
+			slider.set_value_no_signal(clampf(float(value), slider.min_value, slider.max_value))
+
+
+## The ENABLED · n overrides / OFF chip (redundant non-colour state cue, like the
+## legacy chips).
+func _refresh_def_chip(def: OppositionDef) -> void:
+	var chip: Label = _def_chips.get(String(def.id), null)
+	if chip == null:
+		return
+	if not _cfg.oppositions_enabled.has(def.id):
+		chip.text = tr("CFG_CHIP_OFF")
+		return
+	chip.text = tr("CFG_DEF_CHIP_ON").format({"n": _staged_overrides_for(def).size()})
+
+
+## The override '*' label mark + tooltip (§3.3: the row label suffixes '*' while a
+## staged override deviates from the authored default; Reset/Clear removes it).
+func _refresh_def_row_marks(def: OppositionDef) -> void:
+	var staged: Dictionary = _staged_overrides_for(def)
+	var rows: Dictionary = _def_rows.get(String(def.id), {})
+	for key: Variant in rows:
+		var control: Control = rows[key]
+		if control == null or not control.has_meta(&"row_label"):
+			continue
+		var label := control.get_meta(&"row_label") as Label
+		var base := String(control.get_meta(&"label_base"))
+		if staged.has(String(key)):
+			label.text = base + " *"
+			label.tooltip_text = tr("CFG_DEF_OVERRIDE_TIP")
+		else:
+			label.text = base
+			label.tooltip_text = ""
+
+
+## Fold + dim projection for one generated section: body hidden when folded;
+## body dimmed (DIM_ALPHA) when the def is not enabled — chip text + checkbox +
+## dim, never colour alone (the redundant-cue rules).
+func _set_def_body_state(def: OppositionDef) -> void:
+	var id := String(def.id)
+	var body: Control = _def_bodies.get(id, null)
+	if body == null:
+		return
+	body.visible = not bool(_def_folded.get(id, true))
+	var enabled := _cfg.oppositions_enabled.has(def.id)
+	body.modulate = Color(1, 1, 1, 1.0 if enabled else DIM_ALPHA)
+	var fold: Button = _def_fold_buttons.get(id, null)
+	if fold != null:
+		fold.text = "▾" if body.visible else "▸"
+
+
+func _on_def_fold_pressed(id: String) -> void:
+	_def_folded[id] = not bool(_def_folded.get(id, true))
+	for def: OppositionDef in _defs:
+		if String(def.id) == id:
+			_set_def_body_state(def)
+			return
+
+
+## "Active" = worth auto-expanding at build: enabled or carrying staged overrides.
+func _def_section_active(def: OppositionDef) -> bool:
+	return _cfg.oppositions_enabled.has(def.id) or not _staged_overrides_for(def).is_empty()
+
+
+# --- S4 live edit, tier v1 — respawn-with-new-params (§3.7, the ONLY tier) -----
+
+## Enabled only in-dive with live instances of the def (the per-dive SpawnService
+## is group-resolved; absent outside a dive or on an all-off run).
+func _refresh_respawn_buttons() -> void:
+	if not is_inside_tree():
+		return
+	var svc := _spawn_service()
+	var in_dive := _pauses_dive()
+	for def: OppositionDef in _defs:
+		var btn: Button = _def_respawn_buttons.get(String(def.id), null)
+		if btn == null:
+			continue
+		var live: int = svc.live_count(def.id) if (svc != null and in_dive) else 0
+		btn.disabled = live <= 0
+		btn.tooltip_text = tr("CFG_DEF_RESPAWN_TIP") if btn.disabled else ""
+
+
+## The explicit, guarded live-edit action: for each live instance of the def,
+## despawn + respawn AT THE SAME CELL with effective params = def.params ⊕ the
+## menu's CURRENT working overrides (the entity snapshots them at setup(), exactly
+## as any deck-lane spawn). The service enforces caps/placement as for any client —
+## a refusal (null) is a warning, not fatal. Emits debug_run_dirtied ONCE per press
+## (§3.7 step 3) so Telemetry marks the run; the staged overrides REMAIN staged —
+## the next run picks them up as a clean config-marked experiment; only THIS run is
+## dirty. Structurally fingerprint-unreachable: spawn() touches no layout RNG.
+func _on_respawn_pressed(def: OppositionDef) -> void:
+	var svc := _spawn_service()
+	if svc == null or svc.live_count(def.id) == 0:
+		return
+	var params: Dictionary = def.params.duplicate(true)
+	var staged: Dictionary = _staged_overrides_for(def)
+	for k: Variant in staged:
+		params[String(k)] = staged[k]
+	var touched := 0
+	for node: Node in svc.live_instances(def.id):
+		var cell: Vector2i = svc.spawn_cell_of(node)
+		if cell == SpawnService.UNREGISTERED_CELL:
+			continue
+		svc.despawn(node)
+		touched += 1
+		var ctx: Dictionary = {
+			"params": params,               # the ctx-merged def-driven knob bag (S3 contract)
+			"depth": _menu_current_depth(),
+			"run_t_ms": 0,                  # the service never invents a clock
+		}
+		if svc.spawn(def, cell, ctx) == null:
+			push_warning("ConfigMenu: respawn of '%s' at %s refused by the service (caps/placement)."
+				% [def.id, str(cell)])
+	if touched > 0:
+		# The ONE deliberate EventBus emit in this menu (S4 §8.2): the staging path
+		# stays EventBus-free; this guarded debug actor is the exception, and it is
+		# what makes the run self-identifyingly dirty.
+		EventBus.debug_run_dirtied.emit(&"respawn_params", Time.get_ticks_msec())
+	_refresh_respawn_buttons()
+
+
+func _spawn_service() -> SpawnService:
+	return get_tree().get_first_node_in_group(&"spawn_service") as SpawnService
+
+
+## Current dive depth via the same /root lookup Telemetry uses (headless-safe).
+func _menu_current_depth() -> int:
+	var gs := get_node_or_null("/root/GameState")
+	return int(gs.current_depth) if gs != null else 0
+
+
 ## M4 (M1.6) / RD-9: the web telemetry-export button, re-homed from the retiring
 ## SellScreen into the Meta tab. Same JSONL export path (TelemetryExporter), web-guarded:
 ## on desktop the button is hidden (the on-disk retrieval flow is unchanged there). It is
@@ -906,10 +1490,8 @@ func _build_row(parent: Control, field: String) -> void:
 
 
 func _build_bool(row: Control, field: String) -> void:
-	var cb := CheckButton.new()
-	cb.toggled.connect(func(on: bool) -> void: _set_field(field, on))
-	row.add_child(cb)
-	_rows[field] = cb
+	_rows[field] = _make_bool_widget(row,
+		func(on: bool) -> void: _set_field(field, on))
 
 
 func _build_string(row: Control, field: String) -> void:
@@ -924,13 +1506,11 @@ func _build_string(row: Control, field: String) -> void:
 ## @export_enum int → OptionButton; items are the schema's own hint strings in declared
 ## order, tagged "(placeholder)" until R2/R3 finalise (§3.3). Selected index == stored int.
 func _build_enum(row: Control, field: String) -> void:
-	var ob := OptionButton.new()
-	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var items: Array = []
 	for opt in _enum_hint_strings(field):
-		ob.add_item(tr("CFG_ENUM_PLACEHOLDER").format({"name": opt}))
-	ob.item_selected.connect(func(idx: int) -> void: _set_field(field, idx))
-	row.add_child(ob)
-	_rows[field] = ob
+		items.append(tr("CFG_ENUM_PLACEHOLDER").format({"name": opt}))
+	_rows[field] = _make_enum_widget(row, items,
+		func(idx: int) -> void: _set_field(field, idx))
 
 
 ## Numeric scalar (int/float): an HSlider for fast scrub PLUS a SpinBox that is
@@ -945,7 +1525,45 @@ func _build_numeric(row: Control, field: String, is_int: bool) -> void:
 	# I1: per-field step override (lvl_size_mult -> 0.25 so px/cell stays integer).
 	if FIELD_STEP.has(field):
 		step = FIELD_STEP[field]
+	# I1: lvl_room_count carries a -1 sentinel ("use baseline") below its slider min of
+	# 1, so the SpinBox must allow -1 even though the scrub slider starts at 1.
+	var spin_min := -1.0 if field == "lvl_room_count" else rng.x
+	# Store the SpinBox as the canonical control (it holds the exact typed value);
+	# the slider is reached as its sibling for refresh.
+	_rows[field] = _make_numeric_widget(row, rng, step, spin_min,
+		max(rng.y * 100.0, 100000.0),
+		func(v: float) -> void: _set_field(field, int(round(v)) if is_int else v))
 
+
+# --- Shared widget cores (S4 §3.3 refactor) -------------------------------------
+# The construction internals of the bool/enum/numeric widgets, factored to take a
+# SETTER Callable so the legacy rows (setter = a _set_field closure) and the S4
+# generated def rows (setter = an override-staging closure) share ONE widget
+# implementation. Pure refactor: the legacy _rows registration, ranges, steps and
+# behaviour are byte-equivalent to the pre-S4 inline bodies.
+
+func _make_bool_widget(row: Control, setter: Callable) -> CheckButton:
+	var cb := CheckButton.new()
+	cb.toggled.connect(func(on: bool) -> void: setter.call(on))
+	row.add_child(cb)
+	return cb
+
+
+func _make_enum_widget(row: Control, items: Array, setter: Callable) -> OptionButton:
+	var ob := OptionButton.new()
+	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for item: Variant in items:
+		ob.add_item(str(item))
+	ob.item_selected.connect(func(idx: int) -> void: setter.call(idx))
+	row.add_child(ob)
+	return ob
+
+
+## The HSlider+SpinBox pair. SpinBox is the source of truth (type-exact, allow_greater
+## past the slider cap); the slider mirrors/clamps its handle. Returns the SpinBox
+## (the canonical control; the slider is its "Slider"-named sibling for refresh).
+func _make_numeric_widget(row: Control, rng: Vector2, step: float, spin_min: float,
+		spin_max: float, setter: Callable) -> SpinBox:
 	var slider := HSlider.new()
 	slider.name = "Slider"
 	slider.min_value = rng.x
@@ -958,28 +1576,23 @@ func _build_numeric(row: Control, field: String, is_int: bool) -> void:
 	var spin := SpinBox.new()
 	spin.name = "Spin"
 	spin.step = step
-	# I1: lvl_room_count carries a -1 sentinel ("use baseline") below its slider min of
-	# 1, so the SpinBox must allow -1 even though the scrub slider starts at 1.
-	spin.min_value = -1.0 if field == "lvl_room_count" else rng.x
-	# Type-exact escape hatch: allow values beyond the slider cap (and below 0 never,
-	# these knobs are all >= 0). Use a generous SpinBox max so typing isn't clamped.
-	spin.max_value = max(rng.y * 100.0, 100000.0)
+	spin.min_value = spin_min
+	# Type-exact escape hatch: allow values beyond the slider cap. Generous SpinBox
+	# max so typing isn't clamped.
+	spin.max_value = spin_max
 	spin.allow_greater = true
 	spin.custom_minimum_size = Vector2(80, 0)
 	row.add_child(spin)
 
-	# SpinBox is the source of truth for the field; the slider mirrors/clamps its handle.
 	spin.value_changed.connect(func(v: float) -> void:
 		slider.set_value_no_signal(clampf(v, slider.min_value, slider.max_value))
-		_set_field(field, int(round(v)) if is_int else v)
+		setter.call(v)
 	)
 	slider.value_changed.connect(func(v: float) -> void:
 		spin.set_value_no_signal(v)
-		_set_field(field, int(round(v)) if is_int else v)
+		setter.call(v)
 	)
-	# Store the SpinBox as the canonical control (it holds the exact typed value);
-	# the slider is reached as its sibling for refresh.
-	_rows[field] = spin
+	return spin
 
 
 ## seed_override: a plain SpinBox, min -1 (= "auto"), no slider (it's an identity, not
@@ -1086,7 +1699,7 @@ func _list_values_from_editor(editor: VBoxContainer) -> Array:
 
 func _set_field(field: String, value) -> void:
 	_cfg.set(field, value)
-	print("[ConfigMenu] %s = %s" % [field, str(value)])   # local debug only (no EventBus)
+	print("[ConfigMenu] %s = %s" % [field, str(value)])   # local debug only (staging path: no EventBus)
 	_refresh_section_chip(_prefix_of(field))
 	_refresh_summary()
 
@@ -1134,6 +1747,12 @@ func _refresh_all() -> void:
 
 
 func _push_value_to_control(field: String) -> void:
+	# M1.9 (S4): the two generic-lever fields are bound via sentinel controls; their
+	# "refresh" is re-projecting the staged lever state into every generated
+	# master/widget/chip — which is exactly what Reset needs (§3.4 Layer 1).
+	if field == "oppositions_enabled" or field == "param_overrides":
+		_refresh_def_sections()
+		return
 	var control = _rows[field]
 	var value = _cfg.get(field)
 	if control is CheckButton:
@@ -1228,13 +1847,21 @@ func _refresh_trap_warning() -> void:
 	if _trap_label == null:
 		return
 	var traps := _cfg.inert_enabled_oppositions()
-	if traps.is_empty():
+	# M1.9 (S4): the detector generalized to defs (OppositionLint — schema-flagged
+	# trap_if_neutral params + the fully-neutral-card trap). Scope: only ids in
+	# cfg.oppositions_enabled are checked (deck-driven defs are author-owned content,
+	# §8.1 Q8). Same amber warn-only line; def traps render as raw "<id>:<key>"
+	# tokens (an unbounded CSV key-space per def would defeat "content is data").
+	var def_traps := OppositionLint.inert_enabled_defs(_cfg, _defs)
+	if traps.is_empty() and def_traps.is_empty():
 		_trap_label.visible = false
 		_trap_label.text = ""
 		return
 	var parts: PackedStringArray = PackedStringArray()
 	for id in traps:
 		parts.append(tr("CFG_TRAP_%s" % id.to_upper()))
+	for t in def_traps:
+		parts.append(t)
 	_trap_label.text = tr("CFG_TRAP_WARN").format({"traps": ", ".join(parts)})
 	_trap_label.visible = true
 
