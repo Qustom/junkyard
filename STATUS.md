@@ -12,7 +12,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 ## In progress
 | Task | Since | Agent(s) | Milestone | Note |
 |---|---|---|---|---|
-| S8 — Second hub portal + band routing + telemetry band-stamp | 2026-07-03 | general-purpose | M1.9 (W5) | Branch `general-purpose/S8`. Portal 2 → `&"band_two"` (ember-orange, Sump prompt, D-RAT-1); `_resolve_band_profile()` off `consume_pending_dive_band()`; portal 1 byte-identical; `band_id` stamped. |
+| ~~S8 — Second hub portal + band routing + telemetry band-stamp~~ | 2026-07-03 | general-purpose | M1.9 (W5) | **DONE 2026-07-03** — merged (`a357e47`). Portal 2 "Dive — The Sump" ember-orange at (220,-150); `BAND_ROUTES` mapping live; portal 1 `departure_portal.tscn` zero-byte diff; `band_id` stamp verified both routes; new `test_band_routing` + `test_hub_contract` green. 1 deviation logged (route-key member vs Dict helper). |
 | ~~S9 — DeckEntry override wrapper (D-RAT-2 delivery)~~ | 2026-07-03 | general-purpose | M1.9 (W5) | **DONE 2026-07-03** — merged (`ac289db`). `test_deck_entry` green (empty-wrapper ≡ plain ref byte-identical; precedence def < deck-entry < rc; band_two charger gets the D-RAT-2 values); charger def-default pin intact; fps unmoved. Deviations: none. |
 
 ## In progress
