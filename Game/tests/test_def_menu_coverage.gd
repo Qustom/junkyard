@@ -17,7 +17,14 @@ extends Node
 ##       and a clean second run stamps debug_dirty:false;
 ##   (D) tier-v1 live edit: _on_respawn_pressed despawns + respawns every live
 ##       instance AT THE SAME CELL with the merged params bag in ctx, and emits
-##       debug_run_dirtied exactly ONCE per press.
+##       debug_run_dirtied exactly ONCE per press;
+##   (E) FBM19b deck-membership surface: deck-listed defs (charger/splitter via
+##       band_two's opposition_deck) show the honest IN-DECK chip (never OFF) with
+##       the band named in the tooltip, start EXPANDED, while a truly nowhere-
+##       spawning def (splitter_child) keeps OFF + collapsed; and the four
+##       Director knobs staged via the MENU path (_stage_override) reach the
+##       EncounterBuilder deck lane on the real band_two end-to-end (def <
+##       deck-entry < rc precedence intact).
 ##
 ## Run as a SCENE (autoloads + tr() need a live tree):
 ##   godot --headless --path Game res://tests/test_def_menu_coverage.tscn
@@ -29,8 +36,33 @@ const CONFIG_MENU_PATH := "res://ui/config/config_menu.tscn"
 const EMPTY_DEFS_DIR := "res://tests/fixtures/oppositions_empty"
 const LOG_PATH := "user://telemetry/run_log.jsonl"
 const CELL := 16
+const BAND_TWO_PATH := "res://data/bands/band_two.tres"
 
 var _dirty_emits: Array[Array] = []   # recorded debug_run_dirtied emissions
+
+
+## FBM19b (E): the policy-blind recording service (test_deck_entry's pattern) —
+## inherits the REAL begin_band/valid_cells, replaces only the spawn mechanism so
+## the deck lane's resolved ctx params are probe-able at plan level.
+class FakeSpawnService:
+	extends SpawnService
+	var requests: Array[Dictionary] = []         # ordered successful (id, cell, ctx)
+	var _stub_nodes: Array[Node] = []
+
+	func spawn(def: OppositionDef, cell: Vector2i, ctx: Dictionary = {}) -> Node:
+		var one: Array[Vector2i] = [cell]
+		if valid_cells(one).size() != 1:         # the real BUG7 re-check
+			return null
+		requests.append({ "id": def.id, "cell": cell, "ctx": ctx })
+		var n := Node.new()
+		_stub_nodes.append(n)
+		return n
+
+	func cleanup() -> void:
+		for n in _stub_nodes:
+			if is_instance_valid(n):
+				n.free()
+		_stub_nodes.clear()
 
 
 func _ready() -> void:
@@ -272,11 +304,20 @@ func _run() -> int:
 	if is_instance_valid(old_a) or is_instance_valid(old_b):
 		failures.append("(D) despawned instances were not freed")
 
+	# =========================================================================
+	# (E) FBM19b — deck-spawned defs: honest chip + auto-expand + the four
+	#     Director knobs staged via the MENU path reach the deck lane end-to-end.
+	# =========================================================================
+	await _case_deck_surface(failures, scene)
+
 	if failures.is_empty():
 		print("DEF MENU COVERAGE OK — bijection net fires on drift + duplicate ids; "
 			+ "zero-defs headless build green; dotted override stamp + inert_enabled_defs + "
 			+ "generic opposition rows (dual-emit intact) + debug_dirtied/debug_dirty hygiene verified; "
-			+ "tier-v1 respawn keeps cells, merges params, dirties ONCE.")
+			+ "tier-v1 respawn keeps cells, merges params, dirties ONCE; "
+			+ "FBM19b deck surface honest (IN-DECK chip + tooltip + auto-expand, "
+			+ "nowhere-spawners keep OFF+collapsed) and the menu-staged charger/splitter "
+			+ "knobs reach band_two's deck lane on top of the deck-entry layer.")
 		return 0
 	for f in failures:
 		printerr("DEF MENU FAIL: ", f)
@@ -285,6 +326,128 @@ func _run() -> int:
 
 func _on_dirty(source: StringName, run_t_ms: int) -> void:
 	_dirty_emits.append([source, run_t_ms])
+
+
+# --- (E) FBM19b — deck-membership presentation + menu-staged knobs end-to-end ----
+
+func _case_deck_surface(failures: Array[String], scene: PackedScene) -> void:
+	var menu: ConfigMenu = scene.instantiate() as ConfigMenu
+	add_child(menu)
+	await get_tree().process_frame
+
+	var charger: OppositionDef = _def_by_id(menu, &"charger")
+	var splitter: OppositionDef = _def_by_id(menu, &"splitter")
+	if charger == null or splitter == null:
+		failures.append("(E) charger/splitter defs not loaded from data/oppositions (test mis-set)")
+		menu.queue_free()
+		return
+
+	# Honest chip + auto-expand: deck-listed (band_two) + not config-enabled →
+	# the IN-DECK chip (never OFF), band display name in the tooltip, section
+	# EXPANDED at build. splitter_child spawns nowhere → OFF + collapsed.
+	var want_chip: String = tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_two", "n": 0 })
+	for id: String in ["charger", "splitter"]:
+		var chip: Label = menu._def_chips.get(id, null)
+		if chip == null:
+			failures.append("(E) no chip label for deck-listed def '%s'" % id)
+			continue
+		if chip.text == tr("CFG_CHIP_OFF"):
+			failures.append("(E) deck-listed '%s' still shows the misleading OFF chip" % id)
+		if chip.text != want_chip:
+			failures.append("(E) '%s' chip '%s' != expected deck chip '%s'" % [id, chip.text, want_chip])
+		if not chip.tooltip_text.contains("The Sump"):
+			failures.append("(E) '%s' chip tooltip does not name the band: '%s'" % [id, chip.tooltip_text])
+		if bool(menu._def_folded.get(id, true)):
+			failures.append("(E) deck-listed '%s' section defaults FOLDED (knobs invisible)" % id)
+		var body: Control = menu._def_bodies.get(id, null)
+		if body == null or not body.visible:
+			failures.append("(E) deck-listed '%s' body not visible at build" % id)
+	var child_chip: Label = menu._def_chips.get("splitter_child", null)
+	if child_chip == null:
+		failures.append("(E) splitter_child section missing (nowhere-spawning control absent)")
+	else:
+		if child_chip.text != tr("CFG_CHIP_OFF"):
+			failures.append("(E) nowhere-spawning splitter_child chip != OFF: '%s'" % child_chip.text)
+		if not bool(menu._def_folded.get("splitter_child", false)):
+			failures.append("(E) nowhere-spawning splitter_child should default collapsed")
+
+	# Stage the four Director knobs via the MENU path — WITHOUT enabling the defs.
+	menu._stage_override(charger, "aggro_range", 200.0)
+	menu._stage_override(charger, "charge_speed", 700.0)
+	menu._stage_override(splitter, "aggro_radius", 300.0)
+	menu._stage_override(splitter, "move_speed", 120.0)
+	var tuned_chip: String = tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_two", "n": 2 })
+	var charger_chip: Label = menu._def_chips.get("charger", null)
+	if charger_chip != null and charger_chip.text != tuned_chip:
+		failures.append("(E) charger chip after staging 2 knobs != '%s': '%s'"
+			% [tuned_chip, charger_chip.text])
+
+	var rc: RunConfig = menu.apply_and_get_config()
+	if rc.oppositions_enabled.has(&"charger") or rc.oppositions_enabled.has(&"splitter"):
+		failures.append("(E) staging params must not enable the defs (deck lane only)")
+
+	# End-to-end: the REAL band_two deck lane resolves the staged values on top of
+	# the deck-entry layer (def < deck-entry < rc — test_deck_entry (c)'s seam).
+	var profile := load(BAND_TWO_PATH) as BandProfile
+	if profile == null:
+		failures.append("(E) could not load band_two.tres")
+		menu.queue_free()
+		return
+	var band: Band = BandPipeline.new().generate(profile, 12345, RunConfig.new())
+	if band == null:
+		failures.append("(E) band_two pipeline returned null")
+		menu.queue_free()
+		return
+	var svc := FakeSpawnService.new()
+	var container := Node2D.new()
+	add_child(container)
+	svc.begin_band(container, CELL, Vector2.INF, rc)
+	svc.set_cap_group(&"new_hazards", SpawnService.NEW_HAZARD_BAND_CEILING)
+	EncounterBuilder.new().populate(band, profile, rc, svc)
+
+	var want_charger: Dictionary = charger.params.duplicate(true)
+	want_charger["throwable_while_charging"] = false   # deck-entry layer (D-RAT-2)
+	want_charger["wall_crash_recover_mult"] = 2.0      # deck-entry layer (D-RAT-2)
+	want_charger["aggro_range"] = 200.0                # rc layer (menu-staged)
+	want_charger["charge_speed"] = 700.0               # rc layer (menu-staged)
+	var want_splitter: Dictionary = splitter.params.duplicate(true)
+	want_splitter["aggro_radius"] = 300.0              # rc layer (menu-staged)
+	want_splitter["move_speed"] = 120.0                # rc layer (menu-staged)
+
+	var charger_n := 0
+	var splitter_n := 0
+	for r: Dictionary in svc.requests:
+		var params: Dictionary = (r["ctx"] as Dictionary).get("params", {})
+		if r["id"] == &"charger":
+			charger_n += 1
+			if params != want_charger:
+				failures.append("(E) charger resolved params != def + deck + staged rc: %s" % str(params))
+				break
+		elif r["id"] == &"splitter":
+			splitter_n += 1
+			if params != want_splitter:
+				failures.append("(E) splitter resolved params != def + staged rc: %s" % str(params))
+				break
+	if charger_n < 1:
+		failures.append("(E) band_two deck lane produced no charger instructions (staging unproven)")
+	if splitter_n < 1:
+		failures.append("(E) band_two deck lane produced no splitter instructions (staging unproven)")
+
+	svc.cleanup()
+	remove_child(container)
+	container.free()
+	svc.free()
+	for p in band.pieces:
+		if p.instance != null and is_instance_valid(p.instance):
+			p.instance.free()
+	menu.queue_free()
+
+
+func _def_by_id(menu: ConfigMenu, id: StringName) -> OppositionDef:
+	for def: OppositionDef in menu._defs:
+		if def.id == id:
+			return def
+	return null
 
 
 ## A runtime-built stub hazard scene recording setup() calls (the

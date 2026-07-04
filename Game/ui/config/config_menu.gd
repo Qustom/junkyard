@@ -204,6 +204,13 @@ const OPPOSITION_DEFS_KEY := "opposition_defs_"
 ## lever is empty), so fp e943ac9c8bc1 is structurally safe.
 const DEFS_DIR := "res://data/oppositions"
 
+## FBM19b — the authored band-profile folder. The menu display-loads every
+## BandProfile once at build time to learn DECK MEMBERSHIP (which defs a band's
+## opposition_deck spawns without any config enable), so a deck-spawned def's
+## chip can say so instead of the misleading "OFF" ("tuning does nothing").
+## Display-only, same fingerprint argument as DEFS_DIR above.
+const BANDS_DIR := "res://data/bands"
+
 ## M4 (M1.6) — tab taxonomy (RD-2, LOCKED). Each tab is a CSV title-key + an ordered
 ## list of SECTION KEYS to render inside its scroll. A section key is a SECTIONS prefix
 ## EXCEPT R4_VISION_KEY ("r4_vision_") which is the split-out, master-less Vision
@@ -366,6 +373,10 @@ var _def_fold_buttons: Dictionary = {}    # def_id -> the ▸/▾ fold toggle Bu
 var _def_folded: Dictionary = {}          # def_id -> bool (fold state; default folded unless active)
 var _def_respawn_buttons: Dictionary = {} # def_id -> the tier-v1 live-edit (respawn) Button
 
+# FBM19b — deck-membership awareness (Director request post-SG1).
+var bands_dir: String = BANDS_DIR         # test hook: set BEFORE add_child to aim at a fixture dir
+var _def_deck_bands: Dictionary = {}      # def_id(String) -> Array[Dictionary {id, name}] of bands whose deck lists it
+
 
 func _ready() -> void:
 	# J1 (M1.3): the CFG rail BOOTS INTO the default play-preset (the Director's most-fun
@@ -374,6 +385,7 @@ func _ready() -> void:
 	# permanent control (fp=e943ac9c8bc1) is one click away.
 	_cfg = _make_boot_config()
 	_load_defs()                          # M1.9 (S4): discover authored defs BEFORE the build
+	_load_deck_membership()               # FBM19b: learn which bands' decks spawn each def
 	_build_ui()
 	_assert_full_coverage()               # build-time: no RunConfig knob left unreachable
 	_refresh_all()
@@ -971,6 +983,52 @@ func _load_defs() -> void:
 		return String(a.id) < String(b.id))
 
 
+## FBM19b — deck-membership scan (build-time, display-only): every BandProfile
+## .tres under bands_dir contributes def_id -> {band id, band display name} for
+## each opposition_deck row (DeckEntry wrappers unwrapped via entry.def, the S9
+## convention). Filename-sorted so the chip's band list is order-stable.
+## FAIL-SOFT: a file that doesn't load as a BandProfile is push_warning-skipped —
+## a broken band must never take the config menu down with it.
+func _load_deck_membership() -> void:
+	_def_deck_bands.clear()
+	var names: Array[String] = []
+	for f: String in ResourceLoader.list_directory(bands_dir):
+		if f.ends_with(".tres"):
+			names.append(f)
+	names.sort()
+	for f: String in names:
+		var path := bands_dir.path_join(f)
+		var profile := load(path) as BandProfile
+		if profile == null:
+			push_warning("ConfigMenu: %s did not load as a BandProfile — skipped for deck-membership display." % path)
+			continue
+		var band_id := String(profile.id) if profile.id != &"" else f
+		var band_name := profile.display_name if profile.display_name != "" else band_id
+		for entry: Resource in profile.opposition_deck:
+			var def_res: Resource = entry
+			if entry is DeckEntry:
+				def_res = (entry as DeckEntry).def
+			var def := def_res as OppositionDef
+			if def == null or def.id == &"":
+				continue   # broken deck rows are the builder's fail-loud, not the menu's
+			var key := String(def.id)
+			if not _def_deck_bands.has(key):
+				_def_deck_bands[key] = []
+			var bands: Array = _def_deck_bands[key]
+			var already := false
+			for b: Variant in bands:
+				if String((b as Dictionary).get("id", "")) == band_id:
+					already = true
+					break
+			if not already:
+				bands.append({ "id": band_id, "name": band_name })
+
+
+## The bands whose deck lists this def ([] = nowhere-spawning without an enable).
+func _deck_bands_for(def: OppositionDef) -> Array:
+	return _def_deck_bands.get(String(def.id), [])
+
+
 ## The Oppositions tab body: staging note + one generated section per def (sorted
 ## by id) + the TWO DISTINCT lever sentinels (§3.4 Layer 1 / §8.0.2). With zero
 ## defs the tab shows a placeholder — the menu must never fail to build headlessly
@@ -1016,7 +1074,8 @@ func _build_opposition_defs_tab(parent: Control) -> void:
 ## to appear); body = one generated row per param_schema entry + the action row
 ## (Clear overrides + the tier-v1 respawn button). Mirrors the legacy section
 ## anatomy so the Director reads one visual language; genuinely collapsible
-## (6+ defs need folding), default collapsed unless the def is enabled/overridden.
+## (6+ defs need folding), default collapsed unless the def is enabled/overridden/
+## deck-listed (FBM19b — see _def_section_active).
 func _build_def_section(parent: Control, def: OppositionDef) -> void:
 	var id := String(def.id)
 	var box := PanelContainer.new()
@@ -1057,6 +1116,9 @@ func _build_def_section(parent: Control, def: OppositionDef) -> void:
 	chip.name = "Chip"
 	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	chip.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	# FBM19b: Labels default to MOUSE_FILTER_IGNORE, which suppresses tooltips —
+	# PASS lets the deck-membership tooltip show without eating clicks.
+	chip.mouse_filter = Control.MOUSE_FILTER_PASS
 	header.add_child(chip)
 	_def_chips[id] = chip
 
@@ -1289,16 +1351,35 @@ func _push_def_value_to_control(def: OppositionDef, key: String, control: Contro
 			slider.set_value_no_signal(clampf(float(value), slider.min_value, slider.max_value))
 
 
-## The ENABLED · n overrides / OFF chip (redundant non-colour state cue, like the
-## legacy chips).
+## The ENABLED · n overrides / IN DECK / OFF chip (redundant non-colour state cue,
+## like the legacy chips). FBM19b: a def the config leaves off can still spawn
+## from a band's opposition_deck — the chip says so honestly ("OFF" read as
+## "tuning does nothing"; the staged rc.param_overrides DO reach deck spawns —
+## def < deck-entry < rc, the locked precedence). Truly nowhere-spawning defs
+## keep the plain OFF chip.
 func _refresh_def_chip(def: OppositionDef) -> void:
 	var chip: Label = _def_chips.get(String(def.id), null)
 	if chip == null:
 		return
 	if not _cfg.oppositions_enabled.has(def.id):
-		chip.text = tr("CFG_CHIP_OFF")
+		var decks: Array = _deck_bands_for(def)
+		if decks.is_empty():
+			chip.text = tr("CFG_CHIP_OFF")
+			chip.tooltip_text = ""
+			return
+		var band_ids := PackedStringArray()
+		var band_names := PackedStringArray()
+		for b: Variant in decks:
+			band_ids.append(String((b as Dictionary).get("id", "")))
+			band_names.append(String((b as Dictionary).get("name", "")))
+		chip.text = tr("CFG_DEF_CHIP_DECK").format({
+			"bands": ", ".join(band_ids),
+			"n": _staged_overrides_for(def).size(),
+		})
+		chip.tooltip_text = tr("CFG_DEF_CHIP_DECK_TIP").format({ "names": ", ".join(band_names) })
 		return
 	chip.text = tr("CFG_DEF_CHIP_ON").format({"n": _staged_overrides_for(def).size()})
+	chip.tooltip_text = ""
 
 
 ## The override '*' label mark + tooltip (§3.3: the row label suffixes '*' while a
@@ -1344,9 +1425,14 @@ func _on_def_fold_pressed(id: String) -> void:
 			return
 
 
-## "Active" = worth auto-expanding at build: enabled or carrying staged overrides.
+## "Active" = worth auto-expanding at build: enabled, carrying staged overrides,
+## or deck-listed (FBM19b — a band's deck WILL spawn it, so its knobs must be
+## visible the moment the tab opens; folding stays available, only the default
+## changed). Truly nowhere-spawning defs still start collapsed.
 func _def_section_active(def: OppositionDef) -> bool:
-	return _cfg.oppositions_enabled.has(def.id) or not _staged_overrides_for(def).is_empty()
+	return _cfg.oppositions_enabled.has(def.id) \
+		or not _staged_overrides_for(def).is_empty() \
+		or not _deck_bands_for(def).is_empty()
 
 
 # --- S4 live edit, tier v1 — respawn-with-new-params (§3.7, the ONLY tier) -----
