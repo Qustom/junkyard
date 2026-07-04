@@ -45,10 +45,13 @@ DEBUG / CONFIG MENU — a generated Oppositions tab (new)
 -------------------------------------------------------
 * NEW — Oppositions tab (press P). The debug menu has a new Oppositions tab that is
   GENERATED from each hazard's own tuning fields — every hazard (old and new) exposes its
-  parameters here. Tune a hazard's params and respawn it live to feel the change. A run you
-  tweak this way is flagged as "debug-dirty" so it can be filtered out of the honest
-  telemetry later. All tunable knobs total 91 now (89 from before + 2 new opposition
-  levers); "Reset" still returns the all-off baseline (byte-identical to M1.0–M1.8).
+  parameters here. The Sump's hazards (Wrecker, Splitter) are marked "IN DECK" and their
+  sections open pre-expanded, so their activation radius and speed sliders are right there —
+  set values in the hub, then dive into The Sump to feel them. Tune a hazard's params and
+  respawn it live to feel the change. A run you tweak this way is flagged as "debug-dirty"
+  so it can be filtered out of the honest telemetry later. All tunable knobs total 91 now
+  (89 from before + 2 new opposition levers); "Reset" still returns the all-off baseline
+  (byte-identical to M1.0–M1.8).
 
 
 UNDER THE HOOD
