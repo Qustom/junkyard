@@ -27,6 +27,9 @@ extends RefCounted
 ## Q6(i)); rc.param_overrides re-tunes DEF-DRIVEN params only, at ctx-merge time (§7.2
 ## Q6(ii) — legacy entity knobs stay driven by the rc fields entities snapshot at
 ## setup()). Both default empty = perfectly neutral = neither lane's baseline moves.
+## Deck rows may be S9 DeckEntry wrappers (def + deck-only param_overrides), unwrapped
+## in _authored_deck; ctx-merge precedence is def params < deck-entry overrides <
+## rc.param_overrides (breakdown deck-driven-def conventions, D-RAT-2 delivery).
 
 ## TUNABLE (Director sweep at SG2; binds only on deck-driven bands + the extras lane —
 ## §7.2 Q5): the credit pool a band_depth-1 deck band gets before Instability scaling.
@@ -141,15 +144,17 @@ func populate(band: Band, profile: BandProfile, rc: RunConfig, svc: SpawnService
 	if rc == null or band == null or svc == null:
 		return
 	var band_depth: int = profile.band_depth if profile != null else 1
-	var deck: Array[OppositionDef] = _authored_deck(profile)
+	var deck_overrides: Dictionary = {}   # def id -> deck-entry override bag (S9)
+	var deck: Array[OppositionDef] = _authored_deck(profile, deck_overrides)
 	var extras: Array[OppositionDef] = _extras_defs(rc, deck)
 	if not deck.is_empty():
 		# Deck-driven band: ONE deck walk over deck + extras (extras appended after the
 		# authored entries — the band author's priority list stays the head of the draw),
-		# ONE credit budget (§2.3/§3.3).
+		# ONE credit budget (§2.3/§3.3). Deck-entry overrides ride along keyed by id;
+		# extras have none (the lever appends plain defs — S9).
 		var effective: Array[OppositionDef] = deck.duplicate()
 		effective.append_array(extras)
-		_populate_deck(band, effective, band_depth, rc, svc)
+		_populate_deck(band, effective, band_depth, rc, svc, deck_overrides)
 	else:
 		# Band 1 / band_greybox: the byte-exact parity path. Credits never consulted.
 		_populate_legacy(band, rc, svc)
@@ -268,11 +273,13 @@ func _legacy_active_specs(rc: RunConfig) -> Array[Dictionary]:
 ## Deck-driven population. Deterministic and RNG-free: authored deck order IS the draw
 ## order (id-deduped upstream; spawn_weight RESERVED — §7.2 Q6(iii)); pieces walk the
 ## same stable shallow-first order as the legacy lane (one discipline); counts come off
-## the def's spawn card in `params` (amendment 10), overlaid by rc.param_overrides at
-## ctx-merge time (§7.2 Q6(ii)). The budget binds spend; the SERVICE's caps
-## (per_room/per_band/cap_group) are the hard stop — a refused spawn never spends.
+## the def's spawn card in `params` (amendment 10), overlaid by the S9 deck-entry
+## overrides then rc.param_overrides at ctx-merge time (precedence: def params <
+## deck-entry overrides < rc.param_overrides — §7.2 Q6(ii) + breakdown deck-driven-def
+## conventions). The budget binds spend; the SERVICE's caps (per_room/per_band/
+## cap_group) are the hard stop — a refused spawn never spends.
 func _populate_deck(band: Band, deck: Array[OppositionDef], band_depth: int,
-		rc: RunConfig, svc: SpawnService) -> void:
+		rc: RunConfig, svc: SpawnService, deck_overrides: Dictionary = {}) -> void:
 	var budget: int = int(floor(float(BASE_CREDITS) * instability(band_depth)))
 	var eligible: Array[OppositionDef] = []
 	for d in deck:
@@ -294,7 +301,7 @@ func _populate_deck(band: Band, deck: Array[OppositionDef], band_depth: int,
 		for d in eligible:
 			if budget <= 0:
 				break
-			var params: Dictionary = _effective_params(d, rc)
+			var params: Dictionary = _effective_params(d, rc, deck_overrides)
 			var n: int = int(params.get("base_count", 0)) \
 				+ int(floor(float(params.get("count_per_depth", 0.0)) * float(p.depth_index)))
 			if n <= 0:
@@ -316,14 +323,25 @@ func _populate_deck(band: Band, deck: Array[OppositionDef], band_depth: int,
 
 ## The authored deck, typed + id-deduped (first occurrence wins) + fail-loud on broken
 ## entries. BandProfile.opposition_deck is Array[Resource] (S1 Q5 — retightening is a
-## noted post-integration follow-up), so entries are cast here.
-func _authored_deck(profile: BandProfile) -> Array[OppositionDef]:
+## noted post-integration follow-up); rows are EITHER plain OppositionDefs OR S9
+## DeckEntry wrappers (mixed array, back-compat) — wrappers are unwrapped to the def
+## here so gating/costing/ordering see one uniform typed deck. Each wrapper's
+## non-empty param_overrides is recorded into `deck_overrides` (def id -> bag) for
+## the ctx-time merge; dedup keeps the FIRST occurrence's overrides too (a later
+## duplicate's overrides are dropped with the duplicate, same first-wins rule).
+func _authored_deck(profile: BandProfile, deck_overrides: Dictionary = {}) -> Array[OppositionDef]:
 	var out: Array[OppositionDef] = []
 	if profile == null:
 		return out
 	var seen: Dictionary = {}
 	for r in profile.opposition_deck:
-		var d := r as OppositionDef
+		var raw: Resource = r
+		var overrides: Dictionary = {}
+		if r is DeckEntry:
+			var entry := r as DeckEntry
+			raw = entry.def
+			overrides = entry.param_overrides
+		var d := raw as OppositionDef
 		if d == null or d.host_scene == null:
 			push_error("EncounterBuilder: profile '%s' deck entry is not a valid OppositionDef (%s)."
 				% [profile.id, str(r)])
@@ -332,6 +350,8 @@ func _authored_deck(profile: BandProfile) -> Array[OppositionDef]:
 			continue   # id-deduped: the band author's FIRST entry wins
 		seen[d.id] = true
 		out.append(d)
+		if not overrides.is_empty():
+			deck_overrides[d.id] = overrides
 	return out
 
 
@@ -359,11 +379,19 @@ func _extras_defs(rc: RunConfig, deck: Array[OppositionDef]) -> Array[Opposition
 	return out
 
 
-## The def's spawn-card/knob bag with rc.param_overrides overlaid (String or StringName
-## keyed — the .tres/JSON side authors String keys). DEF-DRIVEN params only (§7.2
-## Q6(ii)): the legacy lane never calls this, so legacy entity knobs stay single-driven.
-func _effective_params(d: OppositionDef, rc: RunConfig) -> Dictionary:
+## The def's spawn-card/knob bag with the S9 deck-entry overrides then
+## rc.param_overrides overlaid, in that order — the LOCKED precedence
+## def params < deck-entry overrides < rc.param_overrides (rc keys are String or
+## StringName; deck_overrides is keyed by def id, its bags author String keys —
+## both normalized to String on merge). DEF-DRIVEN params only (§7.2 Q6(ii)):
+## the legacy lane never calls this, so legacy entity knobs stay single-driven.
+func _effective_params(d: OppositionDef, rc: RunConfig,
+		deck_overrides: Dictionary = {}) -> Dictionary:
 	var out: Dictionary = d.params.duplicate(true)
+	var deck_ov: Variant = deck_overrides.get(d.id, null)
+	if deck_ov is Dictionary:
+		for k: Variant in (deck_ov as Dictionary):
+			out[String(k)] = (deck_ov as Dictionary)[k]
 	if rc == null or rc.param_overrides.is_empty():
 		return out
 	var entry: Variant = rc.param_overrides.get(String(d.id),

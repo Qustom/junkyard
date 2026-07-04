@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bs9deckentry0001"]
+
+[ext_resource type="Script" path="res://tests/test_deck_entry.gd" id="1"]
+
+[node name="TestDeckEntry" type="Node"]
+script = ExtResource("1")
