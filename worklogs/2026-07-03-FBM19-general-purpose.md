@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.9
 - **Branch:** general-purpose/FBM19
-- **Commit:** (filled on commit — see below)
+- **Commit:** 5dec90c391cd19ec22d44a7ca5cf4b2452d4ae5e
 
 ## What changed
 
