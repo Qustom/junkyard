@@ -536,3 +536,14 @@ S4 tier-v1 respawn ctx.
 contracts (deck-driven def conventions + S9); TASKS §S9 + §FU5; SG1 blockedBy now S0–S9.
 
 **M1.9 Wave-4 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 5 (S8 ∥ S9).**
+
+---
+
+## M1.9 Wave-5 close-out (2026-07-03) — 1 entry (S8): 1 Reviewed
+
+- **S8/route-key — `_band_route_key` member instead of the §4.1 Dictionary-returning helper**
+  (2026-07-03) — **Reviewed** (protects S3's kept-signature golden-harness seam). **Reapply:** S8
+  spec §Wave-5 close-out amendment. *(S9 shipped zero deviations.)*
+
+**M1.9 Wave-5 close-out complete — build phase S0–S9 fully swept.** `DESIGN_DEVIATIONS.md` empty.
+**Next: Wave 6 re-gate (SG1 build + publish → Director playtest → SG2 → SG3).**

@@ -637,3 +637,12 @@ twice). S3 also keeps `BAND_ID = &"near"` for the default dive's `start_run` tag
 (S3's Q2b), so the telemetry cohort label never forks mid-version; S8 owns the band-stamp
 story in Wave 5. Until S8 lands, nothing reads the GameState staging slot except S3's
 default-only seam — the pre-declare stays inert exactly as §3 requires.
+
+---
+
+## Wave-5 close-out amendment (as-built, Director-dispositioned 2026-07-03)
+
+- **Route-key handoff = `_band_route_key` member** set inside `_resolve_band_profile()` (Director:
+  **Reviewed**) — supersedes the §4.1 Dictionary-returning-helper pseudocode; preserves S3's
+  kept-signature seam the golden harness calls. The resolved key drives `start_run`/`enter_band`
+  and the `band_id` telemetry stamp (verified on both routes).

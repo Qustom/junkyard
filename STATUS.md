@@ -6,8 +6,13 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **Waves 1–4 DONE + swept (Wave-4: 18 deviations, 13 Reviewed + 5 Addressed); Wave 5 (S8 ∥ S9) IN PROGRESS (dispatched).** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
-**Last updated:** 2026-07-03 (Wave-4 close-out executed: 23 gloss rows landed in `config_strings.csv`; `trap_if_neutral` on splitter `catch_radius`; **S9 deck-entry override wrapper planned** (TASKS + board — the Director's D-RAT-2 delivery); **FU5 shared Actor-host shell** filed post-gate; specs amended; archived. Wave 5 dispatched: S8 second hub portal + routing ∥ S9 DeckEntry wrapper.)
+**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **BUILD PHASE S0–S9 COMPLETE + fully swept (5 wave close-outs, 34 deviations dispositioned). Wave 6 re-gate: SG1 (build + publish) IN PROGRESS → Director playtest → SG2 → SG3.** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Last updated:** 2026-07-03 (Wave-5 close-out: 1 S8 deviation Reviewed + archived; S9 zero deviations. Full integrated matrix green (25 tests + smoke, m13 first-run). SG1 dispatched → qa-playtest-coordinator: verify matrix + `SG1_playtest_build.md` + changelog M1.8→M1.9 + itch publish.)
+
+## In progress
+| Task | Since | Agent(s) | Milestone | Note |
+|---|---|---|---|---|
+| SG1 — M1.9 playtest build + verify + changelog + itch publish | 2026-07-03 | qa-playtest-coordinator | M1.9 (W6) | Build-verify doc from the HG1 template; changelog M1.8→M1.9 feature delta; publish `qusto/the-far-yard:html5` via push_itch.sh (BUTLER path). |
 
 ## In progress
 | Task | Since | Agent(s) | Milestone | Note |
