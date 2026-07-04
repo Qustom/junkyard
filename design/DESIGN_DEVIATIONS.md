@@ -36,6 +36,19 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
   here only for the wave-4 audit trail; the design already matches (no reapply needed).
 
 ---
+- [2026-07-03] **ORCH/Wave-4 integration — D-RAT-2's Charger "deck `param_override → false`" has NO
+  data mechanism in the as-built deck.** S7's binding Resolved Decisions made `opposition_deck` a
+  plain ordered array of def references ("tunables live ON the defs, not a deck-entry wrapper"), and
+  `test_charger` pins the def defaults to D-RAT-2's letter (`throwable_while_charging=true`,
+  `wall_crash_recover_mult=1.0`). So the ratified band-two values (dash-invulnerable, crash-stun ≈2.0)
+  currently apply NOWHERE. The only as-built override channel is `rc.param_overrides` (ctx-merge,
+  S3/S4). · Integration completed the deck 4→6 with plain refs per S7's Resolved Decisions; def
+  defaults untouched. · **Recommendation: Addressed via the playtest preset** — have SG1's default
+  play preset stage `param_overrides = {"charger": {"throwable_while_charging": false,
+  "wall_crash_recover_mult": 2.0}}` (charger is band-2-exclusive, so this is exactly "the band_two
+  feel" at the gate; def defaults stay D-RAT-2-letter and menu-sweepable; zero new mechanism).
+  Alternative: a deck-entry override wrapper (new mechanism — post-gate scope).
+
 
 *Last close-out: **M1.9 Wave 2** (2026-07-03) — 8 entries (S2×4 + S5×4): **7 Reviewed + 1 Addressed**
 (run-clock seam → typed injected Callable, fixed at close-out) — reapplied + archived to `DESIGN_DEVIATIONS_HISTORY.md`.*
