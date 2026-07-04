@@ -34,6 +34,15 @@ extends Node
 ##   (F) the child_despawn_s mercy knob works when > 0 (ratified default 0 = off).
 ##   (G) telemetry vocabulary: every generic row seen uses only the S6b vocabulary
 ##       (&"spawned"/&"split"/&"split_refused"/&"hit_player"), primitives-only.
+##   (H) FBM19/FB1 — placement policy cannot swallow shards: a split INSIDE the BUG7
+##       entry-safe radius (parent chased the player back to the entry and died
+##       there) still yields both children (ignore_entry_safety); a same-room
+##       double-split yields 4 children despite the child def's per_room_cap=2
+##       (ignore_room_cap); zero &"split_refused" in either case. The REAL ceilings
+##       (per_band_cap=8 + the group cap) still refuse — case (C) proves that.
+##   (I) FBM19/FB3 — the aggro latch: no chase while the player is outside
+##       aggro_radius; entering it latches aggro; the latch PERSISTS when the player
+##       leaves (no de-aggro); aggro_radius = 0 behaves legacy (always-chase).
 
 const CELL := 16
 const BASELINE_FP := "e943ac9c8bc1"
@@ -70,6 +79,8 @@ func _run() -> int:
 	_case_fingerprint(parent_def, failures)
 	await _case_kills_gate(child_def, failures)
 	await _case_despawn_timer(child_def, failures)
+	_case_split_escapes(parent_def, failures)
+	await _case_aggro_latch(parent_def, failures)
 	_case_vocabulary(failures)
 
 	EventBus.opposition_event.disconnect(_on_opposition_event)
@@ -84,7 +95,10 @@ func _run() -> int:
 			+ BASELINE_FP + " byte-identical across a forced split with the RNG stream "
 			+ "untouched, L5 kills gate (true -> run_ended death + "
 			+ "opposition_killed_player; false -> hit_player only), child_despawn_s "
-			+ "mercy knob, and the generic telemetry vocabulary.")
+			+ "mercy knob, the FB1 escapes (entry-radius split sheds both shards; "
+			+ "same-room double-split yields 4; caps still refuse), the FB3 aggro "
+			+ "latch (idle outside, latch inside, no de-aggro, 0 = legacy), and the "
+			+ "generic telemetry vocabulary.")
 		return 0
 	for f in failures:
 		printerr("S6b FAIL: ", f)
@@ -116,6 +130,13 @@ func _case_defs(parent_def: OppositionDef, child_def: OppositionDef,
 		failures.append("(A) parent ratified defaults wrong: %s" % [parent_def.params])
 	if int(child_def.params.get("generations", -1)) != 0:
 		failures.append("(A) child generations default must be 0 (terminal)")
+	# FBM19/FB3 aggro defaults: parent idles until ~on-screen range (160 px ≈ the
+	# vertical half-view at zoom 2, matching the charger's aggro_range precedent);
+	# children ship 0 = always-chase (born of player aggression — aggro from frame 1).
+	if float(parent_def.params.get("aggro_radius", -1.0)) != 160.0:
+		failures.append("(A) parent aggro_radius default must be 160.0 (FB3)")
+	if float(child_def.params.get("aggro_radius", -1.0)) != 0.0:
+		failures.append("(A) child aggro_radius default must be 0.0 (born aggro)")
 	# Cross-def reference: the id the host's death hook loads resolves to the child
 	# def (a dangling child id would be a fail-loud error).
 	var xref := load(SplitterHazard.DEF_PATH_FMT
@@ -389,6 +410,121 @@ func _case_despawn_timer(child_def: OppositionDef, failures: Array[String]) -> v
 		failures.append("(F) child_despawn_s > 0 did not despawn the child")
 	_teardown(svc, container)
 	player.free()
+
+
+# --- (H) FBM19/FB1 — mid-run splits escape generation-time placement policy ----------
+
+func _case_split_escapes(parent_def: OppositionDef, failures: Array[String]) -> void:
+	# (H1) a split INSIDE the entry-safe radius still sheds both shards. Arm the
+	# service (entry exclusion ACTIVE), spawn the parent at a policed-valid cell,
+	# then walk it back onto the entry (the mid-run chase) and kill it there —
+	# every ring cell lands inside the 2.5-cell exclusion.
+	var svc := _fresh_service()
+	var container := _fresh_container()
+	var entry_pos := Vector2(8, 8)
+	svc.begin_band(container, CELL, entry_pos, RunConfig.new())
+	svc.set_cap_group(&"new_hazards", NEW_HAZARDS_CEILING)
+	var parent := svc.spawn(parent_def, Vector2i(20, 20), { "depth": 2 }) as SplitterHazard
+	if parent == null:
+		failures.append("(H1) parent spawn failed (test mis-set)")
+		_teardown(svc, container)
+		return
+	parent.global_position = entry_pos   # chased the player back to the band entry
+	_events.clear()
+	parent.resolve_throw_death({ "item_id": &"scrap", "kind": &"splitter",
+		"depth": 2, "run_t_ms": 100 })
+	if svc.live_count(&"splitter_child") != 2:
+		failures.append("(H1) entry-safe radius swallowed shards: %d children, expected 2"
+			% svc.live_count(&"splitter_child"))
+	if _count(&"splitter", &"split_refused") != 0:
+		failures.append("(H1) unexpected &\"split_refused\" inside the entry radius (escape broken)")
+	_teardown(svc, container)
+
+	# (H2) a same-room double-split yields 4 children despite the child def's
+	# per_room_cap=2 (both parents share one room_key; the parent forwards it).
+	var svc2 := _fresh_service()
+	var cont2 := _fresh_container()
+	svc2.begin_band(cont2, CELL, Vector2.INF, RunConfig.new())
+	svc2.set_cap_group(&"new_hazards", NEW_HAZARDS_CEILING)
+	var p1 := svc2.spawn(parent_def, Vector2i(5, 5), { "room_key": "room_A" }) as SplitterHazard
+	var p2 := svc2.spawn(parent_def, Vector2i(40, 5), { "room_key": "room_A" }) as SplitterHazard
+	if p1 == null or p2 == null:
+		failures.append("(H2) two same-room parents did not spawn (per_room_cap=2 allows 2)")
+		_teardown(svc2, cont2)
+		return
+	_events.clear()
+	p1.resolve_throw_death({ "item_id": &"scrap", "kind": &"splitter",
+		"depth": 2, "run_t_ms": 200 })
+	p2.resolve_throw_death({ "item_id": &"scrap", "kind": &"splitter",
+		"depth": 2, "run_t_ms": 201 })
+	if svc2.live_count(&"splitter_child") != 4:
+		failures.append("(H2) same-room double-split left %d children, expected 4 "
+			% svc2.live_count(&"splitter_child")
+			+ "(per_room_cap swallowed the second brood)")
+	if _count(&"splitter", &"split_refused") != 0:
+		failures.append("(H2) unexpected &\"split_refused\" on the double-split")
+	if _count(&"splitter", &"split") != 2:
+		failures.append("(H2) expected 2 &\"split\" rows, got %d" % _count(&"splitter", &"split"))
+	_teardown(svc2, cont2)
+
+
+# --- (I) FBM19/FB3 — the aggro latch ---------------------------------------------------
+
+func _case_aggro_latch(parent_def: OppositionDef, failures: Array[String]) -> void:
+	# A player stub must exist BEFORE begin_band (the service resolves it there).
+	var player := Node2D.new()
+	player.add_to_group(&"player")
+	add_child(player)
+	player.global_position = Vector2(10_000, 0)   # far outside every radius
+	var svc := _fresh_service()
+	var container := _fresh_container()
+	svc.begin_band(container, CELL, Vector2.INF, RunConfig.new())
+	svc.set_cap_group(&"new_hazards", NEW_HAZARDS_CEILING)
+	# aggro_radius 100 via the ctx params tier; catch_radius 0 keeps LethalContact
+	# quiet (pure movement probe); speed 60 makes motion visible within a few frames.
+	var hz := svc.spawn(parent_def, Vector2i(0, 0), { "params": {
+		"aggro_radius": 100.0, "move_speed": 60.0, "catch_radius": 0.0 } }) as SplitterHazard
+	if hz == null:
+		failures.append("(I) aggro fixture spawn failed")
+		_teardown(svc, container)
+		player.free()
+		return
+	var idle_pos: Vector2 = hz.global_position
+	for i in 5:
+		await get_tree().physics_frame
+	if hz.global_position.distance_to(idle_pos) > 0.01:
+		failures.append("(I) chased while the player was OUTSIDE aggro_radius (moved %.2f px)"
+			% hz.global_position.distance_to(idle_pos))
+	# Enter the radius -> latch -> chase.
+	player.global_position = hz.global_position + Vector2(80, 0)
+	for i in 5:
+		await get_tree().physics_frame
+	if hz.global_position.distance_to(idle_pos) < 1.0:
+		failures.append("(I) did not chase after the player entered aggro_radius")
+	# Leave far away -> the latch PERSISTS (no de-aggro: once seen, always followed).
+	player.global_position = Vector2(10_000, 0)
+	var before: Vector2 = hz.global_position
+	for i in 5:
+		await get_tree().physics_frame
+	if hz.global_position.distance_to(before) < 1.0:
+		failures.append("(I) latch dropped when the player left (must chase forever)")
+	svc.despawn(hz)
+	# aggro_radius = 0 -> legacy always-chase (the neutral back-compat value).
+	var legacy := svc.spawn(parent_def, Vector2i(0, 0), { "params": {
+		"aggro_radius": 0.0, "move_speed": 60.0, "catch_radius": 0.0 } }) as SplitterHazard
+	if legacy == null:
+		failures.append("(I) legacy fixture spawn failed")
+		_teardown(svc, container)
+		player.free()
+		return
+	var start: Vector2 = legacy.global_position
+	for i in 5:
+		await get_tree().physics_frame
+	if legacy.global_position.distance_to(start) < 1.0:
+		failures.append("(I) aggro_radius=0 did not always-chase (legacy back-compat broken)")
+	_teardown(svc, container)
+	player.free()   # IMMEDIATE — a queue_freed player would still resolve in a
+	                # later case's begin_band group lookup
 
 
 # --- (G) generic vocabulary only ------------------------------------------------------

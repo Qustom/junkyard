@@ -991,3 +991,14 @@ merge) is explicitly post-gate on SG3's watch-list. Implementation deviations fr
   `_compact()`/`clear_all()` test `entry["node"]` in place via `is_instance_valid(...)` instead of
   binding possibly-freed instances to locals — no untyped locals; the typed-GDScript convention
   holds with zero exceptions.
+- **`"ignore_entry_safety"` ctx escape added (FBM19/FB1, Director-directed 2026-07-03).** The
+  service-read ctx-key list gains `"ignore_entry_safety": bool` — the mirror of
+  `ignore_room_cap`: it skips ONLY the BUG7 entry-safe `_cell_valid` refusal in `spawn()`, never
+  a cap tier. Rationale: the 2.5-cell entry radius exists to stop generation-time spawn-camping;
+  it was also swallowing MID-RUN reaction spawns (splitter shards from a parent killed near the
+  band entry), which read as "it just didn't split". Caller: S6b's `_do_split` (which also sets
+  `ignore_room_cap` — a split at the death point is gameplay, not room dressing). The real
+  ceilings (`per_band_cap`, the `&"new_hazards"` group cap) still refuse, with `&"split_refused"`
+  telemetry. Proven in `test_spawn_service` (escape skips only entry safety; caps still bind with
+  it set) and `test_splitter` (entry-radius split now yields 2 shards; same-room double-split
+  yields 4; cap refusals unchanged).
