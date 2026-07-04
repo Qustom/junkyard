@@ -16,6 +16,11 @@ See `CLAUDE.md` → "The orchestrator loop".
 > third (test-proven); **FB3** splitter `aggro_radius=160` latch param (0=legacy; child 0; Oppositions-tab tunable, gloss
 > added). Full matrix green; changelog descriptions updated in place. Worklog `…-FBM19-general-purpose.md`. Deviations: none.
 
+## In progress
+| Task | Since | Agent(s) | Milestone | Note |
+|---|---|---|---|---|
+| FBM19b — Oppositions tab: surface deck-spawned hazards' knobs | 2026-07-04 | general-purpose | M1.9 (post-SG1 FB) | Branch `general-purpose/FBM19b`. Deck-membership chip (no more misleading OFF), auto-expand charger/splitter sections, end-to-end staged-override test (aggro/speed → band_two spawns). All 4 knobs already exist + work. |
+
 ## ▶ DIRECTOR PLAYTEST (human-gated — the felt loop can't be verified headless)
 
 > Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260704-72fd565`** (FBM19 re-test build; supersedes `m1-20260704-8412732`). Re-check the 3 fixed items: splitter always splits on throw-kill (even at the band entrance / two in one room) · Wrecker+Splitter present deep into The Sump · splitter lurks until ~on-screen range then latches (tune `aggro_radius` in the Oppositions tab if 160 feels wrong).
