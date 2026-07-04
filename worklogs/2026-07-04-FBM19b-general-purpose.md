@@ -4,7 +4,8 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.9 (post-SG1 Director request)
 - **Branch:** general-purpose/FBM19b
-- **Commit:** 923fd7511e42b8eb2b2b1a8a3ef47e99ac40994e (+ the worklog-SHA amend commit)
+- **Commit:** 126720a911f251c7c60a4dbe40939e5ab9c6f0bc (feature + tests + this worklog;
+  a small follow-up commit records this SHA line itself)
 
 ## What changed
 The Director opened the Oppositions tab to tune the two Sump hazards and couldn't
