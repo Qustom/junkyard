@@ -1,6 +1,76 @@
 THE FAR YARD — CHANGELOG
 ========================
 
+M1.9 — "The Sump"   (changes since M1.8)
+----------------------------------------
+
+Until now there was ONE place to dive — the portal at the back of the yard. M1.9 adds a
+SECOND dive band with its own portal, its own look, and two new kinds of danger that live
+only down there. The original dive is completely unchanged (walk into the old gate and it
+plays exactly as M1.8). The new band is a harder, denser place with hazards that make you
+fight and dodge differently.
+
+
+A SECOND DIVE — "THE SUMP" (new)
+--------------------------------
+* NEW — A second dive portal on the hub. Next to the original dive gate there's now a
+  second gate glowing ember-orange, prompt "Dive — The Sump". Walk into it to dive into a
+  different band. The original gate still dives into the same band-1 dive as before — the
+  two are side by side so you can choose.
+* NEW — The Sump: a band that feels apart. The Sump is branchier and denser than band 1,
+  tinted a sepia-amber "flooded decay" wash, with worn/decayed terrain and a large VAULT
+  set-piece dropped into the layout. Its opposition budget is ~15% heavier than band 1, so
+  it reads as a genuine step down into somewhere worse. (Placeholder art — the palette is a
+  tint pass, not a final tileset.)
+
+
+TWO NEW HAZARDS — Sump-only (new)
+---------------------------------
+* NEW — The Wrecker (a charger). A hazard that TELEGRAPHS, then commits to a straight,
+  lethal DASH down a shown lane, then has to RECOVER. The loop is bait -> dodge the dash ->
+  punish it in the recovery window. In The Sump it is dash-INVULNERABLE — a thrown item
+  MISSES it while it's dashing (that's intended), so you can't just facetank it; you kill
+  it in the recovery window instead. Crashing it into a wall stuns it longer.
+* NEW — The Splitter. A slow pursuer that, when you kill it WITH A THROW, splits into 2
+  smaller children. The children don't split again. (Kill it any other way and it just
+  dies.) It makes throwing at it a choice, not a reflex.
+* Both new hazards are exclusive to The Sump in this build — band 1 stays exactly as it was,
+  so you can feel the difference cleanly.
+
+
+DEBUG / CONFIG MENU — a generated Oppositions tab (new)
+-------------------------------------------------------
+* NEW — Oppositions tab (press P). The debug menu has a new Oppositions tab that is
+  GENERATED from each hazard's own tuning fields — every hazard (old and new) exposes its
+  parameters here. Tune a hazard's params and respawn it live to feel the change. A run you
+  tweak this way is flagged as "debug-dirty" so it can be filtered out of the honest
+  telemetry later. All tunable knobs total 91 now (89 from before + 2 new opposition
+  levers); "Reset" still returns the all-off baseline (byte-identical to M1.0–M1.8).
+
+
+UNDER THE HOOD
+--------------
+* The whole point of this version: adding a new hazard or a new band is now DATA, not new
+  engine code — hazards are "definition + a small reusable part" and bands are "a profile +
+  stages". The two new hazards and The Sump were built almost entirely as data files, which
+  is what makes future content cheap. (Nothing player-facing here — just why the above
+  shipped fast.)
+
+
+NOT YET IN THIS BUILD
+---------------------
+* The new hazards are SUMP-ONLY — they do not appear in band 1 (a deliberate clean A/B for
+  this build; whether they graduate into band 1 is a later call).
+* The Sump's look is a TINT pass on placeholder tiles, not a bespoke tileset — and the hub
+  iso props are not yet re-dressed around the second portal (a watch-item for a later art
+  pass).
+* Save format is UNCHANGED (meta v4 / run v1) — which band you pick is per-dive, not saved.
+* The loop, hub, shop, economy, quota, and timer are otherwise unchanged from M1.8.
+
+
+====================================================================================
+
+
 M1.8 — "The Yard Takes Shape"   (changes since M1.7)
 ----------------------------------------------------
 
