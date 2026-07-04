@@ -16,14 +16,16 @@ See `CLAUDE.md` → "The orchestrator loop".
 > third (test-proven); **FB3** splitter `aggro_radius=160` latch param (0=legacy; child 0; Oppositions-tab tunable, gloss
 > added). Full matrix green; changelog descriptions updated in place. Worklog `…-FBM19-general-purpose.md`. Deviations: none.
 
-## In progress
-| Task | Since | Agent(s) | Milestone | Note |
-|---|---|---|---|---|
-| FBM19b — Oppositions tab: surface deck-spawned hazards' knobs | 2026-07-04 | general-purpose | M1.9 (post-SG1 FB) | Branch `general-purpose/FBM19b`. Deck-membership chip (no more misleading OFF), auto-expand charger/splitter sections, end-to-end staged-override test (aggro/speed → band_two spawns). All 4 knobs already exist + work. |
+> **✓ FBM19b LANDED + REPUBLISHED (2026-07-04, build `m1-20260704-55ca78f`).** Oppositions tab now surfaces
+> deck-spawned hazards: charger/splitter chips read "IN DECK: band_two · n tuned" (tooltip names the band; OFF only
+> for truly nowhere-spawning defs), their sections open PRE-EXPANDED, and a new end-to-end case stages the Director's
+> 4 knobs (aggro_range/charge_speed/aggro_radius/move_speed) through the menu path and proves band_two spawns receive
+> them on top of the D-RAT-2 deck layer. 91/91 + fps intact. Worklog `…-FBM19b-general-purpose.md`. Deviations: none.
+> Director-flag (worklog): section bodies stay dimmed for not-enabled deck defs (redundant-cue rule) — say the word to undim.
 
 ## ▶ DIRECTOR PLAYTEST (human-gated — the felt loop can't be verified headless)
 
-> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260704-72fd565`** (FBM19 re-test build; supersedes `m1-20260704-8412732`). Re-check the 3 fixed items: splitter always splits on throw-kill (even at the band entrance / two in one room) · Wrecker+Splitter present deep into The Sump · splitter lurks until ~on-screen range then latches (tune `aggro_radius` in the Oppositions tab if 160 feels wrong).
+> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260704-55ca78f`** (FBM19b tab-surfacing build; supersedes `72fd565`/`8412732`). Re-check the 3 fixed items: splitter always splits on throw-kill (even at the band entrance / two in one room) · Wrecker+Splitter present deep into The Sump · splitter lurks until ~on-screen range then latches (tune `aggro_radius` in the Oppositions tab if 160 feels wrong).
 > Checklist (full version: `SG1_playtest_build.md` §5): both portals from the hub · band 1 = control feel
 > (unchanged M1.8) · **The Sump reads as a band apart** (branchy/flooded/vault/sepia tint/denser opposition) ·
 > **The Wrecker**: bait → dodge → punish; throws MISS mid-dash (intended); wall-crash = longer stun ·
