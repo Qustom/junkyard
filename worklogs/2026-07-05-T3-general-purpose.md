@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer) — profile/deck/curve values per game-director-designer T3 spec; palette tint per environment-artist D-RAT-5 ratification
 - **Milestone:** M1.10 (Wave 3 — the scalability measurement)
 - **Branch:** worktree-agent-ac7af44f8860ba823
-- **Commit:** <filled at commit>
+- **Commit:** 025dfa2 (feature commit; this worklog SHA-stamp lands in the follow-up)
 
 ## What changed
 Authored the third dive band **entirely as data**, riding the now-merged cave stack
