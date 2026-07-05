@@ -342,11 +342,18 @@ func _case_deck_surface(failures: Array[String], scene: PackedScene) -> void:
 		menu.queue_free()
 		return
 
-	# Honest chip + auto-expand: deck-listed (band_two) + not config-enabled →
-	# the IN-DECK chip (never OFF), band display name in the tooltip, section
-	# EXPANDED at build. splitter_child spawns nowhere → OFF + collapsed.
-	var want_chip: String = tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_two", "n": 0 })
+	# Honest chip + auto-expand: deck-listed + not config-enabled → the IN-DECK
+	# chip (never OFF), band display name in the tooltip, section EXPANDED at
+	# build. charger is band_two-only; splitter is now in band_three's deck too
+	# (M1.10 T3 D-RAT-6: [ambusher 6 · burrower 3 · splitter 4 · bomb 1]), so its
+	# chip surfaces BOTH bands (band_three listed first). splitter_child spawns
+	# nowhere → OFF + collapsed.
+	var want_chip_by_id: Dictionary = {
+		"charger": tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_two", "n": 0 }),
+		"splitter": tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_three, band_two", "n": 0 }),
+	}
 	for id: String in ["charger", "splitter"]:
+		var want_chip: String = want_chip_by_id[id]
 		var chip: Label = menu._def_chips.get(id, null)
 		if chip == null:
 			failures.append("(E) no chip label for deck-listed def '%s'" % id)
