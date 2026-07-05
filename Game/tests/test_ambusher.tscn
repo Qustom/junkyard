@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c2amb7ush3rt01"]
+
+[ext_resource type="Script" path="res://tests/test_ambusher.gd" id="1"]
+
+[node name="TestAmbusher" type="Node"]
+script = ExtResource("1")
