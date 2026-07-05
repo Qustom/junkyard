@@ -93,6 +93,24 @@ func validate() -> PackedStringArray:
 				push_warning("BandProfile '%s': archetype 'linear' but backend_config.branch_chance = %f > 0" % [id, cfg.branch_chance])
 			elif archetype == "branchy" and cfg.branch_chance <= 0.0:
 				push_warning("BandProfile '%s': archetype 'branchy' but backend_config.branch_chance = %f" % [id, cfg.branch_chance])
+	elif backend == "cave":
+		# M1.10 T0: cave backend needs a CaveBandConfig; NO piece_pool (there are
+		# no pieces to draw) — a non-null piece_pool is legal-but-inert.
+		if backend_config == null or not (backend_config is CaveBandConfig):
+			problems.append("BandProfile '%s': cave backend needs a CaveBandConfig backend_config" % id)
+		else:
+			for p in (backend_config as CaveBandConfig).validate():
+				problems.append("BandProfile '%s': %s" % [id, p])
+		# Flavors ship EMPTY on cave bands (M1.10 breakdown; the cave IS the flavor).
+		# SetPieceInject/WearDecay are socket-built — a flavor-bearing cave profile is
+		# an authoring error until a cave-aware stage exists. This is the SINGLE
+		# location for the cave+flavors fail-loud (Phase-3 amendment 1).
+		if not flavors.is_empty():
+			problems.append("BandProfile '%s': cave backend does not support flavor stages in M1.10 (flavors must be empty)" % id)
+		# The archetype field has no cave-honest value; the CA IS the topology, so
+		# it is an ignored don't-care (warn, never error — Q6 option a).
+		if archetype != "linear":
+			push_warning("BandProfile '%s': archetype '%s' is ignored by the cave backend (the CA IS the topology)" % [id, archetype])
 	if band_depth < 1:
 		problems.append("BandProfile '%s': band_depth must be >= 1" % id)
 	return problems
