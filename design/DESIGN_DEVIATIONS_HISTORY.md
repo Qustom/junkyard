@@ -547,3 +547,29 @@ contracts (deck-driven def conventions + S9); TASKS §S9 + §FU5; SG1 blockedBy 
 
 **M1.9 Wave-5 close-out complete — build phase S0–S9 fully swept.** `DESIGN_DEVIATIONS.md` empty.
 **Next: Wave 6 re-gate (SG1 build + publish → Director playtest → SG2 → SG3).**
+
+---
+
+## M1.10 Wave-1 close-out (2026-07-05) — 3 entries (T0): 3 Reviewed
+
+Director dispositioned all three **Reviewed** (design fine as-is; no change). T2a/T2b shipped zero
+deviations. All three are backend-local as-built facts already captured by the T0 spec's Resolved
+Decisions + the cost ledger — no design-doc edit required.
+
+- **T0/cave-backend — grid-level carve = a deterministic *mirror* of the CARVE-mode concept**
+  (not literal `ConnectivityGuarantee` reuse; that mode is a journal-LIFO revert, inapplicable in a
+  stateless backend). Reuses the stage's real `is_fully_connected` checker via `Mode.ASSERT`. —
+  **Reviewed** (Phase-3 Q4 already ratified this reading). **Reapply:** none — canonical in T0 spec
+  §10 Resolved Decisions Q4.
+- **T0/cave-backend — `cave_backend.gd` ~404 code lines vs the ~255 estimate** (Q8 2×2-open throat
+  guarantee heavier than its ~35-line estimate + `_pick_deepest_piece`; downstream reuse still 0 new
+  lines). — **Reviewed** (cost-ledger magnitude note, not a design change). **Reapply:** none — the
+  number stands in the T0 worklog cost ledger (TG3 evidence).
+- **T0/cave-backend — `deepest_piece` chosen by chunk-graph BFS** (replicating DepthGrader) rather
+  than spec §3.5's cell-BFS, making C4's `depth_index == max_depth` bar hold by construction (spec
+  §3.5 was self-contradictory). — **Reviewed** (keep; validates the spec's own acceptance bar).
+  **Reapply:** none — backend-local; the depth contract T1 consumes (`max_depth >= 4`, entry anchor)
+  is unchanged.
+
+**M1.10 Wave-1 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 2 (T1 — cave
+materialisation, sole `main_game.gd` writer).**

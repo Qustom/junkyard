@@ -6,7 +6,7 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.10 (Second generation backend + cave band + low-sightline oppositions — Director-directed 2026-07-04, opened ahead of M1.9's SG2/SG3) — **Build Wave 1 LANDED + integrated on `main` (`57f2a81`): T0 CaveBackend + T2a Ambusher + T2b Burrower all merged, verified, board=Done. ▶ HOLD: Wave-1 close-out deviation sweep — 3 T0 entries await Director disposition (all rec Reviewed) BEFORE T1 dispatches (CLAUDE.md hard gate).** *(M1.9 SG1 published `m1-20260704-55ca78f` — Director playtest → SG2 → SG3 pending, non-blocking; M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Current milestone:** M1.10 (Second generation backend + cave band + low-sightline oppositions — Director-directed 2026-07-04, opened ahead of M1.9's SG2/SG3) — **Wave 1 LANDED + swept (3 T0 deviations all Director-Reviewed 2026-07-05 → archived). ▶ Wave 2 DISPATCHED: T1 (cave materialisation, sole `main_game.gd` writer).** *(M1.9 SG1 published `m1-20260704-55ca78f` — Director playtest → SG2 → SG3 pending, non-blocking; M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
 
 > **M1.10 design LOCKED (2026-07-05):** breakdown + 6 per-task designs each with a BINDING
 > `Resolved Decisions (Phase 3)` section; 13 cross-task amendments + Director ratifications
@@ -77,7 +77,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — M1.10 Wave 1 LANDED; HELD at the Wave-1 deviation-sweep gate. On Director disposition of the 3 T0 entries → reapply+archive per verdict → dispatch Wave 2 (T1, sole `main_game.gd` writer)
+## ▶ Next action (start here on a cold restart) — M1.10 Wave 2 IN FLIGHT (T1 cave materialisation). On its return: verify DoD + merge + Wave-2 close-out sweep, then dispatch Wave 3 (T3 band_three)
 
 > **M1.10 = the second architectural axis** (Director-directed 2026-07-04; design LOCKED 2026-07-05):
 > a **CaveBackend** (cellular-automata caverns — no pieces/sockets) behind the same `BandPipeline`, proven by
