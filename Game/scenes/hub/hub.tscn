@@ -63,6 +63,15 @@ display_name = "The Sump Portal"
 glow_tint = Color(1, 0.58, 0.24, 1)
 gate_tint = Color(1, 0.78, 0.62, 1)
 
+[node name="DeparturePortalBandThree" parent="." instance=ExtResource("3")]
+position = Vector2(110, -20)
+interactable_id = &"portal_band_three"
+band_id = &"band_three"
+prompt_text = "Dive — The Warren"
+display_name = "The Warren Portal"
+glow_tint = Color(0.3, 0.9, 0.65, 1)
+gate_tint = Color(0.65, 0.95, 0.82, 1)
+
 [node name="ShopAnchor" type="Marker2D" parent="."]
 position = Vector2(-220, -150)
 

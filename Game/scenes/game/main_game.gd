@@ -55,6 +55,7 @@ const BAND_PROFILE_DIR := "res://data/bands/"
 const BAND_ROUTES: Dictionary = {
 	&"near": &"band_greybox",
 	&"band_two": &"band_two",
+	&"band_three": &"band_three",   # T4 (M1.10): the cave band — T3's "The Warren" profile.
 }
 
 ## Spawn-piece fallback cell size if a piece doesn't report one (B1 authored 16).

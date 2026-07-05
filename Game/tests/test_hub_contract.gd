@@ -23,6 +23,7 @@ const HUB_GROUND_CELLS := 963              # H4 iso paint (worklog 2026-07-02-H4
 const YARD_X := 340                        # hub_ground.gd dirt-yard half-extents
 const YARD_Y := 216
 const EMBER_ORANGE := Color(1.0, 0.58, 0.24)   # D-RAT-1 band-2 glow
+const CAVE_TEAL := Color(0.3, 0.9, 0.65)       # D-RAT-5 band-3 glow (The Warren)
 
 var _failures: Array[String] = []
 
@@ -46,14 +47,16 @@ func _run() -> int:
 	_check_interactables(hub)  # H4
 	_check_portal_two(hub)     # H5
 	_check_portal_one(hub)     # H6
+	_check_portal_three(hub)   # H7
 
 	hub.queue_free()
 	await get_tree().process_frame
 
 	if _failures.is_empty():
-		print("HUB_CONTRACT OK — paths + 4 walls + %d ground cells + 3 interactables; " % HUB_GROUND_CELLS,
+		print("HUB_CONTRACT OK — paths + 4 walls + %d ground cells + 4 interactables; " % HUB_GROUND_CELLS,
 				"portal 1 unchanged (&\"near\", WHITE), portal 2 routes &\"band_two\" ",
-				"(The Sump prompt, ember-orange, (220,-150) in-yard)")
+				"(The Sump prompt, ember-orange, (220,-150) in-yard), portal 3 routes ",
+				"&\"band_three\" (The Warren prompt, cave-teal, (110,-20) in-yard)")
 		return 0
 	for f in _failures:
 		printerr("HUB_CONTRACT FAIL: ", f)
@@ -64,7 +67,8 @@ func _run() -> int:
 
 func _check_node_paths(hub: Node2D) -> void:
 	for path in ["Player", "PlayerSpawn", "HudLayer/QuotaNotice", "HubShop",
-			"DeparturePortal", "DeparturePortalBandTwo", "Room/Floor", "Room/Walls"]:
+			"DeparturePortal", "DeparturePortalBandTwo", "DeparturePortalBandThree",
+			"Room/Floor", "Room/Walls"]:
 		if hub.get_node_or_null(path) == null:
 			_failures.append("H1: node path '%s' does not resolve" % path)
 
@@ -102,6 +106,7 @@ func _check_interactables(hub: Node2D) -> void:
 	var expected := {
 		"DeparturePortal": &"portal",
 		"DeparturePortalBandTwo": &"portal_band_two",
+		"DeparturePortalBandThree": &"portal_band_three",
 		"HubShop": &"shop",
 	}
 	for owner_path in expected:
@@ -176,3 +181,41 @@ func _check_portal_one(hub: Node2D) -> void:
 	if it == null or it.interactable_id != &"portal" or it.prompt_text != "Dive" \
 			or it.display_name != "Departure Portal":
 		_failures.append("H6: portal-1 child Interactable identity moved (push-down not a no-op)")
+
+
+# --- H7. Portal 3 (the T4 addition — routes to The Warren) --------------------------------
+
+func _check_portal_three(hub: Node2D) -> void:
+	var portal := hub.get_node_or_null("DeparturePortalBandThree") as DeparturePortal
+	if portal == null:
+		_failures.append("H7: DeparturePortalBandThree is not a DeparturePortal")
+		return
+	if portal.band_id != &"band_three":
+		_failures.append("H7: portal-3 band_id is '%s', expected &\"band_three\"" % portal.band_id)
+	if portal.interactable_id != &"portal_band_three":
+		_failures.append("H7: portal-3 interactable_id is '%s'" % portal.interactable_id)
+	if portal.position != Vector2(110, -20):
+		_failures.append("H7: portal-3 position %s, expected (110, -20)" % portal.position)
+	if absf(portal.position.x) > YARD_X or absf(portal.position.y) > YARD_Y:
+		_failures.append("H7: portal-3 position %s outside the dirt yard" % portal.position)
+	if not String(portal.prompt_text).contains("The Warren"):
+		_failures.append("H7: portal-3 prompt '%s' does not name The Warren" % portal.prompt_text)
+	# Visually distinct from BOTH existing portals (contract, not just the ratified pin).
+	if portal.glow_tint == Color.WHITE:
+		_failures.append("H7: portal-3 glow_tint is WHITE — not distinct vs portal 1")
+	if portal.glow_tint.is_equal_approx(EMBER_ORANGE):
+		_failures.append("H7: portal-3 glow_tint == portal-2 ember-orange — not distinct")
+	if not portal.glow_tint.is_equal_approx(CAVE_TEAL):
+		_failures.append("H7: portal-3 glow_tint %s != D-RAT-5 cave-teal %s"
+				% [portal.glow_tint, CAVE_TEAL])
+	# The _ready push-down actually landed on the child + sprites.
+	var it := portal.get_node_or_null("Interactable") as Interactable
+	if it != null and not String(it.prompt_text).contains("The Warren"):
+		_failures.append("H7: portal-3 child Interactable prompt '%s' not pushed down" % it.prompt_text)
+	var glow := portal.get_node_or_null("PortalGlow") as Sprite2D
+	if glow == null or not glow.modulate.is_equal_approx(portal.glow_tint):
+		_failures.append("H7: portal-3 PortalGlow modulate not tinted (%s)"
+				% (glow.modulate if glow != null else Color.BLACK))
+	var gate := portal.get_node_or_null("DiveGate") as Sprite2D
+	if gate == null or gate.modulate == Color.WHITE:
+		_failures.append("H7: portal-3 DiveGate modulate not tinted")
