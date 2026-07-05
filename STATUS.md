@@ -6,7 +6,7 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.10 (Second generation backend + cave band + low-sightline oppositions — Director-directed 2026-07-04, opened ahead of M1.9's SG2/SG3) — **Wave 2 LANDED (T1 merged `8da0b1f`, 0 deviations — cave is playable end-to-end); Waves 1+2 all clean. ▶ Wave 3 DISPATCHED: T3 (`band_three.tres` "The Warren" — the cave band as data, the headline cost measurement).** *(M1.9 SG1 published `m1-20260704-55ca78f` — Director playtest → SG2 → SG3 pending, non-blocking; M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Current milestone:** M1.10 (Second generation backend + cave band + low-sightline oppositions — Director-directed 2026-07-04, opened ahead of M1.9's SG2/SG3) — **Wave 3 LANDED (T3 merged `025dfa2`, 0 deviations — "The Warren" is a whole new band for 0 production-code lines). Waves 1–3 all clean. ▶ Wave 4 DISPATCHED: T4 (third hub portal + `band_three` routing — the last build task before the re-gate).** *(M1.9 SG1 published `m1-20260704-55ca78f` — Director playtest → SG2 → SG3 pending, non-blocking; M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
 
 > **M1.10 design LOCKED (2026-07-05):** breakdown + 6 per-task designs each with a BINDING
 > `Resolved Decisions (Phase 3)` section; 13 cross-task amendments + Director ratifications
@@ -67,8 +67,18 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 > **✓ Wave-2 close-out (2026-07-05): 0 deviations — clean wave, no Director gate.** Waves 1+2 = the full
 > cave stack (backend → materialisation → 2 oppositions), all controls byte-identical. **Cost so far:
-> ~765 bespoke lines for a whole new generation backend + 2 oppositions, 0 new downstream lines** — the
-> "content = data" thesis is holding into Wave 3, where T3 measures the marginal per-band cost.
+> ~765 bespoke lines for a whole new generation backend + 2 oppositions, 0 new downstream lines.**
+
+## Wave 3 — Done + integrated on `main` (2026-07-05)
+| Task | Agent(s) | Merged | Proof |
+|---|---|---|---|
+| T3 — `band_three.tres` "The Warren" (cave band as data) | general-purpose (game-director-designer/environment-artist scope folded in) | `025dfa2` (br `…ac7af44`) | `test_band_three_profile` OK (loads as cave band, deterministic + connected + reaches depth axis 9 seeds; **band_greybox AND band_two byte-identical** — 9 absolute golden fp pins; deck spawns the D-RAT-6 outcome **ambusher 6 / burrower 3 / splitter 4 / bomb 1 = 14** at the 31-credit budget, spends to 0); `max_depth≥4` + 2×2 throat re-asserted on the authored config; all-off fp `e943ac9c8bc1` unmoved; import + smoke green. Files: 3 new `.tres` (77 lines) + 1 test (528). Worklog `…-T3-general-purpose.md`. **Deviations: none.** |
+
+> **✓ Wave-3 close-out (2026-07-05): 0 deviations — clean wave, no Director gate. HEADLINE COST RESULT:
+> band 3 = 0 production-code lines** (`git diff --stat` empty; not one existing `.gd`/`.tres` touched) —
+> **cheaper than band_two** (M1.9 S7 cost 1 glue line + a schema field). The tint field, cave dispatch,
+> and `DeckEntry` lever all shipped earlier; a whole new differently-generated band is now pure `.tres`.
+> The "content = data" thesis is proven on evidence for a second, CA-generated backend — the TG3 headline.
 
 > **M1.9 build-wave Done tables** (S0–S9, all merged 2026-07-02/03) archived → `STATUS_ARCHIVE.md`
 > §"M1.9 build waves". SG2/SG3 remain the only open M1.9 surface (pointer above + `TASKS.md` §M1.9).
@@ -81,7 +91,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — M1.10 Wave 3 IN FLIGHT (T3 band_three "The Warren"). On its return: verify DoD + merge + Wave-3 close-out sweep, then dispatch Wave 4 (T4 third portal)
+## ▶ Next action (start here on a cold restart) — M1.10 Wave 4 IN FLIGHT (T4 third hub portal + `band_three` routing). On its return: verify DoD + merge + Wave-4 close-out sweep, then Wave 5 = TG1 (playtest build + verify + changelog + itch publish)
 
 > **M1.10 = the second architectural axis** (Director-directed 2026-07-04; design LOCKED 2026-07-05):
 > a **CaveBackend** (cellular-automata caverns — no pieces/sockets) behind the same `BandPipeline`, proven by
