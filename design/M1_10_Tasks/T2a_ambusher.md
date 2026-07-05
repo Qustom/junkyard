@@ -463,3 +463,191 @@ For `Concealment` to own un-hittability cleanly, `ChargeLane` must not also togg
 ---
 
 *Phase 3 (fresh eyes, NOT this author) resolves the Open Questions into a `Resolved Decisions` section, flagging OQ-3 / OQ-4 / OQ-5 / OQ-9 (fun/fairness/vision/scope) for the Director per the orchestrator loop, and confirming OQ-10's group-ownership on merit. Design-only — no code, no `.tres`. The programmer + character-animator build against this; deviations from the committed design go to `DESIGN_DEVIATIONS.md` for the Wave-1 close-out sweep, and the worklog carries the Bespoke-code ledger (§4) that TG3 judges.*
+
+---
+
+## Resolved Decisions (Phase 3 — fresh eyes, BINDING)
+
+> Resolver: Phase-3 fresh-eyes agent (NOT the Phase-2 author), 2026-07-04. Every citation below
+> re-verified against the working tree at resolution time: `charge_lane.gd`, `lethal_contact.gd`,
+> `proximity_trigger.gd`, `throw_interaction.gd`, `thrown_item.gd`, `opposition_component.gd`,
+> `charger_hazard.gd`, `charger.tres`, `opposition_def.gd`, `telegraph_fsm.gd`,
+> `encounter_builder.gd`, `test_opposition_def_schema.gd`, `player.tscn`, `charger.tscn`,
+> plus the T2b and T3 sibling designs (seam check). Verdicts here are **binding on the build**
+> unless the Director overrules a flagged item. Fun/fairness/vision/scope calls are NOT
+> self-resolved — they carry a recommendation and sit in the Director queue at the bottom.
+
+### Per-OQ verdicts
+
+- **OQ-1 — Pounce engine: RESOLVED — reuse `ChargeLane` verbatim.** The §1.3 state mapping
+  verified exact against the real FSM (`charge_lane.gd:46` enum; DORMANT `:113-119`, TELEGRAPH
+  `:120-127`, CHARGE + swept test `:128-140` + `:178-185`, RECOVER `:141-145`; `on_state_changed`
+  is a host-assigned `Callable` invoked `(state: int, wall_crash: bool)` on every transition,
+  `:60`, `:202-206` — the host hook signature in §2.3 matches). `bind()` seats DORMANT without
+  firing the hook (`:96-104`), confirming the host-seats-HIDDEN-itself note. A bespoke lunge would
+  re-derive proven, `test_charger`-gated logic for zero design gain. **Zero `charge_lane.gd`
+  edits.**
+
+- **OQ-2 — One-shot mechanism: RESOLVED — host `_spent` gating, confirmed safe.** The feared
+  race does not exist: `_enter(State.DORMANT)` fires `on_state_changed` **synchronously inside
+  `tick()`** (`charge_lane.gd:202-206`), so the host latches `_spent` before `tick()` even
+  returns; a DORMANT→TELEGRAPH re-arm can only happen inside a *subsequent* `tick()` call, which
+  `_spent` now gates. Even `cooldown_s = 0` (the one-shot's `re_hide_s = 0` fold) cannot re-arm
+  within the same frame. The escalation path (a `ChargeLane` `one_shot` guard) is **not needed**
+  — do not take it speculatively.
+
+- **OQ-3 — Pounce lethality: NEEDS DIRECTOR REVIEW** (fun/fairness). Recommendation confirmed on
+  the merits available to a resolver: **fatal, `kills`-gated**, per breakdown OQ6 — M1 has no HP
+  pool/stagger primitive, and the fairness spend (locked lane + `tell_lead_s` + reveal pop) is
+  the Wrecker precedent. As-built correction to the fallback note: the nonfatal branch is
+  `LethalContact.nonfatal_handler` (`lethal_contact.gd:51`, `:154-155`), wired by R1 at
+  `scenes/hazards/hazard_entity.gd:83` (commented `:221`) — not `hazard_entity.gd:226`. It exists
+  and could carry a nonfatal variant later; not the M1.10 default.
+
+- **OQ-4 — Tell subtlety: NEEDS DIRECTOR REVIEW** (fun/fairness). Ship the proposed defaults
+  (`tell_alpha 0.28`, `concealed_alpha 0.0`, `tell_lead_s 0.45`) and let TG2's
+  deaths-per-first-encounter drive the sweep. Resolver math check: a player walking straight in
+  covers `arm_radius` 90 px in exactly 0.45 s at 200 px/s — the lead is *just* enough to
+  lateral-dodge (0.22 s reaction + ~0.14 s clear) but has no slack; if the Director wants a
+  forgiving first playtest, raise `tell_lead_s` to 0.6, not `tell_alpha`. One schema fix
+  (binding): the `arm_radius` gloss says "0 = permanently inert" while the row's `min` is 32
+  (menu can never set 0 — same shape as charger `aggro_range`, `charger.tres:52`). Keep `min 32`;
+  move the 0-gate remark out of the gloss into the test-harness notes (tests inject
+  `arm_radius: 0` via `spawn_ctx["params"]`, which bypasses schema mins).
+
+- **OQ-5 — Mimic-a-pickup variant: NEEDS DIRECTOR REVIEW** (fun/vision). Recommendation
+  confirmed: **NOT for M1.10.** The fake-`JunkPickup` read risks poisoning the loot verb the
+  whole game teaches; the floor-tell version keeps the read environmental. Post-gate follow-up
+  if TG2 wants a harder read.
+
+- **OQ-6 — Near-loot bias: RESOLVED — standard placement.** Verified: `_populate_deck`
+  (`encounter_builder.gd:298-368`) places by even-spread + cell stride with **no coupling to
+  `JunkPlacer` output** — a loot bias is structurally impossible without a builder edit, which
+  the guardrail forbids. Standard placement ships; loot-coupling is a flagged TG2 follow-up.
+
+- **OQ-7 — ARMED throw-killable: RESOLVED — yes.** Natural consequence of joining the
+  `"hazard"` group at reveal (`thrown_item.gd:79-80` group check → `_hit_hazard`), a fair
+  reaction-throw counter, DoD unaffected. The one-line deferral (join at EXPOSED instead) stays
+  documented as the Director's cheap opt-out.
+
+- **OQ-8 — Param naming: RESOLVED — semantic keys, with the precedent stated honestly.** The
+  charger's actual rename layer is **one key** (`proximity_radius = aggro_range`,
+  `charger_hazard.gd:117`) — its def otherwise ships `ChargeLane`'s raw keys as the authored
+  schema (`charger.tres:18-32`). The Ambusher's full semantic bag goes further than precedent,
+  but it is bijection-safe (the schema test checks params↔schema *within the def*,
+  `test_opposition_def_schema.gd:138-152`, never cross-def key names), costs a handful of
+  `_resolve_params` lines, and the menu-legibility argument stands. Confirmed.
+
+- **OQ-9 — Band-3 exclusivity: NEEDS DIRECTOR REVIEW** (scope). Recommendation confirmed:
+  **band-3-native.** Verified the gate is real and cheap to lift later: the deck lane filters
+  `band_depth >= d.min_band` (`encounter_builder.gd:303-305`), `band_greybox` runs the legacy
+  lane (no deck), `band_two` is `band_depth = 2` — structural exclusivity with `min_band = 3`,
+  matching T3's deck design (T3 §3.4 note) and the D-RAT-2 A/B precedent.
+
+- **OQ-10 — Group ownership: RESOLVED — `Concealment` is sole owner, WITH TWO BINDING
+  AMENDMENTS.** The direction is right, but two as-built facts change the mechanism:
+
+  1. **"`ChargeLane` never touches the group" is false as stated.** `ChargeLane._configure`
+     calls `_set_throwable(true)` **unconditionally at bind** (`charge_lane.gd:104` — "undo a
+     mid-dash group toggle from a prior bind"), and `_set_throwable(true)` fires again at
+     CHARGE entry/exit (`:126`, `:137`) — with `throwable_while_charging = true` these are
+     add-if-absent no-ops **only while the host is already in the group**. The pseudocode's
+     `_conceal.hide_conceal()` **LAST in `setup()`** (§2.3) is therefore **load-bearing, not
+     hygiene** — it is what neutralizes the bind-time group-add. Binding: keep that order, and
+     the build's comment must say why. (The `:126`/`:137` add-backs are harmless in every
+     reachable flow: reveal always precedes CHARGE, so the host is in-group by then.)
+
+  2. **Concealment must own `collision_layer` too — HIDDEN is layer 0.** Group-only gating is
+     *functionally* sufficient for "can't be killed," but not for "un-hittable," because the
+     body stays on layer 16 and two physical facts leak: **(a)** `ThrownItem` (`collision_mask
+     18`) still gets `body_entered` off a hidden body and resolves `_miss()` — the item **stops
+     mid-air on empty floor and re-drops at the hidden Ambusher's feet** (`thrown_item.gd:76-82`,
+     `:114-121`), a free position-reveal that reads as a glitch and trivializes the concealment
+     read; **(b)** the **player's body collides with hazard layer 16** (`player.tscn:14`
+     `collision_mask = 26` = world 2 + 8 + hazard 16), so a hidden body is an invisible
+     obstacle in edge cases (`arm_radius`-0 sweeps, spawn adjacency). T2b independently reached
+     layer-clearing for exactly these reasons (`T2b_burrower.md` §1.3) — two Wave-1 oppositions
+     must not ship two different un-hittability idioms. **Binding:** `Concealment._set_hittable`
+     owns **both** properties on its own host node — HIDDEN: `collision_layer = 0` + out of
+     group; ARMED/POUNCE/EXPOSED: `collision_layer = 16` + in group; SPENT: `collision_layer =
+     16` (a visible husk is solid debris) + out of group (items re-drop off it, can't be farmed).
+     Still a plain own-node property write (the `BurrowCycle` idiom), **zero shared-file edits**,
+     ledger impact ~+5 lines in `concealment.gd`. Consequential DoD amendment: **test 4(a)
+     changes from "misses/re-drops" to "passes clean through"** — a throw across a HIDDEN
+     Ambusher produces **no** `body_entered` against it, no `throw_missed` at its position (the
+     item flies on to its own wall/max-range miss elsewhere), and the Ambusher survives.
+
+### As-built corrections (fold into the build; none change the architecture)
+
+1. **`oppositions_enabled` is ADDITIVE, not conjunctive.** §2.1's "loads only when `&"ambusher"
+   ∈ oppositions_enabled **and** a live deck lists it" is wrong: the deck lane runs off the
+   profile deck alone, and `rc.oppositions_enabled` is an additive extras list appended to it
+   (`encounter_builder.gd:27`, `:131-137` `is_inert`, `:407-423`). Correct statement: the
+   Ambusher spawns when **either** `band_three`'s deck lists it (T3) **or** the extras lever
+   names it. The all-off control is unaffected (the shipped default has neither) — fingerprint
+   claim stands.
+2. **Scene-declared group + layer are REQUIRED, not optional.** `test_opposition_def_schema.gd`
+   scans **all** `.tres` under `data/oppositions/` (count-agnostic — `ambusher.tres` enters
+   automatically, no shared-test edit) and bare-instantiates every `host_scene`, requiring the
+   root **in the `"hazard"` group** (`:262`) plus `resolve_throw_death`/`get_def_id` with
+   `get_def_id() == def.id` (`:264-271`). Binding: `ambusher.tscn` root declares
+   `groups=["hazard"]`, `collision_layer = 16`, `collision_mask = 2` at author time (the
+   `charger.tscn:8-10` shape); `Concealment.hide_conceal()` at `setup()` then seats layer-0 +
+   out-of-group. §2.7's asset spec must add this. (The test's `MIRROR`/`KILLS_MIRROR`/
+   `TRAP_FLAG`/`HOST_CLASS` maps are legacy-4-only by design — T2a does **not** edit that test;
+   host-class/trap pinning for `&"ambusher"` lives in `test_ambusher`.)
+3. **Add exactly one `trap_if_neutral: true` schema row** (S6a convention; the charger carries
+   it on `charge_speed`, `charger.tres:67`). Recommend `lunge_speed` — the mechanism-critical
+   magnitude, mirroring the charger's choice. The doc's schema table omits this entirely.
+4. Minor citation drift, corrected for the programmer: ChargeLane's "inert, **visible**,
+   learnable" DORMANT comment is at `charge_lane.gd:22-23` (not `:31`); the charger wiring block
+   is `charger_hazard.gd:78-89`; `apply_contact` is `lethal_contact.gd:102-107`; the cell-size
+   cite `main_game.gd:42` is stale (that line is now `BAND_ID`) though 16 px cells stand;
+   R1's nonfatal wiring is `scenes/hazards/hazard_entity.gd:83`/`:221` (see OQ-3).
+5. **Def count check:** `data/oppositions/` holds 7 defs today (incl. `splitter_child`);
+   `ambusher.tres` makes the doc's "8 defs" correct as written.
+6. Card values verified against T3's assumptions — **no change needed**: `credit_cost 2`,
+   `base_count 1` *on the def* (T3 §2.3 requires natives carry their own demand), `per_room_cap
+   2`, `per_band_cap 6`, `min_band 3` all sit inside T3's §4.3 budget-sim targets (cost ≈2,
+   cap 5-6).
+
+### Cross-task amendments (for orchestrator adjudication before Wave-1 dispatch)
+
+1. **`ui/config/config_strings.csv` is a REAL T2a↔T2b file collision** — the one common file
+   the two "file-disjoint" designs both need. T2a lists `CFG_FIELD_AMBUSHER_*` rows explicitly
+   (§0, §4); T2b's schema table implies burrower rows (and mis-names them `CFG_GLOSS_BURROWER_*`
+   — the shipped convention is `CFG_FIELD_<DEF>_<KEY>`, per `charger.tres`/`config_strings.csv:
+   163-170`; T2b must correct its prefix). **Recommended adjudication:** neither branch touches
+   the csv; each worklog carries its row block verbatim, and the orchestrator applies both in
+   one integration commit at the Wave-1 merge. Safe to defer: no test asserts gloss-key coverage
+   against the csv (missing rows only degrade menu labels), and the compiled
+   `config_strings.en.translation` is gitignored — no binary conflict.
+2. **T2b's `phase_salt` assumption is broken as-built** (flagged here because it threatens a
+   *silent shared-file edit* in the same wave): `EncounterBuilder.legacy_ctx` stamps
+   `phase_salt` for `&"spike"` **only** — every other kind gets `{}` (`encounter_builder.gd:
+   111-121`), so every Burrower would read salt 0 and pop in unison. T2b must either derive its
+   desync from ctx it *does* get (`depth`/`room_key`/spawn cell are stamped for all deck spawns)
+   or raise an adjudicated one-line `legacy_ctx` request — never a silent edit. No T2a impact
+   (the Ambusher is event-driven and needs no salt).
+3. **Un-hittability idiom is now UNIFIED across the wave** (per OQ-10 amendment 2): both new
+   oppositions gate targetability as *layer 0 + out of group* while untargetable, both as
+   own-node writes inside their ONE new component. This is the coherent player-facing rule and
+   keeps both cost ledgers at zero shared edits.
+4. **T3 seam confirmed from this side:** deck id `&"ambusher"`, def-carried `base_count 1`,
+   and the card values above match T3's deck order/budget walk (§3.4/§4.3). No coordination
+   change requested.
+
+### Ledger impact of Phase 3
+
+Unchanged in kind: still `def + ONE component + host shell + scene + test`, zero shared-file
+edits. `concealment.gd` grows ~5 lines (the `collision_layer` writes). The two §4 risk points
+are now **closed** (OQ-2: host gating proven safe; OQ-10: no contention, ownership unified).
+
+### NEEDS DIRECTOR REVIEW (queue for the Wave-1 close-out — recommendations attached)
+
+| # | Call | Recommendation |
+|---|---|---|
+| OQ-3 | Pounce fatal (`kills`-gated) vs nonfatal stagger | **Fatal, `kills`-gated**; stagger deferred to an HP-bearing milestone |
+| OQ-4 | Tell subtlety starting values (`tell_alpha 0.28` / `concealed_alpha 0` / `tell_lead_s 0.45`) | **Ship defaults**, sweep on TG2 first-encounter deaths; if pre-softening, raise `tell_lead_s` → 0.6, not `tell_alpha` |
+| OQ-5 | Disguised-as-junk mimic variant | **Not in M1.10**; post-gate follow-up |
+| OQ-9 | Band-3-exclusive for M1.10 | **Yes** — clean three-band A/B; promotion later is a `min_band` edit + deck add |

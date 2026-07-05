@@ -343,3 +343,227 @@ Sharpened to one-line decisions with a recommendation. None gate the build's *me
 ---
 
 *Spec authored by game-director-designer for M1.10 T3. Design + data-spec only — no game code; the `.tres` values here are authored during T3's build. The contract test is a retargeted clone of `test_band_two_profile.gd`. Coordination seams (OQ6 cave-validate, OQ7 native costs) are flagged to T0/T2a/T2b so T3's marginal cost stays at the predicted zero production lines. Deviations go to `DESIGN_DEVIATIONS.md` for the Wave-3 close-out sweep. OQ1/OQ2/OQ4/OQ8 need the Director; OQ3/OQ5/OQ6/OQ7/OQ9 are fresh-eyes/coordination-resolvable.*
+
+---
+
+## Resolved Decisions (Phase 3) — BINDING
+
+> Fresh-eyes resolution, 2026-07-04 (resolver ≠ author). Every claim below was re-verified
+> against the working tree at `main` (`encounter_builder.gd`, `deck_entry.gd`,
+> `band_profile.gd`, `band_two.tres`, `test_band_two_profile.gd`, the 7 shipped
+> `data/oppositions/*.tres`, `depth_curve_band_two.tres`/`depth_curve.tres`,
+> `junk_placer.gd`, `data/junk/items/`, `test_hub_contract.gd`) and against the four
+> sibling Phase-2 designs T3 integrates (`T0_cave_backend.md`, `T1_cave_materialisation.md`,
+> `T2a_ambusher.md`, `T2b_burrower.md`, `T4_hub_portal_routing.md`). The build implements
+> these verdicts; departures are deviations for the Wave-3 sweep.
+
+### Per-OQ verdicts
+
+**OQ1 — Band identity pick. → NEEDS DIRECTOR REVIEW (D1). Recommendation: Pitch A "The
+Warren", with the portal-glow column CORRECTED (see as-built correction 5).** Pitch A stays
+the recommendation on the spec's own grounds (GDD-canonical "Lateral"; blue-violet is the
+cleanest "impossible color" step; maximally distinct band tint vs band 2's warm amber). But
+the pitch table's **portal-glow column is wrong as-built and is superseded**: portal 1's
+glow *art* is already violet (`portal_glow.png` dominant opaque pixel `(193, 85, 255)`,
+S8 §RD — its `glow_tint` export is WHITE, i.e. identity modulate over violet pixels), so
+Pitch A's "violet/magenta" third portal would read as a *second portal 1*; likewise Pitch
+C's "ember-orange" glow is byte-for-byte portal 2's pinned `EMBER_ORANGE Color(1.0, 0.58,
+0.24)` (`test_hub_contract.gd:25`). Only Pitch B's green was collision-free. **Binding:
+whichever pitch is ratified, the portal-3 glow comes from the remaining clean hue family
+(green–teal), per T4 OQ-2's analysis — recommended cave-teal `Color(0.30, 0.90, 0.65)`.**
+The band's `palette_tint` (in-cave identity) is untouched by this correction — tint and
+portal glow are separate channels, and the D1 pick governs only `display_name` +
+`palette_tint`; T4 owns the glow within the teal/green family.
+
+**OQ2 — Deck roster fun-calls. → NEEDS DIRECTOR REVIEW (D2). Recommendation: ship the
+4-entry `[ambusher, burrower, splitter, bomb(DeckEntry base_count:1)]` deck — with the
+spawn arithmetic corrected (as-built correction 2) and one honest caveat.** The corrected
+deterministic outcome at the 31-credit budget with T2a/T2b's *actual* authored cards
+(ambusher cost 2 / `per_band_cap` 6; burrower cost 2 / **`per_band_cap` 3**, not the
+assumed 4; splitter cost 3 / cap 8; bomb cost 1 / cap 0 = uncapped) is:
+
+```
+budget 31 → ambusher n=min(P, 31/2=15, 6)=6  (spend 12, budget 19)
+          → burrower n=min(P, 19/2=9,  3)=3  (spend  6, budget 13)
+          → splitter n=min(P, 13/3=4,  8)=4  (spend 12, budget  1)
+          → bomb     n=min(P,  1/1=1,  ∞)=1  (spend  1, budget  0)
+          = 6 + 3 + 4 + 1 = 14 spawns, budget spends exactly to 0
+```
+
+(P = eligible pieces ≈ 35–45 on a chunked cave — demand never binds; caps + budget do.)
+**Caveat for the Director:** §3.4's "hidden nook mines" row delivers exactly **one** bomb
+(even-spread places it mid-depth). The deck lane's shaping levers for shipped defs are
+coarse — `credit_cost`/`per_band_cap` are *typed def fields* a `DeckEntry` cannot override
+(`deck_entry.gd` overrides `params` only), and `bomb.tres` defaults are control-frozen —
+so the only alternatives are "1 bomb as remainder spice" (recommended) or moving bomb
+ahead of splitter, which floods (n = 13/1 = 13 bombs, splitter starved). Rec: ship as
+authored; if TG2 wants more mines, that is a per-def-cap-on-DeckEntry engine follow-up,
+not a T3 data tweak. Exclusions (pingpong/charger/spike/pursuer) are ratified as argued —
+each verified against the as-built cards (charger `charge_max_dist = 400` post-FBM19c;
+pursuer has no `base_count` key and `cap_group = &""`, deck-semantics mismatch confirmed).
+
+**OQ3 — Deck exclusivity. → RESOLVED: yes, band-3-exclusive for M1.10.** Verified
+structurally: `_populate_deck` gates `band_depth >= d.min_band` (`encounter_builder.gd:302`)
+on *every* lane including the `oppositions_enabled` extras lever, so `min_band = 3` natives
+can never spawn on band 1 (depth 1) or band 2 (depth 2) through any shipped path. Clean
+three-band A/B for TG2; graduation is a TG3 item. Carried to the Director sweep as a
+one-line ratify (D3), consistent with breakdown OQ9 — no build impact either way.
+
+**OQ4 — Difficulty step size. → NEEDS DIRECTOR REVIEW (D4). Recommendation: ship the
+locked 1.30.** Arithmetic verified: `instability(3) = 1.30`, `floor(24 × 1.30) = 31`
+(`encounter_builder.gd:64, :299, BASE_CREDITS :38`). One numeric nit folded in: 31 vs
+band 2's 27 credits is **+14.8%** in credits (+13.0% in multiplier) — the spec's "+13%"
+is the multiplier read. TG2's deaths-by-band / time-to-gate is the evidence for widening;
+do not pre-tune.
+
+**OQ5 — CaveBandConfig starting values. → RESOLVED, re-based onto T0's ACTUAL schema
+(binding; supersedes §3.3/§4.2's field list).** §3.3 was written against a guessed schema.
+T0's Phase-2 design (`T0_cave_backend.md` §2) defines: `grid_width/grid_height, fill_pct
+(int), smooth_passes, wall_threshold, min_region_cells, carve_width, chunk_cells,
+min_floor_cells, max_attempts, cell_size_px`. **There is no `nook_roughness` float knob
+and none may be added** — T0 Q7 deliberately makes `wall_threshold` + `smooth_passes` the
+roughness surface, and T0's B2 discipline requires integer branch-affecting fields (a 0.5
+float would violate the determinism contract T3's own §0 restates). The authored instance
+becomes:
+
+| T0 field | T3 value | Note |
+|---|---|---|
+| `grid_width` × `grid_height` | **56 × 56** | §3.3's footprint/depth-axis reasoning stands (T0's 60×44 default is comparable; square reads more cave, less corridor) |
+| `fill_pct` | **45** | unchanged (integer percent, T0's `randi_range(0,99)` compare) |
+| `smooth_passes` | **4** | unchanged |
+| `wall_threshold` | **5** | the b3 stated rule; THIS (with `smooth_passes`) is the nook/roughness surface — replaces the fictional `nook_roughness 0.5` |
+| `min_region_cells` | **24** | T3's tune over T0's default 12 (fewer, bigger satellite chambers) — legitimate per-instance authoring |
+| `carve_width` | **2** (T0 default) | the socket-doorway-width player-scale floor — do not lower |
+| `chunk_cells` | **8** (T0 default) | T1's `max_depth ≥ 4` bar is calibrated to it — do not change without T1 re-verify |
+| `min_floor_cells` | **300** (T0 default) | a retry floor, not a target; 56×56 @ 45% fill clears it comfortably |
+| `max_attempts` | **8** (T0 default) | |
+| `cell_size_px` | **16** (T0 default) | must agree with `DEFAULT_CELL_SIZE_PX` + JunkPlacer's instance-null fallback |
+
+Exact shape numbers (`fill_pct`/`smooth_passes`/`wall_threshold`/`min_region_cells`)
+remain integration-tunable within the "chamber-y, nook-rich, bad sightlines" intent, with
+**T1's M6 2×2-open throat bar and M4 `max_depth ≥ 4` bar as the hard floors** — and the
+contract test re-asserts both bars **on the authored config** (as-built correction 4),
+since T1's own test pins them only on T0's defaults.
+
+**OQ6 — Cave `validate()` must not require socket fields. → RESOLVED: confirmed against
+T0's design; T3 builds on it as drafted.** T0 §4.2's cave branch requires only a typed
+`CaveBandConfig` + its self-validate, explicitly does **not** require `piece_pool`
+("legal-but-inert"), and `push_warning`s (never errors) on `archetype != "linear"` — T3's
+authored `archetype = "linear"` + `piece_pool = null` therefore validates clean *and*
+warning-free. Also confirmed from T0 §4.1: the pipeline **fail-louds on a cave profile
+with non-empty `flavors`** — so §3.6's `flavors = []` is not merely correct, it is
+*mandatory* (a flavor-bearing `band_three.tres` returns null). If T0's landed code differs
+from its §4.1/§4.2 design, that is a T0-side deviation to adjudicate before T3 authors.
+
+**OQ7 — Native cost/cap coordination targets. → RESOLVED: superseded by T2a/T2b's actual
+Phase-2 cards; no coordination request needed.** T2a authors `credit_cost 2, per_room_cap
+2, per_band_cap 6, base_count 1`; T2b authors `credit_cost 2, per_room_cap 1, per_band_cap
+3, base_count 1`. These are inside §4.3's target envelope (burrower at 3, the low end).
+The corrected budget walk (OQ2 above) is the binding expectation: **6 / 3 / 4 / 1 = 14
+spawns**, natives-first, budget to zero. Sane cave, not a swarm; density is TG2's call.
+
+**OQ8 — Reward curve tier ceiling / tier-6 loot. → RESOLVED with a BINDING correction to
+§3.5's density curve; tier-6 deferral confirmed (D5 confirm).** Tier verdict stands: floor
+tier 3 / ceiling 5 (junk pool verified: items at tiers 1,1,2,2,3,3,4,5 — nothing above 5;
+the tier-3 floor leaves 4 eligible templates, and `JunkPlacer._eligible_indices` has a
+whole-catalog fallback so a steep gate can never empty a piece). Value 1.30→2.5 stands.
+**The density curve does NOT transplant:** `JunkPlacer.plan` rolls `expected_count` **per
+piece** (`junk_placer.gd` — flat per-piece count; `loot_density_per_area` ships OFF and is
+never preset-on), and a chunked cave has **~35–45 floor-bearing pieces vs band 2's ~16**.
+Copying band-2-scaled density (2.3→2.8) yields ~85–125 junk per cave vs band 2's ~35–42 —
+a 2.5–3× loot flood that would invert the risk/reward step. **Binding: author
+`depth_curve_band_three.tres` density at ≈ `1.0 → 1.3` (per-chunk-piece), targeting a
+band-total of ~45–60 items**; the reward escalation is carried by value (1.30→2.5) and
+tier floor (3), not raw count. Exact density endpoints are integration-tunable against a
+measured plan-size on the seed matrix; the worklog records the measured band-total so TG2
+reads the three-band loot comparison correctly. Tier-6 "anomalous/paradox parts" stays an
+M2 content follow-up (D5, one-line Director confirm).
+
+**OQ9 — Flavors EMPTY. → RESOLVED: confirmed, and upgraded from "correct" to
+"mandatory".** Per OQ6's finding, T0's pipeline guard returns null on a cave profile with
+any flavor stage — `flavors = []` is enforced machinery, not just scope. The contract
+test's `flavors.size() == 0` assert stands.
+
+### As-built corrections (to this doc's body — the build follows these)
+
+1. **§3.3 / §4.2 — `CaveBandConfig` field list replaced** per OQ5 above (`nook_roughness`
+   does not exist; `wall_threshold = 5` integer is the roughness knob; the five
+   T0-defaulted fields are set explicitly in the `.tres` for pin-ability). The `.tres`
+   path follows the shipped sibling precedent (`bandgen_config_band_two.tres` lives at
+   `res://data/`): **`data/cave_config_band_three.tres`** as §5.1 already says — final
+   name deferred to T0's landed convention, as drafted.
+2. **§4.3 — budget walk corrected**: burrower `per_band_cap` is **3** (not ~4); bomb is
+   budget-bound to **1** (its `per_band_cap` is 0 = uncapped, so "cap~6" was fictional);
+   eligible pieces ≈ **35–45** (chunked cave), not ~14 — demand never binds. Outcome:
+   **6 ambusher + 3 burrower + 4 splitter + 1 bomb = 14**, budget exactly 0.
+3. **§2.2 — "+13% over band 2"** is the multiplier read; in credits it is 31 vs 27 =
+   +14.8%.
+4. **§4.4 — contract-test amendments**:
+   - **C0**: schema assertions re-based to T0's real field names/values (correction 1);
+     add `piece_pool_ext == null` and `principles.size() == 0` (cheap completeness).
+   - **C3/C4**: additionally assert, on the **authored** config across the seed matrix:
+     total floor cells ≥ `min_floor_cells`, `pieces.size() >= 2`, and **`band.max_depth
+     >= 4`** (T1's M4 granularity bar re-pinned on T3's tuned instance — T1's own test
+     only pins it on `CaveBandConfig.new()` defaults).
+   - **C5**: the greybox half stays the verbatim direct-vs-pipeline compare; the
+     **band_two half cannot use that shape** (no direct-generator path exists through
+     its flavor stages), so it pins **absolute golden per-seed fingerprints** captured
+     from `main` *before* T3's change (band_two is a frozen control, so the constants
+     are stable); full-matrix coverage stays with the existing suites the DoD reruns.
+5. **§3.1 pitch table — portal-glow column superseded** (see OQ1): portal 1 reads violet
+   on screen (violet art under WHITE identity tint), portal 2 is pinned ember-orange;
+   portal-3 glow must come from the green–teal family regardless of pitch. Band
+   `palette_tint` values in the table are unaffected.
+
+### Cross-task amendments (for orchestrator adjudication)
+
+- **→ T0 (Wave 1):** T3 adopts T0 Q7's resolution (`wall_threshold` + `smooth_passes` ARE
+  the roughness surface) — **no float nook knob is requested on T3's account**. Request:
+  at T0 integration, sanity-run T3's authored value set (56×56 / fill 45 / passes 4 /
+  threshold 5 / min_region 24, T0 defaults elsewhere) across the seed matrix and report
+  region counts + `max_depth` so T3's Wave-3 authoring starts from measured shape, not
+  guesses (this is OQ5's "T0 sanity-runs these values", now against the corrected schema).
+- **→ T1 (Wave 2):** T3's contract test re-asserts T1's two playability bars (`max_depth
+  ≥ 4`, plus gate-reachability C4) on the *authored* config; if the 56×56 instance
+  pinches below the 2×2-open throat bar (T1 M6), the fix is a T3 config tune
+  (fill/smooth/threshold), never a T1 materialisation patch — per T1 OQ-3's ownership
+  ruling.
+- **→ T2a/T2b (Wave 1):** actuals adopted (cost 2/cap 6; cost 2/cap 3) — **no change
+  requested**. If either card lands different, T3's deck still spends validly
+  (self-limiting); only the 6/3/4/1 expectation in the worklog shifts.
+- **→ T4 (Wave 4):** the D1 ratification hands T4 `display_name` + band `palette_tint`
+  **only**; portal-3 `glow_tint`/`gate_tint` are T4's, constrained to the green–teal
+  family (T4 OQ-2, cave-teal recommended) — T3's pitch-table glow suggestions are
+  withdrawn. If Pitch C is picked, ember-orange glow is explicitly forbidden (portal-2
+  collision).
+- **→ TG2 (Wave 5):** two telemetry-reading notes: (a) band-3 junk counts are
+  per-chunk-piece rolls — compare *band-total value*, not item counts, across bands
+  (correction to naive three-band loot reads); (b) the deck outcome is deterministic
+  6/3/4/1 = 14 — deviations in observed spawn counts indicate cap/refusal behavior, not
+  tuning drift.
+
+### NEEDS DIRECTOR REVIEW (assembled for the sweep — recommendations attached)
+
+- **D1 — Band identity (OQ1):** Pitch **A "The Warren"** (blue-violet band tint
+  `Color(0.62, 0.60, 0.78)`) vs B "The Hollow" vs C "Paradox Deep". **Rec: A** — with
+  portal glow re-assigned to cave-teal (portal 1 already reads violet; C's ember glow
+  would clone portal 2). Gates only `display_name`/`palette_tint`/T4 strings — not the
+  build's mechanics.
+- **D2 — Cave deck roster (OQ2):** ship `[ambusher, burrower, splitter, bomb×1]` →
+  deterministic 6/3/4/1 = 14 spawns. **Rec: ship it**; accept the single mid-depth bomb
+  as remainder spice (more mines needs an engine follow-up, not data); add `spike` only
+  if TG2 shows under-population.
+- **D3 — Native exclusivity (OQ3, ratify):** `min_band = 3` keeps ambusher/burrower
+  band-3-exclusive, structurally enforced on every lane. **Rec: yes** (clean three-band
+  A/B); TG3 decides graduation.
+- **D4 — Difficulty step (OQ4):** locked 1.30 → 31 credits (+14.8% credits over band 2).
+  **Rec: ship 1.30**; TG2 evidence drives any widening.
+- **D5 — Reward curve (OQ8, confirm):** value 1.30→2.5, tier floor 3 / ceiling 5,
+  density re-based to ~1.0→1.3 per chunk-piece (band-total ~45–60 items; prevents the
+  2.5–3× loot flood the chunk partition would otherwise cause); tier-6
+  "anomalous/paradox" items logged as M2 content. **Rec: confirm as corrected.**
+
+*Resolved by the Phase-3 fresh-eyes resolver, 2026-07-04. 6 OQs resolved on merit
+(OQ3, OQ5, OQ6, OQ7, OQ8, OQ9 — OQ5/OQ8 with binding as-built corrections); 3 flagged to
+the Director (OQ1→D1, OQ2→D2, OQ4→D4) plus two light confirms (D3, D5). The design is
+lockable once D1–D5 are dispositioned; none of D1–D5 gates the mechanical build.*

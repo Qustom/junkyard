@@ -396,5 +396,179 @@ actual ledger materially exceeds this prediction, that overrun is a TG3 finding 
 
 ---
 
-*Phase-3 resolution + Director ratification of OQ-1/OQ-2 (via T3's pitch pick) and OQ-3
-land here as a `## Resolved Decisions` section before T4 dispatches.*
+## Resolved Decisions (Phase 3) — BINDING
+
+> Fresh-eyes resolution, 2026-07-04, against `main` @ `303f14e`. Every §2 as-built claim
+> was re-verified against the working tree (files read; portal-glow art pixel-checked
+> with PIL). Verdicts below are binding on the T4 build except where marked
+> **NEEDS DIRECTOR REVIEW** / **blocked on T3 ratification**.
+
+### As-built corrections (citation + analysis fixes — none change the design's verdicts)
+
+1. **Detector-radius citation.** The 36 px reach lives in
+   `Game/components/interaction/interaction_detector.tscn:7` (`radius = 36.0` on the
+   CircleShape2D), not `interaction_detector.gd:6` (the `.gd` only *describes* "~36px
+   reach" in its doc comment). The ambiguity math (72 px rect-gap threshold) is
+   unaffected — verified correct, including the nearest-with-hysteresis selection
+   (`SWITCH_RATIO = 0.9`, stable-insertion tie-break, `interaction_detector.gd:19-28`).
+2. **§2.4's y-sort/occlusion sub-claims mis-state the gate art width — conclusion
+   survives on different (verified) grounds.** `dive_gate.png` is **160×96**
+   (opaque bbox ≈ 148×62), not "~48 px"; gate 1's art spans world x ≈ [−74, +74]
+   (not "x −24..24") and gate 2's x ≈ [146, 294]. Portal 3's art at `(110, -20)`
+   (visible x ≈ [36, 184]) therefore **does** horizontally overlap both back gates'
+   art columns. **No occlusion occurs anyway** because the separation is *vertical*:
+   back-row gate art occupies y ≈ [−222, −160] (visible) while portal 3's occupies
+   y ≈ [−92, −30] — ≥ 68 px of clear vertical daylight — and hub-root y-sort draws
+   portal 3 (origin y −20) in front of the back row without touching either sprite.
+   Both back gates and their prompts stay fully readable. §2.4's "sits in the
+   horizontal gap / overlaps neither gate's sprite column" is struck; the verdict
+   ("no occlusion, y-sort correct") stands as re-derived here.
+3. **§2.4's "clear lanes preserved" missed one lane.** The straight spawn `(0, 120)` →
+   portal-2 `(220, -150)` diagonal **passes through portal 3's interactable rect**
+   (the line crosses x 88→140 while inside the rect's y-band [−52, 12]; the rect is
+   x [86, 134]). A player beelining to The Sump will transit portal 3's prompt zone,
+   and an early F-press mid-walk is a band-3 mis-dive. Checked exhaustively: **no
+   second-rank slot avoids this** — any x with a valid ambiguity gap (64 < x < 164
+   fails the 72 px bar against a back gate; the diagonal sweeps x 88–140 in that
+   y-band) intersects the walk line, so it is inherent to any mid-plaza position, not
+   a defect of `(110, -20)` specifically. Mitigations already in place: never
+   simultaneously in range (the 90.6 px gaps hold), hysteresis keeps focus stable,
+   and the prompt explicitly names the band. Recorded as a **TG1 Director-eyeball
+   item** (see OQ-3 verdict), not a blocker. Minor cite note: hub walls are at
+   `hub.tscn:32-46`, shop block at `:66-70`; both within rounding of the doc's cites.
+4. **Portal-1 glow verified.** `portal_glow.png` dominant opaque pixel is exactly
+   **(193, 85, 255)** — the S8 §RD claim reproduced by pixel count. Portal 1 renders
+   this violet **as-is** (WHITE modulate = identity). This matters for OQ-2 and the
+   T3 reconciliation below.
+5. **Glow tint is a MULTIPLY over violet art — the achievable hue range is
+   constrained** (neither this doc nor T3's noticed). The art's normalized RGB is
+   ≈ (0.76, 0.33, 1.0); `modulate` multiplies per-channel, so **rendered green can
+   never exceed 0.33**. Consequences: the drafted **acid-green
+   `Color(0.55, 0.95, 0.35)` renders ≈ (0.42, 0.31, 0.35) — a muddy gray-brown —
+   and is REJECTED on math**; cave-teal `Color(0.30, 0.90, 0.65)` renders
+   ≈ (0.23, 0.30, 0.65), a deep cyan-blue — cold and clearly distinct from portal 1's
+   bright violet and portal 2's red-ember (which itself renders ≈ (0.76, 0.19, 0.24)
+   through the same math — shipped precedent that the *family* read survives the
+   multiply). A genuinely bright teal/green portal would need an art retone
+   (PixelLab, Director-gated) — **out of T4 scope**; the H7 assert pins the
+   `glow_tint` property, so a later retone would not break the contract test.
+6. Everything else in §2 checks out verbatim: `BAND_ROUTES` two-row dict + doc
+   comment (`main_game.gd:43-52`), `_band_route_key` (`:103`), `start_run`/`enter_band`
+   tagging, `_resolve_band_profile` consume-on-read + double-fallback, staging seam
+   (`game_state.gd:100, :219-226`), telemetry stamp (`telemetry.gd:142/:167/:182`),
+   portal exports + push-down + id/focus/lockout guards (`departure_portal.gd`),
+   48×64 Interactable rect at origin / root layer-mask 0 (`departure_portal.tscn`),
+   hub node positions incl. portal 2's `Color(1, 0.58, 0.24, 1)` (`hub.tscn:54-70`),
+   yard bounds + transition painting (`hub_ground.gd`), C1–C6 as numbered +
+   `_free_band` null-guard (`test_band_routing.gd:201-206`), H1–H6 as numbered +
+   `EMBER_ORANGE` at `:25` + H5 push-down asserts (`:136-152`), and the count-agnostic
+   deck-membership scan (`config_menu.gd:212, :992`). The rejected-alternate math in
+   §2.4 (row-extension/compression/mid-row/column) recomputes correctly.
+
+### Per-OQ verdicts
+
+- **OQ-1 (prompt text + display name) — BLOCKED ON T3 RATIFICATION → NEEDS DIRECTOR
+  REVIEW (via T3's D1 pitch pick).** Not self-resolvable; the binding *pattern* is
+  ratified now: `prompt_text = "Dive — <Name>"`, `display_name = "<Name> Portal"`,
+  name only, no depth signposting in the prompt (matches portal 2's shipped shape;
+  depth-signposting stays a TG2/TG3 watch-item). Folding the winner in is one
+  `hub.tscn` override + the H7 string pin.
+- **OQ-2 (glow/gate tint) — BLOCKED ON T3 RATIFICATION → NEEDS DIRECTOR REVIEW, with
+  binding technical amendments.** (a) Whatever pitch wins, the glow **must come from
+  the green–teal/cyan region** — violet is portal 1's art-native color (correction 4)
+  and ember-orange is portal 2's pin; both are taken. (b) **Acid-green is struck as a
+  candidate** (correction 5 — renders muddy through the multiply). (c) The standing
+  recommendation is **cave-teal `Color(0.30, 0.90, 0.65)`** (rendered: deep cyan-blue,
+  cold/alien — previews Pitch A's cold-family tint) with gate tint a lighter wash of
+  the same hue; if the Director wants a *brighter* teal read, that is an art-retone
+  follow-up task, not a T4 tint. (d) See the T3 reconciliation below — the per-pitch
+  glow column must be corrected before the Director ratifies, so one coherent color
+  story is picked, once.
+- **OQ-3 (placement `(110, -20)`) — geometry RESOLVED (accept as the build value);
+  composition read NEEDS DIRECTOR REVIEW at TG1.** The ambiguity math, yard
+  clearance, spawn-distance, and no-occlusion claims all verify (corrections 2–3
+  re-derive two of them on fixed grounds). Binding: build at `(110, -20)`; H7 pins it;
+  a Director nudge after the TG1 eyeball is a one-line override + one test constant.
+  The Director eyeball should cover BOTH the plaza-forward composition read ("forward
+  = newest" replacing "rightmost = deeper") AND the spawn→portal-2 transit prompt
+  (correction 3) — if the transit read is judged mis-dive-prone, the fallback is a
+  hub relayout task (band-select surface pull-forward), not a T4 slot shuffle, since
+  no second-rank slot avoids the diagonal.
+- **OQ-4 (H7 pairwise tint distinctness) — RESOLVED: YES.** Keep both asserts
+  (`!= Color.WHITE`, `not is_equal_approx(EMBER_ORANGE)`) plus the exact ratified-color
+  pin. It encodes the breakdown's "visually distinct" as a contract for one line each,
+  and H5's exact-pin precedent shows the shape. Note the asserts pin the *property*,
+  not the rendered multiply — correct and sufficient (correction 5).
+- **OQ-5 (routing test vs T3's determinism matrix) — RESOLVED: keep the split.** C7
+  asserts route-resolution + same-seed fp *distinctness* from both controls (one
+  generate); same-seed-twice determinism + connectivity stay owned by T3's
+  `test_band_three_profile` (its C1/C2). One owner per assertion; C5's full-scene
+  drive already proves the route end-to-end. No duplication.
+- **OQ-6 (portal-row scaling watch-item) — RESOLVED: confirm as stated, with the
+  shop-shape check now DONE.** The shop's Interactable is **exactly 48×64**
+  (`shop.tscn`, `RectangleShape2D_shop`) — so the west mirror `(-110, -20)` clears the
+  shop by the same ≈ 90.6 px gap and **band 4 fits; band 5 forces the band-select
+  surface**. Hand TG3 that threshold verbatim. One new caveat for the future band-4
+  placement (recorded here, not built): the mirror slot's glow/gate art would visually
+  overlap the shop's SortTable sprite (world x [−160, −96] × y [−146, −98]) and the
+  shack's SE corner — y-sort keeps the portal in front, but it will read crowded;
+  the band-4 task should re-eyeball.
+- **OQ-7 (Wave-4 `main_game.gd` writer handoff) — RESOLVED: legal, per-wave reading
+  confirmed.** The cross-cutting rule's own name is "single-writer-per-file **per
+  wave**"; T1 (Wave 2) is merged before Wave 4 dispatch; no other Wave-4 task exists,
+  so T4 is Wave 4's sole writer of exactly one dict row. Decisive corroboration:
+  **T1's own design §2.7(e) explicitly anticipates this** — "`BAND_ROUTES`
+  (`main_game.gd:49-52`) gains no cave key **until T4**." The breakdown's parenthetical
+  ("T1, Wave 2 — **nobody else ever**" and "`main_game.gd`: T1 only") contradicts its
+  own §T4 goal text and is flagged for orchestrator wording cleanup (amendment 3
+  below). Binding: anything beyond the one `BAND_ROUTES` row (+ optional comment)
+  in `main_game.gd` is a deviation AND a scalability finding, per the draft.
+
+### Cross-task amendments (for orchestrator adjudication)
+
+1. **T3 pitch-table portal-glow column is wrong on the as-built and must be corrected
+   BEFORE the Director ratifies D1** (`T3_band_three.md` §3.1). T3's Pitch A proposes a
+   **"Violet / magenta"** portal glow "unmistakably the third portal vs band-1
+   *neutral*" — but portal 1 is only neutral in *modulate*; its **art renders violet
+   (193, 85, 255)** (correction 4), so a violet/magenta portal 3 collides with portal 1.
+   Pitch C's **"Ember-orange"** glow collides *exactly* with portal 2's shipped pin.
+   Only Pitch B's green family was free — and the multiply constraint (correction 5)
+   caps how green it can render. **Reconciled one-color-story-per-pitch** (recommend
+   folding into T3 §3.1 so the Director picks once, coherently):
+   **A "The Warren"** → glow **cave-teal `Color(0.30, 0.90, 0.65)`** (renders deep
+   cyan-blue — cold/alien, pairs with the blue-violet band tint, distinct from both
+   portals); **B "The Hollow"** → the same teal family biased greener, e.g.
+   `Color(0.20, 1.0, 0.60)` (renders ≈ (0.15, 0.33, 0.60); a true phosphor-green read
+   needs an art retone — flag on the pitch); **C "Paradox Deep"** → **no clean free
+   hue exists** (ember taken by portal 2, violet by portal 1) — this *strengthens*
+   T3's own "risks reading as band 2" caution into a concrete strike against C.
+   T4's §3.2/§3.4 `<BAND3_GLOW>` binds to whichever reconciled value the Director
+   ratifies. (T3's rec A + T4's rec cave-teal are mutually coherent — that pairing is
+   the joint recommendation.)
+2. **T1 seam confirmed, no action:** T1 §2.7(e) and T4 agree — T1 ships no
+   `BAND_ROUTES` key; T4 adds it in Wave 4. Recorded so the orchestrator need not
+   re-adjudicate at T4 dispatch beyond the standing "confirm T1 merged" check.
+3. **Breakdown wording cleanup (non-blocking):** `M1.10_Breakdown.md` §Scope
+   guardrails' "`main_game.gd` has ONE designated writer this version (T1, Wave 2 —
+   nobody else ever)" and §Cross-cutting "`main_game.gd`: T1 only" should read
+   "T1 (Wave 2) and T4's single `BAND_ROUTES` row (Wave 4)" — the breakdown's own
+   §T4 already requires that row. Orchestrator edits at the next bookkeeping pass;
+   T4 need not wait.
+
+### NEEDS DIRECTOR REVIEW (consolidated)
+
+| # | Item | Blocked on | Recommendation |
+|---|---|---|---|
+| 1 | OQ-1 prompt/display name | T3 D1 pitch pick | `"Dive — <Name>"`, name only (pattern ratified; value pends) |
+| 2 | OQ-2 glow/gate tint | T3 D1 pitch pick (reconciled color story, amendment 1) | cave-teal `Color(0.30, 0.90, 0.65)` + lighter gate wash; acid-green struck on modulate math |
+| 3 | OQ-3 composition read | TG1 playtest eyeball | accept `(110, -20)` now; eyeball plaza-forward read AND the spawn→portal-2 transit prompt (correction 3); nudge = one line |
+
+**Resolution tally:** 4 of 7 OQs resolved on merit (OQ-4, OQ-5, OQ-6, OQ-7); 3
+Director-flagged (OQ-1, OQ-2 — blocked on T3 ratification; OQ-3 — geometry resolved,
+composition eyeballed at TG1). T4 remains dispatchable the moment T3's identity is
+ratified: every pending item is a named-parameter value, never a structural change.
+
+---
+
+*Phase-2 note (superseded): Phase-3 resolution above is binding; OQ-1/OQ-2 final values
+land via T3's Director ratification before T4 dispatches.*

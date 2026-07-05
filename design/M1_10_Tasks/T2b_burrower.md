@@ -791,3 +791,182 @@ for T3's deck.
 - **Q11 — `param_schema` enum/bool encoding for `lock_surface_at_telegraph`.** *Technical.* Follow the charger
   `throwable_while_charging` bool-schema encoding exactly (`{key, gloss, type:"bool", default}`) so the generated
   menu + bijection linter accept it unchanged. Resolve: mirror the charger bool schema.
+
+---
+
+## Resolved Decisions (Phase 3) — BINDING
+
+> Fresh-eyes resolution (2026-07-04, Phase-3 resolver — NOT the Phase-2 author), per the four-phase authoring
+> process. Every as-built citation below was re-verified against the repo at resolution time. Verdicts on the
+> technical OQs are **binding on the build**; the fun/fairness/tone items are recommendations awaiting the
+> Director (listed at the end). Where this section contradicts the Phase-2 body above, **this section wins.**
+
+### Per-OQ verdicts
+
+- **Q1 — Fiction/name + palette.** **NEEDS DIRECTOR REVIEW.** Endorse the Phase-2 recommendation: **(A)
+  Sinkmaw/Grinder**. Rider from the T3 seam: (A)'s buried-machine read works under *any* of T3's band-identity
+  pitches, while (C) Undertow/Subsidence only lands if T3's "the place is the enemy" framing wins — so (A) is
+  also the lower-coupling pick. `id` stays `&"burrower"`; `display_name` swaps freely post-verdict.
+- **Q2 — Deck exclusivity.** **NEEDS DIRECTOR REVIEW (ratify).** Endorse: `min_band = 3`, `band_three` deck
+  only. Structurally consistent with breakdown OQ9, T2a OQ-9, and T3 OQ3/D3 — one Director verdict should
+  disposition all four at once.
+- **Q3 — Static pop vs lunge.** **NEEDS DIRECTOR REVIEW.** Endorse **static pop**, with a sharpened rationale:
+  the locked decal is only an honest "you will be hit HERE" contract if the body *stays* there — a lunge exits
+  the telegraphed circle and breaks the fairness proof of §1.4 rule 3, not just the code budget. A lunge variant
+  is a post-gate follow-up requiring its own telegraph grammar.
+- **Q4 — Exact locked decal vs vague zone.** **NEEDS DIRECTOR REVIEW.** Endorse `lock_surface_at_telegraph =
+  true` (exact, locked) as the shipped default, vague/tracking variant reachable via the knob for a Director
+  sweep. This is the core fairness line (breakdown OQ8).
+- **Q5 — Defaults/tempo (`track_speed` 80, 3.0 buried / 0.9 telegraph / 1.2 surfaced).** **NEEDS DIRECTOR
+  REVIEW at the gate**, with one **binding technical amendment**: **`kill_radius` default moves 26.0 → 34.0**
+  (schema max 64 unchanged). Reason (as-built physics, missed by Phase 2): `player.tscn` `collision_mask = 26`
+  **includes hazard layer 16**, so a SURFACED burrower is physically solid to the player, and depenetration
+  holds the pair at sum-of-radii ≈ **30 px** (player r 14 + host CircleShape r 16) — a `kill_radius` of 26
+  makes a surfaced burrower a *safe-to-hug bollard* (the catch can literally never fire against a player
+  pressing into it). The knob must exceed the physical exclusion distance to function at all; 34 = 30 + margin.
+  Dodge math stays trivially fair: clearing `kill_radius + PLAYER_R = 48 px` in the 0.9 s telegraph needs
+  0.24 s at 200 px/s. (Alternative — shrinking the host CollisionShape2D below ~11 px — rejected: it would also
+  shrink the throw-hit target and diverge from the charger/splitter 16 px scene template.) The rest of the
+  tempo set ships as proposed; TG2 sweeps.
+- **Q6 — "Un-hittable while buried" vs the throw verb.** **NEEDS DIRECTOR REVIEW (validate at TG2).** Endorse
+  shipping as designed — the patience counter-lesson is the def's whole point; the mitigations list
+  (shorten `buried_s` / lengthen `surface_s` / brighten the tell) stands.
+- **Q7 — Buried movement clamp.** **RESOLVED: clamp-at-player.** The §3.1 pseudocode already implements it
+  (`minf(_track_speed * delta, d)`); no oscillation, deterministic, reads as "it arrived." Binding.
+- **Q8 — Group toggle in addition to `collision_layer = 0`.** **RESOLVED: keep both.** Verified: the layer
+  clear is the load-bearing half (`ThrownItem` is an `Area2D`, mask 18 — `body_entered` never fires against a
+  layer-0 body, so the throw passes clean through, `thrown_item.tscn:10` + `_on_body_entered`); the group
+  removal is defensive (`_on_body_entered` branches kill-vs-miss on `is_in_group(&"hazard")`,
+  `thrown_item.gd:79`, and no shipped system group-scans in a way the toggle breaks — the SpawnService cap
+  registry is registration-based, not group-based). Cheap belt-and-braces; both writes are on the component's
+  own host. Binding.
+- **Q9 — Seam check (shared-file edits).** **RESOLVED: zero shared *code* edits — confirmed, including after
+  the Phase-3 corrections below** (the phase-salt fix and the wall-surfacing guard both live inside
+  `burrow_cycle.gd`). Verified `LethalContact` `&"external"` covers the static radius test exactly as claimed
+  (`lethal_contact.gd:28-31, 102-107`; the `ChargeLane` template at `charge_lane.gd:178-185, 139`). **One
+  shared *data* file was missed by Phase 2, however:** the def's gloss rows must land in
+  `Game/ui/config/config_strings.csv`, which **T2a also appends to in the same wave** — see Cross-task
+  amendments (CT-1).
+- **Q10 — Dedicated host.** **RESOLVED: dedicated `burrower.tscn` + `burrower_hazard.gd`.** Matches the S6a
+  Wave-4 "honest per-def host" precedent T2a cites; the Splitter's shared-scene case (two defs, one scene)
+  does not apply to a single-def opposition. Binding.
+- **Q11 — Bool schema encoding.** **RESOLVED: mirror the charger bool row exactly** — verified as-built:
+  `{"default": true, "gloss": "...", "key": "...", "type": "bool"}` with **no min/max keys** (`charger.tres`
+  `lock_at_telegraph_start` / `throwable_while_charging` rows). Binding.
+
+### As-built corrections (binding on the build — Phase-2 claims that do not survive contact with the repo)
+
+1. **`phase_salt` is NOT stamped for the Burrower — the §1.2/§5/§3.1 claim is wrong as written.**
+   `EncounterBuilder.legacy_ctx` (`encounter_builder.gd:110-121`) returns the salt **only for `&"spike"`**;
+   every other kind — including a future `&"burrower"` — falls to `_: return {}`. Through the real builder,
+   `ctx.get("phase_salt", 0)` is **0 for every burrower**, all `_phase_offset`s collapse to the same value, and
+   co-located burrowers pop in unison — the exact "legibility disaster" §5 designs against, silently shipped.
+   **Fix (binding, zero shared edits):** `BurrowCycle._configure` derives its salt **positionally**, with the
+   ctx key kept as a test-harness override:
+   ```gdscript
+   var salt: int = int(ctx.get("phase_salt",
+       int(_body.global_position.x) * 31 + int(_body.global_position.y)))
+   ```
+   This is valid because `SpawnService.spawn` sets `hz.global_position` **before** calling `setup()`
+   (`spawn_service.gd:121` → `:125`), placement cells are seed-deterministic, and no two burrowers share a cell
+   (`per_room_cap = 1` + per-room stride) — so the offset is deterministic, per-instance unique, and RNG-free.
+   Test case (10) is amended: assert desync via **two different spawn positions** through the real
+   builder+service (and keep the direct-`ctx` override path for fast-cycle harness control). The alternative —
+   a 2-line `&"burrower"` arm in `legacy_ctx` — would be a shared `encounter_builder.gd` edit requiring
+   orchestrator adjudication; it is **not needed** and is rejected.
+2. **The surfaced body is physically solid to the player — Phase 2 never examined it.** `player.tscn`
+   `collision_mask = 26` includes hazard(16). Three binding consequences:
+   - **`kill_radius` default 26 is non-functional** against a player in physical contact (separation held at
+     ~30 px) — raised to **34.0** (Q5 above).
+   - **The first SURFACED lethal test must run on the surfacing frame itself.** As pseudocoded, the first
+     `apply_contact` test runs one physics frame *after* the layer flip — time enough for the player's
+     `move_and_slide` to depenetrate a standing player away from the locked point, making test case (7) and the
+     real catch frame-order flaky. Binding: in the TELEGRAPH→SURFACED transition, run the radius test + 
+     `apply_contact(hit, true)` **immediately after** `_enter(Phase.SURFACED)`, same tick. (With the same-frame
+     test, whichever order the player's and burrower's `_physics_process` run that frame, the standing-player
+     catch is deterministic.)
+   - The pop physically shoving an adjacent player reads as acceptable juice (the charger is likewise solid to
+     the player); no change.
+3. **Surfacing inside a wall is possible and must be guarded — a Phase-2 blind spot.** The buried timer expires
+   wherever the wall-ignoring tracker happens to be, including **under a wall** (the exploration's own
+   "moves under walls"). A wall-interior surface point is throw-proof (mask 18 includes world(2) — the wall
+   eats every projectile first) yet still **script-lethal through the wall** to a player within `kill_radius`
+   of the wall interior — unfair and unreadable, and the decal/body render inside wall geometry. **Fix
+   (binding, in-component):** gate BURIED→TELEGRAPH on the candidate surface point being clear of world
+   geometry — a `PhysicsDirectSpaceState2D.intersect_point` query (`collision_mask = 2`) at the body position;
+   if blocked, **stay BURIED and keep tracking** (re-test each frame). Deterministic per-position; run-state
+   only; terminates because clamp-at-player tracking (Q7) converges on the player's position, which is always
+   on FLOOR. ~8 lines in `burrow_cycle.gd`; zero shared edits. `test_burrower` case (8) gains a rider: with the
+   player beyond a wall and the buried timer set to expire mid-wall, the burrower does **not** telegraph until
+   clear of the wall.
+4. **Gloss-key prefix + the missing CSV rows.** The repo convention is **`CFG_FIELD_<DEF>_<KEY>`** in
+   `Game/ui/config/config_strings.csv` (`CFG_FIELD_CHARGER_AGGRO_RANGE`, …) — §2.2's `CFG_GLOSS_BURROWER_*`
+   names are wrong, and §8's file list omits the CSV rows entirely (T2a's spec lists its own). Binding: the
+   build adds `CFG_FIELD_BURROWER_*` rows (~9) to `Game/ui/config/config_strings.csv`. See CT-1 for the
+   shared-file consequence.
+5. **Def-count assertion discipline.** The DoD phrase "bijection green (9 defs)" is the **post-merge** state
+   TG1 verifies. `test_burrower` itself must assert the **burrower's own** params↔schema bijection and must
+   **not** hard-assert a global def count (T2a lands "8 → 9" in the same wave; a hardcoded 8 or 9 in either
+   test breaks on the other's merge — the shipped coverage net is dir-scanning and count-agnostic, stay that
+   way).
+6. **Mid-flight surfacing is a hit — expected, keep it.** An `Area2D` fires `body_entered` when an overlapped
+   body's layer flips 0→16, so a burrower that surfaces **into** a projectile already in flight dies to it.
+   That is correct and fair (surfacing into danger is danger); noted so the build doesn't "fix" it. Optional
+   bonus assert in case (4)/(7).
+7. **Presentation ownership clarification.** §2.4's "hide the body visual, show the decal" inside the
+   component contradicts §3's (correct) split. Binding: `BurrowCycle` owns **layer/group/lethality/movement/
+   FSM only**; all visuals (decal/body flips, colors, throb) are **host**-owned off the `on_state_changed`
+   hook + `TelegraphFSM` — the S2 rule the charger follows (`telegraph_fsm.gd:7-14` scope note).
+8. **Minor citation fixes (no design impact):** `ThrownItem`'s mask is authored in `thrown_item.tscn:10`
+   (`collision_mask = 18`; `thrown_item.gd:13-14` is the docstring describing it); ledger comparables are
+   `charge_lane.gd` = **206** lines, `charger_hazard.gd` = **218**, `splitter.gd` = **354** (off-by-one in §8's
+   table); `test_charger`'s vocabulary pin sits at `test_charger.gd:242-244`. All other spot-checked citations
+   (`lethal_contact.gd:28-31/102-107/143-155`, `charge_lane.gd:92/118/126/139/178-185/192-199`,
+   `throw_interaction.gd:29-32`, `opposition_component.gd:50-52/71-72`, `charger_hazard.gd:48-60/112-123/135-136`,
+   `encounter_builder.gd:104/119/363-367`, `spawn_service.gd:121/125-126`, player `max_speed = 200.0`,
+   splitter `cap_group = &"new_hazards"`) verified accurate.
+
+### Cross-task amendments (for orchestrator adjudication)
+
+- **CT-1 — `Game/ui/config/config_strings.csv` is edited by BOTH T2a and T2b in the same parallel wave.** Both
+  specs claim strict file-disjointness; both need gloss rows in this one shared CSV. The rows are append-only
+  and disjoint (`CFG_FIELD_AMBUSHER_*` vs `CFG_FIELD_BURROWER_*`), so this is a merge-order adjudication, not a
+  redesign: **orchestrator merges one branch first and the second rebases trivially** (or pre-assigns row
+  blocks). Must be called out at brief time so neither agent treats the conflict as a surprise deviation.
+- **CT-2 — Concealment-mechanism divergence (T2a group-gating vs T2b layer-clearing): KEEP BOTH — do not
+  converge — but T2a has an unexamined physics consequence to disposition.** The two mechanisms are
+  *semantically different tiers*, both legitimate: T2a's HIDDEN keeps `collision_layer 16` and drops only the
+  group → a throw **stops and re-drops** (the body is *present but untargetable* — deliberately "can't be
+  cheese-killed"); T2b's BURIED clears the layer → a throw **passes through** (the body is *absent*). Each is a
+  property write on its own host inside its own component; there is no shared code to unify, and forcing one
+  semantic onto both would break one design or the other. A shared `ConcealmentGate` refactor becomes worth it
+  only if a third concealed def appears (FU-tier). **However** — same mask-26 finding as correction 2 — T2a's
+  HIDDEN body at layer 16 is an **invisible solid obstacle the player physically bumps into**, and a thrown
+  item visibly stopping mid-air and re-dropping on "nothing" is a free sonar-probe for concealed ambushers.
+  Both may be *intended* tells (bump = "something's buried here"), but T2a's spec never decides this. Flag to
+  T2a/orchestrator: either **ratify the bump/probe as designed tells**, or adopt T2b's layer-clear for HIDDEN
+  (restore on reveal) so concealment is also physical absence. Recommendation: **adopt the layer-clear** —
+  an invisible collider reads as a bug, not a tell, and the floor decal is the *designed* read; the probe-throw
+  then also passes through, which matches "un-hittable sight-unseen" more honestly.
+- **CT-3 — T3 budget-sketch inputs confirmed.** T2b ships `credit_cost = 2`, `per_band_cap = 3`,
+  `per_room_cap = 1` — inside T3's assumed ranges (`cost ≈ 2, cap 3-4`; its §4.3 walk used 4, actual 3 shifts
+  the sketch to `3 burrowers, spend 6`, budget still spends validly — self-limiting, no action). T3's deck
+  references `&"burrower"` by id only; no file seam.
+- **CT-4 — For the breakdown/TG1:** the T2b DoD line "cycle timing from params" gains the two binding riders
+  from corrections 2–3 (same-frame surfacing test; wall-clear surfacing gate) — TG1's verify matrix should
+  include them via `test_burrower` cases (7)+(8) as amended.
+
+### NEEDS DIRECTOR REVIEW (assembled for the wave close-out — recommendations attached, not self-resolved)
+
+| # | Call | Recommendation |
+|---|---|---|
+| Q1 | Burrower fiction/name (A Sinkmaw / B Silt-lurker / C Undertow) | **(A) Sinkmaw** — junkyard-machine fiction, clearest telegraph read, lowest coupling to T3's band pitch |
+| Q2 | Band-3 exclusivity (`min_band = 3`, band-3 deck only) | **Yes** — ratify once for breakdown OQ9 + T2a OQ-9 + T3 D3 together |
+| Q3 | Surfaced behaviour: static pop vs lunge | **Static pop** — the locked decal's fairness contract requires the body to stay in it |
+| Q4 | Decal: exact locked position vs vague zone | **Exact + locked** (`lock_surface_at_telegraph = true` default); vague variant stays knob-reachable |
+| Q5 | Tempo defaults (80 px/s; 3.0 / 0.9 / 1.2 s; **kill_radius 34** per Phase-3 physics correction) | **Ship the set as amended**; TG2 sweeps on deaths-per-first-encounter vs Wrecker/Splitter |
+| Q6 | The buried-unhittable counter-lesson (throw "doesn't work" risk) | **Ship as designed**; validate the wait-for-the-window read at TG2 |
+| CT-2 | (T2a-owned, surfaced here) hidden Ambusher: invisible-solid bump + throw-probe — tells or bugs? | **Adopt T2b's layer-clear for HIDDEN**; ratify only if the Director wants the bump-tell |
+
+*Resolved: Q7, Q8, Q9, Q10, Q11 (binding, on merit). Director-flagged: Q1–Q6 + CT-2. As-built corrections 1–3
+are binding build requirements; 4–5 are conventions; 6–8 informational.*

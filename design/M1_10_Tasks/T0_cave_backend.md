@@ -3,7 +3,7 @@
 **Milestone:** M1.10 (Second Backend + Cave Band + Low-Sightline Oppositions) · **Workstream:** bands · **Wave:** 1 (parallel worktree, alongside T2a/T2b)
 **Task id:** T0 · **blockedBy:** none · **Blocks:** T1 (materialisation), T3 (`band_three.tres`)
 **Assignee:** general-purpose (programmer)
-**Author:** Phase-2 per-task design (2026-07-04) · **Status:** awaiting Phase-3 fresh-eyes resolution of §9
+**Author:** Phase-2 per-task design (2026-07-04) · **Status:** Phase-3 resolved (2026-07-04) — §10 Resolved Decisions is BINDING over the doc body
 
 > **What this doc is.** The Phase-2 design for T0 per `M1.10_Breakdown.md` §"Wave 1" — the exploration's
 > **Phase D second backend**, brought forward by the Director's M1.10 directive ("a new band that tests
@@ -793,3 +793,218 @@ the emergent one; C4 asserts ≥ 2 on the test configs regardless. *Technical �
 branch. The programmer builds against this after Phase 3 folds a **Resolved Decisions** section in
 below. Deviations from the committed design go to `design/DESIGN_DEVIATIONS.md` for the Wave-1
 close-out sweep.*
+
+---
+
+## 10. Resolved Decisions (Phase 3 — fresh-eyes resolution, 2026-07-04)
+
+Resolved by a Phase-3 fresh-eyes agent (not this doc's author), after re-reading
+`M1.10_Breakdown.md`, the sibling seam docs (`T1_cave_materialisation.md` §2.2/§2.4/§2.6/§2.7,
+`T3_band_three.md` §3.3/§4.2/OQ5/OQ6), and spot-verifying every load-bearing as-built claim against
+the working tree (`main` @ `303f14e`). **These resolutions are BINDING and override the doc body
+where they conflict** (specifically: §8/§9 Q3's "sealer naturally inert" framing, §9 Q8's
+recommendation, §4.1's cave-flavor pipeline guard, and §3.5/§3.6's entry-anchor/ordering details are
+amended below). No open item blocks the Wave-1 build dispatch. **Zero items need Director review for
+T0** — this task's surface is wholly technical; the version's vision/fun/tone calls live in
+T2a/T2b/T3's queues.
+
+### 10.0 Verification notes + claim corrections
+
+- **Spot-verified accurate** (2026-07-04): Phase-A wiring guard `band_pipeline.gd:45-48`
+  (`backend != "socket"` → `push_error` + null); socket backend block + I1 catalog swap `:70-80`
+  verbatim as quoted; flavor loop + `ConnectivityGuarantee` CARVE/ASSERT `:90-107` (doc says
+  `:93-107` — the guard is at `:90`; trivial); tail grade + return distance `:112-113`;
+  `_stage_seed`/`_mix` `:143-151`; zero-RNG pipeline docstring `:14-19`. Generator: retry loop
+  `band_generator.gd:60-79`; reseed-first `RNG.seed_from(seed)` `:88`; `deepest_piece = placed`
+  `:132`; `_derive_seed`/`_hash_combine` `:352-362`; socket default width 2 `:399`; `_make_placed`
+  always instantiates a scene `:413-417` (so `instance == null` is unreachable on the socket path —
+  T1's load-bearing observation, confirmed). `Band.fingerprint()` `band.gd:58-62` hashes only
+  `piece_id@offset#mated`; `floor_fingerprint()` `:76-88` documented supplementary-only `:70-75`;
+  `entry_piece = pieces[0]` convention `:21`. `PlacedPiece` fields at the cited lines.
+  `SocketSealer` geometry-keyed `:16-26`, RNG/fingerprint discipline `:28-35`, floor-set + cap walk
+  `:57-84`, `_place_wall_cap` early-return on `owner.instance == null` `:94-96`.
+  `ConnectivityGuarantee.is_fully_connected` cell-level flood `:41-62`; `enforce` ASSERT/CARVE
+  journal-LIFO `:68-81`; `_STEPS` N/E/S/W `:35-36`; ASSERT posture "push_error, band returned as-is,
+  never crash" `:14-24`. `BandProfile.backend` enum with `"cave"` declared `band_profile.gd:26`;
+  socket-only `validate()` branch `:82-95` (requires `BandGenConfig` + non-empty `piece_pool` +
+  linear/branchy archetype — exactly what the cave branch must NOT require). `DepthGrader`:
+  piece-index BFS off sorted adjacency `:83-104`, `max_depth` `:47`, one-piece band → `depth_norm
+  0.0` `:49`. `JunkPlacer`: per-piece `expected_count(depth_norm)` roll `:62-75`, instance-null
+  fallback 16 `:198-201`, and it (y,x)-sorts each piece's `floor_cells` itself before use — per-piece
+  list order never reaches the junk stream. `EncounterBuilder`: `BASE_CREDITS = 24`, `instability()`
+  `1.0 + 0.15·(depth−1)`, deck budget floor, `min_band` gate, entry-safety `depth_index <= 0` skip
+  (both lanes), demand formula, neutral-card skip, `room_key = str(p.offset_cell)`,
+  `_floor_bounds_world` — all as cited. EventBus signal signatures match §3.1's pseudocode exactly
+  (`band_generation_started(seed)`, `band_generated(seed, piece_count)`,
+  `band_generation_failed(seed, reason: StringName)` — `event_bus.gd:39-41`). `RNG.seed_from`
+  exists (`rng.gd:15`). Parity P7 cave case `test_band_pipeline_parity.gd:252-257` asserts the
+  wiring guard as described; determinism seed matrix + retry-purity perturbation check
+  (`test_bandgen_determinism.gd:36`, `:105-115`) as quoted. `data/bandgen_config.gd` and
+  `data/bands/` exist as described.
+- **Correction 1 — the `piece_id` consumer audit (§3.7(d) / §9 Q2(c)) is incomplete.** The claim
+  "nothing downstream keys behaviour off `piece_id` beyond the fingerprint" is wrong as stated:
+  **`main_game.gd:590` and `:649`** filter pieces via `_is_corridor(p.piece_id)` when
+  `rc.r1_density_rooms_only` is on, and **`main_game.gd:891`** classifies piece kind for the R4
+  junction map / J4 `corridor_summary` telemetry — all via `RunConfig.CORRIDOR_PIECE_IDS.has(...)`
+  (plus `band_generator.gd:261` in the weight table, socket-only as the doc says). **The conclusion
+  survives:** synthetic `cave_<hash>` ids are never in `CORRIDOR_PIECE_IDS`, so every cave chunk
+  classifies as "room" — the correct cave-honest classification (T1 §2.1 independently records the
+  `corridor_frac = 0` telemetry note for TG2). Opaque content-hash ids remain safe; the audit is
+  corrected, the design unchanged.
+- **Correction 2 — "SocketSealer is naturally inert on cave bands" (§1.2 bullet, §8 item 3) is true
+  only in T0's headless world and is NOT the shipping behaviour.** T1's ratified design (T1 §2.2–2.3)
+  builds a runtime `ZonePiece` host with a `"Geometry"` TileMapLayer for every synthetic piece at
+  materialise time — so `p.instance` is **non-null when the sealer runs**, and the sealer (verbatim,
+  unedited) becomes the cave's **active wall-writer** (the entire WALL shell). T0's actual guarantees
+  are unchanged (no sealer edit; data-level enclosure; headless pipeline tests see the no-op because
+  no instance exists there), but §8's framing is superseded: the seam is "already generalized —
+  sealer runs verbatim as the cave wall-writer," not "sealer no-ops on caves." See Q3.
+
+### 10.1 The questions
+
+- **Q1 — Synthetic-piece partition.** **RESOLVED: grid chunks (`chunk_cells`, default 8), as
+  specced.** The evidence in §1.2 is verified and decisive (one piece ⇒ `max_depth = 0` ⇒ zero
+  encounter spawns + one loot roll; region-per-piece collapses to one piece post-carve). Watershed
+  segmentation is the wrong trade for the cheap-backend thesis. The chunk-as-room per-room-cap
+  imprecision is accepted and TG2-watched. **Amendment (reconciles T1 T0-C1):** the acceptance bar
+  for chunk granularity is not just `pieces.size() >= 2` — C4 upgrades to assert
+  **`band.max_depth >= 4` on the default config across the full seed matrix** (T1's hard input
+  contract; its `test_cave_materialise` M4 re-asserts the same bar end-to-end). If a default-config
+  seed grades shallower, tune `chunk_cells`/grid extents at T0, not at T1.
+
+- **Q2 — Fingerprint identity residuals.** **RESOLVED: 12-hex `cave_` prefix, as specced.**
+  (a) 48 bits/chunk is ample and log-readable; (b) bare `cave_` — profile identity is not piece
+  identity; (c) ratified **with Correction 1 folded in**: `piece_id` consumers exist
+  (`main_game.gd:590/649/891` via `CORRIDOR_PIECE_IDS`) but non-membership yields the correct "room"
+  classification for every cave chunk, so opaque ids are safe. The content-hash scheme stands: it
+  pins the entire cave floor through `fingerprint()` with zero `band.gd`/`placed_piece.gd` edits,
+  and `floor_fingerprint()` stays supplementary (never promoted — `band.gd:70-75` honored).
+
+- **Q3 — Void-sealing seam ownership (breakdown OQ4).** **RESOLVED: option (ii) as amended by T1
+  §2.2 — and the T0/T1 positions reconcile cleanly.** T0 guarantees **data-level enclosure** (forced
+  WALL border ring; every non-floor interior cell WALL; C4 asserts no floor on the ring) and touches
+  no sealer code. T1 builds the synthetic instance with a `"Geometry"` TileMapLayer holding FLOOR
+  tiles, and the **unedited `SocketSealer` runs verbatim as the cave's wall-writer** (its
+  floor-adjacency cap rule IS the cave wall-front definition — T1 §2.2). No sealer edit, no sealer
+  sibling, no bypass; socket-band byte-safety is trivial (the file does not change). §8 item 3 and
+  §1.2's "inert" bullet are superseded per Correction 2; §8 items 1–2 (enclosure + wall ownership
+  caveat) stand as T0's contract.
+
+- **Q4 — The "existing CARVE mode" reading.** **RESOLVED: ratify §3.4 + §4.1 as the compliant
+  reading.** Verified: `enforce(band, Mode.CARVE, journal)` is journal-LIFO revert
+  (`connectivity_guarantee.gd:75-81`) — structurally inapplicable inside a backend with no prior
+  state. The breakdown's operative intent is its own parenthetical: *deterministic, never
+  retry-loops on the global stream* — §3.4's zero-RNG sorted-order grid carve satisfies it, and
+  §4.1 reuses the stage's real machinery (`is_fully_connected` via `Mode.ASSERT`) as the pipeline
+  invariant. ASSERT's fail-loud posture (push_error, band returned, never crash —
+  `connectivity_guarantee.gd:14-24`) is kept as-is; the test (C3) is the hard bar. Worklog flags the
+  interpretation, per the doc.
+
+- **Q5 — rc ignored by the backend.** **RESOLVED: yes, as specced; C7 pins it.** Verified every
+  as-built rc generation hook is socket-interior (`effective_room_count` at
+  `band_generator.gd:111-113`, corridor weights `:55/:238-261`, r4 in `_select_frontier_index`).
+  The play preset's `lvl_enabled = true` must be a generation no-op on caves — exactly what C7
+  asserts. Downstream rc surfaces (junk overrides, `param_overrides`, `oppositions_enabled`) apply
+  to cave bands at the call sites unchanged, as noted. Keep the `rc` parameter for signature
+  symmetry.
+
+- **Q6 — `archetype` on cave profiles.** **RESOLVED: option (a)** — cave profiles author
+  `"linear"` as an ignored don't-care; the cave `validate()` branch never *requires* an archetype
+  and `push_warning`s (never errors) on a non-linear value. No enum extension in M1.10. This
+  satisfies T3's OQ6 coordination note verbatim (T3 authors `archetype = "linear"`,
+  `piece_pool = null`; the §4.2 branch requires only a valid `CaveBandConfig`). Revisit `"organic"`
+  only when a second non-socket backend makes the field genuinely polymorphic.
+
+- **Q7 — Nook/roughness knob.** **RESOLVED: `wall_threshold` + `smooth_passes` ARE the roughness
+  surface; no dedicated roughen pass.** All-integer, zero extra code, no second RNG block. The
+  eventual *values* are T3/Director tuning, not T0's. **Cross-task consequence:** T3's sketched
+  `nook_roughness: 0.5` (a float) does not exist and would violate the integer discipline — see
+  Cross-task amendment 3.
+
+- **Q8 — Natural 1-cell throats.** **RESOLVED: option (a) — the doc's recommendation (b) is
+  OVERRIDDEN. T0 owns the player-scale guarantee, generation-side.** T1 §2.6's argument is
+  structurally correct and wins on merit: widening mutates `floor_cells`, and `floor_cells` must be
+  final before grading/fingerprinting — T1 *cannot* fix a pinch without breaking the determinism
+  contract, so "leave it to T1's check" means any red seed forces a mid-version T0 follow-up anyway.
+  Binding contract: after keep+discard+carve (§3.4), T0 runs a **deterministic, RNG-free
+  player-scale pass**: compute the **2×2-open set** T (floor cells belonging to ≥ 1 all-floor 2×2
+  block — T1 §2.6's traversability certificate: a 28 px player disc fits a 32×32 px block); reuse
+  the §3.4 carve machinery (width ≥ 2, sorted component order, fixed L-rule) to connect every
+  secondary T-component — and any floor component containing no T-cell — to the largest T-component
+  (size desc, anchor (y,x) tiebreak). Post-pass invariant, test-asserted (new check **C10**): *T is
+  non-empty, single-component, contains the entry anchor, and every floor cell is a member of or
+  4-adjacent to T* (so scattered gates/loot on any floor cell are at most one cell from standable
+  space). Carves only add floor ⇒ §3.4's connectivity-by-construction argument is preserved. Entry
+  and deepest anchors are selected **after** this pass. T1's M6 spawn→gate 2×2-open bar remains the
+  independent end-to-end proof. Estimated ledger cost ~30–40 lines — recorded honestly as bespoke
+  backend code.
+
+- **Q9 — C6 non-vacuity visibility.** **RESOLVED: option (a)** — a public `last_region_count: int`
+  on `CaveBackend`, set from the returned attempt's pre-carve region tally; test-only consumer,
+  mild API smell accepted (the BUG4 no-vacuous-test precedent outweighs it). The programmer may add
+  sibling stats fields (e.g. `last_throat_carve_count` for C10's non-vacuity) if a check needs
+  them — worklog-noted, same pattern.
+
+- **Q10 — Entry anchor rule.** **RESOLVED: west-most, hardcoded — amended by Q8 and T1 T0-C2/C3:**
+  the entry anchor is the **west-most cell of the 2×2-open set T** (min x, tie min y over
+  T-members — not over raw floor), selected after the Q8 pass, so the spawn cell always has the
+  player-scale clearance T1's M4 asserts. **Ordering amendment (§3.6):** the entry piece's
+  `floor_cells` list the **anchor FIRST**, remainder in fixed (y,x) scan order — because
+  `_entry_spawn_position` reads `entry_piece.floor_cells[0]` (`main_game.gd:1017`, T1 T0-C2).
+  Verified safe: nothing is order-sensitive to a per-piece list head (`floor_fingerprint()` sorts
+  globally, `fingerprint()` never reads floor cells, `ConnectivityGuarantee._sorted_first` computes
+  its own (y,x)-min, `JunkPlacer`/`EncounterBuilder` re-sort per piece). All non-entry pieces stay
+  pure (y,x) scan order. No config enum; the entry direction's *fictional* meaning stays T3's.
+
+- **Q11 — `pieces.size() >= 2` guard.** **RESOLVED: option (c), both** — `CaveBandConfig.validate()`
+  rejects configs whose grid/chunk geometry cannot yield ≥ 2 chunks (authoring-time catch), plus a
+  runtime `push_error` (band still returned — playable-but-degenerate, matching the never-crash
+  posture) if emission ever produces < 2 pieces; C4 asserts ≥ 2 (and now `max_depth >= 4`, per Q1)
+  on the test configs.
+
+### 10.2 Design amendments (binding edits to the doc body)
+
+1. **§4.1 cave-flavor guard moves into `validate()` (§4.2).** The cave branch of
+   `BandProfile.validate()` appends a problem on **non-empty `flavors`** for a cave profile (the
+   breakdown's flavors-ship-EMPTY guardrail; T1 assumption (c) asks for exactly this). The pipeline
+   already fail-louds on validate problems (`band_pipeline.gd:38-42`), making §4.1's separate
+   cave+flavors pipeline guard unreachable — drop it from the dispatch diff (smaller diff, same
+   fail-loud). C8's "cave profile with a flavor ⇒ null" assertion is unchanged (it now trips in
+   validation).
+2. **§3.2 attempt order gains the Q8 player-scale pass:** `_keep_and_carve` → **player-scale pass
+   (Q8)** → `_select_entry` (over T, per Q10) → deepest BFS → `_emit_band`.
+3. **§5 test matrix gains C10** (the Q8 invariant, per seed, both test configs) and upgrades C4's
+   depth bar to `band.max_depth >= 4` on the default config (Q1). C6 may additionally use the Q9
+   stats fields for non-vacuity.
+4. **§6 ledger expectation updated:** backend ~220 → **~255** lines (the Q8 pass); everything else
+   unchanged.
+
+### 10.3 Cross-task amendments (for orchestrator adjudication)
+
+1. **Breakdown T1-goal wording vs Q8 (task-seam move):** the breakdown assigns "player-scale sanity
+   … via a min-corridor-width check or config floor" to T1; Q8 moves the *guarantee* to T0
+   (generation-side, the only place `floor_cells` may mutate) while T1 keeps the *independent test
+   bar* (M6). T1 §2.6 already argues for exactly this split — both Phase-2 docs now agree; the
+   orchestrator should record the breakdown deviation at Wave-1 close-out.
+2. **T1 T0-C3 ordering contract:** amend "floor_cells sorted (y,x) for order-stability" to "sorted
+   (y,x), **except the entry piece, whose element 0 is the entry anchor**" (Q10). T1's M4
+   (`spawn cell = entry_piece.floor_cells[0]`, 2×2-open) is then satisfied by construction.
+3. **T3 §3.3/§4.2 knob names:** `nook_roughness: 0.5` (float) does not exist in the T0 schema and
+   would break the integer discipline. T3 authors T0's real knobs — `wall_threshold` (int; THE
+   roughness lever, lower = tighter/nookier) alongside `fill_pct`/`smooth_passes`, plus the fields
+   T3's sketch omits (`chunk_cells`, `carve_width`, `min_floor_cells`, `max_attempts`,
+   `cell_size_px` — all have T3-authorable defaults). Also: the config `.tres` lives under
+   **`data/bands/`** (T0's schema-with-content convention), i.e.
+   `data/bands/cave_config_band_three.tres`, not T3's sketched `data/cave_config_band_three.tres`.
+4. **T1 assumption (a) confirmed:** the §4.1 dispatch leaves the tail grade + return-distance
+   (`band_pipeline.gd:112-113`) running unconditionally, so cave bands return graded
+   (`entry_piece`/`deepest_piece`/`max_depth` set) — no T1 escalation needed.
+5. **T1 assumption (c) satisfied** via Design amendment 1 (flavor rejection lives in `validate()`,
+   which T3's contract test calls directly).
+
+### 10.4 NEEDS DIRECTOR REVIEW
+
+**None from T0.** Every T0 question resolves on technical merit. For the record, the two items the
+doc body already routes elsewhere: the *felt* nook density (Q7's knob **values**) is T3's
+Director-tuned authoring, and the entry direction's *fictional* meaning (Q10) belongs to T3's
+identity pitch — both are on T3's Director queue (its D1/OQ5), not T0's.
