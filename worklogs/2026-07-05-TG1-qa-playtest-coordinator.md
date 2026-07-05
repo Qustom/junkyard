@@ -4,7 +4,7 @@
 - **Subagent:** qa-playtest-coordinator
 - **Milestone:** M1.10
 - **Branch:** worktree-agent-a55256d7a61f69599 (isolated TG1 worktree; NOT main)
-- **Commit:** 9af33ba41f4efb8b87e2d79a51e732feceadef40
+- **Commit:** 8308120f0479fb7e93e3d343cd70258d1fd12df4 (TG1 deliverables; worklog-SHA stamped in the immediate follow-up)
 
 ## What changed
 Ran the full M1.10 verify matrix (import · smoke · three permanent controls byte-exact ·
