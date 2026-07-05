@@ -1,6 +1,74 @@
 THE FAR YARD — CHANGELOG
 ========================
 
+M1.10 — "The Warren"   (changes since M1.9)
+-------------------------------------------
+
+Until now the two dive portals both led to bands built the same way — rooms and
+corridors snapped together from prefab pieces. M1.10 adds a THIRD dive band that is
+grown, not built: a cave carved by a completely different kind of level generator, with
+two new kinds of danger that only live down there. The first two dives are completely
+unchanged (walk into either of the old gates and they play exactly as M1.9). The new
+band is a deeper, more disorienting place where you can't see far and the threats hide
+in the ground.
+
+
+A THIRD DIVE — "THE WARREN" (new)
+---------------------------------
+* NEW — A third dive portal on the hub. Next to the two existing dive gates there's now
+  a third gate with a cave-teal glow, prompt "Dive — The Warren". Walk into it to dive
+  into the new cave band. The two original gates still dive into band 1 and The Sump
+  exactly as before — all three sit side by side so you choose where to go.
+* NEW — The Warren: a cave, not a building. Where band 1 and The Sump are assembled from
+  rectangular rooms and corridors, The Warren is carved by a NEW cavern generator —
+  organic, cellular-automata caves. The result looks and plays completely differently:
+  blobby, rounded chambers instead of square rooms; winding throats instead of straight
+  halls; bad sightlines everywhere; and nooks and dead-ends you have to poke into to find
+  the loot. A blue-violet "grown, not built" tint sets it apart from The Sump's amber. It
+  sits a step deeper than The Sump, with a heavier opposition budget to match.
+
+
+TWO NEW HAZARDS — Warren-only (new)
+-----------------------------------
+* NEW — The Ambusher. A trap that hides IN THE FLOOR — near-invisible, just a faint tell
+  where it's buried. It waits. Loot something near it and it ARMS (the tell flashes), then
+  springs up in one fast lunge. The lunge is lethal, but the tell gives you a fair window
+  to read it and step clear before it commits — greed near a hidden Ambusher is the trap.
+  It's a one-shot: once it springs, it's spent. In the cave's bad sightlines you often
+  don't see it until you're already leaning in for the loot.
+* NEW — The Burrower ("Sinkmaw"). A tunneling area-denier. It travels UNDERGROUND — you
+  can't hit it and it can't hit you while it's buried — following you as a decal that
+  tracks along the floor (it moves slow enough to outwalk, and it crosses under walls). On
+  a rhythm it TELEGRAPHS, locks its target spot, then SURFACES to strike right there and
+  holds for a moment before diving back down. The telegraph is the fairness line: the spot
+  it will surface is locked when the tell fires, so stepping off it is always safe. While
+  it's buried you simply can't kill it — you punish it in the window it's up.
+* Both new hazards are exclusive to The Warren in this build — bands 1 and The Sump stay
+  exactly as they were, so you can feel the difference cleanly. They're seeded across the
+  whole cave, shallow to deep.
+* The debug Oppositions tab (press P) now tunes these two as well — every hazard, old and
+  new, exposes its own sliders there, and The Warren's natives are marked "IN DECK" and
+  open pre-expanded, so you can set values in the hub and dive in to feel them.
+
+
+NOT YET IN THIS BUILD
+---------------------
+* The new cavern generator is THE WARREN ONLY — bands 1 and The Sump are unchanged (still
+  the prefab-piece generator). The Warren is the proof that a second, totally different
+  kind of level generation slots in cleanly.
+* The Warren's portal glow is meant to read cave-teal but currently looks a deeper
+  cyan-blue over the placeholder portal art — an art retone is pending.
+* Cave floor and walls are greybox geometry with a tint pass, not a bespoke cave tileset,
+  and there's no new higher-tier loot down there yet (a later addition).
+* The new hazards are WARREN-ONLY — they do not appear in bands 1 or The Sump (a deliberate
+  clean A/B for this build; whether they graduate to other bands is a later call).
+* Save format is UNCHANGED (meta v4 / run v1) — which band you pick is per-dive, not saved.
+* The loop, hub, shop, economy, quota, and timer are otherwise unchanged from M1.9.
+
+
+====================================================================================
+
+
 M1.9 — "The Sump"   (changes since M1.8)
 ----------------------------------------
 
