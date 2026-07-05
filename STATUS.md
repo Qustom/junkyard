@@ -6,7 +6,7 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.10 (Second generation backend + cave band + low-sightline oppositions — Director-directed 2026-07-04, opened ahead of M1.9's SG2/SG3) — **BUILD COMPLETE: all 5 build tasks T0–T4 merged, 0 deviations across Waves 2–4 (3 Reviewed in Wave 1). Hub has 3 portals; all controls byte-identical. ▶ Wave 5 re-gate DISPATCHED: TG1 (M1.10 verify matrix + changelog + itch publish) → Director playtest → TG2 → TG3.** *(M1.9 SG1 published `m1-20260704-55ca78f` — Director playtest → SG2 → SG3 pending, non-blocking; M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Current milestone:** M1.10 (Second generation backend + cave band + low-sightline oppositions — Director-directed 2026-07-04, opened ahead of M1.9's SG2/SG3) — **TG1 DONE + PUBLISHED (`m1-20260705-3c9644e`, itch build `#1775187`). ▶ DIRECTOR PLAYTEST (human-gated) → TG2 (telemetry/balance) → TG3 (verdict). One Wave-5 test-fixture deviation awaits disposition (rec Reviewed; non-blocking).** *(M1.9 SG1 `m1-20260704-55ca78f` — SG2/SG3 also pending, non-blocking; M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending.)*
 
 > **M1.10 design LOCKED (2026-07-05):** breakdown + 6 per-task designs each with a BINDING
 > `Resolved Decisions (Phase 3)` section; 13 cross-task amendments + Director ratifications
@@ -107,7 +107,27 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — M1.10 Wave 5 re-gate: TG1 IN FLIGHT (verify matrix + changelog + itch publish). On its return → Director playtest of the published build → TG2 (telemetry/balance) → TG3 (verdict in `design/M1_10_Tasks/G4_findings_M1.10.md`)
+## ▶ DIRECTOR PLAYTEST (human-gated — the felt loop can't be verified headless)
+
+> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260705-3c9644e`**
+> (itch build `#1775187`). Full checklist: `design/M1_10_Tasks/TG1_playtest_build.md` §5. Key reads:
+> - **The two old portals are unchanged** (band 1 + The Sump play exactly as M1.9 — the control).
+> - **The third portal "Dive — The Warren"** (cave-teal glow, forward of the other two) → a **cave band**:
+>   blobby chambers, bad sightlines, nook-rich — a *different generator*, not rooms-and-corridors.
+> - **Ambusher** — hides in the floor near loot, springs when you get close (readable tell → dodge → punish).
+> - **Burrower "Sinkmaw"** — tracks you underground, surfaces on a rhythm to strike (static pop, locked decal
+>   = the dodge frame); un-hittable while buried. Both are Warren-exclusive.
+> - Watch-items to eyeball: the third portal's plaza composition + the spawn→portal-2 transit prompt; the
+>   cave-teal glow currently reads deep cyan-blue (violet-multiply — a retone is Director-gated); is the cave
+>   *disorienting-tense* or *lost-annoying*? does the +15% (1.30) difficulty step feel like a band apart?
+> - **Export telemetry** (in-game button) when done → feeds TG2.
+>
+> Then **TG2** (qa telemetry/balance — three-band comparison, hazard fairness, cave time-to-gate, 1.30 budget,
+> web perf) → **TG3** verdict (go/iterate/pivot) in `design/M1_10_Tasks/G4_findings_M1.10.md`. TG2 is BlockedBy
+> the Director playtest — do NOT dispatch it until the Director has played. Also pending: disposition the one
+> Wave-5 test-fixture deviation (rec Reviewed) at the TG3 close-out.
+
+## ▶ Next action (start here on a cold restart) — HOLD for the Director playtest of `m1-20260705-3c9644e`. On the Director's return (telemetry + felt-loop read) → dispatch TG2 (qa telemetry/balance analysis) → assemble TG3 verdict. Nothing to build; M1.10 is build-complete + published.
 
 > **M1.10 = the second architectural axis** (Director-directed 2026-07-04; design LOCKED 2026-07-05):
 > a **CaveBackend** (cellular-automata caverns — no pieces/sockets) behind the same `BandPipeline`, proven by

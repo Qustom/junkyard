@@ -15,7 +15,8 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*Last close-out: **M1.10 Wave 4** (2026-07-05) — **T4: 0 deviations** — M1.10 build complete (T0–T4); portal 3 for 1 bespoke line.*
+*Current: **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — awaiting Director disposition (non-blocking; TG2 is human-gated behind the playtest anyway).*
+*Prior: **M1.10 Wave 4** (2026-07-05) — T4: 0 deviations — build complete (T0–T4); portal 3 for 1 bespoke line.*
 *Prior: **Wave 3** T3: 0 dev (band 3 = 0 lines) · **Wave 2** T1: 0 dev · **Wave 1** T0: 3 Reviewed (archived), T2a/T2b: none.*
 *Prior: **M1.9 Wave 5** (2026-07-03) — 1 entry (S8): 1 Reviewed — build phase S0–S9 fully swept.*
 *Prior: **M1.9 Wave 4** (18: 13+5) · **Wave 3** (5: 4+1) · **Wave 2** (8: 7+1) · **Wave 1** (2: 1+1) ·
@@ -23,4 +24,10 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*(empty — M1.10 Wave 1 fully swept; next entries land at the Wave-2 (T1) close-out.)*
+[2026-07-05] TG1/def-menu-coverage-test — `test_def_menu_coverage.gd` hard-coded the splitter IN-DECK
+chip as `"IN DECK: band_two"` (an FBM19b-era expectation); T3's D-RAT-6 deck correctly added splitter to
+band_three, so the chip now correctly reads `"band_three, band_two"`. TG1 updated the stale test
+expectation to a per-id map (charger → band_two; splitter → band_three, band_two). · why: the PRODUCT
+behavior is correct (the menu surfaces true deck membership); only the test's expectation was stale and
+not updated in the T3 wave. Test-only change; no production `.gd`/`.tres` touched. · Rec: **Reviewed** —
+test caught up to ratified product behavior; no design change.

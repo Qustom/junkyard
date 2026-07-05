@@ -284,10 +284,15 @@ glow **awaits an art retone**; no save change (band choice is per-dive, not pers
 
 ### 6.1 Publish record
 
-- **Publish is orchestrator-run from `main`** after merging this worktree's changelog + doc (+ the
-  test-fixture correction). Fill the build id / stamp / butler confirmation here at publish time (per the
-  SG1 §6.1 shape: `m1-<UTC-date>-<short-sha>` userversion, `BuildVersion.short_sha` stamp, `pushed
-  qusto/the-far-yard:html5 @ <userversion>` confirmation, live page).
+- **PUBLISHED 2026-07-05** (orchestrator-run from `main` after merging this worktree's changelog + doc +
+  test-fixture correction; merge `3c9644e`).
+  - **userversion:** `m1-20260705-3c9644e` (`BuildVersion.short_sha == 3c9644e`, stamped by `stamp_build.sh`).
+  - **butler:** `pushed qusto/the-far-yard:html5 @ m1-20260705-3c9644e` — channel `html5`, upload
+    `#18000582`, build **`#1775187`** ✓ processed (from `#1773505`; 98.88% patch savings). One mid-upload
+    network flap (10.0.0.1:443 i/o timeout) auto-retried by butler and completed; the initial
+    `push_itch.sh` run's wharf POST timed out on the same flaky endpoint, so the upload was re-driven
+    directly on the intact export (export is deterministic; same artifacts).
+  - **Live page:** https://qusto.itch.io/the-far-yard (password-gated; **Chrome/Edge only** — SharedArrayBuffer COEP).
 
 ---
 
