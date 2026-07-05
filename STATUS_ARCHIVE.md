@@ -398,3 +398,43 @@ last build fix before the re-gate — makes R2's `exposure` toll actually charge
 
 ---
 
+
+---
+
+## M1.9 build waves — Done tables (archived 2026-07-05 at the M1.10 version boundary)
+
+Specs also in `TASKS_COMPLETED.md` §M1.9; worklogs under `worklogs/`. SG1 published
+`m1-20260704-55ca78f`; SG2/SG3 remain Director-pending (live in `STATUS.md` §M1.9 pointer + `TASKS.md`).
+
+### Wave 5 — Done (2026-07-03)
+| Task | Agent | Merged | Proof |
+|---|---|---|---|
+| S8 — Second hub portal + band routing + telemetry band-stamp | general-purpose | `a357e47` | Portal 2 "Dive — The Sump" ember-orange at (220,-150); `BAND_ROUTES` live; portal 1 tscn zero-byte diff; `band_id` both routes; `test_band_routing`+`test_hub_contract` green. 1 deviation. |
+| S9 — DeckEntry override wrapper (D-RAT-2 delivery) | general-purpose | `ac289db` | `test_deck_entry` green (empty-wrapper ≡ plain ref; precedence def<deck-entry<rc; band_two charger gets D-RAT-2 values); charger def-default pin intact; fps unmoved. Deviations: none. |
+
+### Wave 4 — Done (2026-07-03)
+| Task | Agent | Merged | Proof |
+|---|---|---|---|
+| S4 — Generated debug-menu sections + coverage 91 + sweep hygiene | general-purpose | `e95a892` | 91/91 + per-def bijection; count-agnostic Oppositions tab (6 defs post-merge); dotted stamp; neutral-card trap; `debug_dirty` hygiene; tier-v1 respawn. 5 deviations. |
+| S6a — Charger "The Wrecker" | general-purpose | `250cee1` | ChargeLane (the ONE new script); `charger.tres` D-RAT-2 letter defaults (test-pinned); `test_charger` 11 groups green; goldens intact. 4 deviations. |
+| S6b — Splitter | general-purpose | `5ac1fa7` | `test_splitter` green (throw-death-only split, cap refusal, freed-parent headroom, fp byte-identical across a forced split); 6-def bijection; goldens intact. 6 deviations. |
+| S7 — band_two "The Sump" | game-director-designer | `025d37a` | `test_band_two_profile` C0–C6 green 9 seeds; greybox fp untouched; tint `Color(0.82,0.66,0.42)`; deck completed 4→6 at integration. 2 deviations. |
+
+### Wave 3 — Done (2026-07-03)
+| Task | Agent | Merged | Proof |
+|---|---|---|---|
+| S3 — EncounterBuilder + RunConfig generic levers + both call-site integrations | general-purpose | `d9f5377` | Integrated matrix 23 tests + smoke green (incl. m13 first-run); fp `e943ac9c8bc1` through the new call sites; preset cohort byte-parity; 89/89 held; 91 knobs stamped. 5 deviations. |
+
+### Wave 2 — Done (2026-07-03)
+| Task | Agent | Merged | Proof |
+|---|---|---|---|
+| S2 — Opposition component extraction + `param_schema` | general-purpose | `e851a8c` | Golden frame-trace parity byte-identical (5 traces); dual-emit twins 1:1; defs + bijection test; throw seam + LethalContact external seam. 4 deviations. |
+| S5 — Band flavor stages + connectivity guarantee | general-purpose | `0aa085c` | `test_band_flavors` F1–F8 green 9 seeds; parity UNMODIFIED green; strand-proof at max decay. 4 deviations. |
+
+### Wave 1 — Done (2026-07-02)
+| Task | Agent | Merged | Proof |
+|---|---|---|---|
+| S0 — SpawnService + OppositionDef data layer + EventBus pre-declare | general-purpose | `84785cf` | Full matrix green incl. golden `test_new_hazard_spawn` unmodified + new `test_spawn_service`. 2 deviations. |
+| S1 — BandProfile + BandPipeline + `band_greybox.tres` | general-purpose | `9a8c6fb` | Parity byte-match 9 seeds, purely additive. Deviations: none. |
+
+---

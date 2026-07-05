@@ -58,6 +58,111 @@ Build (M0·M1·M2·M4·M3) + RG1 (itch published `m1-20260627-41106de` + FB1–F
 
 ---
 
+## M1.10 — Second Generation Backend + Cave Band + Low-Sightline Oppositions (ACTIVE — Director-directed; design LOCKED 2026-07-05)
+
+Prove the M1.9 architectures scale along their second axis: a **genuinely different generator**
+(`CaveBackend`, cellular automata — no pieces/sockets) slots behind the same `BandPipeline` with the
+whole downstream stack reused, and **two more oppositions** (Ambusher + Burrower — the cave-native
+pair) land as def + one component each. Breakdown + 13 cross-task amendments + Director ratifications
+D-RAT-1…9: `design/M1_10_Tasks/M1.10_Breakdown.md`. Every task doc carries a BINDING
+`Resolved Decisions (Phase 3)` section. **Contracts:** THREE permanent controls byte-identical at every
+wave boundary (all-off fp `e943ac9c8bc1` + `band_greybox` fp + `band_two` fp, all through the untouched
+socket path); cave determinism = order-stable iteration + deterministic CARVE, no cave code on any socket
+path; **cost-ledger** in every build worklog (bespoke non-data/non-test lines beyond the promised
+backend/component — TG3's evidence); per-def bijection at 9 defs; 91-knob model frozen; no save change;
+single-writer-per-file per wave (`main_game.gd`: T1 through Wave 3 → T4's one `BAND_ROUTES` row Wave 4;
+`band_pipeline.gd`/`band_profile.gd`: T0 only); parallel agents in worktrees; PixelLab Director-gated
+(tint-only, D-RAT-5).
+
+### Wave 1 — Backend + the two oppositions  *(T0 ∥ T2a ∥ T2b, parallel worktrees, file-disjoint)*
+
+### T0 — CaveBackend: CA caverns generator + `CaveBandConfig` + pipeline backend dispatch
+- Milestone: M1.10 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_10_Tasks/T0_cave_backend.md` (body + §10 Resolved Decisions)
+- Goal: `CaveBandConfig` (integer-only: `grid` 56×56, `fill_pct`, `smooth_passes`, `wall_threshold`, `min_region_cells`, `carve_width`, `chunk_cells`, `min_floor_cells`, `max_attempts`, `cell_size_px`) + a `CaveBackend` in `systems/bandgen/`: seeded fill → CA smoothing → keep-largest flood + deterministic carve of secondary regions (sorted order) → **west-most 2×2-open entry anchor** (front-positioned `floor_cells[0]`) → **chunk partition** into synthetic `PlacedPiece`s (content-hashed `cave_`+12-hex ids so `Band.fingerprint()` pins the floor; `max_depth >= 4` on defaults) + a **deterministic 2×2-open throat guarantee** (only T0 mutates floor_cells). Replace the pipeline cave fail-loud with `_backend_for` dispatch; add the `validate()` cave branch (incl. the cave+flavors fail-loud). Touches ONLY `systems/bandgen/` + `data/bands/*.gd` schema + tests — NOT `main_game.gd`.
+- Done when: `test_cave_backend` green (same seed → same fp ×2; diff seed → diff fp; single connected FLOOR component; region-keep + carve determinism; 2×2 throat C10; rc-invariance C7); `band_greybox` + `band_two` + all-off fp byte-identical through the untouched socket path; existing bandgen suite green; worklog (with the bespoke-code ledger) + commit.
+
+### T2a — New opposition #5: Ambusher (def + one `Concealment` component)
+- Milestone: M1.10 (Wave 1)   Assignee: general-purpose (+ character-animator: greybox tell/placeholder)   BlockedBy: none
+- Spec: `design/M1_10_Tasks/T2a_ambusher.md` (body + §Resolved Decisions; D-RAT-2)
+- Goal: `ambusher.tres` (min_band=3, off by default) + the ONE new `Concealment` component (near-invisibility + faint floor tell + `collision_layer = 0` true pass-through while HIDDEN + SPENT husk), with the pounce FSM = **reused `ChargeLane` verbatim** (HIDDEN→ARMED→POUNCE→EXPOSED ≡ DORMANT→TELEGRAPH→CHARGE→RECOVER), `ProximityTrigger` arm, `TelegraphFSM` tell, `LethalContact` (`kills`-gated **fatal** pounce), `ThrowInteraction` (throw-kill while ARMED/EXPOSED). **One-shot** (host `_spent` stops re-ticking; `re_hide_s` ships dormant). Conceal-LAST bind ordering is load-bearing (ChargeLane adds the group at bind) — pinned by test. `ambusher.tscn` declares `groups=["hazard"]`. NO shared-file edit; gloss rows deferred to the orchestrator's merge commit.
+- Done when: all-off fp unmoved; params↔schema bijection green (dir-scan net, no hard count); `test_ambusher` green (hidden non-lethal + un-hittable + pass-through; arm radius; tell precedes pounce; kill gated; exposed throw-kill; deterministic placement); menu section auto-appears; worklog + cost ledger + commit.
+
+### T2b — New opposition #6: Burrower "Sinkmaw" (def + one `BurrowCycle` component)
+- Milestone: M1.10 (Wave 1)   Assignee: general-purpose (+ character-animator: greybox decal/placeholder)   BlockedBy: none
+- Spec: `design/M1_10_Tasks/T2b_burrower.md` (body + §Resolved Decisions; D-RAT-3)
+- Goal: `burrower.tres` (min_band=3, off by default) + the ONE new `BurrowCycle` component (BURIED→TELEGRAPH→SURFACED phase timer; per-phase `collision_layer` cycling — cleared to 0 while buried so throws pass through + contact non-lethal; wall-ignoring direct-translate tracking with an `intersect_point` world-mask-2 gate so it NEVER surfaces inside a wall; positional desync salt — `legacy_ctx` only stamps `phase_salt` for spike), reusing `TelegraphFSM`, `LethalContact` (`&"external"`, `kills`-gated), `ThrowInteraction`. **Static pop**, **exact locked-at-telegraph decal**, `kill_radius = 34` (player mask 26 collides with hazard 16), first lethal test on the surfacing frame. NO shared-file edit.
+- Done when: all-off fp unmoved; bijection green; `test_burrower` green (buried throw-pass-through + non-lethal; dodge frame honored — surface-under-player never kills inside the lead; wall-clear surfacing; cycle timing from params; surfacing-frame kill_radius test); menu section auto-appears; worklog + cost ledger + commit.
+
+### Wave 2 — Materialisation  *(T1 alone — sole `main_game.gd` writer through Wave 3)*
+
+### T1 — Cave materialisation + backend-agnostic sealing + downstream verify
+- Milestone: M1.10 (Wave 2)   Assignee: general-purpose   BlockedBy: T0
+- Spec: `design/M1_10_Tasks/T1_cave_materialisation.md` (body + §Resolved Decisions; D-RAT-7/8)
+- Goal: make a cave playable — per synthetic piece, build a runtime `ZonePiece` host with a generated `Geometry` `TileMapLayer` from `floor_cells` reusing `greybox.tres` (WALL `(1,0)` carries the layer-2 physics polygon the player mask 26 already collides with); T1 writes **FLOOR tiles only** and assigns instances **before** the seal, so the **unedited `SocketSealer` runs verbatim as the single wall-writer** (1-tile shell over darkness, D-RAT-8). Cave-guard the pinned gate to **snap-to-nearest-floor** (D-RAT-7, 3 call sites). Verify DepthGrader anchors (entry spawn `floor_cells[0]`, gate), JunkPlacer, EncounterBuilder placement, camera + player collision; `palette_tint` applies. Socket-band materialisation byte-identical.
+- Done when: a cave-profile dive runs headlessly end-to-end (generate → materialise → junk + gate + spawns on FLOOR); socket-band materialisation byte-identical (fp + `test_rg1_m1*`/hub/routing green); all-off fp unmoved; `test_cave_materialise` M1–M9 green (wall collision closes the space — spawn→gate 2×2-open bar; gate reachable); worklog + cost ledger + commit.
+
+### Wave 3 — The band as data  *(T3 — the scalability measurement)*
+
+### T3 — New band: `band_three.tres` "The Warren" (cave profile + deck + tint)
+- Milestone: M1.10 (Wave 3)   Assignee: game-director-designer (+ environment-artist: tint, general-purpose: glue/tests)   BlockedBy: T0, T1, T2a, T2b
+- Spec: `design/M1_10_Tasks/T3_band_three.md` (body + §Resolved Decisions; D-RAT-5/6)
+- Goal: author The Warren as data — `backend="cave"`, `cave_config_band_three.tres` (56×56 · fill 45 · smooth 4 · wall_threshold 5 · min_region 24 + T0 defaults), `band_depth=3` (→ instability 1.30 → 31-credit budget), deck `[ambusher 6 · burrower 3 · splitter 4 · bomb 1]` = **14 spawns, budget exactly 0** (bomb via `DeckEntry base_count` override; typed def fields can't be overridden), min_band=3 gating, `depth_curve_band_three.tres` (value 1.30→2.5, tier 3→5, **density ~1.0→1.3** — chunked-cave piece-count re-base), **blue-violet `palette_tint`**, **flavors = [] MANDATORY** (validate() fail-louds on cave flavors). Clone T1's 2×2-open certificate onto the authored config.
+- Done when: `band_three` deterministic (same seed → same fp ×2; connectivity green); deck spawns via the builder within caps at 31 credits; `band_greybox` + `band_two` fps untouched (absolute golden pins for band_two — no direct-generator path through its flavors); headless profile-load contract test green (C0–C6 + both socket controls); worklog + **headline cost ledger** + commit.
+
+### Wave 4 — Reachability
+
+### T4 — Third hub portal + `band_three` routing
+- Milestone: M1.10 (Wave 4)   Assignee: general-purpose   BlockedBy: T3
+- Spec: `design/M1_10_Tasks/T4_hub_portal_routing.md` (body + §Resolved Decisions; D-RAT-5/9)
+- Goal: third `departure_portal.tscn` instance at **(110,-20)** (forward-staggered second rank; `interactable_id=&"portal_band_three"`, route key `&"band_three"`, **cave-teal glow `Color(0.30,0.90,0.65)`**, prompt **"Dive — The Warren"**); one-line `BAND_ROUTES` add (`&"band_three"` → `band_three`); both existing portals byte-identical; `band_id == &"band_three"` on run rows (generic stamp — verify). Always present; no save change.
+- Done when: both existing portal paths byte-identical (fp + `test_hub_contract` H5/H6 + C1–C6 unmodified); new-portal contract check (H7/C7 — id, prompt, routes to band_three with its fp); `band_id` verified; smoke green; worklog + cost ledger + commit.
+
+### Wave 5 — Re-gate  *(standing playtest-gate steps)*
+
+### TG1 — M1.10 playtest build + verify + changelog + itch publish
+- Milestone: M1.10 (Wave 5)   Assignee: qa-playtest-coordinator   BlockedBy: T0–T4 all Done
+- Spec: breakdown §TG1; template `design/M1_9_Tasks/SG1_playtest_build.md`
+- Goal: full verify matrix (fp `e943ac9c8bc1` · 91-knob + 9-def bijection · `band_greybox`+`band_two` fps · cave determinism + connectivity · all THREE portals · preset parity · suite incl. the T2b binding riders — kill_radius-34 surfacing-frame + wall-clear surfacing tests); `changelog.txt` M1.9→M1.10 feature delta (third band + cave generator + two oppositions); publish to itch (`BUTLER=/mnt/c/wsl-libraries/butler/butler bash Game/tools/push_itch.sh`, human/network-gated).
+- Done when: verify matrix green; changelog committed; build live on `qusto/the-far-yard:html5`.
+
+### TG2 — M1.10 telemetry / balance analysis
+- Milestone: M1.10 (Wave 5)   Assignee: qa-playtest-coordinator   BlockedBy: TG1 + Director playtest
+- Goal: three-band comparison off `band_id` (band-total **value** not item counts — per-chunk loot rolls); Ambusher tell + Burrower telegraph fairness (deaths-per-first-encounter vs Wrecker/Splitter); does the cave disorient productively vs read as lost (time-to-gate vs band 2); 1.30 budget sanity (deck outcome 6/3/4/1 is deterministic — count drift = cap/refusal); web perf with cave wall-collision geometry; `debug_dirty` filtered.
+- Done when: analysis doc assembled for TG3.
+
+### TG3 — M1.10 re-gate verdict (Director decides)
+- Milestone: M1.10 (Wave 5)   Assignee: qa (assembles) → Director (decides)   BlockedBy: TG2
+- Goal: go/iterate/pivot in `design/M1_10_Tasks/G4_findings_M1.10.md`. Watch-items: **the cost ledgers** (did backend #2 + oppositions #5/#6 hold "content = data"?); cave depth-signposting (lighting/cue next?); do Ambusher/Burrower enter shallower decks; ScatterBackend next?; flavor stages on cave floor; hub portal-row scaling (3 portals — band 5 forces a band-select surface).
+- Done when: recorded verdict.
+
+---
+
+## M1.9 — Scalable Opposition + Band Systems (build DONE; SG2/SG3 Director-pending, non-blocking)
+
+**Build waves S0–S9 all DONE + integrated; SG1 DONE + published** (`m1-20260704-55ca78f`, incl.
+FBM19/FBM19b feedback fixes). Breakdown + amendments + ratifications: `design/M1_9_Tasks/M1.9_Breakdown.md`.
+**Open (Director-gated, non-blocking M1.10):** SG2 (telemetry/balance off `band_id`) + SG3 verdict in
+`design/M1_9_Tasks/G4_findings_M1.9.md` — await the Director's playtest of the published build. Build-task
+specs S0–S9 archived → `TASKS_COMPLETED.md` §M1.9.
+
+### SG2 — M1.9 telemetry / balance analysis
+- Milestone: M1.9 (Wave 6)   Assignee: qa-playtest-coordinator   BlockedBy: SG1 (done) + Director playtest
+- Goal: per-band comparison off `band_id`; new-hazard readability + fairness (via `opposition_event`); The Sump's +15% step felt?; `debug_dirty` runs filtered; web perf with the deck live.
+- Done when: analysis doc assembled for SG3.
+
+### SG3 — M1.9 re-gate verdict (Director decides)
+- Milestone: M1.9 (Wave 6)   Assignee: qa (assembles) → Director (decides)   BlockedBy: SG2
+- Goal: go/iterate/pivot in `design/M1_9_Tasks/G4_findings_M1.9.md`. Watch-items: did "content = data" hold; promote charger/splitter to band 1?; legacy-signal retirement; ceiling numeric merge; CaveBackend/ScatterBackend next? *(M1.10 answers the CaveBackend watch-item.)*
+- Done when: recorded verdict.
+
+---
+
+## M1.9 — build-task detail (SUPERSEDED — specs archived to `TASKS_COMPLETED.md` §M1.9)
+
+_The full S0–S9 task specs below are retained for provenance only; they are all Done. The active M1.9
+surface is the SG2/SG3 block above._
+
 ## M1.9 — Scalable Opposition + Band Systems (ACTIVE — Director-directed; design LOCKED 2026-07-02)
 
 Implement the two explored scalable architectures — the **SpawnService/EncounterBuilder** split
