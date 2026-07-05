@@ -249,12 +249,21 @@ func _run_fail_loud_checks(pipe: BandPipeline, cfg: BandGenConfig,
 	if pipe.generate(invalid, 1) != null:
 		failures.append("P7: invalid (empty) profile did not return null")
 
-	# Unwired backend → null (validate passes; the Phase-A wiring guard fires).
+	# Unwired backend → null (validate passes; the wiring guard fires). M1.10
+	# wired socket + cave, so "scatter" is now the remaining fail-loud backend.
+	var scatter := BandProfile.new()
+	scatter.id = &"synthetic_scatter"
+	scatter.backend = "scatter"
+	if pipe.generate(scatter, 1) != null:
+		failures.append("P7: backend 'scatter' did not return null (unwired-backend guard missing)")
+
+	# M1.10 (T0): a cave backend IS wired, so its fail-loud moved to validate() —
+	# a cave profile with a missing/wrong-typed backend_config returns null.
 	var cave := BandProfile.new()
 	cave.id = &"synthetic_cave"
-	cave.backend = "cave"
+	cave.backend = "cave"    # no CaveBandConfig → validate() fails → null
 	if pipe.generate(cave, 1) != null:
-		failures.append("P7: backend 'cave' did not return null (socket-only guard missing)")
+		failures.append("P7: cave profile with no CaveBandConfig did not return null (validate guard missing)")
 
 	# Stage-bearing profile before S5 → null (control safety).
 	var staged := BandProfile.new()

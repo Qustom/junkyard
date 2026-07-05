@@ -41,9 +41,15 @@ func generate(profile: BandProfile, seed: int, rc: RunConfig = null) -> Band:
 			push_error(p)
 		return null
 
-	# --- Phase-A wiring guards -------------------------------------------
-	if profile.backend != "socket":
-		push_error("BandPipeline: backend '%s' is not wired in M1.9 (socket only — profile '%s')"
+	# --- Wiring guards (M1.10: socket + cave wired; scatter still fail-loud) --
+	# Cave dispatch (T0): the socket path's statements below stay VERBATIM in the
+	# same order, and the ONLY additions on that path are `backend == "cave"`
+	# string compares (no draws, no state), so band_greybox/band_two byte-identity
+	# is structural (test_band_pipeline_parity proves it). The cave+flavors
+	# fail-loud lives in BandProfile.validate() (single location; the pipeline's
+	# validate-then-fail flow at :38-42 enforces it).
+	if profile.backend != "socket" and profile.backend != "cave":
+		push_error("BandPipeline: backend '%s' is not wired in M1.10 (socket + cave only — profile '%s')"
 				% [profile.backend, profile.id])
 		return null
 	if not profile.principles.is_empty():
@@ -62,26 +68,42 @@ func generate(profile: BandProfile, seed: int, rc: RunConfig = null) -> Band:
 					% [profile.id, fcfg.get_class() if fcfg != null else "null"])
 			return null
 
-	# --- STAGES 1+2: backend + archetype = today's generator, verbatim ---
-	# The socket grow loop IS the linear/branchy archetype: branch topology
-	# is keyed off backend_config.branch_chance and the rc r4_* levers at
-	# the exact same draw sites as today (band_generator.gd:308-329). Same
-	# args, same retry loop, same _derive_seed chain, same RNG reseed.
-	var cfg := profile.backend_config as BandGenConfig
-	# I1 catalog swap (S3, §7.2 Q6(iv) / S1 §10.1 Q3): lvl_enabled + an authored
-	# piece_pool_ext swaps in the extended pool — the exact config-dependent swap the
-	# main_game call site used to do (Resolved G), relocated here so the profile fully
-	# owns generation content. lvl off / ext absent → piece_pool (the all-off fp and
-	# every ext-less profile are byte-untouched).
-	var catalog: Array[ZonePieceData] = profile.piece_pool.pieces
-	if rc != null and rc.lvl_enabled and profile.piece_pool_ext != null \
-			and not profile.piece_pool_ext.pieces.is_empty():
-		catalog = profile.piece_pool_ext.pieces
-	var band := BandGenerator.new().generate(seed, cfg, catalog, rc)
+	# --- STAGES 1+2: backend dispatch (T0) -------------------------------
+	var band: Band
+	if profile.backend == "cave":
+		# CAVE (M1.10): the CA caverns backend. rc accepted, IGNORED (every
+		# as-built rc generation hook is socket-interior; test C7 pins it).
+		var cave_cfg := profile.backend_config as CaveBandConfig
+		band = CaveBackend.new().generate(seed, cave_cfg, rc)
+	else:
+		# SOCKET: today's generator, verbatim. The socket grow loop IS the
+		# linear/branchy archetype: branch topology is keyed off
+		# backend_config.branch_chance and the rc r4_* levers at the exact same
+		# draw sites as today (band_generator.gd:308-329). Same args, same retry
+		# loop, same _derive_seed chain, same RNG reseed.
+		var cfg := profile.backend_config as BandGenConfig
+		# I1 catalog swap (S3, §7.2 Q6(iv) / S1 §10.1 Q3): lvl_enabled + an authored
+		# piece_pool_ext swaps in the extended pool — the exact config-dependent swap the
+		# main_game call site used to do (Resolved G), relocated here so the profile fully
+		# owns generation content. lvl off / ext absent → piece_pool (the all-off fp and
+		# every ext-less profile are byte-untouched).
+		var catalog: Array[ZonePieceData] = profile.piece_pool.pieces
+		if rc != null and rc.lvl_enabled and profile.piece_pool_ext != null \
+				and not profile.piece_pool_ext.pieces.is_empty():
+			catalog = profile.piece_pool_ext.pieces
+		band = BandGenerator.new().generate(seed, cfg, catalog, rc)
 	if band == null or band.pieces.is_empty():
 		push_error("BandPipeline: generation produced no pieces (profile '%s', seed %d)"
 				% [profile.id, seed])
 		return band
+
+	# --- Post-backend invariant (cave only): cell-level connectivity ASSERT --
+	# The backend guarantees one FLOOR component by construction (keep-largest +
+	# deterministic carve + player-scale pass); this is the invariant's teeth at
+	# the pipeline seam, reusing the existing checker. Fail-loud, never a silent
+	# fix (ASSERT posture, connectivity_guarantee.gd:14-24).
+	if profile.backend == "cave":
+		ConnectivityGuarantee.new().enforce(band, ConnectivityGuarantee.Mode.ASSERT)
 
 	# --- STAGES 3-5 (S5): flavor loop + connectivity invariant ------------
 	# Guarded so a profile with empty flavors runs ZERO flavor code — the
