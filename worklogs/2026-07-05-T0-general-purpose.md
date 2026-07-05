@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.10 (Wave 1)
 - **Branch:** worktree-agent-a8c1cc41010079646 (isolated worktree; `general-purpose/T0` role)
-- **Commit:** c5d63f16d6bfb0aa44f783b34bb1042c61e0305e
+- **Commit:** f7d44d2cf4408c5fbf7329e1ac6af36006c02cbf (T0 code + tests + this worklog)
 
 ## What changed
 Built the second generation backend behind the `BandPipeline` seam: a cellular-automata
