@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="CaveBandConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/bands/cave_band_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+grid_width = 56
+grid_height = 56
+fill_pct = 45
+smooth_passes = 4
+wall_threshold = 5
+min_region_cells = 24
+carve_width = 2
+chunk_cells = 8
+min_floor_cells = 300
+max_attempts = 8
+cell_size_px = 16

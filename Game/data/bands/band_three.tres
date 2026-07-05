@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="BandProfile" load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://data/bands/band_profile.gd" id="1"]
+[ext_resource type="Resource" path="res://data/bands/cave_config_band_three.tres" id="2"]
+[ext_resource type="Resource" path="res://systems/depth/depth_curve_band_three.tres" id="3"]
+[ext_resource type="Resource" path="res://data/junk/junk_catalog.tres" id="4"]
+[ext_resource type="Resource" path="res://data/oppositions/ambusher.tres" id="5"]
+[ext_resource type="Resource" path="res://data/oppositions/burrower.tres" id="6"]
+[ext_resource type="Resource" path="res://data/oppositions/splitter.tres" id="7"]
+[ext_resource type="Resource" path="res://data/oppositions/bomb.tres" id="8"]
+[ext_resource type="Script" path="res://data/bands/deck_entry.gd" id="9"]
+
+[sub_resource type="Resource" id="deck_entry_bomb"]
+script = ExtResource("9")
+def = ExtResource("8")
+param_overrides = {
+"base_count": 1
+}
+
+[resource]
+script = ExtResource("1")
+id = &"band_three"
+display_name = "The Warren"
+backend = "cave"
+backend_config = ExtResource("2")
+archetype = "linear"
+archetype_params = {}
+piece_pool = null
+piece_pool_ext = null
+principles = Array[Resource]([])
+flavors = Array[Resource]([])
+depth_curve = ExtResource("3")
+junk_catalog = ExtResource("4")
+opposition_deck = Array[Resource]([ExtResource("5"), ExtResource("6"), ExtResource("7"), SubResource("deck_entry_bomb")])
+band_depth = 3
+palette_tint = Color(0.62, 0.6, 0.78, 1)
