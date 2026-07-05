@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.10 (Wave 1)
 - **Branch:** worktree-agent-a19da54ac4b53e7e8
-- **Commit:** 860eb3f8abdc381cef2c92548cb2fe9d979bf0d2
+- **Commit:** 0c72f686debbff00f6bcdad213d9f60e025bc3f0 (code + test); worklog SHA fix in the follow-up commit
 
 ## What changed
 Added the AMBUSHER opposition ("The Lurker") as the TG3 scalability proof: `ambusher.tres`
