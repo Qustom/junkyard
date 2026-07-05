@@ -24,10 +24,15 @@ extends Node
 ##       asserting the signal asserts the JSONL row's source.)
 ##   C6. wipe isolation: a staged key survives GameState.wipe_meta() (wipe is
 ##       meta-only; the staging slot is neither run-state nor meta)
+##   C7. (T4) routing lands: &"band_three" staged -> the band_three ("The Warren")
+##       cave profile; its pipeline fingerprint is distinct from BOTH controls
+##       (greybox AND band_two) for the same seed. C5 additionally drives a full
+##       band-three dive end-to-end and asserts run_started band_id &"band_three".
 
 const MAIN_GAME_PATH := "res://scenes/game/main_game.tscn"
 const GREYBOX_PATH := "res://data/bands/band_greybox.tres"
 const BAND_TWO_PATH := "res://data/bands/band_two.tres"
+const BAND_THREE_PATH := "res://data/bands/band_three.tres"
 const SEED := 12345
 
 var _failures: Array[String] = []
@@ -39,17 +44,19 @@ func _ready() -> void:
 
 
 func _run() -> int:
-	_check_staging()          # C1
-	_check_default()          # C2
-	_check_unknown_key()      # C3
-	_check_routing_lands()    # C4
-	await _check_stamp()      # C5 (full scene — async)
-	_check_wipe_isolation()   # C6
+	_check_staging()               # C1
+	_check_default()               # C2
+	_check_unknown_key()           # C3
+	_check_routing_lands()         # C4
+	_check_routing_lands_band_three()  # C7 (T4 — new route, checked before the async C5)
+	await _check_stamp()           # C5 (full scene — async; drives band_two + band_three + near)
+	_check_wipe_isolation()        # C6
 
 	if _failures.is_empty():
 		print("BAND_ROUTING OK — staging consume-on-read, &\"near\"/unknown -> greybox ",
-				"control, &\"band_two\" -> The Sump (deterministic, distinct fp), ",
-				"run_started band_id == the route key for both routes, wipe-isolated")
+				"control, &\"band_two\" -> The Sump + &\"band_three\" -> The Warren ",
+				"(each distinct fp), run_started band_id == the route key for all three ",
+				"routes, wipe-isolated")
 		return 0
 	for f in _failures:
 		printerr("BAND_ROUTING FAIL: ", f)
@@ -131,6 +138,42 @@ func _check_routing_lands() -> void:
 	_free_band(g)
 
 
+# --- C7 (T4). Routing lands in band_three, distinct from BOTH controls -----------------
+
+func _check_routing_lands_band_three() -> void:
+	EventBus.dive_requested.emit(&"band_three")
+	var mg := MainGame.new()
+	var profile: BandProfile = mg._resolve_band_profile()
+	if profile == null or profile.id != &"band_three":
+		_failures.append("C7: staged &\"band_three\" resolved '%s', expected band_three"
+				% (profile.id if profile != null else &"<null>"))
+		mg.free()
+		return
+	if mg._band_route_key != &"band_three":
+		_failures.append("C7: route key is '%s', expected &\"band_three\"" % mg._band_route_key)
+	mg.free()
+
+	# Route distinctness: one generate; fp != greybox AND != band_two for the same seed.
+	# (Same-seed-twice determinism + connectivity are T3's test_band_three_profile — OQ-5.)
+	var b3 := BandPipeline.new().generate(profile, SEED)
+	var greybox := load(GREYBOX_PATH) as BandProfile
+	var band_two := load(BAND_TWO_PATH) as BandProfile
+	var g := BandPipeline.new().generate(greybox, SEED)
+	var t2 := BandPipeline.new().generate(band_two, SEED)
+	if b3 == null or g == null or t2 == null:
+		_failures.append("C7: null band from the pipeline (band_three / greybox / band_two)")
+	else:
+		if b3.fingerprint() == g.fingerprint():
+			_failures.append("C7: band_three fp == band_greybox fp for seed %d (routes indistinct)"
+					% SEED)
+		if b3.fingerprint() == t2.fingerprint():
+			_failures.append("C7: band_three fp == band_two fp for seed %d (routes indistinct)"
+					% SEED)
+	_free_band(b3)
+	_free_band(g)
+	_free_band(t2)
+
+
 # --- C5. Stamp: the assembled scene tags run_started with the route key --------------
 
 func _check_stamp() -> void:
@@ -171,6 +214,21 @@ func _check_stamp() -> void:
 				% str(_run_started_band_ids))
 	if game._band_profile == null or game._band_profile.id != &"band_greybox":
 		_failures.append("C5: unstaged dive generated profile '%s', expected band_greybox"
+				% (game._band_profile.id if game._band_profile != null else &"<null>"))
+
+	# T4: a portal-3-style emission drives the FULL assembled cave dive end-to-end
+	# (pipeline cave dispatch + materialise) and must tag run_started &"band_three".
+	GameState.extract_and_end_run()
+	await get_tree().process_frame
+	_run_started_band_ids.clear()
+	EventBus.dive_requested.emit(&"band_three")
+	game.start_new_run()
+	await get_tree().process_frame
+	if _run_started_band_ids.size() != 1 or _run_started_band_ids[0] != &"band_three":
+		_failures.append("C5: portal-3 dive run_started band_id(s) %s, expected [&\"band_three\"]"
+				% str(_run_started_band_ids))
+	if game._band_profile == null or game._band_profile.id != &"band_three":
+		_failures.append("C5: portal-3 dive generated profile '%s', expected band_three"
 				% (game._band_profile.id if game._band_profile != null else &"<null>"))
 
 	# Teardown: end the run and free the scene (leave GameState quiescent for C6).
