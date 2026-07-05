@@ -30,6 +30,12 @@ const DEFAULT_BAND_PROFILE_PATH := "res://data/bands/band_greybox.tres"
 const JUNK_CATALOG_PATH := "res://data/junk/junk_catalog.tres"
 const DEPTH_CURVE_PATH := "res://systems/depth/depth_curve.tres"
 const GATE_SCENE_PATH := "res://entities/gate/extract_gate.tscn"
+## M1.10 (T1): the greybox tileset a synthetic cave piece's runtime Geometry layer
+## reuses (its WALL atlas (1,0) carries the physics polygon the sealer caps with, and
+## its FLOOR atlas (0,0) is collisionless). load()ed LAZILY inside _build_synthetic_piece
+## — a socket dive never builds a synthetic piece, so it never loads this here, and the
+## all-off/socket materialise path stays byte-identical.
+const GREYBOX_TILESET_PATH := "res://data/tilesets/greybox.tres"
 ## M1.1 R0: the default (all-off) run config. CFG will later swap this for the
 ## menu-built config; for now we stage the all-off default so the wiring is
 ## exercised and the loop stays at the M1.0 baseline.
@@ -820,7 +826,16 @@ func _materialise_band(band: Band, cell_size: int = DEFAULT_CELL_SIZE_PX) -> int
 	# the effective cell size to the authored one, so collision + visuals match the lane.
 	for p in band.pieces:
 		if p.instance == null:
-			continue
+			# M1.10 (T1): a synthetic (cave-backend) piece carries floor_cells but NO
+			# authored scene (backend is deliberately scene-free so the pipeline tests stay
+			# headless-pure). Build its greybox instance HERE at materialise time — a runtime
+			# ZonePiece host + generated Geometry TileMapLayer with FLOOR tiles only; the
+			# SocketSealer below then writes the WALL shell (§2.2/§3.2, D-RAT-8). Socket bands
+			# NEVER hit this branch (BandGenerator always instantiates a ZonePiece scene, so
+			# p.instance != null on every socket piece), so the legacy path is byte-identical.
+			if p.floor_cells.is_empty():
+				continue                              # defensive: the legacy null-skip, kept
+			p.instance = _build_synthetic_piece(p)    # the ONLY new statement on the piece walk
 		var base_cell := p.instance.cell_size_px if p.instance.cell_size_px > 0 else DEFAULT_CELL_SIZE_PX
 		var mult := float(cell_size) / float(base_cell)
 		p.instance.position = Vector2(p.offset_cell * cell_size)
@@ -834,6 +849,32 @@ func _materialise_band(band: Band, cell_size: int = DEFAULT_CELL_SIZE_PX) -> int
 	# px arg is informational only (the sealer ignores it).
 	SocketSealer.new().seal_unused_sockets(band, cell_size)
 	return cell_size
+
+
+## M1.10 (T1): build the runtime greybox host for ONE synthetic (cave) piece. The node
+## contract mirrors an authored ZonePiece scene EXACTLY — a "Geometry" TileMapLayer child
+## (the name SocketSealer._place_wall_cap / WearDecay._write_cell key on) plus an empty
+## "Sockets" holder (silences ZonePiece._ready's warning) — so the unedited sealer, the
+## I1 scale path, and (later) the flavor write/revert stages all work verbatim over it.
+## Writes FLOOR tiles ONLY (atlas (0,0), collisionless); the SocketSealer contributes the
+## entire WALL shell after parenting (§2.2/§3.2). Pure function of the piece's cell data:
+## no RNG, no floor_cells mutation — so Band.fingerprint()/floor_fingerprint() are byte-
+## stable across materialise, exactly as the sealer's own determinism discipline requires.
+func _build_synthetic_piece(p: PlacedPiece) -> ZonePiece:
+	var host := ZonePiece.new()                     # typed slot: PlacedPiece.instance is ZonePiece
+	host.piece_id = p.piece_id                       # @export defaults to &"unnamed" — must overwrite
+	host.cell_size_px = DEFAULT_CELL_SIZE_PX         # authored-base 16; the caller's mult scales it
+	var geo := TileMapLayer.new()
+	geo.name = "Geometry"                            # the name every geometry writer keys on
+	geo.tile_set = load(GREYBOX_TILESET_PATH)
+	for cell in p.floor_cells:                        # band-global -> piece-local (the offset_cell invariant)
+		geo.set_cell(cell - p.offset_cell,
+				ConnectivityGuarantee.GREYBOX_SOURCE_ID, ConnectivityGuarantee.FLOOR_ATLAS)
+	host.add_child(geo)
+	var sockets := Node2D.new()
+	sockets.name = "Sockets"                          # empty holder: no sockets in a cave
+	host.add_child(sockets)
+	return host
 
 
 # --- R4 (M1.1): run-state nav nodes ------------------------------------------
@@ -1020,6 +1061,34 @@ func _entry_spawn_position(band: Band) -> Vector2:
 	return Vector2.ZERO
 
 
+## M1.10 (T1, D-RAT-7): the pinned/near-spawn gate position. Socket bands (and every
+## non-cave harness path): EXACTLY today's fixed offset spawn_pos + GATE_SPAWN_OFFSET —
+## the guard short-circuits before any band walk, so byte-identity is by inspection and the
+## untouched suites prove it. Cave bands: the offset cell (10 cells due east) is wall/void
+## on most seeds (§2.5), so SNAP to the NEAREST floor cell — deterministic tie-break
+## (dist², y, x) via Vector3i's lexicographic <, pure geometry over floor_cells, ZERO RNG,
+## run-state only (never enters fingerprint()). gate-at-deepest would invert the extraction
+## loop on the play preset (the pinned gate is likely the only gate) — snap keeps the "way
+## home near where you came in" contract uniform across backends.
+func _pinned_gate_pos(band: Band, spawn_pos: Vector2) -> Vector2:
+	var want := spawn_pos + GameState.GATE_SPAWN_OFFSET
+	if _band_profile == null or _band_profile.backend != "cave":
+		return want                                  # socket / harness path: today's exact value
+	var want_cell := _world_to_cell(want)
+	var best := want_cell
+	var best_key := Vector3i(2147483647, 0, 0)
+	var found := false
+	for piece in band.pieces:
+		for c in piece.floor_cells:
+			var d2: int = (c - want_cell).length_squared()
+			var key := Vector3i(d2, c.y, c.x)        # dist², then (y, x) — a total order, seed-stable
+			if not found or key < best_key:
+				best = c
+				best_key = key
+				found = true
+	return _density_cell_to_world(best) if found else want
+
+
 ## K7 (M1.4): place ONE OR MORE extract gates. The all-off control (exit_enabled=false,
 ## or no active config) is byte-identical to M1.3 — a single gate at spawn_pos +
 ## GATE_SPAWN_OFFSET. With exit_enabled, the count scales with band depth and gates are
@@ -1032,7 +1101,7 @@ func _place_gate(band: Band, spawn_pos: Vector2, rc: RunConfig) -> void:
 
 	# --- All-off control: exactly today's single fixed gate (no RNG, no candidate pool). ---
 	if rc == null or not rc.exit_enabled:
-		_spawn_gate_at(spawn_pos + GameState.GATE_SPAWN_OFFSET)
+		_spawn_gate_at(_pinned_gate_pos(band, spawn_pos))   # cave: snap-to-floor (D-RAT-7); socket: today's value
 		EventBus.exits_placed.emit(1, _band_max_depth(band))
 		return
 
@@ -1044,7 +1113,7 @@ func _place_gate(band: Band, spawn_pos: Vector2, rc: RunConfig) -> void:
 
 	# exit_keep_one_at_spawn: pin ONE gate at the legacy offset, place the rest in the level.
 	if rc.exit_keep_one_at_spawn:
-		positions.append(spawn_pos + GameState.GATE_SPAWN_OFFSET)
+		positions.append(_pinned_gate_pos(band, spawn_pos))   # cave: snap-to-floor (D-RAT-7); socket: today's value
 
 	var remaining: int = count - positions.size()
 	if remaining > 0:
@@ -1119,7 +1188,9 @@ func _exit_placement_positions(band: Band, rc: RunConfig, n: int, spawn_pos: Vec
 ## on the player's start or doubles the pinned spawn gate. Deterministic — pure topology.
 func _exit_candidate_cells(band: Band, spawn_pos: Vector2) -> Array[Vector2i]:
 	var entry_cell: Vector2i = _world_to_cell(spawn_pos)
-	var spawn_gate_cell: Vector2i = _world_to_cell(spawn_pos + GameState.GATE_SPAWN_OFFSET)
+	# Exclude the SNAPPED pinned cell on caves (same helper the placement uses), the fixed
+	# offset cell on socket bands — the guard inside _pinned_gate_pos makes them agree there.
+	var spawn_gate_cell: Vector2i = _world_to_cell(_pinned_gate_pos(band, spawn_pos))
 	var out: Array[Vector2i] = []
 	for p in _density_pieces_sorted(band):                  # depth asc, then (y,x)
 		for cell in _density_sorted_cells(p):               # stable (y, x) order
