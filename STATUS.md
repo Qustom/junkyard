@@ -6,7 +6,15 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.9 (Scalable Opposition + Band systems — Director-directed 2026-07-02) — **SG1 DONE + PUBLISHED (`m1-20260704-8412732`). ▶ Next: DIRECTOR PLAYTEST (human-gated) → SG2 → SG3.** *(M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Current milestone:** M1.10 (Second generation backend + cave band + low-sightline oppositions — Director-directed 2026-07-04, opened ahead of M1.9's SG2/SG3) — **DESIGN PHASES 0–3 DONE. ▶ Next: DIRECTOR RATIFICATION of DR-1…DR-9 (`design/M1_10_Tasks/M1.10_Breakdown.md` §"Needs Director review") → Phase 4 wire-up → build Wave 1 (T0 ∥ T2a ∥ T2b).** *(M1.9 SG1 published `m1-20260704-55ca78f` — Director playtest → SG2 → SG3 pending, non-blocking; M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+
+> **M1.10 authoring state (2026-07-05):** breakdown + 6 per-task designs (T0 CaveBackend ·
+> T1 cave materialisation · T2a Ambusher · T2b Burrower · T3 band_three · T4 third portal),
+> each with a BINDING `Resolved Decisions (Phase 3)` section; 13 cross-task amendments
+> orchestrator-adjudicated into the breakdown. All technical OQs closed; the 9 vision/fun/tone
+> bundles await the Director (recommendations attached). **Do not dispatch build tasks until
+> DR-1…DR-9 are dispositioned + Phase 4 (TASKS.md/board/STATUS wire-up) is done.**
+
 **Last updated:** 2026-07-03 (SG1: full M1.9 verify matrix ALL GREEN — fp `e943ac9c8bc1` · 91/91 + per-def bijection · both portals · 7-def schema · m13 first-run · save schema UNCHANGED (meta v4/run v1). Changelog "The Sump" block written. Published to itch: `qusto/the-far-yard:html5 @ m1-20260704-8412732`. Docs: `design/M1_9_Tasks/SG1_playtest_build.md` (§5 = the playtest checklist).)
 
 > **✓ FBM19 feedback fixes LANDED + REPUBLISHED (2026-07-03/04, build `m1-20260704-72fd565`).** Director's 3 playtest
