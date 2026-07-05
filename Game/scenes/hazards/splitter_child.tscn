@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://cs6bsplitchild01"]
+[gd_scene format=3 uid="uid://co2d6ie7a2sei"]
 
 [ext_resource type="Script" path="res://scenes/hazards/splitter.gd" id="1"]
 

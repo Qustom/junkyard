@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://c6s6achargerhaz1"]
+[gd_scene format=3 uid="uid://xssxx7fk6lge"]
 
 [ext_resource type="Script" path="res://scenes/hazards/charger_hazard.gd" id="1"]
 

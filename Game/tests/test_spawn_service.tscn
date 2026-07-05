@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://b5dspawnservice001"]
+[gd_scene format=3 uid="uid://pdbk1qdqa6hg"]
 
 [ext_resource type="Script" path="res://tests/test_spawn_service.gd" id="1"]
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://s6atestcharger01"]
+[gd_scene format=3 uid="uid://cuu3of64uudwy"]
 
 [ext_resource type="Script" path="res://tests/test_charger.gd" id="1"]
 

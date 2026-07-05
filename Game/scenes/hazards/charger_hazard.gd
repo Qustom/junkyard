@@ -46,10 +46,10 @@ const COLOR_LANE := Color(0.95, 0.25, 0.15, 0.22)    # translucent committed-lan
 ## are builder-read spawn-card keys and never reach the entity). test_charger
 ## asserts def.params[k] == DEFAULTS[k] for every key here (no silent drift).
 const DEFAULTS := {
-	"aggro_range": 160.0,
+	"aggro_range": 400.0,
 	"telegraph_s": 0.5,
-	"charge_speed": 520.0,
-	"charge_max_dist": 220.0,
+	"charge_speed": 700.0,
+	"charge_max_dist": 400.0,
 	"recover_s": 1.2,
 	"cooldown_s": 0.6,
 	"lane_width": 28.0,

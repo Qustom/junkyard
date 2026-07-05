@@ -373,7 +373,7 @@ func _case_deck_surface(failures: Array[String], scene: PackedScene) -> void:
 
 	# Stage the four Director knobs via the MENU path — WITHOUT enabling the defs.
 	menu._stage_override(charger, "aggro_range", 200.0)
-	menu._stage_override(charger, "charge_speed", 700.0)
+	menu._stage_override(charger, "charge_speed", 750.0)
 	menu._stage_override(splitter, "aggro_radius", 300.0)
 	menu._stage_override(splitter, "move_speed", 120.0)
 	var tuned_chip: String = tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_two", "n": 2 })
@@ -409,7 +409,7 @@ func _case_deck_surface(failures: Array[String], scene: PackedScene) -> void:
 	want_charger["throwable_while_charging"] = false   # deck-entry layer (D-RAT-2)
 	want_charger["wall_crash_recover_mult"] = 2.0      # deck-entry layer (D-RAT-2)
 	want_charger["aggro_range"] = 200.0                # rc layer (menu-staged)
-	want_charger["charge_speed"] = 700.0               # rc layer (menu-staged)
+	want_charger["charge_speed"] = 750.0               # rc layer (menu-staged)
 	var want_splitter: Dictionary = splitter.params.duplicate(true)
 	want_splitter["aggro_radius"] = 300.0              # rc layer (menu-staged)
 	want_splitter["move_speed"] = 120.0                # rc layer (menu-staged)

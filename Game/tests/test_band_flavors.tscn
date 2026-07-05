@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://bs5bandflavors0001"]
+[gd_scene format=3 uid="uid://dqnjwa3nx3k3i"]
 
 [ext_resource type="Script" path="res://tests/test_band_flavors.gd" id="1"]
 

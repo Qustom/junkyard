@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://bs8bandrouting1"]
+[gd_scene format=3 uid="uid://d3kx2jap7hn3g"]
 
 [ext_resource type="Script" path="res://tests/test_band_routing.gd" id="1"]
 
