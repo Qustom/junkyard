@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.10 (Wave 2 — T1 alone, the version's sole `main_game.gd` writer)
 - **Branch:** worktree-agent-a8674f391474e6160
-- **Commit:** 018d8c7c7d94b8e921559ddb89b1102b292d7593
+- **Commit:** c6f58424b4016fe6cc209c0b789a5f84ef2814be (feature commit; this SHA recorded in the follow-up worklog commit)
 
 ## What changed
 Made a T0-generated cave *playable*. `_materialise_band` now builds a runtime greybox
