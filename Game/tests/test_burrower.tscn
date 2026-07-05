@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://b2burrow10test"]
+
+[ext_resource type="Script" path="res://tests/test_burrower.gd" id="1"]
+
+[node name="TestBurrower" type="Node"]
+script = ExtResource("1")
