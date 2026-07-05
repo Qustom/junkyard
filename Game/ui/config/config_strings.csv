@@ -184,3 +184,24 @@ CFG_GLOSS_SPLITTER_GENERATIONS,Split generations — 0 = children never re-split
 CFG_GLOSS_SPLITTER_SPEED,Parent move speed (px/s) — 0 = stationary tell
 CFG_GLOSS_SPLITTER_SPLITON,Split trigger — throw-death only per D-RAT-2
 CFG_GLOSS_SPLITTER_SPREAD,Child ring spread (px) from the death cell
+CFG_FIELD_AMBUSHER_BASE_COUNT,Spawn card — base Lurkers per eligible room (deck lane)
+CFG_FIELD_AMBUSHER_COUNT_PER_DEPTH,Spawn card — extra Lurkers per depth unit
+CFG_FIELD_AMBUSHER_ARM_RADIUS,Arm radius (px) — distance at which a hidden Lurker springs up and telegraphs
+CFG_FIELD_AMBUSHER_TELL_LEAD_S,Tell lead (s) — the readable wind-up before the pounce
+CFG_FIELD_AMBUSHER_LUNGE_SPEED,Pounce speed (px/s) along the locked lunge lane
+CFG_FIELD_AMBUSHER_LUNGE_DIST,Pounce distance (px) before it overshoots and is exposed
+CFG_FIELD_AMBUSHER_EXPOSED_WINDOW_S,Exposed (s) after the pounce — the throw-punish window
+CFG_FIELD_AMBUSHER_LUNGE_WIDTH,Lunge lane width (px) — the swept lethal corridor
+CFG_FIELD_AMBUSHER_CONCEALED_ALPHA,Body visibility at rest (0 = invisible; the floor tell carries the read)
+CFG_FIELD_AMBUSHER_TELL_ALPHA,Floor-tell decal visibility while hidden (the "read the room" affordance)
+CFG_FIELD_AMBUSHER_RE_HIDE_S,Re-hide delay (s) — 0 = one-shot (spent after the pounce); >0 = re-arm after this delay
+CFG_FIELD_AMBUSHER_KILLS,Lethal pounce kills (off = harmless contact for sweeps)
+CFG_FIELD_BURROWER_BASE_COUNT,Base burrowers per band (spawn-card count before the depth ramp)
+CFG_FIELD_BURROWER_COUNT_PER_DEPTH,Extra burrowers per within-band depth (spawn-card ramp)
+CFG_FIELD_BURROWER_BURIED_S,Seconds buried per cycle (the safe-to-cross window — longer = easier turf)
+CFG_FIELD_BURROWER_SURFACE_S,Seconds surfaced (the lethal + throw-kill window)
+CFG_FIELD_BURROWER_TRACK_SPEED,Underground follow speed (px/s) — below player 200 so it is outwalkable; 0 = stationary area-denier
+CFG_FIELD_BURROWER_TELEGRAPH_LEAD_S,Telegraph lead (s) — the dodge window; the body stays buried + non-lethal while the decal pulses
+CFG_FIELD_BURROWER_KILL_RADIUS,Surfaced lethal catch distance (px); 0 = a pure area-scare that never catches
+CFG_FIELD_BURROWER_LOCK_SURFACE,Lock the surface point at telegraph start (off = the decal keeps tracking you — the unfair/harder variant)
+CFG_FIELD_BURROWER_KILLS,Lethal contact kills (off = harmless surfacing for sweeps)
