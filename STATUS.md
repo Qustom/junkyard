@@ -6,7 +6,7 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.10 (Second generation backend + cave band + low-sightline oppositions — Director-directed 2026-07-04, opened ahead of M1.9's SG2/SG3) — **DESIGN LOCKED (D-RAT-1…9 all ratified per recommendation 2026-07-05); Phase 4 wire-up DONE. ▶ Build Wave 1 DISPATCHED: T0 ∥ T2a ∥ T2b (parallel worktrees).** *(M1.9 SG1 published `m1-20260704-55ca78f` — Director playtest → SG2 → SG3 pending, non-blocking; M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
+**Current milestone:** M1.10 (Second generation backend + cave band + low-sightline oppositions — Director-directed 2026-07-04, opened ahead of M1.9's SG2/SG3) — **Build Wave 1 LANDED + integrated on `main` (`57f2a81`): T0 CaveBackend + T2a Ambusher + T2b Burrower all merged, verified, board=Done. ▶ HOLD: Wave-1 close-out deviation sweep — 3 T0 entries await Director disposition (all rec Reviewed) BEFORE T1 dispatches (CLAUDE.md hard gate).** *(M1.9 SG1 published `m1-20260704-55ca78f` — Director playtest → SG2 → SG3 pending, non-blocking; M1.8 CLOSED; M1.7/M1.6 RG2/RG3 Director-pending, non-blocking.)*
 
 > **M1.10 design LOCKED (2026-07-05):** breakdown + 6 per-task designs each with a BINDING
 > `Resolved Decisions (Phase 3)` section; 13 cross-task amendments + Director ratifications
@@ -44,17 +44,27 @@ See `CLAUDE.md` → "The orchestrator loop".
 > Watch-items for SG3: content=data proof cost (host shell, LethalContact seam) · promote charger/splitter to band 1? ·
 > legacy-signal retirement · ceiling numeric merge · CaveBackend/ScatterBackend next? · hub iso prop re-dress.
 
-## In progress — M1.10 Wave 1 (dispatched 2026-07-05)
-| Task | Since | Agent(s) | Milestone | Note |
-|---|---|---|---|---|
-| T0 — CaveBackend: CA generator + `CaveBandConfig` + pipeline dispatch | 2026-07-05 | general-purpose (worktree) | M1.10 (W1) | Spec `design/M1_10_Tasks/T0_cave_backend.md` (+§10 Resolved). Sole writer of `systems/bandgen/` + `band_profile.gd`/`band_pipeline.gd`. Contracts: 3 controls byte-identical (all-off fp + greybox + band_two through untouched socket path); order-stable CA; chunked synthetic pieces (`cave_`+12-hex, `max_depth>=4`); 2×2-open throat guarantee is T0-side; cost ledger in worklog. |
-| T2a — Ambusher (def + `Concealment` component) | 2026-07-05 | general-purpose (worktree) + character-animator | M1.10 (W1) | Spec `design/M1_10_Tasks/T2a_ambusher.md` (+§Resolved; D-RAT-2). Pounce FSM = reused `ChargeLane` verbatim; `Concealment` owns pass-through (`collision_layer=0`) + tell + SPENT; conceal-LAST bind ordering pinned; fatal `kills`-gated; one-shot. NO shared-file edit (gloss rows → orchestrator merge commit). |
-| T2b — Burrower "Sinkmaw" (def + `BurrowCycle` component) | 2026-07-05 | general-purpose (worktree) + character-animator | M1.10 (W1) | Spec `design/M1_10_Tasks/T2b_burrower.md` (+§Resolved; D-RAT-3). `BurrowCycle` = phase timer + `collision_layer` cycling + wall-ignoring tracking + `intersect_point` wall-clear surface gate + positional desync; static pop; exact locked decal; `kill_radius=34`. NO shared-file edit. |
+## Wave 1 — Done + integrated on `main` (2026-07-05)
+| Task | Agent(s) | Merged | Proof |
+|---|---|---|---|
+| T0 — CaveBackend + `CaveBandConfig` + pipeline dispatch | general-purpose | `cfef9f7` (br `…a8c1cc4`) | `test_cave_backend` OK (C1–C10, 9 seeds; sample seed 12345 → 49 pieces, max_depth 12, cave fp `d984fd8913bf`); `test_band_pipeline_parity` + `test_bandgen_determinism` OK, socket-path fp **`e943ac9c8bc1`** byte-identical (greybox + band_two); ~475-line cost ledger, **0 new downstream lines**. Worklog `…-T0-general-purpose.md`. **3 deviations (all rec Reviewed).** |
+| T2a — Ambusher (def + `Concealment` component) | general-purpose (+ character-animator) | `3d17bf0` (br `…a19da54`) | `test_ambusher` OK (all cases: HIDDEN pass-through layer 0, arm/tell/pounce, `kills`-gate + BUG6 once, EXPOSED throw-kill, one-shot); all-off fp unmoved; 39-line `Concealment`, **0 shared-file edits**. Worklog `…-T2a-general-purpose.md`. Deviations: none. |
+| T2b — Burrower "Sinkmaw" (def + `BurrowCycle` component) | general-purpose (+ character-animator) | `26ef5e9` (br `…a6048d5`) | `test_burrower` OK (11 cases: buried pass-through, dodge frame, wall-clear surface, `kill_radius=34` surfacing-frame kill, positional desync); all-off fp unmoved; 212-line ledger, **0 shared-file edits**. Worklog `…-T2b-general-purpose.md`. Deviations: none. |
 
-> **Wave-1 merge integration steps (orchestrator, at merge — carried from Phase-3 amendments):** apply
-> BOTH T2a + T2b gloss rows to `Game/ui/config/config_strings.csv` in ONE commit, prefix `CFG_FIELD_*`
-> (neither branch touches the CSV); verify branch topology before each merge (qa git-switch-leak memory);
-> Wave-1 close-out deviation sweep before dispatching T1.
+> **Integration done (`57f2a81`):** three worktree branches merged (file-disjoint, verified); both
+> T2a (12) + T2b (9) `CFG_FIELD_*` gloss rows applied to `config_strings.csv` in one commit (`57f2a81`);
+> the def schemas reference those exact keys (verified). Integrated verify ALL GREEN: import · cave ·
+> parity · bandgen · ambusher · burrower · **9-def bijection** · socket-path fp `e943ac9c8bc1` · smoke.
+> Board T0/T2a/T2b = Done.
+
+> **▶ HOLD — Wave-1 close-out deviation sweep (CLAUDE.md hard gate; the Director dispositions, Claude only
+> recommends).** `DESIGN_DEVIATIONS.md` holds **3 T0 entries, all recommended Reviewed**: (1) grid-level
+> carve = deterministic *mirror* of the CARVE-mode concept (Phase-3 Q4 already ratified this reading);
+> (2) `cave_backend.gd` ~404 code lines vs the ~255 estimate (Q8 throat pass + deepest-piece BFS — cost-
+> ledger magnitude note, no design change); (3) `deepest_piece` chosen by chunk-graph BFS (makes C4's
+> `depth_index == max_depth` bar hold by construction; spec §3.5 was self-contradictory). T2a/T2b: none.
+> **T1 (Wave 2, sole `main_game.gd` writer) does NOT dispatch until the Director dispositions these** —
+> #3 in particular touches the depth contract T1 builds on.
 
 > **M1.9 build-wave Done tables** (S0–S9, all merged 2026-07-02/03) archived → `STATUS_ARCHIVE.md`
 > §"M1.9 build waves". SG2/SG3 remain the only open M1.9 surface (pointer above + `TASKS.md` §M1.9).
@@ -67,7 +77,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ Next action (start here on a cold restart) — M1.10 Wave 1 IN FLIGHT (T0 ∥ T2a ∥ T2b); on their return, verify + merge + Wave-1 close-out sweep, then dispatch T1
+## ▶ Next action (start here on a cold restart) — M1.10 Wave 1 LANDED; HELD at the Wave-1 deviation-sweep gate. On Director disposition of the 3 T0 entries → reapply+archive per verdict → dispatch Wave 2 (T1, sole `main_game.gd` writer)
 
 > **M1.10 = the second architectural axis** (Director-directed 2026-07-04; design LOCKED 2026-07-05):
 > a **CaveBackend** (cellular-automata caverns — no pieces/sockets) behind the same `BandPipeline`, proven by
