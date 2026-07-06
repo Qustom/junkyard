@@ -639,3 +639,157 @@ With derived-longest-sightline, two co-located sentries could pick lanes that vi
 ---
 
 *Phase 3 (fresh eyes, NOT this author) resolves the Open Questions into a `Resolved Decisions` section, flagging OQ-1 / OQ-3 / OQ-4 / OQ-5 (vision/fun/scope) for the Director per the orchestrator loop, and confirming OQ-2 / OQ-6 / OQ-7 on technical merit. Design-only — no code, no `.tres`. The programmer + character-animator build against this; deviations from the committed design go to `DESIGN_DEVIATIONS.md` for the Wave-1 close-out sweep, and the worklog carries the Bespoke-code ledger (§4) that UG3 judges.*
+
+---
+
+## Resolved Decisions (Phase 3) — BINDING
+
+> Fresh-eyes resolution (2026-07-06, Phase-3 resolver — NOT the Phase-2 author), per the four-phase authoring
+> process. Every as-built citation below was re-verified against the repo at resolution time. Verdicts on the
+> technical OQs are **binding on the build**; the fun/fairness/tone/scope items are recommendations awaiting the
+> Director (listed at the end). Where this section contradicts the Phase-2 body above, **this section wins.**
+
+### Re-verification of the body's load-bearing claims (all checked against the repo)
+
+- **ChargeLane swept-test idiom transfers to the bolt.** Verified `charge_lane.gd:178-185`: the sweep is pure
+  segment math (`Geometry2D.get_closest_point_to_segment` over *this frame's travel segment* vs the player,
+  corridor `lane_width/2 + PLAYER_R`) — it is **body-agnostic**. Nothing in it depends on the segment being the
+  host's own `move_and_slide` travel; feeding it the bolt's driven-position segment is the same math, same
+  tunnel-proofing, same `LethalContact.apply_contact(hit, true)` sink (`lethal_contact.gd:102-108` confirmed,
+  `_fire` emit-always at `:143-155` confirmed). **The borrow is sound.**
+- **`thrown_item.gd` rejection reasoning is ACCURATE.** Verified: it is an `Area2D` (`collision_layer 0`,
+  `mask 18`), carries a `JunkItem` (`:24`), re-drops it via `junk_dropped` on any miss (`:114-121`), targets and
+  kills the `"hazard"` group (`:76-110`), and speaks player-throw telemetry (`throw_killed_hazard`/`throw_missed`).
+  Every one of those behaviours is wrong for an enemy bolt and would need forking, and its physics-callback model
+  contradicts the opposition stack's locked convention (`lethal_contact.gd` header: "deterministic SCRIPT DISTANCE
+  TESTS (never physics overlap)"). **Component-owned bolt HELD (breakdown OQ10 → resolved: minimal owned bolt).**
+- **Fairness-bar arithmetic verified.** `PLAYER_R = 14` is real (`player.tscn` `CircleShape2D` `radius = 14.0`;
+  matches `charge_lane.gd:51`); player `max_speed = 200.0` (`player_movement.tres:7`); cell 16 px
+  (`main_game.gd:62`). Crossable bar `(lane_width + 2·PLAYER_R)/200 = (28+28)/200 = 0.28 s` ≤ `cooldown_s 1.2` ✓.
+  The visual/kill honesty also survives the M1.10 kill_radius-34 lesson: the kill corridor half-width
+  `lane_width/2 + PLAYER_R = 28` is exactly "your **body** overlaps the drawn 28 px strip" (center distance →
+  body overlap conversion), the same read the Charger shipped; and since the sentry **body** is never lethal, the
+  player↔hazard physical exclusion (player mask 26 includes hazard 16, sum-of-radii ≈ 28-30 px) creates no
+  safe-to-hug paradox here — hugging the body to throw is the intended counter.
+- **Collision constants verified.** `project.godot` layer 2 = `world` (mask value 2), layer 5 = `hazard`
+  (mask value 16) — §2.3's scene values are correct.
+- **One citation correction (non-load-bearing):** `burrow_cycle.gd:185-199` is an **`intersect_point`** query,
+  not `intersect_ray`. What U2b borrows from it is the *direct-space-state + null/space-less-safe* pattern
+  (`get_world_2d()`/`direct_space_state` null guards), which transfers; the ray form
+  (`PhysicsRayQueryParameters2D.create`) is new-but-idiomatic, as pseudocoded in §2.2.
+
+### Binding technical amendments (the derived-lane contract, hardened)
+
+**A1 — Acquisition happens on the SECOND `tick()`, not the first (overrides §1.4/§2.2/§2.5's "first tick" wording).**
+The body's claim that the physics space is "guaranteed current" at the first physics tick is **not backed by
+anything in-repo**: the only shipped precedent for querying freshly-built static geometry, `BurrowCycle`'s
+wall-surfacing guard, is (a) re-checked **every** tick until it passes (self-healing by design — a stale read
+merely delays surfacing) and (b) first exercised ~`buried_s` seconds after spawn, long after the space synced.
+A one-shot latch has neither safety: band materialisation and hazard spawning happen in the same idle frame, and
+Godot's 2D broadphase only reliably reflects bodies added that frame **after the next physics step** — a ray cast
+on the very first `tick()` can miss every wall, return all-clear on all 8 candidates, and silently latch
+`CANDIDATES[0]` (RIGHT) forever. **Contract:** `LaneWatch` counts ticks; on tick 1 it does nothing (no FSM, no
+lane test); on tick 2 it derives + latches (`_ticks >= 2` guard replacing the bare `not _acquired` check), and the
+FSM runs from that tick on. One physics frame (~16 ms) of extra IDLE is imperceptible and deterministic. The FSM
+must be **gated on `_acquired`** (never enter WINDUP before acquisition). Test rider: `test_sentry`'s derive case
+adds walls, then the sentry, then awaits **≥ 2 physics frames** before asserting `get_lane_dir()` (the shipped
+idiom — `test_burrower` always `_frames(N)`-waits after `_make_wall`).
+
+**A2 — Latch the derived clear LENGTH with the direction (`_lane_len_eff`), and use it everywhere.**
+`_acquire_lane` latches `_lane_dir` **and** `_lane_len_eff = best_clear` (authored-override path latches
+`_lane_len_eff` from a single ray along the forced heading; space-less harness → full `lane_length`). The lane
+strip visual is drawn at `_lane_len_eff` (a strip drawn through a blocking wall is a readability lie — the strip
+is the route-reading affordance and must not overclaim), the crossing test uses `along <= _lane_len_eff`, and
+`_advance_bolt`'s travel check compares against `_lane_len_eff`. This also makes the **degenerate dense-cover
+pocket** (all 8 rays short) harmless **without any fallback machinery**: latch the longest candidate regardless —
+a short lane is strictly *weaker*, never unfair (the bolt dies at the wall; the stub strip reads honestly).
+No minimum-length floor, no refusal/inert state, no re-derive. U0's min-spacing + clear-lane construction rules
+make the pocket case rare; "sentries latched with `_lane_len_eff` < ~4 cells" is a **UG2 eyeball/telemetry
+watch-item**, not code. Cover is static and never destroyed in M1, so a latched length can never go stale.
+
+**A3 — Latch lifecycle: pause / save / re-setup.** Pause halts the host's `_physics_process` → no `tick()` → the
+in-memory latch is untouched; correct by construction. M1 has **no mid-run hazard persistence** (run-state is
+disposable per the run/meta boundary), so the latch never needs serialising. Re-`setup()` (`_configure`) resets
+`_acquired`/`_ticks` → re-derives on its next second tick **from the same static geometry** → identical lane.
+Deterministic across engine runs on the same build: with A1 the geometry is fully registered before the query,
+ray results are a pure function of the static 16 px-grid geometry (well-separated distances; strict `>` +
+fixed candidate order breaks ties — in the all-clear open-arena case every ray returns exactly `lane_length` and
+the pick is deterministically `CANDIDATES[0]`), and the lane is run-state that never feeds `fingerprint()` —
+the body's determinism note stands, *as amended by A1*.
+
+**A4 — Final spawn card (overrides §2.1's `per_band_cap = 4`): `credit_cost = 2`, `per_room_cap = 1`,
+`per_band_cap = 5`, `cap_group = &"new_hazards"`. U3 re-bases its pin on these.**
+The cross-task seam, settled on the def side against the as-built cap semantics
+(`spawn_service.gd:244-259` — the minimum binds across per_band → cap_group → per_room; `per_room_cap` keys on
+`room_key = str(p.offset_cell)`, i.e. **per chunk**; `encounter_builder.gd:336-340` — `n_plan =
+min(demand, budget/cost, per_band_cap)`):
+- U3's deterministic deck pin (`U3_band_four.md` §4.3: **`lobber 5 / sentry 5 / charger 4 / bomb 1 = 15`**,
+  spending the 34-credit budget exactly to 0: `5·3 + 5·2 + 4·2 + 1·1 = 34`) assumes **sentry cost 2 /
+  per_band_cap 5**. The Phase-2 body authored `per_band_cap = 4`, which would shift the outcome to
+  `5/4/4/3 = 16` (the freed 2 credits soak into extra bombs) — a legal but different band. The pin's composition
+  (ranged-pair-dominant, single mine) is the better band *and* the cleaner cross-doc contract: **ship
+  `per_band_cap = 5`.**
+- **Satisfiability confirmed** on U0's default arena: `grid 56×36`, `chunk_cells 8` → ≤ `7×5 = 35` chunk pieces,
+  ~34 eligible after the entry-piece exclusion (`encounter_builder.gd:313-314`). (U3's "P ≈ 40-60" estimate is
+  high; the correct default figure is ~34 — still ≫ 5, so nothing changes.) The def-major even-spread assigns the
+  5 sentry placements to 5 **distinct** depth-spread chunks (`round(i/4·(P−1))` over P≈34 yields distinct
+  indices), so `per_room_cap = 1` never refuses and never silently shrinks the pin. The `&"new_hazards"` group
+  ceiling is 48 (`spawn_service.gd:43`, registered at `main_game.gd:466`) — non-binding at band 4's 15 total.
+- **U3's contract-test `EXPECT_SPAWNS` is finalized against the shipped `sentry.tres` carrying these values**
+  (the stated T3 precedent); with cost 2 / cap 5 the `5/5/4/1 = 15` pin holds exactly. U3's doc is not edited by
+  this resolution; this section is the authoritative def-side answer it re-bases on.
+
+### Per-OQ verdicts
+
+- **OQ-1 — Lane telegraph mode.** **NEEDS DIRECTOR REVIEW (vision/tone).** Endorse the Phase-2 recommendation:
+  **`lane_always_visible = true`** (the route-reading puzzle IS the def's skill; reveal-on-windup converts first
+  contact into an unreadable death and would poison the UG2 "fair?" read). The knob ships either way — data-cheap
+  to flip for an A/B.
+- **OQ-2 — Lane acquisition.** **RESOLVED: derive longest-clear-sightline + optional `lane_dir_deg` override,
+  8-octant candidate set — as recommended, with amendments A1 (second-tick acquisition) and A2 (latched
+  effective length) binding.** 8 octants over a finer sweep is confirmed: axis/diagonal lanes read cleanly
+  against the 16 px grid and the fixed order gives a trivial deterministic tie-break; a finer sweep buys
+  marginally "longer" lanes at the price of muddier direction reads and more float-tie surface. The override
+  field stays (one schema row; future socket-corridor sentries). Binding.
+- **OQ-3 — Centre vs body-edge crossing trigger.** **NEEDS DIRECTOR REVIEW (fun).** Endorse **centre-crossing**
+  (`fire_on_body_edge = false`). Rider from re-verification: the *trigger* half-width (centre, 14 px) is
+  narrower than the *kill* corridor (28 px) by design — the §1.6 windup budget already accounts for clearing the
+  full kill corridor (0.14 s of the 0.40 s), so a player who triggers and immediately exits is safe under the
+  default; body-edge triggering would make the sentry fire at players who brush the strip edge and never enter
+  the bolt's honest path. Centre is both the forgiving *and* the more coherent default.
+- **OQ-4 — Throw-disable: permanent vs temporary.** **NEEDS DIRECTOR REVIEW (scope/fun).** Endorse
+  **permanent** (`ThrowInteraction` `&"die"`, reused verbatim): it is the uniform verb across all 11 defs, the
+  "spend sale value to open a route forever" economy is real (the item is consumed and the approach crosses the
+  sentry's own lane), and temporary disable costs new machinery (`resolve_throw_death → true` + a re-arm timer)
+  against the one-component budget. The loot-piñata risk is a UG2 telemetry watch (throw-kills-per-sentry), not
+  pre-gate machinery.
+- **OQ-5 — Band-4 exclusivity.** **NEEDS DIRECTOR REVIEW (scope; ratify).** Endorse **band-4-native for M1.11**
+  (`min_band = 4` + bands 1-3 decks omit it — structurally exclusive, the clean four-band A/B). The
+  socket-corridor promotion is a one-field edit + deck add later, and `lane_dir_deg` already future-proofs
+  hand-placed corridor sentries. One Director verdict should disposition this together with U2a's twin and U3's
+  OQ3 (same question, three docs).
+- **OQ-6 — Marker soup / crossing lanes.** **RESOLVED: `per_room_cap = 1` is sufficient — confirmed with the
+  concrete as-built math** (see A4: per-chunk room keys, ~34 eligible chunks, 5 placements even-spread to
+  distinct chunks; `per_band_cap = 5` total). A minimum-lane-separation rule would require an
+  `EncounterBuilder`/policy edit — forbidden this wave and unnecessary on the evidence. UG2 watch-item if the
+  felt read disagrees. Binding.
+- **OQ-7 — Bolt pierce/stop.** **RESOLVED: stop-on-first-axis-hit, no pierce; off-axis cover does not block —
+  as recommended.** The centre-ray block test matches the swept-corridor kill model (the danger is the centre
+  strip) and keeps the bolt 1-D. Rider: with A2, the bolt's max travel compares against `_lane_len_eff`, so a
+  bolt can never out-fly its own latched lane even if geometry queries were to disagree frame-to-frame. Binding.
+
+### NEEDS DIRECTOR REVIEW — summary for the Wave-1 close-out sweep
+
+| # | Question | Recommendation |
+|---|---|---|
+| OQ-1 | Lane always-visible vs reveal-on-windup | **Always-visible** (knob ships for A/B) |
+| OQ-3 | Centre vs body-edge crossing trigger | **Centre** (forgiving + coherent with the kill corridor) |
+| OQ-4 | Permanent vs temporary throw-disable | **Permanent** (`&"die"` reuse; piñata risk = UG2 watch) |
+| OQ-5 | Band-4-exclusive for M1.11 | **Yes, exclusive** (disposition jointly with U2a/U3's twins) |
+
+Everything else in this section is resolved on technical merit and **binding on the Wave-1 build**: second-tick
+lane acquisition gated on `_acquired` (A1), latched `_lane_len_eff` driving strip/crossing/bolt-travel (A2),
+re-derive-on-re-setup + no-persistence latch lifecycle (A3), the final spawn card `cost 2 / per_room 1 /
+per_band 5 / group &"new_hazards"` with U3 re-basing its pin on it (A4), component-owned bolt over
+`thrown_item` reuse (OQ10), 8-octant derive + override (OQ-2), `per_room_cap = 1` (OQ-6), and
+stop-on-first-axis-hit (OQ-7).

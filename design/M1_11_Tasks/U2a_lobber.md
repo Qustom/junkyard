@@ -537,3 +537,196 @@ The blast is a distance test **against the player only** — it never tests othe
 ---
 
 *Phase 3 (fresh eyes, NOT this author) resolves the Open Questions into a `Resolved Decisions` section, flagging OQ-1 / OQ-2 / OQ-3 / OQ-6 / OQ-7 (fun/fairness/scope/tone) for the Director per the orchestrator loop, and confirming OQ-4/5/8/9 on merit. Design-only — no code, no `.tres`. The programmer + character-animator build against this; deviations from the committed design go to `DESIGN_DEVIATIONS.md` for the Wave-1 close-out sweep, and the worklog carries the Bespoke-code ledger (§4) that UG3 judges.*
+
+---
+
+## Resolved Decisions (Phase 3 — fresh eyes, BINDING)
+
+> Resolver: Phase-3 fresh-eyes agent (NOT the Phase-2 author), 2026-07-06. Every citation below
+> re-verified against the working tree at resolution time: `lethal_contact.gd` (`&"external"` mode
+> `:28-31`, `apply_contact` `:102-107`, `command_hit` `:113-115`, `_fire` `:143-155`),
+> `burrow_cycle.gd` (the transplanted radius-test + falling-edge + positional-desync idioms,
+> `:98-101`, `:129`, `:139`, `:159-163`), `throw_interaction.gd:29-32`, `telegraph_fsm.gd`
+> (`tell: Polygon2D` host-assigned — the `_fsm.tell = _body` wiring in §2.2 matches),
+> `bomb_hazard.gd` (fixed seam flags in `_resolve_params` `:78-89`; `_draw_idle_ring` `:168-177`),
+> `opposition_def.gd`, `encounter_builder.gd` (`instability` `:64-65`, budget `:299`, `min_band`
+> filter `:302`, `legacy_ctx` default arm `:120-121`, `n_plan` cap bound `:337-340`, spend-stop
+> `:355-356`, `_effective_params` `:437-451`), `spawn_service.gd` (`_caps_allow` `:244-259`,
+> `NEW_HAZARD_BAND_CEILING` `:43`), all 9 shipped defs under `data/oppositions/`,
+> `data/player/player_movement.tres` (`max_speed 200`, `acceleration 2000`), plus the U2b, U3 and
+> T2a/T2b sibling designs (seam check). Verdicts here are **binding on the build and override the
+> body text where they conflict** unless the Director overrules a flagged item. Fun/fairness/
+> tone/scope calls are NOT self-resolved — they carry a recommendation and sit in the Director
+> queue at the bottom.
+
+### The credit-cost seam (cross-task, settled here — U3 re-bases on these)
+
+**FINAL card (binding): `credit_cost = 2` · `per_room_cap = 1` · `per_band_cap = 5` ·
+`min_band = 4` · `cap_group = &"new_hazards"`.** The body's `per_band_cap = 3` (§2.1, §2.5,
+DoD 4(a)/4(i)) is **overridden to 5**; everything else on the card stands as authored.
+
+- **Cost 2, on threat-per-credit merit.** The shipped ladder (verified on the 9 defs on disk):
+  **1 credit** = the legacy simples (pingpong/bomb/spike/pursuer, `min_band 0`); **2 credits** =
+  the band-native single-body actors (charger 2 · room 1/band 4, ambusher 2 · room 2/band 6,
+  burrower 2 · room 1/band 3); **3 credits** = the splitter, which multiplies into three bodies.
+  The Lobber is a static, body-non-lethal sheller that is **always visible and always
+  throw-killable** (it never leaves layer 16 / the `"hazard"` group — §2.4) and whose default
+  shells are countered by simply walking (`lead_factor 0`, §1.4). That is *strictly more
+  counterable than the cost-2 burrower on two axes* (the burrower is un-hittable for most of its
+  cycle and surfaces at your feet) while sharing its "reaches you anywhere" quality. Pricing it
+  at 3 — U3's provisional assumption — would make it the most expensive single body in the game,
+  tied with the self-multiplying splitter: an inversion of the ladder. Cost reflects threat, not
+  one band's budget arithmetic.
+- **Band cap 5, not 3 — the cap is the real pressure dial and 3 cannot serve the band.**
+  Verified semantics: `per_band_cap` is a **per-def, per-band ceiling enforced twice** — the
+  deck lane bounds the plan up front (`n_plan = mini(n_plan, d.per_band_cap)`,
+  `encounter_builder.gd:339-340`) and the service refuses at the live count
+  (`spawn_service.gd:244-245`, validity-swept). So the authored 3 would hard-limit the band to
+  3 Lobbers — it **cannot** produce U3's 5-lobber marquee under any deck. On merit, 5 is also
+  the better feel point: every live Lobber shells the *player*, globally, regardless of room, so
+  `per_room_cap 1` never bounds simultaneous pressure — the band cap does. At defaults
+  (`fire_period 2.5`, desynced), cap 5 ≈ one marker every ~0.5 s, each individually escapable in
+  ~0.5 s against the 0.9 s window; cap 5 sits inside roster norms (burrower 3, charger 4,
+  ambusher 6) and makes the band-4 native the co-marquee its band needs. `per_room_cap = 1`
+  stands (anti-clustering belt-and-braces; with ~40–60 eligible chunks and 5 even-spread
+  placements it never binds — all assigned pieces are distinct, so the plan is refusal-free and
+  deterministic).
+- **Arithmetic consequence for U3 (stated, not edited — U3's resolver re-bases; its own §4.3
+  caveat already finalizes `EXPECT_SPAWNS` against the *shipped* defs).** U3's
+  `lobber 5 / sentry 5 / charger 4 / bomb 1 = 34-to-zero` pin assumed **lobber 3/5 AND sentry
+  2/5**; U2b's Phase-2 design actually authored **sentry 2 / band-cap 4**, so the pin re-bases
+  on both natives regardless of this decision. On the final U2a card + U2b-as-authored +
+  shipped charger (2/4) + the bomb `DeckEntry{base_count: 1}`, the deterministic deck walk at
+  budget `floor(24 · 1.45) = 34` is: lobber `min(34/2=17, 5) = 5` (spend 10, 24 left) → sentry
+  `min(12, 4) = 4` (8, 16) → charger `min(8, 4) = 4` (8, 8) → bomb `min(P, 8) = 8` (8, 0):
+  **`lobber 5 / sentry 4 / charger 4 / bomb 8 = 21`, spending to exactly 0.** Two structural
+  facts U3 must internalize when re-basing: (i) the bomb's "1" in the old pin was **budget
+  exhaustion, not a count knob** — a `base_count 1` DeckEntry demands 1 *per eligible piece*
+  (`demand = Σ base_count`, `encounter_builder.gd:330-332`), so the uncapped 1-credit bomb is a
+  remainder *sponge* whose count equals the leftover credits; (ii) with every cost-2 def
+  spending in even increments, **no cost-2 lobber configuration can leave the odd leftover an
+  exactly-one-bomb pin requires**. U3's natural re-base options (its call, not U2a's): accept
+  the 8-mine sponge; drop or reorder the bomb row (e.g. `5/4/4 = 13` with 8 credits
+  deterministically stranded — legal, spending simply stops at unaffordability); or put the
+  question to the Director with the deck bundle it already owes them (breakdown OQ11).
+  **U3 re-bases its pin on these numbers.**
+
+### Per-OQ verdicts
+
+- **OQ-1 — Lead vs no-lead: NEEDS DIRECTOR REVIEW** (fun/difficulty). Recommendation confirmed
+  on resolver merit: **ship `lead_factor = 0`**. With no lead the fairness envelope is satisfied
+  by *continuing to walk* — a moving player is ~180 px from the locked marker by impact
+  (0.9 s · 200 px/s) vs the 48 px needed — so the verb teaches itself; the 0.0–1.0 knob exists
+  for a one-value UG2 sweep with zero code change. Deaths-per-first-encounter at UG2 is the
+  fairness read (the T2a OQ-4 pattern).
+- **OQ-2 — Single shell vs volley: NEEDS DIRECTOR REVIEW** (fun/scope). Recommendation
+  confirmed: **single shell for M1.11**. Resolver addition: with the final `per_band_cap 5`, the
+  *encounter* already delivers volley-like pressure (5 desynced cadences ≈ a marker every
+  ~0.5 s) without `MortarCycle` modelling a barrage — the volley's fun payload exists at the
+  band level for free. `volley_count` stays out of the v1 schema; scoped follow-up if UG2 finds
+  the rain sparse.
+- **OQ-3 — Rim-kill semantics: NEEDS DIRECTOR REVIEW** (fun/fairness). Recommendation confirmed:
+  **centre-in-radius, ring drawn at exactly `blast_radius`, `<=` at the rim**. Verified this is
+  byte-consistent with the bomb's shipped semantics (`command_hit` is `distance_to <= _blast_radius`
+  with no player-radius term, `lethal_contact.gd:113-115`) — one AoE contract across the game,
+  and it is the *more forgiving* of the alternatives. Revisit only on UG2 rim-death complaints.
+- **OQ-4 — Max range: RESOLVED — global reach, no `max_range` knob.** The knob would
+  re-introduce the safe standing spots the def exists to deny, and the arena (single open floor)
+  offers no range-management play to buy with it. Zero-code consequence; nothing to build.
+- **OQ-5 — Fire without LOS / off-screen: RESOLVED — fires regardless.** The fairness contract
+  lives entirely at the player's feet (locked marker + `arc_time`), not at the emitter; an
+  LOS gate needs occlusion machinery the engine lacks and would contradict the geometry-ignoring
+  identity (§1.1). The open field's sightlines make the source visible in practice; UG2's
+  telegraph-read metrics cover the residual "shelled from nowhere" feel risk.
+- **OQ-6 — Fiction/name: NEEDS DIRECTOR REVIEW** (tone). Recommendation confirmed: **(A) "The
+  Mortar"** — tightest to the junkyard-machine fiction (Wrecker/Burrower siblings) and the
+  clearest "a machine is ranging me" read, which directly serves §1.4's fairness. Coordinate
+  with U3's band-identity pitch + U4's portal hue; `id` stays `&"lobber"` regardless.
+- **OQ-7 — Band-4 exclusivity: NEEDS DIRECTOR REVIEW** (scope). Recommendation confirmed:
+  **band-4-native for M1.11** (clean four-band A/B, the D-RAT-4 precedent). Verified the gate is
+  structural and cheap to lift later: the deck lane filters `band_depth >= d.min_band`
+  (`encounter_builder.gd:302`), and the extras lever rides the same `_populate_deck` filter — so
+  even `oppositions_enabled = [&"lobber"]` on a band-1/2/3 run spawns nothing (see as-built
+  correction 2 for the load-vs-spawn nuance). Promotion later = a `min_band` edit + a deck add.
+- **OQ-8 — Blast friendly-fire: RESOLVED — player-only.** Confirmed as-built: `LethalContact`
+  tests only the bound `player` and no shipped hazard damages another; hazard-vs-hazard is an
+  unowned design space and out of a def+one-component proof's scope.
+- **OQ-9 — Cadence desync: RESOLVED — position-derived offset, zero shared-file edits, WITH ONE
+  BINDING AMENDMENT.** The positional hash is sound: `legacy_ctx` gives `&"lobber"` the empty
+  default arm (`encounter_builder.gd:120-121`), spawn cells are seed-deterministic and
+  per-instance distinct under the even-spread stride, and `SpawnService` sets `global_position`
+  *before* `setup()` (`spawn_service.gd:121-125`), so `_configure` reads the final position —
+  the exact preconditions `BurrowCycle` proved. **Binding amendment:** mirror the burrower's ctx
+  escape hatch verbatim — `_configure` derives the default salt positionally but honors a
+  `ctx.get("phase_salt", <positional default>)` override (`burrow_cycle.gd:98-101`) — so
+  `test_lobber` case (j) can inject exact offsets without physics-position choreography. ~1 line
+  in `mortar_cycle.gd`, component-internal, no `encounter_builder.gd` edit now or later (the T2a
+  cross-task amendment-2 lesson, closed at design time).
+
+### As-built corrections (fold into the build; none change the architecture)
+
+1. **§2.1's all-off sentence has the wrong conjunction** — the same error T2a's Phase 3
+   corrected for the ambusher. `rc.oppositions_enabled` is an **additive** extras list, not a
+   conjunctive gate (`encounter_builder.gd:131-137` `is_inert`, `:411-428` `_extras_defs`):
+   `lobber.tres` loads when **either** a live deck lists it (U3's `band_four`) **or** the extras
+   lever names it. The all-off conclusion stands unchanged — the shipped default has *neither*,
+   so nothing loads and `e943ac9c8bc1` holds.
+2. **Load-vs-spawn nuance on the lever:** naming `&"lobber"` in `oppositions_enabled` on a
+   shallow band **loads** the def + scene (`_extras_defs` `load()`s at `:421`, *before* the
+   `min_band` filter at `:302`) but **spawns nothing** (`band_depth < 4` refuses every
+   placement). Harmless — fingerprints hash the generation stream, not resource loads — but
+   `test_lobber` DoD 4(i)'s "min_band = 4 refuses a band-depth-3 profile entirely" should assert
+   *zero spawns*, not zero loads.
+3. **Card override:** every body occurrence of `per_band_cap = 3` (§2.1 card + schema prose,
+   §2.5 caps, DoD 4(a), DoD 4(i) "`per_band_cap = 3` binds") reads **5** per the seam decision
+   above. DoD 4(i) becomes "`per_band_cap = 5` binds".
+4. **Fairness envelope, re-derived — conclusion stands, constant sharpened.** Anchors verified:
+   `max_speed 200` / `acceleration 2000` (`player_movement.tres:7-8` — ~0.1 s to top speed),
+   player radius 14 (`burrow_cycle.gd:61` PLAYER_R), 16 px cells, and the **~0.22 s reaction
+   constant is the T2a ambusher canon** (`T2a_ambusher.md:86`, reaffirmed in its Phase-3 OQ-4).
+   The body's formula omits the acceleration ramp (~+0.05 s effective from a standing start);
+   the strict envelope is **`arc_time_s > ~0.27 + blast_radius / 200`**. Defaults: escape ≈
+   0.51 s vs the 0.9 s window — **~0.39 s slack, comfortably fair; no default changes**. The
+   sweep-corner warning (§1.4) tightens accordingly: `arc_time 0.4` is unfair from a standing
+   start for any `blast_radius ≳ 26`, not just large ones — keep the corner reachable (the
+   burrower precedent) but the §2.1 gloss for `arc_time_s` should say "floor 0.4 is unfair from
+   a stand at most radii", not "borders unfair at large blast_radius".
+5. **Citation audit: clean.** `lethal_contact.gd:30-32/102-108/113-115/143-155`,
+   `throw_interaction.gd:29-32`, `encounter_builder.gd:64-65/299/120-121/437-451`,
+   `spawn_service.gd:43`, `bomb_hazard.gd:84-88/171-177` all verified within a line or two of
+   as-built; `TelegraphFSM.tell` is the host-assigned `Polygon2D` exactly as §2.2 wires it;
+   `floor(24 · 1.45) = 34` confirmed against the real rounding. `data/oppositions/` holds 9 defs
+   today — the doc's "9 shipped, Lobber lands 9→10" is correct as written.
+
+### Cross-task amendments (for orchestrator adjudication before the Wave-1 merge)
+
+1. **The card seam → U3** (above): final lobber card `cost 2 / room 1 / band 5`; U3 re-bases its
+   deterministic pin (indicative outcome `5/4/4/8 = 21` at the 34 budget with U2b-as-authored)
+   and owns the bomb-sponge disposition. No U2a build impact.
+2. **Sentry-side note for the orchestrator:** U3's pin also assumed `sentry per_band_cap 5`;
+   U2b's Phase-2 design authored **4**. Whichever U2b's own resolver finalizes, the U3 re-base
+   must use the *shipped* `sentry.tres` (U3 §4.3 already says so) — flag at the Wave-1 merge so
+   the two Phase-3 outcomes reach U3 together.
+3. **`config_strings.csv`** stays orchestrator-applied in one integration commit at the Wave-1
+   merge (already §0/§4; the proven M1.10 amendment-6 protocol). 7 `CFG_FIELD_LOBBER_*` rows.
+4. **Bijection lands 9→10 at U2a's merge, 10→11 at U2b's** — both tests stay count-agnostic, no
+   global def-count hard-asserts (breakdown contract; both docs already comply).
+
+### Ledger impact of Phase 3
+
+Unchanged in kind: still `lobber.tres + ONE component (MortarCycle) + host shell + scene + test`,
+**zero shared-file edits**. The OQ-9 ctx-override amendment adds ~1 line to `mortar_cycle.gd`;
+the §4 risk point (a `legacy_ctx` `&"lobber"` case) is now **closed** — it will not be needed.
+
+### NEEDS DIRECTOR REVIEW (queue for the Wave-1 close-out — recommendations attached)
+
+| # | Call | Recommendation |
+|---|---|---|
+| OQ-1 | Lead the player (`lead_factor`) or land on current position | **Ship `lead_factor = 0`** (learn the verb clean); UG2 deaths-per-first-encounter drives a one-value sweep |
+| OQ-2 | Single shell vs volley | **Single shell**; band-cap-5 desync already yields overlapping markers; `volley_count` is a post-gate follow-up |
+| OQ-3 | Rim-kill semantics (centre-in-radius vs player-radius margin) | **Centre-in-radius, ring == `blast_radius`** — the bomb's shipped contract, the more forgiving option |
+| OQ-6 | Fiction/name (`display_name`) | **(A) "The Mortar"**; (C) "The Tithe" if the Director wants the band's too-open theme front-loaded |
+| OQ-7 | Band-4-exclusive for M1.11 | **Yes** — clean four-band A/B; promotion later is a `min_band` edit + deck add |
+
+*(The `per_band_cap 3 → 5` raise is resolver-set on technical/consistency merit, but it reaches
+the Director anyway inside U3's deck bundle — breakdown OQ11 — so a veto there re-opens it.)*

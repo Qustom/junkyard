@@ -865,6 +865,259 @@ U3/environment-artist territory regardless.*
 
 ---
 
+## 10. Resolved Decisions (Phase 3)
+
+> **Fresh-eyes resolution (qa-playtest-coordinator, 2026-07-06).** Author of §0–§9 was the
+> Phase-2 designer; this section is a different agent's adversarial pass, mirroring the T0 §10
+> shape. Each entry is **BINDING** on the programmer and, where noted, on U1/U3's Phase-3
+> resolvers. The §3.3 no-carve claim was re-derived from scratch (RD-6); the schema was re-verified
+> against the real `cave_backend.gd` / `band_pipeline.gd` / `band_profile.gd` / `cave_band_config.gd`
+> line refs cited in §1.2/§4 (all hold as of `f555f5c`). Body text these override is called out;
+> provenance stays (nothing above is deleted).
+
+**RD-0 — Verification of the doc's as-built anchors (no change; confidence base).** Spot-checked
+every load-bearing line ref: `band_profile.gd:26` enum `("socket","cave","scatter")` ✓;
+`band_pipeline.gd:51-54` guard `if profile.backend != "socket" and profile.backend != "cave"` ✓
+and the cave arm `:73-77` ✓; `band_profile.gd:82-95` socket / `:96-113` cave validate branches with
+the flavors fail-loud at `:108-109` ✓; `cave_band_config.gd:64-96` validate incl. the ≥2-chunks
+geometry check `:88-95` ✓; `cave_backend.gd` seeding `:67`, entry `:359-371`, chunk emit
+`:376-472`, deepest BFS `:479-521`, 2×2-open T `:274-285` ✓; `socket_sealer.gd:57-84`/`:94-101`
+caps **every** floor cell's non-floor 4-neighbour with **no perimeter concept** (so cover blobs are
+capped by the identical statement that seals the ring) ✓; both existing scatter assertions
+(`test_band_pipeline_parity.gd:253-258`, `test_cave_backend.gd:296-301`) survive because a
+config-less scatter profile fails `validate()` → the pipeline's `:38-42` validate-then-null ✓. The
+design is buildable against the real APIs.
+
+**RD-1 (Q1) — Sampler = order-stable stratified grid-jitter, as §3.2.** *Decision: RATIFIED.*
+Rationale: the stratum scan order **is** the "sorted candidate order" the breakdown demands (no
+sort imposed on a random stream); the unconditional 4-draw tuple makes the RNG stream length a
+pure function of `cfg` (`1 + 4·S`, `S` = stratum count) — strictly stronger than the cave's
+outcome-dependent stream and the correct discipline to keep as the binding determinism bar (see
+RD-13). Dart-throwing needs an arbitrary `N` and hides the spread in rejection dynamics; Bridson's
+active-list + float-annulus violates the repo's order-stability + integer-math rules. *Technical.*
+
+**RD-2 (Q2) — Entry tie-break = lane-aligned (min |y − lane_center|, then min y), as §3.5.**
+*Decision: RATIFIED, worklog-flag it as an interpretation of the M1.10 Q10 "west-most" contract.*
+The west-most set on an arena is the whole `x = 1` margin column (all floor, all in T by RD-6), so
+the tie-break, not the west rule, selects the spawn; lane-aligned is a total order (deterministic),
+edge-biased, orientation-stable, and lands the first frame down the guaranteed sightline. `lane_center`
+is a pure integer of the seed-drawn `lane_y` — determinism preserved. The cave-verbatim min-y is a
+safe fallback if the programmer prefers minimal deviation; either is correct. The *felt meaning* of
+that first view is U3's identity material, not a U0 gate. *Technical.*
+
+**RD-3 (Q3) — Default extents = 56×36, as §2.** *Decision: RATIFIED as the U0 test/schema default;*
+U3 authors its own point (it proposes 64×64, `chunks_x = 8` — compatible, RD-7/RD-11). U0's tests
+bind their own in-code configs, so U3 retuning never touches them. *Technical; felt size is U3/Director's.*
+
+**RD-4 (Q4/OQ12) — The S11 sightline identity bar: three tiers, re-scoped for provability.**
+*Decision: RATIFIED with a correction to what is asserted universally.*
+- **S11(a) — the constructed lane — is the LOAD-BEARING, by-construction identity bar.** The lane
+  rows `[lane_y, lane_y + clear_lane_width)` are all-floor across the full interior width by
+  predicate 2 + the margin (no cover admitted in those rows or the margin columns), so **some row's
+  uninterrupted floor run `== grid_width − 2` on every seed, every legal config** — a property no
+  cave (56 wide but ~45–55% wall, max run ≈ single digits) or socket band can hold. This is the
+  provable "reads open" separator. Assert the extents-independent form (`== grid_width − 2`).
+- **S11(c) — cover-fraction ceiling — is a BY-CONSTRUCTION guard, but the magic "15%" is WRONG and
+  is REPLACED.** Each stratum (side `s = min_cover_spacing + 2`) contributes at most one footprint of
+  ≤ 4 cells, so `cover_cells ≤ 4·S` and the interior is `≈ S·s²` → the true by-construction ceiling
+  is `4 / s²` of the interior (= **16 %** at the dense test config's `min_cover_spacing = 3`, not
+  8 %). Assert `cover_cells · s² ≤ 4 · interior_cells` (integer, non-flaky) rather than a fixed 15 %,
+  which a rare all-2×2 seed could exceed and make the test flaky. **This overrides §5 S11(c)'s "≤ 15 %"
+  and §3.2's "cover ≤ ~8 % … even at 100" and §5 S11(b)'s parenthetical "≤ ~8 %".**
+- **S11(b) — the openness percentile — is BUILD-CALIBRATED, not asserted-universal.** `P = 50` /
+  `K = interior_min/2` are plausible but NOT by-construction (at high density with covers on the
+  ~`s`-cell lattice, per-cell axis runs can fall below `interior_min/2` on cover-dense rows). The
+  programmer measures the actual percentile on **both** the default and dense in-code configs across
+  the seed matrix and sets `P`/`K` to the empirically-safe floor **with margin**, recording the
+  measured values in the worklog. S11(b) stays in the suite (it separates arena from cave/socket) but
+  is calibrated, not magic-numbered. **This overrides §5 S11(b)'s "P = 50 / K = interior_min/2 … must
+  hold at the dense config" as a hard universal** — it holds *as measured/calibrated*, with S11(a) as
+  the guarantee. *Technical.*
+
+**RD-5 (Q5) — Drop the retry scaffold entirely, as §3.1.** *Decision: RATIFIED.* Floor
+`= interior − cover`, and RD-4's stratum bound gives `cover ≤ (4/s²)·interior`, so
+`floor ≥ (1 − 4/s²)·interior ≥ 0.84·interior` — there is no undershoot mode; `min_floor_cells`,
+`max_attempts`, `_derive_seed` would be untestable dead ledger lines. `requested_seed ==
+resolved_seed` always; `band_generation_failed` is never emitted (event-driven consumers already
+tolerate this — the cave emits it, socket bands do not require it). **Schema consequence (binding
+on RD-11): `ScatterBandConfig` has NO `min_floor_cells` and NO `max_attempts` field** — U3's §4.2
+proposal of `min_floor_cells 500` / `max_attempts 8` does not map and must be dropped. *Technical.*
+
+**RD-6 (Q6) — NO defensive carve: "connectivity + player-scale BY CONSTRUCTION" is a compliant
+reading, and the §3.3 argument HOLDS. Adversarially re-derived.** *Decision: RATIFIED (no carve),
+conditioned on the three schema clamps in RD-8. Worklog-flag as an interpretation of the
+breakdown's "…or by deterministic CARVE" (an *or*, per the T0 Q4 precedent).*
+
+I re-derived the worst case (density 100, all-2×2 footprints, `min_cover_spacing = 3`,
+`border_margin = 2`, edge-bias extremes) from scratch. The proof rests on three enforced facts:
+footprints are **≤ 2×2** (the fixed 4-shape catalog — *not* a knob), any two accepted footprints are
+**Chebyshev edge-to-edge ≥ `min_cover_spacing` (≥ 3)** apart (the `_mark_blocked` dilation by
+`min_cover_spacing − 1` = 2 rejects anything closer, enforced on actual stamped cells, so
+jitter/stratum-boundary spill cannot defeat it), and a **≥ `border_margin` (≥ 2)-wide all-floor
+frame** rings the interior (predicate 1).
+
+1. **No two covers even touch.** ≥ 3 Chebyshev apart ⇒ not 8-adjacent ⇒ the cover set is a union of
+   isolated ≤ 2×2 blobs. Isolated non-boundary blobs cannot form a spanning wall or enclose a
+   region, so the floor (margin frame + between-blob space) is **one 4-connected component**.
+2. **Every floor cell is IN T (2×2-open) — stronger than the cave's "in or adjacent to T".** For any
+   floor cell `f`, at most **one** footprint can intersect `f`'s 3×3 neighbourhood: two cells from
+   different footprints both within Chebyshev 1 of `f` would be ≤ Chebyshev 2 of each other,
+   contradicting the ≥ 3 separation. A single ≤ 2×2 footprint touches at most **2 adjacent** of
+   `f`'s 8 neighbours, all on one side (a 2×2 can't span `f`'s W-and-E or N-and-S). Hence at least
+   one of `f`'s four quadrant 2×2-blocks is all-floor ⇒ `f ∈ T`. The margin (≥ 2) supplies the
+   interior-side floor for cells against the wall ring, so border-adjacent floor cells are in T too.
+3. **T is a single component** because T = the whole (4-connected) floor set.
+
+Therefore connectivity + 2×2 player-scale hold at **every legal knob value, on every seed, with zero
+carve code**. The invariant keeps three teeth (pipeline ASSERT §4.1, S3, S10); if any trips, the
+sampler *predicates* are wrong and get fixed at source — never a carve band-aid. **Counterexample
+found only OUTSIDE the legal range:** `min_cover_spacing = 2` admits covers flanking `f` at E and W
+(Chebyshev 2 apart, legal at spacing 2), leaving `f` a 1-wide impassable slot ∉ T — which is exactly
+why RD-8 makes `min_cover_spacing ≥ 3` a hard validate() clamp. Within the legal range, **no
+counterexample exists; the no-carve claim is sound.**
+
+**RD-7 (Q7/OQ4) — Cover = stamped non-floor cells, pre-partition, as §3.4.** *Decision: RATIFIED.*
+Cover participates in floor/connectivity/`fingerprint` for free; the unedited `SocketSealer` walls
+every blob for free (RD-0 confirms it caps interior holes by the same statement as the ring);
+`floor_cells` are final before hashing/grading (the determinism contract's hard requirement —
+post-partition stamping would mutate emitted pieces). Cover-as-entities is deferred (would need new
+collision/LOS now, blinds `fingerprint()`, and turns U2b's "cover blocks the bolt" from
+world-mask-free into bespoke code). *Technical.*
+
+**RD-8 (schema clamps — the teeth RD-6 depends on; BINDING on `validate()`).** `ScatterBandConfig.validate()`
+MUST reject (return a problem string, so the pipeline `:38-42` returns null) any config that breaches
+the by-construction preconditions. Exact clamps:
+- `min_cover_spacing ≥ 3` (RD-6's player-scale floor; spacing 2 creates 1-wide slots). **This is the
+  passability bar and subsumes U1's request — see RD-9.**
+- `border_margin ≥ 2` (the 2×2-open perimeter road).
+- `grid_width ≥ 12`, `grid_height ≥ 12`; `cover_density_pct ∈ 0..100`; `edge_cover_bias_pct ∈
+  −100..100`; the four cover weights each `≥ 0` with **sum ≥ 1**; `clear_lane_width ∈ 2..interior_height`;
+  `cell_size_px ≥ 1`; `chunk_cells ≥ 2`.
+- **Depth-axis geometry check — CORRECTED (overrides §2's sum formula).** §2 proposed
+  `(ceil(w/cc) − 1) + (ceil(h/cc) − 1) ≥ 4` and called it "the exact chunk-BFS diameter lower bound."
+  **That is wrong:** the entry chunk is always at chunk-**column 0** (entry cell x = 1 ⇒ chunk 0), and
+  the entry row is lane-aligned (≈ vertical centre), so the true BFS lower bound is
+  `chunks_x − 1`, NOT the corner-to-corner sum. A config like `chunks 2×4` passes the sum
+  (`1 + 3 = 4`) yet yields `max_depth = 3` on centre-entry seeds — violating the `max_depth ≥ 4`
+  bar (S4/C4) it was meant to guarantee. **Replace with `ceil(grid_width / chunk_cells) − 1 ≥ 4`
+  (i.e. `chunks_x ≥ 5`).** This is a seed-independent guarantee (`max_depth ≥ chunks_x − 1` always,
+  since the deepest chunk-column exists and is ≥ `chunks_x − 1` hops from column 0) and is
+  design-aligned (the wide entry-west→gate-east aspect *is* the identity). Default 56×36
+  (`chunks_x = 7`) and U3's 64×64 (`chunks_x = 8`) both pass. *Technical.*
+
+**RD-9 (cross-task seam: U0 ⇄ U1 spacing) — U0's Chebyshev `min_cover_spacing ≥ 3` SUBSUMES and
+CORRECTS U1's requested "`min_cover_spacing ≥ 2`".** *Decision: BINDING; U1's Phase-3 resolver cites
+this.* U1 §2.7 C4 / OQ-2 asked U0 to guarantee `min_cover_spacing ≥ 2` so that "≥ 2-cell gaps"
+separate footprints. **The numeric `≥ 2` is inconsistent with U1's own stated goal:** Chebyshev
+edge-distance `d` leaves `d − 1` floor cells between footprints, so a **2-cell (2×2-open) gap
+requires `d ≥ 3`, not `d ≥ 2`** (spacing 2 leaves a single, impassable 1-cell slot — the exact
+counterexample in RD-6). U0's authored `min_cover_spacing ≥ 3` (a) delivers the ≥ 2-cell gaps U1
+actually needs, (b) is enforced as a hard `validate()` clamp (RD-8), so the schema range **cannot**
+admit a sub-passability value, and (c) therefore fully satisfies U1's C4 traversability contract at
+the source. U1's M6 T-coverage certificate remains the independent check; by RD-6 it holds by
+construction (indeed every floor cell is in T). **U1 should update its C4/OQ-2 text from "≥ 2" to
+"≥ 3 (Chebyshev, U0 RD-8/RD-9)".**
+
+**RD-10 (cross-task seam: U0 ⇄ U3 — flavors + validate).** *Decision: BINDING.* The scatter
+`validate()` branch (§4.2) **fail-louds on non-empty `flavors`** exactly like the cave branch
+(`band_profile.gd:108-109`) — this is the single-location owner of the scatter-flavors rule, so
+U3's `band_four.flavors = []` is *mechanically mandatory* and U3 OQ10 is CONFIRMED (empty, U0 owns
+the fail-loud). The branch also does **not** require `piece_pool` (a scattered arena has no authored
+pieces; non-null is legal-but-inert) and treats `archetype` as an ignored `push_warning` don't-care
+(the arena IS the topology), matching U3 §3.2's `piece_pool = null` / `archetype = "linear"` — both
+confirmed non-blocking for U3.
+
+**RD-11 (cross-task seam: U0 ⇄ U3 — the CANONICAL landed schema U3 authors against).** *Decision:
+BINDING; this table is THE contract for U3 OQ5. U3's §3.3/§4.2 field list must be re-based onto it —
+several names/types differ.*
+
+| Field (canonical) | Type | validate() range | Default | U3's Phase-2 name (to rename) |
+|---|---|---|---|---|
+| `grid_width` | int | ≥ 12 **and** `ceil(w/chunk_cells) ≥ 5` | 56 | `arena_width` |
+| `grid_height` | int | ≥ 12 | 36 | `arena_height` |
+| `cover_density_pct` | int | 0..100 | 25 | `cover_density` (was ambiguous-unit; it is an integer **percent** per-stratum stamp chance) |
+| `min_cover_spacing` | int | **≥ 3** | 3 | `min_cover_spacing` (same) |
+| `border_margin` | int | **≥ 2** | 2 | *(absent in U3 — must be added/accepted at default 2)* |
+| `cover_w_1x1` | int | ≥ 0 | 4 | `cover_size_mix[0]` |
+| `cover_w_2x1` | int | ≥ 0 | 2 | `cover_size_mix` (no separate 2×1/1×2 in U3) |
+| `cover_w_1x2` | int | ≥ 0 | 2 | — |
+| `cover_w_2x2` | int | ≥ 0 (sum of the four ≥ 1) | 3 | `cover_size_mix[2]` |
+| `edge_cover_bias_pct` | int | −100..100 | 0 | `edge_cover_bias` (integer **percent**) |
+| `clear_lane_width` | int | 2..interior_height | 3 | `clear_lane_width` (same) |
+| `chunk_cells` | int | ≥ 2 (and drives RD-8's `chunks_x ≥ 5`) | 8 | `chunk_cells` (same) — **CONFIRMED present, U3 OQ5(a) answered: the depth axis chunks** |
+| `cell_size_px` | int | ≥ 1 | 16 | `cell_size_px` (same) |
+
+**Not on the schema (RD-5):** `min_floor_cells`, `max_attempts` — U3 must drop both from §4.2, and
+its contract-test C3 ("total floor cells ≥ `min_floor_cells`") must be replaced with the RD-5
+computed lower bound (`floor ≥ (1 − 4/s²)·interior`) or simply `pieces.size() ≥ 2` + a fixed floor
+count measured at build. **Cover representation:** four integer weights, **not** a `cover_size_mix`
+array — U3's `[4, 2, 1]` maps to e.g. `cover_w_1x1 = 4, cover_w_2x1 = 1, cover_w_1x2 = 1,
+cover_w_2x2 = 1` (small-biased). **Units confirmed for U3 OQ5(b):** density and bias are integer
+percents (0..100 and −100..100).
+
+**RD-12 (cross-task seam: U0 ⇄ U3 — sparse intent vs the identity bar; U3 OQ5(c) answered).**
+*Decision: U3's sparse-deadly point is fully compatible — CONFIRMED.* The S11 identity bars are
+threatened (if at all) only at HIGH cover density; **sparse is the easy direction.** S11(a) (the
+full-width lane) holds regardless of density. S11(b)/(c) get *easier* as density falls. Concretely,
+any `cover_density_pct` in roughly **[5, 40]** satisfies all three S11 tiers with wide margin (the
+bars only get interesting approaching 100). U3's proposed sparse value (its "`cover_density 8`" →
+`cover_density_pct = 8`) sits comfortably in the compatible range and *supports* the long-sightline
+identity. **Compatible range for U3's authored config: `cover_density_pct ∈ [5, 40]`, rim-biased
+(`edge_cover_bias_pct > 0`) — all satisfy the identity bar.** U0 will also sanity-run U3's authored
+value set on the seed matrix and report region/sightline/`max_depth` at U3 brief time (the T3 OQ5
+precedent) so U3 starts from measured shape.
+
+**RD-13 (determinism bar — KEEP the fixed-length stream, per the breakdown + task constraint).**
+*Decision: BINDING.* The RNG stream is exactly `1 + 4·S` draws (one lane-row draw + a fixed 4-draw
+tuple per stratum, drawn **unconditionally**, in fixed (stratum-y, stratum-x) order), so its length
+is a pure function of `cfg` — stronger than the cave's outcome-dependent stream and the required
+determinism discipline. No retry, no carve, no conditional draw may weaken it. `cave_backend.gd`
+stays **byte-untouched**; the four controls (`e943ac9c8bc1`, `band_greybox`, `band_two`,
+`band_three`) are byte-identical because the only additions on socket/cave paths are string
+compares (`… != "scatter"` in the guard + the `elif` arm) — zero draws, zero state (RD-0 confirms).
+
+**RD-14 (Q8) — Duplicate the chunk/emit machinery inside `scatter_backend.gd`; do NOT extract a
+shared helper this wave.** *Decision: RATIFIED.* Extracting `synthetic_chunker.gd` would edit
+`cave_backend.gd` in the same wave that promotes `band_three` to a byte-identical control — losing
+structural byte-safety for only test-pinned safety. Duplication is honest ledger weight and keeps
+the cave control structurally safe. **UG3 watch-item: extract on the *third* consumer** (a 4th
+backend), in ITS version, with all backend suites as the net. *Technical/scope.*
+
+**RD-15 (Q9) — Clear-lane = full-width protected rows, seed-drawn row, `clear_lane_width ≥ 2`, as
+§3.2.** *Decision: RATIFIED (mechanism).* Cheapest constructed sightline + b1's `clear_lane_guarantee`
+in one rule; seed-drawing the row keeps arenas from reading identically; it only ADDS floor so it
+never threatens RD-6. **Forward watch-item (NOT a U0 gate): whether the guaranteed straight lane
+plays as a "highway" that trivialises the crossing is a UG2 telemetry read + U3 deck/tuning call**
+(the Sentry watches lanes, the Lobber punishes straight-line loitering — the U2a/U2b cover dialogue
+is the designed answer). *Technical.*
+
+**RD-16 (Q10) — Comment-only staleness fixes in `test_band_pipeline_parity.gd` +
+`test_cave_backend.gd`: DO them, as a separate assertion-preserving commit.** *Decision: RATIFIED
+(option b).* Both files' "scatter is unwired / still-unwired" comments become false; the assertion
+lines stay byte-identical (RD-0 verified the assertions still pass). Land the comment touch-up as its
+own commit so the diff is self-evidently comment-only, worklog-flagged (the T0 P7 precedent of
+truthful acceptance-test docs). *Hygiene.*
+
+**RD-17 (Q11) — `edge_cover_bias_pct` two-zone (rim/centre) model for U0; gradient deferred.**
+*Decision: RATIFIED.* The two-zone integer split is the cheapest formula that makes b1's knob real,
+deterministic, and test-covered (the dense config exercises it). A per-stratum gradient (~5 more
+integer lines) is a U3-driven upgrade only if its authored tuning asks for it. *Technical.*
+
+**RD-18 (Q12) — Rectangle-only `_arena_floor` in M1.11; non-rectangular rim deferred.** *Decision:
+RATIFIED (defer).* Every rim variation re-opens RD-6's by-construction proof (the perimeter-road
+argument assumes a convex ring) and adds draws to the fixed stream (RD-13), for pure aesthetics in a
+tint-only version. Note rim variation as a future scatter-aware flavor-stage candidate (a `WearDecay`
+sibling), NOT backend code; the arena's LOOK is U3/environment-artist territory. *Scope.*
+
+**Director review queue (U0): NONE block the build.** Every U0 open question resolves on
+technical/scope merit above. The genuine vision/fun/tone calls the arena raises are already routed to
+their owners: band identity/tint (U3 D1), the sparse-vs-dense *felt* read (U3 D-cover-density +
+UG2), the difficulty step (U3 D4), and whether the open field reads *tense vs empty* / the lane
+plays as a highway (UG2 telemetry). U0 ships a deterministic, safe, tunable substrate; no U0-level
+Director gate exists.
+
+---
+
 *Spec authored for M1.11 U0 (the third generation backend). Design-only — no code, no `.tres`,
 no branch. The programmer builds against this after Phase 3 folds a **Resolved Decisions**
 section in below. Deviations from the committed design go to `design/DESIGN_DEVIATIONS.md` for
