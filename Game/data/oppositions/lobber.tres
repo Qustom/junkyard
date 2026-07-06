@@ -1,0 +1,77 @@
+[gd_resource type="Resource" script_class="OppositionDef" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://data/oppositions/opposition_def.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/lobber.tscn" id="2"]
+
+[resource]
+script = ExtResource("1")
+id = &"lobber"
+display_name = "The Mortar"
+archetype = "actor"
+host_scene = ExtResource("2")
+credit_cost = 2
+spawn_weight = 1.0
+min_band = 4
+cap_group = &"new_hazards"
+per_room_cap = 1
+per_band_cap = 5
+params = {
+"arc_time_s": 0.9,
+"base_count": 1,
+"blast_radius": 48.0,
+"count_per_depth": 0.0,
+"fire_period_s": 2.5,
+"kills": true,
+"lead_factor": 0.0
+}
+param_schema = Array[Dictionary]([{
+"default": 1,
+"gloss": "CFG_FIELD_LOBBER_BASE_COUNT",
+"key": "base_count",
+"max": 10,
+"min": 0,
+"type": "int"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_LOBBER_COUNT_PER_DEPTH",
+"key": "count_per_depth",
+"max": 5.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 2.5,
+"gloss": "CFG_FIELD_LOBBER_FIRE_PERIOD_S",
+"key": "fire_period_s",
+"max": 8.0,
+"min": 0.8,
+"type": "float"
+}, {
+"default": 0.9,
+"gloss": "CFG_FIELD_LOBBER_ARC_TIME_S",
+"key": "arc_time_s",
+"max": 2.5,
+"min": 0.4,
+"type": "float"
+}, {
+"default": 48.0,
+"gloss": "CFG_FIELD_LOBBER_BLAST_RADIUS",
+"key": "blast_radius",
+"max": 96.0,
+"min": 16.0,
+"trap_if_neutral": true,
+"type": "float"
+}, {
+"default": 0.0,
+"gloss": "CFG_FIELD_LOBBER_LEAD_FACTOR",
+"key": "lead_factor",
+"max": 1.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": true,
+"gloss": "CFG_FIELD_LOBBER_KILLS",
+"key": "kills",
+"type": "bool"
+}])
+lethality = "lethal"
+kills = true

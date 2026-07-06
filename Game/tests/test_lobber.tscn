@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://b2lobber11test"]
+
+[ext_resource type="Script" path="res://tests/test_lobber.gd" id="1"]
+
+[node name="TestLobber" type="Node"]
+script = ExtResource("1")
