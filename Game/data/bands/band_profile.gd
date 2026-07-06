@@ -20,11 +20,12 @@ extends Resource
 @export var display_name: String = ""
 
 # --- Which BACKEND builds the raw floor/occupancy -------------------------
-## M1.9 wires "socket" ONLY (scope guardrail). "cave"/"scatter" are declared so
-## the schema is stable across the exploration's Phase D, but the pipeline
-## fail-louds on them.
+## All three declared backends are wired: "socket" (M1.9), "cave" (M1.10 T0),
+## "scatter" (M1.11 U0). Each carries its own backend_config type, checked by
+## validate() below.
 @export_enum("socket", "cave", "scatter") var backend: String = "socket"
-## The backend's own config Resource. For "socket": a BandGenConfig.
+## The backend's own config Resource. For "socket": a BandGenConfig; for
+## "cave": a CaveBandConfig; for "scatter": a ScatterBandConfig.
 @export var backend_config: Resource = null
 
 # --- Base ARCHETYPE (topology the backend grows toward) -------------------
@@ -111,6 +112,23 @@ func validate() -> PackedStringArray:
 		# it is an ignored don't-care (warn, never error — Q6 option a).
 		if archetype != "linear":
 			push_warning("BandProfile '%s': archetype '%s' is ignored by the cave backend (the CA IS the topology)" % [id, archetype])
+	elif backend == "scatter":
+		# M1.11 U0: scatter backend needs a ScatterBandConfig; NO piece_pool
+		# (there are no pieces to draw) — a non-null piece_pool is legal-but-inert.
+		if backend_config == null or not (backend_config is ScatterBandConfig):
+			problems.append("BandProfile '%s': scatter backend needs a ScatterBandConfig backend_config" % id)
+		else:
+			for p in (backend_config as ScatterBandConfig).validate():
+				problems.append("BandProfile '%s': %s" % [id, p])
+		# Flavors ship EMPTY on scatter bands (M1.11 breakdown / U0 RD-10; the
+		# M1.10 rule carries — SetPieceInject/WearDecay are socket-built). This
+		# is the SINGLE location for the scatter+flavors fail-loud.
+		if not flavors.is_empty():
+			problems.append("BandProfile '%s': scatter backend does not support flavor stages in M1.11 (flavors must be empty)" % id)
+		# The archetype field has no scatter-honest value (the arena IS the
+		# topology) — ignored don't-care (warn, never error).
+		if archetype != "linear":
+			push_warning("BandProfile '%s': archetype '%s' is ignored by the scatter backend (the arena IS the topology)" % [id, archetype])
 	if band_depth < 1:
 		problems.append("BandProfile '%s': band_depth must be >= 1" % id)
 	return problems
