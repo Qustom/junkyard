@@ -41,16 +41,18 @@ func generate(profile: BandProfile, seed: int, rc: RunConfig = null) -> Band:
 			push_error(p)
 		return null
 
-	# --- Wiring guards (M1.10: socket + cave wired; scatter still fail-loud) --
-	# Cave dispatch (T0): the socket path's statements below stay VERBATIM in the
-	# same order, and the ONLY additions on that path are `backend == "cave"`
-	# string compares (no draws, no state), so band_greybox/band_two byte-identity
-	# is structural (test_band_pipeline_parity proves it). The cave+flavors
-	# fail-loud lives in BandProfile.validate() (single location; the pipeline's
-	# validate-then-fail flow at :38-42 enforces it).
-	if profile.backend != "socket" and profile.backend != "cave":
-		push_error("BandPipeline: backend '%s' is not wired in M1.10 (socket + cave only — profile '%s')"
-				% [profile.backend, profile.id])
+	# --- Wiring guards (M1.11: all three declared backends wired) ---------
+	# Backend dispatch (T0 cave, U0 scatter): the socket path's statements below
+	# stay VERBATIM in the same order, and the ONLY additions on the socket/cave
+	# paths are backend string compares (no draws, no state), so the
+	# band_greybox/band_two/band_three byte-identity is structural
+	# (test_band_pipeline_parity + test_cave_backend prove it). The
+	# backend+flavors fail-louds live in BandProfile.validate() (single
+	# location; the pipeline's validate-then-fail flow at :38-42 enforces them).
+	if profile.backend != "socket" and profile.backend != "cave" \
+			and profile.backend != "scatter":
+		push_error("BandPipeline: unknown backend '%s' (profile '%s')"
+				% [profile.backend, profile.id])  # future-proof fail-loud; unreachable via the enum
 		return null
 	if not profile.principles.is_empty():
 		# S5 wired the FLAVOR stage contract only; no principle stage exists in
@@ -68,13 +70,19 @@ func generate(profile: BandProfile, seed: int, rc: RunConfig = null) -> Band:
 					% [profile.id, fcfg.get_class() if fcfg != null else "null"])
 			return null
 
-	# --- STAGES 1+2: backend dispatch (T0) -------------------------------
+	# --- STAGES 1+2: backend dispatch (T0 / U0) --------------------------
 	var band: Band
 	if profile.backend == "cave":
 		# CAVE (M1.10): the CA caverns backend. rc accepted, IGNORED (every
 		# as-built rc generation hook is socket-interior; test C7 pins it).
 		var cave_cfg := profile.backend_config as CaveBandConfig
 		band = CaveBackend.new().generate(seed, cave_cfg, rc)
+	elif profile.backend == "scatter":
+		# SCATTER (M1.11 U0): the open-field arena backend. rc accepted,
+		# IGNORED (every as-built rc generation hook is socket-interior;
+		# test S7 pins it).
+		var scat_cfg := profile.backend_config as ScatterBandConfig
+		band = ScatterBackend.new().generate(seed, scat_cfg, rc)
 	else:
 		# SOCKET: today's generator, verbatim. The socket grow loop IS the
 		# linear/branchy archetype: branch topology is keyed off
@@ -97,12 +105,13 @@ func generate(profile: BandProfile, seed: int, rc: RunConfig = null) -> Band:
 				% [profile.id, seed])
 		return band
 
-	# --- Post-backend invariant (cave only): cell-level connectivity ASSERT --
-	# The backend guarantees one FLOOR component by construction (keep-largest +
-	# deterministic carve + player-scale pass); this is the invariant's teeth at
-	# the pipeline seam, reusing the existing checker. Fail-loud, never a silent
-	# fix (ASSERT posture, connectivity_guarantee.gd:14-24).
-	if profile.backend == "cave":
+	# --- Post-backend invariant (synthetic backends): connectivity ASSERT ----
+	# The backends guarantee one FLOOR component by construction (cave:
+	# keep-largest + deterministic carve + player-scale pass; scatter:
+	# min-spacing + border-margin + clear-lane predicates, U0 RD-6); this is
+	# the invariant's teeth at the pipeline seam, reusing the existing checker.
+	# Fail-loud, never a silent fix (ASSERT posture, connectivity_guarantee.gd:14-24).
+	if profile.backend == "cave" or profile.backend == "scatter":
 		ConnectivityGuarantee.new().enforce(band, ConnectivityGuarantee.Mode.ASSERT)
 
 	# --- STAGES 3-5 (S5): flavor loop + connectivity invariant ------------

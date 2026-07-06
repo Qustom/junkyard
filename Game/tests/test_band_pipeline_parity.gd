@@ -249,8 +249,9 @@ func _run_fail_loud_checks(pipe: BandPipeline, cfg: BandGenConfig,
 	if pipe.generate(invalid, 1) != null:
 		failures.append("P7: invalid (empty) profile did not return null")
 
-	# Unwired backend → null (validate passes; the wiring guard fires). M1.10
-	# wired socket + cave, so "scatter" is now the remaining fail-loud backend.
+	# Config-less scatter profile → null. M1.11 (U0) wired scatter, so this
+	# fail-loud moved from the wiring guard to validate() (a scatter profile
+	# needs a ScatterBandConfig) — the assertion is unchanged.
 	var scatter := BandProfile.new()
 	scatter.id = &"synthetic_scatter"
 	scatter.backend = "scatter"
