@@ -206,3 +206,21 @@ CFG_FIELD_BURROWER_TELEGRAPH_LEAD_S,Telegraph lead (s) — the dodge window; the
 CFG_FIELD_BURROWER_KILL_RADIUS,Surfaced lethal catch distance (px); 0 = a pure area-scare that never catches
 CFG_FIELD_BURROWER_LOCK_SURFACE,Lock the surface point at telegraph start (off = the decal keeps tracking you — the unfair/harder variant)
 CFG_FIELD_BURROWER_KILLS,Lethal contact kills (off = harmless surfacing for sweeps)
+CFG_FIELD_LOBBER_BASE_COUNT,Base Mortars per band (builder spawn card).
+CFG_FIELD_LOBBER_COUNT_PER_DEPTH,Extra Mortars per depth index (builder spawn card).
+CFG_FIELD_LOBBER_FIRE_PERIOD_S,"Seconds AIMing between shells. Lower = relentless rain; higher = occasional pressure."
+CFG_FIELD_LOBBER_ARC_TIME_S,"Shell flight time = the marker-shown dodge window. The fairness line — never lethal inside it. Floor 0.4 is unfair from a stand at most radii."
+CFG_FIELD_LOBBER_BLAST_RADIUS,"Marker + kill radius (px); centre-in-radius test, the ring is drawn at exactly this radius. 0 = inert (never kills)."
+CFG_FIELD_LOBBER_LEAD_FACTOR,"Player-velocity lead in seconds of prediction: landing = player pos + player velocity (px/s) x this. 0 = lands where you stand (fair/readable); >0 leads your movement (the difficulty dial)."
+CFG_FIELD_LOBBER_KILLS,Blast lethality toggle. Off = the blast emits contact telemetry but never ends the run.
+CFG_FIELD_SENTRY_BASE_COUNT,Sentries per band (builder spawn card).
+CFG_FIELD_SENTRY_COUNT_PER_DEPTH,Extra sentries per depth index (builder spawn card).
+CFG_FIELD_SENTRY_WINDUP_S,Lock-on flash lead before the bolt fires — the fairness line (bolt never fires earlier).
+CFG_FIELD_SENTRY_COOLDOWN_S,Post-shot gap where it cannot fire — the crossable window.
+CFG_FIELD_SENTRY_BOLT_SPEED,Bolt travel speed down the locked lane (0 = no bolt).
+CFG_FIELD_SENTRY_LANE_LENGTH,Lane strip length = bolt max travel = sightline-derive cap.
+CFG_FIELD_SENTRY_LANE_WIDTH,Lethal corridor width (and the drawn strip width).
+CFG_FIELD_SENTRY_LANE_ALWAYS_VISIBLE,"ON: the lane strip is always drawn (route puzzle); OFF: revealed on windup."
+CFG_FIELD_SENTRY_FIRE_ON_BODY_EDGE,"OFF: fires when the player's centre enters the strip (forgiving); ON: any body edge."
+CFG_FIELD_SENTRY_LANE_DIR_DEG,"-1: derive the longest clear sightline at spawn; >= 0: force this heading (degrees)."
+CFG_FIELD_SENTRY_KILLS,Bolt contact is fatal (OFF: contact telemetry only).
