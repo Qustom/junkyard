@@ -107,10 +107,24 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
+## ▶ FBM-A1 IN FLIGHT — Ambusher rework (Director playtest feedback, 2026-07-05)
+
+> Director playtested `m1-20260705-3c9644e` and gave Ambusher feedback: (1) BUG — visible orange tell at
+> rest (Concealment drives `$Body`/`$FloorTell` but not `$Tell`, so the wedge shows, pointing east); (2)
+> "can't shoot it / junk stops" (hidden = pass-through by design + the visible-tell confusion); (3)
+> immutable one-shot husk — **Director wants it to keep attacking.** Directive: a **hide-pursue-pounce
+> stalker** — stationary ambush on first contact, then after the first pounce it loops (hide+pursue via
+> reused `ChaseMove` → re-pounce toward the player → hide+pursue), killable only while revealed, tell
+> fixed to be invisible at rest, faint floor-smudge kept visible+tracking for a fair read. **Design flag
+> surfaced to Director:** this makes the Ambusher a mechanical cousin of the Burrower (both hide-track-
+> strike) — Director directed it anyway; TG2/TG3 watch-item. Dispatched to general-purpose (worktree);
+> on return → merge + re-verify + **re-publish** so the Director can feel it. FBM-style direct fix (no
+> four-phase). Touches only ambusher files + 1 CSV gloss row + changelog (Ambusher desc updated in place).
+
 ## ▶ DIRECTOR PLAYTEST (human-gated — the felt loop can't be verified headless)
 
 > Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260705-3c9644e`**
-> (itch build `#1775187`). Full checklist: `design/M1_10_Tasks/TG1_playtest_build.md` §5. Key reads:
+> (itch build `#1775187`; FBM-A1 Ambusher rework will supersede it). Full checklist: `design/M1_10_Tasks/TG1_playtest_build.md` §5. Key reads:
 > - **The two old portals are unchanged** (band 1 + The Sump play exactly as M1.9 — the control).
 > - **The third portal "Dive — The Warren"** (cave-teal glow, forward of the other two) → a **cave band**:
 >   blobby chambers, bad sightlines, nook-rich — a *different generator*, not rooms-and-corridors.
