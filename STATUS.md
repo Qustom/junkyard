@@ -107,24 +107,28 @@ See `CLAUDE.md` → "The orchestrator loop".
 
 ---
 
-## ▶ FBM-A1 IN FLIGHT — Ambusher rework (Director playtest feedback, 2026-07-05)
+## ✓ FBM-A1 DONE + REPUBLISHED — Ambusher rework to a hide-pursue-pounce stalker (2026-07-05/06)
 
-> Director playtested `m1-20260705-3c9644e` and gave Ambusher feedback: (1) BUG — visible orange tell at
-> rest (Concealment drives `$Body`/`$FloorTell` but not `$Tell`, so the wedge shows, pointing east); (2)
-> "can't shoot it / junk stops" (hidden = pass-through by design + the visible-tell confusion); (3)
-> immutable one-shot husk — **Director wants it to keep attacking.** Directive: a **hide-pursue-pounce
-> stalker** — stationary ambush on first contact, then after the first pounce it loops (hide+pursue via
-> reused `ChaseMove` → re-pounce toward the player → hide+pursue), killable only while revealed, tell
-> fixed to be invisible at rest, faint floor-smudge kept visible+tracking for a fair read. **Design flag
-> surfaced to Director:** this makes the Ambusher a mechanical cousin of the Burrower (both hide-track-
-> strike) — Director directed it anyway; TG2/TG3 watch-item. Dispatched to general-purpose (worktree);
-> on return → merge + re-verify + **re-publish** so the Director can feel it. FBM-style direct fix (no
-> four-phase). Touches only ambusher files + 1 CSV gloss row + changelog (Ambusher desc updated in place).
+> Director feedback on `m1-20260705-3c9644e` fixed on `main`@`8e3a888` (merge `8e3a888`): **(bug)** the
+> orange tell was visible at rest — `Concealment` now gates `$Tell` alpha too (0 hidden / 1 revealed);
+> **(root cause of "junk just stops")** it was the one-shot **husk** — solid (layer 16) but out of the
+> "hazard" group = unkillable, so throws bounced and re-dropped; removing the husk eliminates the state;
+> **(rework)** dropped `_spent` — after the first pounce it STALKS: re-hides (invisible, un-hittable,
+> floor-smudge still tracking) + pursues via the reused `ChaseMove` (`track_speed` **130 px/s**, tunable)
+> → re-pounces toward the player → loops until killed in a revealed window. New `track_speed` knob
+> (params↔schema bijection green at 9 defs); `re_hide_s` default 0→0.6 s inter-pounce breath. Off-by-
+> default fp `e943ac9c8bc1` unmoved; `test_ambusher`/`test_opposition_def_schema`/smoke green. Changelog
+> Ambusher description updated in place. **Republished:** `qusto/the-far-yard:html5 @ m1-20260706-8e3a888`
+> (build `#1775586`). **Design watch-item (surfaced, Director-directed):** now a mechanical cousin of the
+> Burrower (both hide-track-strike) — flag at TG2/TG3.
 
 ## ▶ DIRECTOR PLAYTEST (human-gated — the felt loop can't be verified headless)
 
-> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260705-3c9644e`**
-> (itch build `#1775187`; FBM-A1 Ambusher rework will supersede it). Full checklist: `design/M1_10_Tasks/TG1_playtest_build.md` §5. Key reads:
+> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260706-8e3a888`**
+> (itch build `#1775586`; supersedes `3c9644e` — includes the FBM-A1 Ambusher stalker rework). Full checklist:
+> `design/M1_10_Tasks/TG1_playtest_build.md` §5. **Re-check the Ambusher:** invisible at rest (no floating orange
+> arrow) · springs when you approach loot · then it STALKS — vanishes, chases you, re-pounces (tune `track_speed`
+> in the Oppositions tab if 130 feels wrong) · throw-kill it in the exposed beat after a pounce. Other key reads:
 > - **The two old portals are unchanged** (band 1 + The Sump play exactly as M1.9 — the control).
 > - **The third portal "Dive — The Warren"** (cave-teal glow, forward of the other two) → a **cave band**:
 >   blobby chambers, bad sightlines, nook-rich — a *different generator*, not rooms-and-corridors.

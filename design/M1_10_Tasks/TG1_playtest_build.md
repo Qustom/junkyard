@@ -293,6 +293,10 @@ glow **awaits an art retone**; no save change (band choice is per-dive, not pers
     `push_itch.sh` run's wharf POST timed out on the same flaky endpoint, so the upload was re-driven
     directly on the intact export (export is deterministic; same artifacts).
   - **Live page:** https://qusto.itch.io/the-far-yard (password-gated; **Chrome/Edge only** — SharedArrayBuffer COEP).
+- **SUPERSEDED 2026-07-06 by FBM-A1** (Ambusher rework — hide-pursue-pounce stalker; Director playtest feedback):
+  republished `qusto/the-far-yard:html5 @ m1-20260706-8e3a888`, build **`#1775586`** (from `#1775187`), merge
+  `8e3a888`. Same verify matrix (Ambusher rows updated for the stalker behavior; all-off fp `e943ac9c8bc1`,
+  9-def bijection, smoke — all green). This is the current playtest build.
 
 ---
 
