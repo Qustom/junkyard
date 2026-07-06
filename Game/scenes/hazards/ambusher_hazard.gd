@@ -55,14 +55,14 @@ const COLOR_EXPOSED := Color(0.5, 0.55, 0.6)     # stunned grey-blue — hit me
 const DEFAULTS := {
 	"arm_radius": 90.0,
 	"tell_lead_s": 0.45,
-	"lunge_speed": 600.0,
-	"lunge_dist": 140.0,
-	"exposed_window_s": 1.5,
+	"lunge_speed": 900.0,
+	"lunge_dist": 250.0,
+	"exposed_window_s": 0.6,
 	"lunge_width": 28.0,
 	"concealed_alpha": 0.0,
 	"tell_alpha": 0.28,
 	"re_hide_s": 0.6,
-	"track_speed": 130.0,
+	"track_speed": 232.0,
 	"kills": true,
 }
 
