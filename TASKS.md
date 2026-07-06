@@ -58,73 +58,98 @@ Build (M0·M1·M2·M4·M3) + RG1 (itch published `m1-20260627-41106de` + FB1–F
 
 ---
 
-## M1.10 — Second Generation Backend + Cave Band + Low-Sightline Oppositions (ACTIVE — Director-directed; design LOCKED 2026-07-05)
+## M1.11 — Third Generation Backend + Open-Field Band + Ranged Oppositions (ACTIVE — Director-directed; design LOCKED 2026-07-06)
 
-Prove the M1.9 architectures scale along their second axis: a **genuinely different generator**
-(`CaveBackend`, cellular automata — no pieces/sockets) slots behind the same `BandPipeline` with the
-whole downstream stack reused, and **two more oppositions** (Ambusher + Burrower — the cave-native
-pair) land as def + one component each. Breakdown + 13 cross-task amendments + Director ratifications
-D-RAT-1…9: `design/M1_10_Tasks/M1.10_Breakdown.md`. Every task doc carries a BINDING
-`Resolved Decisions (Phase 3)` section. **Contracts:** THREE permanent controls byte-identical at every
-wave boundary (all-off fp `e943ac9c8bc1` + `band_greybox` fp + `band_two` fp, all through the untouched
-socket path); cave determinism = order-stable iteration + deterministic CARVE, no cave code on any socket
-path; **cost-ledger** in every build worklog (bespoke non-data/non-test lines beyond the promised
-backend/component — TG3's evidence); per-def bijection at 9 defs; 91-knob model frozen; no save change;
-single-writer-per-file per wave (`main_game.gd`: T1 through Wave 3 → T4's one `BAND_ROUTES` row Wave 4;
-`band_pipeline.gd`/`band_profile.gd`: T0 only); parallel agents in worktrees; PixelLab Director-gated
-(tint-only, D-RAT-5).
+Prove the seams hold at **N = 3 with declining marginal cost**: a third genuinely-different
+generator (`ScatterBackend` — open-field arena + order-stable poisson cover, no pieces/no CA)
+slots behind the same `BandPipeline` with materialisation expected at **~0 new lines** (the
+M1.10 synthetic-piece path is backend-agnostic), and **two ranged oppositions** (Lobber +
+Sentry — the at-range axis; all 9 shipped defs are contact-lethal) land as def + one component
+each. Breakdown + 13 cross-task amendments + Director ratifications D-RAT-1…8:
+`design/M1_11_Tasks/M1.11_Breakdown.md`. Every task doc carries a BINDING `Resolved Decisions
+(Phase 3)` section. **Contracts:** FOUR permanent controls byte-identical at every wave
+boundary (all-off fp `e943ac9c8bc1` + `band_greybox` + `band_two` + `band_three` fps); scatter
+determinism = order-stable sampling + connectivity/2×2-passability **by construction**
+(`min_cover_spacing >= 3` + `chunks_x >= 5` validate() clamps — no carve); **cost-ledger** in
+every build worklog (the N=3 trend is UG3's evidence; U1's target = 1 line, U3's = 0);
+per-def bijection at 11 defs; knob model frozen; no save change; single-writer-per-file per
+wave (`main_game.gd`: U1 through Wave 2 → U4's one `BAND_ROUTES` row Wave 4;
+`band_pipeline.gd`/`band_profile.gd`: U0 only); parallel agents in worktrees; the shared
+`config_strings.csv` gloss rows applied by the orchestrator in ONE Wave-1 merge commit;
+PixelLab Director-gated (tint-only).
 
-### Wave 1 — Backend + the two oppositions  *(T0 ∥ T2a ∥ T2b, parallel worktrees, file-disjoint)*
+### Wave 1 — Backend + the two oppositions  *(U0 ∥ U2a ∥ U2b, parallel worktrees, file-disjoint)*
 
-### T0 — CaveBackend: CA caverns generator + `CaveBandConfig` + pipeline backend dispatch
-- Milestone: M1.10 (Wave 1)   Assignee: general-purpose   BlockedBy: none
-- Spec: `design/M1_10_Tasks/T0_cave_backend.md` (body + §10 Resolved Decisions)
-- Goal: `CaveBandConfig` (integer-only: `grid` 56×56, `fill_pct`, `smooth_passes`, `wall_threshold`, `min_region_cells`, `carve_width`, `chunk_cells`, `min_floor_cells`, `max_attempts`, `cell_size_px`) + a `CaveBackend` in `systems/bandgen/`: seeded fill → CA smoothing → keep-largest flood + deterministic carve of secondary regions (sorted order) → **west-most 2×2-open entry anchor** (front-positioned `floor_cells[0]`) → **chunk partition** into synthetic `PlacedPiece`s (content-hashed `cave_`+12-hex ids so `Band.fingerprint()` pins the floor; `max_depth >= 4` on defaults) + a **deterministic 2×2-open throat guarantee** (only T0 mutates floor_cells). Replace the pipeline cave fail-loud with `_backend_for` dispatch; add the `validate()` cave branch (incl. the cave+flavors fail-loud). Touches ONLY `systems/bandgen/` + `data/bands/*.gd` schema + tests — NOT `main_game.gd`.
-- Done when: `test_cave_backend` green (same seed → same fp ×2; diff seed → diff fp; single connected FLOOR component; region-keep + carve determinism; 2×2 throat C10; rc-invariance C7); `band_greybox` + `band_two` + all-off fp byte-identical through the untouched socket path; existing bandgen suite green; worklog (with the bespoke-code ledger) + commit.
+### U0 — ScatterBackend: open-field arena generator + `ScatterBandConfig` + pipeline dispatch
+- Milestone: M1.11 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_11_Tasks/U0_scatter_backend.md` (body + §10 Resolved Decisions RD-0…RD-18)
+- Goal: `ScatterBandConfig` (integer-only canonical schema RD-11: `grid_width/height` (56×36; `chunks_x >= 5` clamp), `cover_density_pct`, `min_cover_spacing` (>= 3 hard clamp), `border_margin` (>= 2), `cover_w_1x1/2x1/1x2/2x2` weights, `edge_cover_bias_pct`, `clear_lane_width`, `chunk_cells` 8, `cell_size_px` 16 — NO retry fields) + a `ScatterBackend` in `systems/bandgen/`: arena floor → **stratified grid-jitter poisson cover stamping** (fixed-length `1+4·S` RNG stream; sorted order) → ≤2×2 footprints as non-floor → full-width seed-drawn clear lane → **chunk partition** (content-hashed `scat_` ids; `max_depth >= chunks_x−1 >= 4`) → lane-aligned west-most 2×2-open entry anchor. Connectivity + 2×2 passability BY CONSTRUCTION (RD-6 proof — every floor cell ∈ the 2×2-open set; no carve). Replace the pipeline scatter fail-loud with dispatch; `validate()` scatter branch (flavors fail-loud; both clamps). `cave_backend.gd` byte-untouched (duplicate chunk/emit machinery, RD-14). Touches ONLY `systems/bandgen/` + `data/bands/*.gd` schema + tests — NOT `main_game.gd`.
+- Done when: `test_scatter_backend` S1–S11 green (same seed → same fp ×2; diff seed → diff fp; single connected FLOOR component; spacing/stratum non-vacuity stats; chunk depth bar; 2×2 throat; S11(a) full-width lane == interior width; cover-budget bound); all FOUR control fps byte-identical; existing bandgen suite green (P7/C8 fail-loud cases survive unedited); worklog + cost ledger + commit.
 
-### T2a — New opposition #5: Ambusher (def + one `Concealment` component)
-- Milestone: M1.10 (Wave 1)   Assignee: general-purpose (+ character-animator: greybox tell/placeholder)   BlockedBy: none
-- Spec: `design/M1_10_Tasks/T2a_ambusher.md` (body + §Resolved Decisions; D-RAT-2)
-- Goal: `ambusher.tres` (min_band=3, off by default) + the ONE new `Concealment` component (near-invisibility + faint floor tell + `collision_layer = 0` true pass-through while HIDDEN + SPENT husk), with the pounce FSM = **reused `ChargeLane` verbatim** (HIDDEN→ARMED→POUNCE→EXPOSED ≡ DORMANT→TELEGRAPH→CHARGE→RECOVER), `ProximityTrigger` arm, `TelegraphFSM` tell, `LethalContact` (`kills`-gated **fatal** pounce), `ThrowInteraction` (throw-kill while ARMED/EXPOSED). **One-shot** (host `_spent` stops re-ticking; `re_hide_s` ships dormant). Conceal-LAST bind ordering is load-bearing (ChargeLane adds the group at bind) — pinned by test. `ambusher.tscn` declares `groups=["hazard"]`. NO shared-file edit; gloss rows deferred to the orchestrator's merge commit.
-- Done when: all-off fp unmoved; params↔schema bijection green (dir-scan net, no hard count); `test_ambusher` green (hidden non-lethal + un-hittable + pass-through; arm radius; tell precedes pounce; kill gated; exposed throw-kill; deterministic placement); menu section auto-appears; worklog + cost ledger + commit.
+### U2a — New opposition #7: Lobber "The Mortar" (def + one `MortarCycle` component)
+- Milestone: M1.11 (Wave 1)   Assignee: general-purpose (+ character-animator: marker/placeholder)   BlockedBy: none
+- Spec: `design/M1_11_Tasks/U2a_lobber.md` (body + §Resolved Decisions; D-RAT-3)
+- Goal: `lobber.tres` (**credit_cost 2 · per_room_cap 1 · per_band_cap 5** — amendment 1; min_band=4, off by default) + the ONE new `MortarCycle` component: AIM (`fire_period_s`) → IN-FLIGHT (`arc_time_s`; **marker locked at fire time** — the fairness contract; `lead_factor 0` D-RAT-3) → one-frame IMPACT (**centre-in-radius** distance test, drawn ring == `blast_radius`, `kills`-gated via `LethalContact &"external"` `apply_contact` — the `command_hit` host-position test is wrong for a remote shell) → cycle. **Single shell**; geometry-ignoring (no LOS); body non-lethal, always throw-killable; static. Positional desync + `ctx phase_salt` harness-override mirror (component-internal). Fairness envelope `arc_time > ~0.27 + blast/200` (defaults 0.9 s / 48 px ≈ 0.39 s slack). All-off lever is additive-OR — assert zero *spawns* on shallow bands. NO shared-file edit; gloss rows deferred to the orchestrator merge commit.
+- Done when: all-off fp unmoved; bijection green (dir-scan net, no hard count); `test_lobber` green (marker precedes impact by authored `arc_time`; centre-in-radius kill gated; geometry-ignoring across a wall; period cycle; throw-killable; def < DeckEntry < rc.param_overrides flow; deterministic); menu section auto-appears; worklog + cost ledger + commit.
 
-### T2b — New opposition #6: Burrower "Sinkmaw" (def + one `BurrowCycle` component)
-- Milestone: M1.10 (Wave 1)   Assignee: general-purpose (+ character-animator: greybox decal/placeholder)   BlockedBy: none
-- Spec: `design/M1_10_Tasks/T2b_burrower.md` (body + §Resolved Decisions; D-RAT-3)
-- Goal: `burrower.tres` (min_band=3, off by default) + the ONE new `BurrowCycle` component (BURIED→TELEGRAPH→SURFACED phase timer; per-phase `collision_layer` cycling — cleared to 0 while buried so throws pass through + contact non-lethal; wall-ignoring direct-translate tracking with an `intersect_point` world-mask-2 gate so it NEVER surfaces inside a wall; positional desync salt — `legacy_ctx` only stamps `phase_salt` for spike), reusing `TelegraphFSM`, `LethalContact` (`&"external"`, `kills`-gated), `ThrowInteraction`. **Static pop**, **exact locked-at-telegraph decal**, `kill_radius = 34` (player mask 26 collides with hazard 16), first lethal test on the surfacing frame. NO shared-file edit.
-- Done when: all-off fp unmoved; bijection green; `test_burrower` green (buried throw-pass-through + non-lethal; dodge frame honored — surface-under-player never kills inside the lead; wall-clear surfacing; cycle timing from params; surfacing-frame kill_radius test); menu section auto-appears; worklog + cost ledger + commit.
+### U2b — New opposition #8: Sentry (def + one `LaneWatch` component)
+- Milestone: M1.11 (Wave 1)   Assignee: general-purpose (+ character-animator: lane/bolt placeholder)   BlockedBy: none
+- Spec: `design/M1_11_Tasks/U2b_sentry.md` (body + §Resolved Decisions incl. A1–A4; D-RAT-4)
+- Goal: `sentry.tres` (**credit_cost 2 · per_room_cap 1 · per_band_cap 5** — A4; min_band=4, off by default) + the ONE new `LaneWatch` component: lane **derived** (8 fixed octants, `intersect_ray` vs world, longest-pick fixed tie-break) **on the SECOND tick** (A1 — first-tick latch races the broadphase), latching direction AND effective clear **length** (A2 — strip visual, crossing test, bolt max-travel all use it; dense-cover spawn degrades to a short honest lane); IDLE (lane **always-visible**, D-RAT-4) → WINDUP (authored flash; LOS-gated) → FIRE (component-owned driven bolt + per-frame script-swept `kills`-gated test — the ChargeLane idiom; **wall-blocked, stop-on-first-hit, no pierce**; thrown_item reuse rejected) → COOLDOWN (crossable: `cooldown_s >= (lane_width + 2·PLAYER_R)/200`; defaults 1.2 vs 0.28 bar). **Centre-crossing trigger; permanent throw-disable** (D-RAT-4). Body never contact-lethal. NO shared-file edit.
+- Done when: all-off fp unmoved; bijection green (11 defs, dir-scan); `test_sentry` green (second-tick acquisition rider — await ≥2 physics frames; windup lead honored; bolt kills-gated + wall-stopped + travel capped at `_lane_len_eff`; cooldown-gap bar; lane geometry from params; throw-kill disables; deterministic); menu section auto-appears; worklog + cost ledger + commit.
 
-### Wave 2 — Materialisation  *(T1 alone — sole `main_game.gd` writer through Wave 3)*
+### Wave 2 — Materialisation verify  *(U1 alone — sole `main_game.gd` writer through Wave 2; ledger target 1 line)*
 
-### T1 — Cave materialisation + backend-agnostic sealing + downstream verify
-- Milestone: M1.10 (Wave 2)   Assignee: general-purpose   BlockedBy: T0
-- Spec: `design/M1_10_Tasks/T1_cave_materialisation.md` (body + §Resolved Decisions; D-RAT-7/8)
-- Goal: make a cave playable — per synthetic piece, build a runtime `ZonePiece` host with a generated `Geometry` `TileMapLayer` from `floor_cells` reusing `greybox.tres` (WALL `(1,0)` carries the layer-2 physics polygon the player mask 26 already collides with); T1 writes **FLOOR tiles only** and assigns instances **before** the seal, so the **unedited `SocketSealer` runs verbatim as the single wall-writer** (1-tile shell over darkness, D-RAT-8). Cave-guard the pinned gate to **snap-to-nearest-floor** (D-RAT-7, 3 call sites). Verify DepthGrader anchors (entry spawn `floor_cells[0]`, gate), JunkPlacer, EncounterBuilder placement, camera + player collision; `palette_tint` applies. Socket-band materialisation byte-identical.
-- Done when: a cave-profile dive runs headlessly end-to-end (generate → materialise → junk + gate + spawns on FLOOR); socket-band materialisation byte-identical (fp + `test_rg1_m1*`/hub/routing green); all-off fp unmoved; `test_cave_materialise` M1–M9 green (wall collision closes the space — spawn→gate 2×2-open bar; gate reachable); worklog + cost ledger + commit.
+### U1 — Scatter materialisation ride-through + downstream verify
+- Milestone: M1.11 (Wave 2)   Assignee: general-purpose   BlockedBy: U0
+- Spec: `design/M1_11_Tasks/U1_scatter_materialisation.md` (body + §Resolved Decisions RD-U1-0…8)
+- Goal: prove the scatter band rides the EXISTING synthetic-piece path — audit verdict: the free ride holds everywhere except ONE line: flip the gate-snap guard at `main_game.gd:1076` from denylist `backend != "cave"` to allowlist `== "socket"` (byte-identical on socket/null/cave arms — walked at all 3 helper call sites; without it the scatter pinned gate is a latent softlock). The unedited `SocketSealer` wall-caps arena perimeter + every cover footprint identically (no perimeter concept in the loop; ~210 tiles at defaults). Rewrite the helper docstring + 2 stale call-site comments in the same commit (uncounted). Verify downstream end-to-end: DepthGrader anchors, snapped gate, JunkPlacer, EncounterBuilder, camera/collision, tint.
+- Done when: scatter-profile dive runs headlessly end-to-end; all FOUR control fps byte-identical (arm-walk + fp suite); existing hub/routing/rg1 suites green UNMODIFIED; `test_scatter_materialise` green (M6 strengthened: every floor cell ∈ 2×2-open T, T == floor set, single component — red routes to U0; exhaustive per-cover-cell point-query closure on seed[0], tile-atlas matrix-wide; fp+floor_fp pre/post byte-equal; gate snapped + reachable; junk/encounters on floor); worklog + **the 1-line ledger** + commit.
 
-### Wave 3 — The band as data  *(T3 — the scalability measurement)*
+### Wave 3 — The band as data  *(U3 — the N=3 scalability measurement; ledger target 0)*
 
-### T3 — New band: `band_three.tres` "The Warren" (cave profile + deck + tint)
-- Milestone: M1.10 (Wave 3)   Assignee: game-director-designer (+ environment-artist: tint, general-purpose: glue/tests)   BlockedBy: T0, T1, T2a, T2b
-- Spec: `design/M1_10_Tasks/T3_band_three.md` (body + §Resolved Decisions; D-RAT-5/6)
-- Goal: author The Warren as data — `backend="cave"`, `cave_config_band_three.tres` (56×56 · fill 45 · smooth 4 · wall_threshold 5 · min_region 24 + T0 defaults), `band_depth=3` (→ instability 1.30 → 31-credit budget), deck `[ambusher 6 · burrower 3 · splitter 4 · bomb 1]` = **14 spawns, budget exactly 0** (bomb via `DeckEntry base_count` override; typed def fields can't be overridden), min_band=3 gating, `depth_curve_band_three.tres` (value 1.30→2.5, tier 3→5, **density ~1.0→1.3** — chunked-cave piece-count re-base), **blue-violet `palette_tint`**, **flavors = [] MANDATORY** (validate() fail-louds on cave flavors). Clone T1's 2×2-open certificate onto the authored config.
-- Done when: `band_three` deterministic (same seed → same fp ×2; connectivity green); deck spawns via the builder within caps at 31 credits; `band_greybox` + `band_two` fps untouched (absolute golden pins for band_two — no direct-generator path through its flavors); headless profile-load contract test green (C0–C6 + both socket controls); worklog + **headline cost ledger** + commit.
+### U3 — New band: `band_four.tres` "The Far Field" (scatter profile + deck + tint)
+- Milestone: M1.11 (Wave 3)   Assignee: game-director-designer (+ environment-artist: tint, general-purpose: glue/tests)   BlockedBy: U0, U1, U2a, U2b
+- Spec: `design/M1_11_Tasks/U3_band_four.md` (body + §Resolved Decisions; D-RAT-5/6)
+- Goal: author The Far Field as data — `backend="scatter"`, `scatter_config_band_four.tres` (RD-4 re-based on U0's canonical schema: **64×64 · cover_density_pct 8 · min_cover_spacing 4 · border_margin 2 · weights 4/1/1/1 · edge_cover_bias_pct 60 · clear_lane_width 3 · chunk_cells 8 · cell 16** — sparse-deadly, chunks_x 8 passes the clamp), `band_depth=4` (→ instability 1.45 → **34-credit** budget), deck pin **`lobber 5 / sentry 5 / charger 4 / bomb 6 = 20 spawns, budget exactly 0`** (D-RAT-6; bombs = remainder sponge; supporting draw = charger — its lanes come alive in the open), `depth_curve_band_four.tres` (value 1.45→**2.9**, tier →**5**, density **1.0→1.2** on ~64 junk-bearing pieces), **cold-indigo `palette_tint Color(0.42, 0.46, 0.62)`** (D-RAT-5), **flavors = [] MANDATORY** (scatter validate() fail-louds). Re-assert `max_depth >= 4` + 2×2 throat + S11(a) lane bar on the authored config.
+- Done when: `band_four` deterministic (same seed → same fp ×2; connectivity + lane bar green); deck spawns the pinned 5/5/4/6 outcome at 34 credits spend-to-0; ALL FOUR control fps untouched (absolute golden pins); headless profile-load contract test green (re-based C3 cover-budget bound; C6 = the new pin; C11 row-run == 62); worklog + **headline 0-line cost ledger** + commit.
 
 ### Wave 4 — Reachability
 
-### T4 — Third hub portal + `band_three` routing
-- Milestone: M1.10 (Wave 4)   Assignee: general-purpose   BlockedBy: T3
-- Spec: `design/M1_10_Tasks/T4_hub_portal_routing.md` (body + §Resolved Decisions; D-RAT-5/9)
-- Goal: third `departure_portal.tscn` instance at **(110,-20)** (forward-staggered second rank; `interactable_id=&"portal_band_three"`, route key `&"band_three"`, **cave-teal glow `Color(0.30,0.90,0.65)`**, prompt **"Dive — The Warren"**); one-line `BAND_ROUTES` add (`&"band_three"` → `band_three`); both existing portals byte-identical; `band_id == &"band_three"` on run rows (generic stamp — verify). Always present; no save change.
-- Done when: both existing portal paths byte-identical (fp + `test_hub_contract` H5/H6 + C1–C6 unmodified); new-portal contract check (H7/C7 — id, prompt, routes to band_three with its fp); `band_id` verified; smoke green; worklog + cost ledger + commit.
+### U4 — Fourth hub portal + `band_four` routing
+- Milestone: M1.11 (Wave 4)   Assignee: general-purpose   BlockedBy: U3
+- Spec: `design/M1_11_Tasks/U4_hub_portal_routing.md` (body + §Resolved Decisions; D-RAT-5/8)
+- Goal: fourth `departure_portal.tscn` instance at the reserved mirror slot **(-110, -20)** (`interactable_id=&"portal_band_four"`, route key `&"band_four"`, **saturated-indigo glow `Color(0.15, 0.25, 1.0)`** (gate wash ≈ `(0.55, 0.62, 1.0)`), prompt **"Dive — The Far Field"**); one-line `BAND_ROUTES` add (`&"band_four"` → `band_four`); all three existing portals byte-identical; `band_id == &"band_four"` on run rows (generic stamp — verify). **Hub contract pins plaza-FULL: exact set-equality of the 5 interactable ids** (D-RAT-8 — band 5 deliberately starts red; comment names the band-select forcing function). Always present; no save change.
+- Done when: three existing portal paths byte-identical (fp + hub contract unmodified cases); new-portal contract check (H8 set-equality; routes to band_four with its fp; wipe-isolated); `band_id` verified; smoke + routing green; worklog + cost ledger (≈1 line + scene block) + commit.
 
 ### Wave 5 — Re-gate  *(standing playtest-gate steps)*
 
-### TG1 — M1.10 playtest build + verify + changelog + itch publish
-- Milestone: M1.10 (Wave 5)   Assignee: qa-playtest-coordinator   BlockedBy: T0–T4 all Done
-- Spec: breakdown §TG1; template `design/M1_9_Tasks/SG1_playtest_build.md`
-- Goal: full verify matrix (fp `e943ac9c8bc1` · 91-knob + 9-def bijection · `band_greybox`+`band_two` fps · cave determinism + connectivity · all THREE portals · preset parity · suite incl. the T2b binding riders — kill_radius-34 surfacing-frame + wall-clear surfacing tests); `changelog.txt` M1.9→M1.10 feature delta (third band + cave generator + two oppositions); publish to itch (`BUTLER=/mnt/c/wsl-libraries/butler/butler bash Game/tools/push_itch.sh`, human/network-gated).
+### UG1 — M1.11 playtest build + verify + changelog + itch publish
+- Milestone: M1.11 (Wave 5)   Assignee: qa-playtest-coordinator   BlockedBy: U0–U4 all Done
+- Spec: breakdown §UG1; template `design/M1_10_Tasks/TG1_playtest_build.md`
+- Goal: full verify matrix (fp `e943ac9c8bc1` · knob + 11-def bijection · all FOUR band fps · scatter determinism + connectivity + lane bar · all FOUR portals route · preset parity · suite incl. the U2b A1 second-tick rider + U1's seed[0] closure matrix); `changelog.txt` M1.10→M1.11 feature delta (fourth band + open-field generator + two ranged oppositions); publish to itch (`BUTLER=/mnt/c/wsl-libraries/butler/butler bash Game/tools/push_itch.sh`, human/network-gated). **UG1 Director-eyeball rider (amendment 12): BOTH transit lanes (spawn→portal-2 AND spawn→shop) + the four-glow plaza read.**
 - Done when: verify matrix green; changelog committed; build live on `qusto/the-far-yard:html5`.
+
+### UG2 — M1.11 telemetry / balance analysis
+- Milestone: M1.11 (Wave 5)   Assignee: qa-playtest-coordinator   BlockedBy: UG1 + Director playtest
+- Goal: four-band comparison off `band_id` (band-total value); Lobber marker + Sentry windup fairness (deaths-per-first-encounter vs Ambusher/Burrower/Wrecker baselines); open field tense-vs-empty (time-to-gate + loiter-vs-sprint vs bands 2/3); lane-as-highway feel (U0 RD-15); sentry throw-disable piñata watch (D-RAT-4); exposed-center loot value watch (M2 candidate); 1.45 budget sanity (5/5/4/6 deterministic — drift = cap/refusal); web perf with cover-collision geometry; `debug_dirty` filtered.
+- Done when: analysis doc assembled for UG3.
+
+### UG3 — M1.11 re-gate verdict (Director decides)
+- Milestone: M1.11 (Wave 5)   Assignee: qa (assembles) → Director (decides)   BlockedBy: UG2
+- Goal: go/iterate/pivot in `design/M1_11_Tasks/G4_findings_M1.11.md`. Watch-items: **the N=3 cost-ledger trend** (backend #3 + oppositions #7/#8 vs M1.10's price — is "content = data" compounding?); open-field fun read; do Lobber/Sentry enter other decks; **plaza FULL — band 5 forces the band-select surface** (design task next version?); pack-hunters (deferred coordination axis) next?; extract-vs-duplicate chunk machinery on a 4th backend (U0 RD-14); four bands ≈ the GDD's "bands 1–4 distinct biomes" — is M1's band spread complete?
+- Done when: recorded verdict.
+
+---
+
+## M1.10 — Second Generation Backend + Cave Band + Low-Sightline Oppositions (build DONE + TG1 published; TG2/TG3 Director-pending, non-blocking)
+
+**Build waves T0–T4 all DONE + integrated; TG1 DONE + published** (`m1-20260706-d04bd13`, incl. the
+FBM-A1 Ambusher stalker rework + FBM-A2 Director tuning). Breakdown + amendments + ratifications
+D-RAT-1…9: `design/M1_10_Tasks/M1.10_Breakdown.md`. **Open (Director-gated, non-blocking M1.11):**
+TG2 (telemetry/balance) + TG3 verdict in `design/M1_10_Tasks/G4_findings_M1.10.md` — await the
+Director's playtest of the published build. One Wave-5 test-fixture deviation awaits disposition at
+the TG3 close-out (rec Reviewed). Build-task specs T0–T4 + TG1 archived → `TASKS_COMPLETED.md` §M1.10.
 
 ### TG2 — M1.10 telemetry / balance analysis
 - Milestone: M1.10 (Wave 5)   Assignee: qa-playtest-coordinator   BlockedBy: TG1 + Director playtest

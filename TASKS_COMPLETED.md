@@ -390,3 +390,41 @@ Art-only iteration: shed the Hub's greybox skin (Layout-A vertical spine), loop 
 - **H4 (2026-07-02, orchestrator + PixelLab):** 45° isometric re-dress — 48 iso tiles + `hub_ground_iso.tres` (DIAMOND_DOWN 64×32) + RNG-free zone painter (963 cells); shop/portal/colliders kept; H2 top-down kept in-repo as revert path. (First attempt falsely reported done — caught by Director, rebuilt + pck-verified; see `verify-before-reporting-done` memory.)
 - **HG1 (`9d613ed`):** verify + changelog + published `qusto/the-far-yard:html5` (`m1-20260629-9d613ed` → republished `m1-20260701-2457bc2`, `m1-20260702-3faeed0`).
 - **Open (not archived):** H3 (street-threshold prop, Director-gated) · HG2/HG3 verdict (`design/M1_8_Tasks/G4_findings_M1.8.md`) · 13 deviations awaiting Director disposition.
+
+---
+
+## M1.9 — Scalable Opposition + Band Systems — ✓ BUILD DONE 2026-07-02..04; SG1 published (re-gate SG2/SG3 Director-pending)
+
+Build waves S0–S9 + SG1 all Done + integrated on `main` (2026-07-02/03); full per-task proof (agents,
+merge commits, test matrices) in the `worklogs/2026-07-0{2,3}-S*-*.md` set and `STATUS_ARCHIVE.md`
+§"M1.9 build waves". Specs: `design/M1_9_Tasks/S*_*.md` + `M1.9_Breakdown.md`. Highlights: SpawnService +
+OppositionDef data layer (S0), BandProfile/BandPipeline + band_greybox (S1), component extraction +
+param_schema (S2), EncounterBuilder + levers (S3), generated debug-menu sections @ 91 knobs (S4), flavor
+stages (S5), Charger "The Wrecker" (S6a), Splitter (S6b), band_two "The Sump" (S7), verify/regression
+waves (S8/S9). **SG1** published `qusto/the-far-yard:html5 @ m1-20260704-55ca78f` (incl. FBM19/FBM19b
+feedback fixes). *(This section backfills a dangling "archived → §M1.9" pointer discovered 2026-07-06.)*
+- **Open (not archived):** SG2 (telemetry/balance) · SG3 verdict (`design/M1_9_Tasks/G4_findings_M1.9.md`).
+
+---
+
+## M1.10 — Second Generation Backend + Cave Band + Low-Sightline Oppositions — ✓ BUILD DONE 2026-07-05; TG1 published (re-gate TG2/TG3 Director-pending)
+
+Breakdown + D-RAT-1…9: `design/M1_10_Tasks/M1.10_Breakdown.md`. Full proof: `STATUS_ARCHIVE.md` +
+`worklogs/2026-07-05-T*-*.md`. Headline: **band 3 = 0 production-code lines; portal 3 = 1 line** —
+the "content = data" thesis proven on a second, CA-generated backend.
+- **T0 (`cfef9f7`):** CaveBackend + `CaveBandConfig` + pipeline dispatch — CA caverns, chunk partition
+  (content-hashed `cave_` ids), deterministic carve, 2×2 throat cert; ~475-line ledger, 0 downstream lines.
+- **T2a (`3d17bf0`):** Ambusher — def + `Concealment` (39 lines); later reworked to the hide-pursue-pounce
+  stalker (FBM-A1 `8e3a888`) + Director tuning (FBM-A2 `d04bd13`: pounce 250/900, exposed 0.6 s, stalk 232).
+- **T2b (`26ef5e9`):** Burrower "Sinkmaw" — def + `BurrowCycle` (212-line ledger); kill_radius 34,
+  wall-clear surfacing, positional desync.
+- **T1 (`8da0b1f`):** cave materialisation — `_build_synthetic_piece` runtime greybox hosts; unedited
+  `SocketSealer` = single wall-writer both backends; snapped gate; 39-line ledger, 0 socket-path changes.
+- **T3 (`025dfa2`):** `band_three.tres` "The Warren" — cave band as pure data (3 `.tres`, 77 lines);
+  deck 6/3/4/1 = 14 @ 31 credits spend-to-0; **0 production-code lines**.
+- **T4 (`b9e3944`):** third hub portal (110,-20) cave-teal + `BAND_ROUTES` row — **exactly 1 bespoke line**.
+- **TG1 (2026-07-05):** verify matrix + changelog + published `qusto/the-far-yard:html5 @
+  m1-20260705-3c9644e` (build #1775187) → republished `m1-20260706-8e3a888` (#1775586) →
+  `m1-20260706-d04bd13` (#1775901, FBM-A2 tuning).
+- **Open (not archived):** TG2 (telemetry) · TG3 verdict (`design/M1_10_Tasks/G4_findings_M1.10.md`) ·
+  one Wave-5 test-fixture deviation (rec Reviewed) at the TG3 close-out.

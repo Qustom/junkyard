@@ -438,3 +438,119 @@ Specs also in `TASKS_COMPLETED.md` §M1.9; worklogs under `worklogs/`. SG1 publi
 | S1 — BandProfile + BandPipeline + `band_greybox.tres` | general-purpose | `9a8c6fb` | Parity byte-match 9 seeds, purely additive. Deviations: none. |
 
 ---
+
+---
+
+# (archived 2026-07-06, at M1.11 open) M1.10 build waves, close-outs + superseded next-action
+
+> Moved out of `STATUS.md` when M1.11's build phase opened. M1.10's build was complete +
+> published; only the Director playtest → TG2 → TG3 remained (pointer stays in `STATUS.md`).
+
+## (archived) M1.10 design-locked note
+
+> **M1.10 design LOCKED (2026-07-05):** breakdown + 6 per-task designs each with a BINDING
+> `Resolved Decisions (Phase 3)` section; 13 cross-task amendments + Director ratifications
+> **D-RAT-1…9** folded into `design/M1_10_Tasks/M1.10_Breakdown.md`. Headlines: Ambusher +
+> Burrower "Sinkmaw" (band-3-exclusive, fatal `kills`-gated); band 3 = **"The Warren"**
+> (cave/CA backend, blue-violet tint, cave-teal portal glow, deck 6/3/4/1 @ 1.30/31-credit);
+> cave gate snaps-to-floor; cave walls = 1-tile sealer shell; portal 3 @ (110,-20). TASKS.md
+> §M1.10 + board items T0–TG3 wired (T0/T2a/T2b In Progress).
+
+## (archived) FBM19 / FBM19b feedback-fix notes (M1.9 re-test line)
+
+> **✓ FBM19 feedback fixes LANDED + REPUBLISHED (2026-07-03/04, build `m1-20260704-72fd565`).** Director's 3 playtest
+> reports fixed on `main`@`5dec90c`: **FB1** split reliability — shards now bypass the BUG7 entry-safe refusal + per-room
+> cap via explicit ctx escapes (`ignore_entry_safety` new on SpawnService; per_band 8 + group 48 ceilings unchanged);
+> **FB2** deck lane is def-major with J2-style even-spread over eligible pieces — charger/splitter now reach the deepest
+> third (test-proven); **FB3** splitter `aggro_radius=160` latch param (0=legacy; child 0; Oppositions-tab tunable, gloss
+> added). Full matrix green; changelog descriptions updated in place. Worklog `…-FBM19-general-purpose.md`. Deviations: none.
+
+> **✓ FBM19b LANDED + REPUBLISHED (2026-07-04, build `m1-20260704-55ca78f`).** Oppositions tab now surfaces
+> deck-spawned hazards: charger/splitter chips read "IN DECK: band_two · n tuned" (tooltip names the band; OFF only
+> for truly nowhere-spawning defs), their sections open PRE-EXPANDED, and a new end-to-end case stages the Director's
+> 4 knobs (aggro_range/charge_speed/aggro_radius/move_speed) through the menu path and proves band_two spawns receive
+> them on top of the D-RAT-2 deck layer. 91/91 + fps intact. Worklog `…-FBM19b-general-purpose.md`. Deviations: none.
+> Director-flag (worklog): section bodies stay dimmed for not-enabled deck defs (redundant-cue rule) — say the word to undim.
+
+## (archived) M1.9 SG1 Director-playtest checklist (superseded by the M1.10 build `d04bd13` — SG2/SG3 still pending)
+
+> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260704-55ca78f`** (FBM19b tab-surfacing build; supersedes `72fd565`/`8412732`). Re-check the 3 fixed items: splitter always splits on throw-kill (even at the band entrance / two in one room) · Wrecker+Splitter present deep into The Sump · splitter lurks until ~on-screen range then latches (tune `aggro_radius` in the Oppositions tab if 160 feels wrong).
+> Checklist (full version: `SG1_playtest_build.md` §5): both portals from the hub · band 1 = control feel
+> (unchanged M1.8) · **The Sump reads as a band apart** (branchy/flooded/vault/sepia tint/denser opposition) ·
+> **The Wrecker**: bait → dodge → punish; throws MISS mid-dash (intended); wall-crash = longer stun ·
+> **Splitter**: throw-kill splits into 2 (children terminal); non-throw kill doesn't · P-menu **Oppositions tab**:
+> tune + respawn (marks the run debug-dirty) · **Export telemetry** (in-game button) when done.
+> Then **SG2** (qa telemetry/balance analysis) → **SG3** verdict (go/iterate/pivot) in `G4_findings_M1.9.md`.
+> Watch-items for SG3: content=data proof cost (host shell, LethalContact seam) · promote charger/splitter to band 1? ·
+> legacy-signal retirement · ceiling numeric merge · CaveBackend/ScatterBackend next? · hub iso prop re-dress.
+
+## (archived) M1.10 Wave 1 — Done + integrated on `main` (2026-07-05)
+| Task | Agent(s) | Merged | Proof |
+|---|---|---|---|
+| T0 — CaveBackend + `CaveBandConfig` + pipeline dispatch | general-purpose | `cfef9f7` (br `…a8c1cc4`) | `test_cave_backend` OK (C1–C10, 9 seeds; sample seed 12345 → 49 pieces, max_depth 12, cave fp `d984fd8913bf`); `test_band_pipeline_parity` + `test_bandgen_determinism` OK, socket-path fp **`e943ac9c8bc1`** byte-identical (greybox + band_two); ~475-line cost ledger, **0 new downstream lines**. Worklog `…-T0-general-purpose.md`. **3 deviations (all rec Reviewed).** |
+| T2a — Ambusher (def + `Concealment` component) | general-purpose (+ character-animator) | `3d17bf0` (br `…a19da54`) | `test_ambusher` OK (all cases: HIDDEN pass-through layer 0, arm/tell/pounce, `kills`-gate + BUG6 once, EXPOSED throw-kill, one-shot); all-off fp unmoved; 39-line `Concealment`, **0 shared-file edits**. Worklog `…-T2a-general-purpose.md`. Deviations: none. |
+| T2b — Burrower "Sinkmaw" (def + `BurrowCycle` component) | general-purpose (+ character-animator) | `26ef5e9` (br `…a6048d5`) | `test_burrower` OK (11 cases: buried pass-through, dodge frame, wall-clear surface, `kill_radius=34` surfacing-frame kill, positional desync); all-off fp unmoved; 212-line ledger, **0 shared-file edits**. Worklog `…-T2b-general-purpose.md`. Deviations: none. |
+
+> **Integration done (`57f2a81`):** three worktree branches merged (file-disjoint, verified); both
+> T2a (12) + T2b (9) `CFG_FIELD_*` gloss rows applied to `config_strings.csv` in one commit (`57f2a81`);
+> the def schemas reference those exact keys (verified). Integrated verify ALL GREEN: import · cave ·
+> parity · bandgen · ambusher · burrower · **9-def bijection** · socket-path fp `e943ac9c8bc1` · smoke.
+> Board T0/T2a/T2b = Done.
+
+> **✓ Wave-1 close-out swept (2026-07-05):** the 3 T0 deviations were Director-**Reviewed** and archived
+> → `DESIGN_DEVIATIONS_HISTORY.md` §"M1.10 Wave-1 close-out". T2a/T2b: none.
+
+## (archived) M1.10 Wave 2 — Done + integrated on `main` (2026-07-05)
+| Task | Agent(s) | Merged | Proof |
+|---|---|---|---|
+| T1 — Cave materialisation + backend-agnostic sealing | general-purpose | `8da0b1f` (br `…a8674f3`) | `test_cave_materialise` M1–M9 OK (closure · collision truth via point query · fp+floor_fp pre/post byte-equal · anchors max_depth≥4 · **snapped gate** on floor + reachable · 2×2 throat cert · junk/encounter land on floor at depth>0 · tint; socket control = **0 synthetic hosts**); socket byte-identical (fp `e943ac9c8bc1`; hub/routing/rg1 suites green UNMODIFIED); **39-line `main_game.gd` ledger, 0 socket-path files changed** (SocketSealer now the single wall-writer for both backends). Worklog `…-T1-general-purpose.md`. **Deviations: none.** |
+
+> **✓ Wave-2 close-out (2026-07-05): 0 deviations — clean wave, no Director gate.** Waves 1+2 = the full
+> cave stack (backend → materialisation → 2 oppositions), all controls byte-identical. **Cost so far:
+> ~765 bespoke lines for a whole new generation backend + 2 oppositions, 0 new downstream lines.**
+
+## (archived) M1.10 Wave 3 — Done + integrated on `main` (2026-07-05)
+| Task | Agent(s) | Merged | Proof |
+|---|---|---|---|
+| T3 — `band_three.tres` "The Warren" (cave band as data) | general-purpose (game-director-designer/environment-artist scope folded in) | `025dfa2` (br `…ac7af44`) | `test_band_three_profile` OK (loads as cave band, deterministic + connected + reaches depth axis 9 seeds; **band_greybox AND band_two byte-identical** — 9 absolute golden fp pins; deck spawns the D-RAT-6 outcome **ambusher 6 / burrower 3 / splitter 4 / bomb 1 = 14** at the 31-credit budget, spends to 0); `max_depth≥4` + 2×2 throat re-asserted on the authored config; all-off fp `e943ac9c8bc1` unmoved; import + smoke green. Files: 3 new `.tres` (77 lines) + 1 test (528). Worklog `…-T3-general-purpose.md`. **Deviations: none.** |
+
+> **✓ Wave-3 close-out (2026-07-05): 0 deviations — clean wave, no Director gate. HEADLINE COST RESULT:
+> band 3 = 0 production-code lines** (`git diff --stat` empty; not one existing `.gd`/`.tres` touched) —
+> **cheaper than band_two** (M1.9 S7 cost 1 glue line + a schema field). The tint field, cave dispatch,
+> and `DeckEntry` lever all shipped earlier; a whole new differently-generated band is now pure `.tres`.
+> The "content = data" thesis is proven on evidence for a second, CA-generated backend — the TG3 headline.
+
+## (archived) M1.10 Wave 4 — Done + integrated on `main` (2026-07-05)
+| Task | Agent(s) | Merged | Proof |
+|---|---|---|---|
+| T4 — Third hub portal + `band_three` routing | general-purpose | `b9e3944` (br `…a47bf5b`) | `test_hub_contract` OK (4 interactables; portal 1 `&"near"`/WHITE + portal 2 `&"band_two"`/ember UNCHANGED, portal 3 `&"band_three"`/cave-teal (110,-20)); `test_band_routing` OK (all 3 routes distinct fp, `band_id == route key` for all, wipe-isolated); band_greybox+band_two byte-identical; all-off fp `e943ac9c8bc1` unmoved; no save change. **Cost ledger: exactly 1 bespoke line** (the `BAND_ROUTES` row) + 9-line scene block + tests. Worklog `…-T4-general-purpose.md`. **Deviations: none.** |
+
+> **✓ Wave-4 close-out (2026-07-05): 0 deviations. M1.10 BUILD COMPLETE (T0–T4).** Total marginal cost of
+> the whole milestone: CaveBackend ~475 + materialisation 39 + Ambusher ~130 + Burrower 212 + band 3 **0**
+> + portal 3 **1** = a second generation backend, two oppositions, a full new band, and its portal, with
+> **0 new downstream lines** and every control byte-identical throughout. TG1 next assembles the build.
+>
+> **TG1 surfaced (Director eyeball at the playtest, not blockers):** plaza-forward portal-3 composition +
+> the spawn→portal-2 transit prompt (one-line nudge available); cave-teal renders as deep cyan-blue
+> through the glow art's violet multiply (a brighter read needs a Director-gated retone; H7 pins the
+> property so a retone won't break the test); plaza has ONE safe portal slot left → band 5 forces a
+> band-select surface (TG3 watch-item).
+
+> **M1.9 build-wave Done tables** (S0–S9, all merged 2026-07-02/03) archived → `STATUS_ARCHIVE.md`
+> §"M1.9 build waves". SG2/SG3 remain the only open M1.9 surface.
+
+## (archived) ▶ prior next-action (M1.10 — superseded by M1.11's)
+
+> HOLD for the Director playtest of `m1-20260705-3c9644e`. On the Director's return (telemetry +
+> felt-loop read) → dispatch TG2 (qa telemetry/balance analysis) → assemble TG3 verdict. Nothing to
+> build; M1.10 is build-complete + published.
+>
+> **M1.10 = the second architectural axis** (Director-directed 2026-07-04; design LOCKED 2026-07-05):
+> a **CaveBackend** (cellular-automata caverns — no pieces/sockets) behind the same `BandPipeline`, proven by
+> **band 3 "The Warren"** + two low-sightline oppositions (**Ambusher** + **Burrower "Sinkmaw"**) behind a third
+> hub portal. Every build worklog carries a **cost ledger** (bespoke lines beyond the promised backend/component
+> = TG3's scalability evidence). Breakdown + 13 cross-task amendments + ratifications **D-RAT-1…9**:
+> `design/M1_10_Tasks/M1.10_Breakdown.md`. Task queue + DoD: `TASKS.md` §M1.10; board items T0–TG3 created.
+> **✓ Wave 1 DISPATCHED → all waves landed (see the archived wave tables above).**
+> **✓ M1.9 build DONE + SG1 published** (`m1-20260704-55ca78f`); SG2/SG3 Director-pending, non-blocking.
+> **✓ M1.8 CLOSED (2026-07-02).**
