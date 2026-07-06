@@ -25,7 +25,24 @@ See `CLAUDE.md` → "The orchestrator loop".
 > lines**. FOUR byte-identical controls (all-off fp `e943ac9c8bc1` + greybox/two/three fps).
 > TASKS.md §M1.11 + board items U0–UG3 wired (U0/U2a/U2b In Progress).
 
-**Last updated:** 2026-07-06 (M1.11 Phases 0–4 complete: breakdown `3d4c105` → 6 designs `0fed2f6` → Phase-3 resolutions `2816bdd`+`60ef9b1` → amendments+DR `8a21acb` → D-RAT fold + wire-up. Also backfilled a dangling `TASKS_COMPLETED.md` §M1.9 pointer discovered during the archive sweep.)
+**Last updated:** 2026-07-06 (M1.11 Wave 1 integrated + verified; close-out sweep presented to the Director — 4 U0 deviations, all rec Reviewed. Wave 2 (U1) holds for the dispositions.)
+
+## M1.11 Wave 1 — Done + integrated on `main` (2026-07-06)
+| Task | Agent(s) | Merged | Proof |
+|---|---|---|---|
+| U0 — ScatterBackend + `ScatterBandConfig` + pipeline dispatch | general-purpose | `bd24204` (br feature `bbed6fb` + RD-16 `d2a8a34`) | `test_scatter_backend` S1–S11 OK (9 seeds; sample 12345 → 35 pieces, max_depth 9, fp `44a9a9b3756f`; S11(b) calibrated 90/75 floors vs 99/95 measured); ALL FOUR controls byte-identical (all-off `e943ac9c8bc1` · greybox · band_two · band_three; cave fp `d984fd8913bf` unchanged); P7/C8 fail-louds survive; **ledger 327 lines vs the cave's ~466 — backend #3 ~30% cheaper (the N=3 headline)**; RD-12 sanity of U3's 64×64 config recorded. Worklog `…-U0-general-purpose.md`. **4 deviations (all rec Reviewed).** |
+| U2a — Lobber "The Mortar" (def + `MortarCycle`) | general-purpose (animator scope folded) | `7cbe50f` (br `364ffea`) | `test_lobber` OK (12 cases: locked marker + arc_time dodge; centre-in-radius kills-gated BUG6-once; geometry-ignoring; throw-kill stops the rain; additive-OR lever = zero spawns bands 1–3; def<DeckEntry<rc; cap 5/min_band 4 enforced; positional desync + ctx override; RNG-free); all-off fp pinned; card `2/1/5`. Ledger: component ~110 eff. lines, **0 shared-file edits**. Worklog `…-U2a-general-purpose.md`. Deviations: none. |
+| U2b — Sentry (def + `LaneWatch`) | general-purpose (animator scope folded) | `4ff5c49` (br `dc1c124`) | `test_sentry` OK (12 cases: A1 second-tick lane + A2 latched `_lane_len_eff` + short-lane honesty; windup fairness — zero pre-flash contact; wall stops bolt + LOS suppression; cooldown bar 1.2 ≥ 0.28; permanent throw-disable; body never lethal; cap 5/min_band 4; RNG-free); all-off fp pinned; card `2/1/5`. Ledger: component ~191 code lines (over ~120–150 prediction — the A1/A2 hardening, itemised), **0 shared-file edits**. Worklog `…-U2b-general-purpose.md`. Deviations: none. |
+
+> **Integration (`fb3435d`):** three file-disjoint worktree branches merged (topology verified); both
+> defs' `CFG_FIELD_*` gloss rows (7 lobber + 11 sentry) applied in ONE commit (amendment-6 protocol).
+> Integrated verify ALL GREEN: import · scatter · lobber · sentry · **11-def bijection** · def-menu
+> coverage · config 91/91 · parity fp `e943ac9c8bc1` · determinism · cave · band_three profile (greybox
+> + band_two golden pins) · cave materialise · routing · hub contract · smoke. Board U0/U2a/U2b = Done.
+>
+> **▶ Wave-1 close-out sweep PRESENTED (2026-07-06):** 4 U0 deviations in `design/DESIGN_DEVIATIONS.md`
+> (entry-anchor lane tie-break · no-carve election · S10 strong form · RD-16 comment edits — all rec
+> **Reviewed**); U2a/U2b none. **Wave 2 (U1) dispatches after the Director dispositions.**
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
