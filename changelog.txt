@@ -30,12 +30,16 @@ A THIRD DIVE — "THE WARREN" (new)
 
 TWO NEW HAZARDS — Warren-only (new)
 -----------------------------------
-* NEW — The Ambusher. A trap that hides IN THE FLOOR — near-invisible, just a faint tell
-  where it's buried. It waits. Loot something near it and it ARMS (the tell flashes), then
-  springs up in one fast lunge. The lunge is lethal, but the tell gives you a fair window
-  to read it and step clear before it commits — greed near a hidden Ambusher is the trap.
-  It's a one-shot: once it springs, it's spent. In the cave's bad sightlines you often
-  don't see it until you're already leaning in for the loot.
+* NEW — The Ambusher. A predator that hides IN THE FLOOR — near-invisible, just a faint
+  smudge where it's buried. It waits. Loot something near it and it ARMS (a tell flashes
+  up), then springs in one fast, lethal lunge at where you stood — the tell is your fair
+  window to read it and step clear. But it doesn't stop after one hit: the moment it has
+  pounced it becomes a STALKER. It vanishes back into the floor — unhittable again, only
+  the smudge tracking across the ground to warn you — and hunts you, closing the gap while
+  hidden, then springing again, and again. You can only hurt it in the instant it's
+  exposed: bait a pounce, then throw junk into it during the recovery. Greed near a hidden
+  Ambusher is the trap; ignoring one that's already sprung is the second. In the cave's
+  bad sightlines you often don't see the first spring coming at all.
 * NEW — The Burrower ("Sinkmaw"). A tunneling area-denier. It travels UNDERGROUND — you
   can't hit it and it can't hit you while it's buried — following you as a decal that
   tracks along the floor (it moves slow enough to outwalk, and it crosses under walls). On

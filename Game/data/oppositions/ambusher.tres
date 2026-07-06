@@ -25,9 +25,10 @@ params = {
 "lunge_dist": 140.0,
 "lunge_speed": 600.0,
 "lunge_width": 28.0,
-"re_hide_s": 0.0,
+"re_hide_s": 0.6,
 "tell_alpha": 0.28,
-"tell_lead_s": 0.45
+"tell_lead_s": 0.45,
+"track_speed": 130.0
 }
 param_schema = Array[Dictionary]([{
 "default": 1,
@@ -101,10 +102,17 @@ param_schema = Array[Dictionary]([{
 "min": 0.0,
 "type": "float"
 }, {
-"default": 0.0,
+"default": 0.6,
 "gloss": "CFG_FIELD_AMBUSHER_RE_HIDE_S",
 "key": "re_hide_s",
 "max": 10.0,
+"min": 0.0,
+"type": "float"
+}, {
+"default": 130.0,
+"gloss": "CFG_FIELD_AMBUSHER_TRACK_SPEED",
+"key": "track_speed",
+"max": 300.0,
 "min": 0.0,
 "type": "float"
 }, {

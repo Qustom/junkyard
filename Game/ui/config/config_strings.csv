@@ -194,7 +194,8 @@ CFG_FIELD_AMBUSHER_EXPOSED_WINDOW_S,Exposed (s) after the pounce — the throw-p
 CFG_FIELD_AMBUSHER_LUNGE_WIDTH,Lunge lane width (px) — the swept lethal corridor
 CFG_FIELD_AMBUSHER_CONCEALED_ALPHA,Body visibility at rest (0 = invisible; the floor tell carries the read)
 CFG_FIELD_AMBUSHER_TELL_ALPHA,Floor-tell decal visibility while hidden (the "read the room" affordance)
-CFG_FIELD_AMBUSHER_RE_HIDE_S,Re-hide delay (s) — 0 = one-shot (spent after the pounce); >0 = re-arm after this delay
+CFG_FIELD_AMBUSHER_RE_HIDE_S,Inter-pounce pause (s) — the breath after it re-hides before the stalker can spring again
+CFG_FIELD_AMBUSHER_TRACK_SPEED,Stalk speed (px/s) — how fast it pursues you while hidden after the first pounce
 CFG_FIELD_AMBUSHER_KILLS,Lethal pounce kills (off = harmless contact for sweeps)
 CFG_FIELD_BURROWER_BASE_COUNT,Base burrowers per band (spawn-card count before the depth ramp)
 CFG_FIELD_BURROWER_COUNT_PER_DEPTH,Extra burrowers per within-band depth (spawn-card ramp)
