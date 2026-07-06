@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.10 (FBM — Director playtest-feedback fix)
 - **Branch:** worktree-agent-a9eeb9f02b8208f38
-- **Commit:** 6d10683379249d7da704a2523646a20b1ebf626f
+- **Commit:** 210ee9e7fcc59ab21217fe6c656d3d1ed2dcdd18 (feature)
 
 ## What changed
 Reworked the M1.10 Ambusher ("The Lurker") from a one-shot trap into a **hide-pursue-pounce
