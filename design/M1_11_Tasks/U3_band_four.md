@@ -387,3 +387,219 @@ Sharpened to one-line decisions with a recommendation. None gate the build's *me
 ---
 
 *Spec authored by game-director-designer for M1.11 U3. Design + data-spec only — no game code; the `.tres` values here are authored during U3's build. The contract test is a retargeted clone of `test_band_three_profile.gd`. Coordination seams (OQ5 scatter-config schema, OQ7 native costs, OQ10 scatter-validate) are flagged to U0/U2a/U2b so U3's marginal cost stays at the predicted zero production lines — the N=3 headline. Deviations go to `DESIGN_DEVIATIONS.md` for the Wave-3 close-out sweep. OQ1/OQ2/OQ4/OQ8 need the Director; OQ3/OQ5/OQ6/OQ7/OQ9/OQ10 are fresh-eyes/coordination-resolvable.*
+
+---
+
+## Resolved Decisions (Phase 3) — BINDING
+
+> Fresh-eyes resolution, 2026-07-06 (resolver ≠ Phase-2 author), per the four-phase authoring
+> process. Every claim below was re-verified against the working tree at resolution time:
+> `encounter_builder.gd` (`instability` `:64-65`, budget `:299` = `int(floor(24·instability))`,
+> `min_band` filter `:302`, entry-piece exclusion `:313-314`, per-piece demand `:330-334`,
+> `n_plan = mini(demand, budget / credit_cost, per_band_cap)` with GDScript **integer** division
+> `:336-340`, spend-stop `:355-356` — the def loop `break`s at `budget <= 0` and otherwise simply
+> ends, so a **non-zero stranded remainder is legal**), `deck_entry.gd`, `junk_placer.gd`
+> (per-piece `expected_count`, `loot_density_per_area` OFF), the shipped `charger.tres`
+> (`cost 2 / room 1 / band 4 / base_count 1 / min_band 2`), `splitter.tres` (`cost 3 / room 2 /
+> band 8 / base_count 1`), `bomb.tres` (`cost 1 / room 0 / band 0 = uncapped / base_count 0`),
+> `band_three.tres` (+ its `deck_entry_bomb` SubResource), `depth_curve_band_three.tres`,
+> `cave_config_band_three.tres` (56×56, `chunk_cells 8`), and the three **Wave-A Phase-3
+> resolutions that postdate this doc's body and BREAK several of its assumptions**: U0 §10
+> (RD-5/8/10/11/12/13), U2a's Resolved Decisions (the credit-cost seam), U2b's Resolved Decisions
+> (A4). Where this section contradicts the body above, **this section wins**; the vision/fun/
+> tone/scope items carry recommendations and sit in the updated Director queue at the end.
+
+### The re-based deck pin (supersedes §3.4's cards, §4.3's arithmetic, C6, and DoD 5)
+
+**RD-1 — Final native cards (settled upstream; the body's targets are DEAD).** U2a's Phase-3
+settled **lobber `credit_cost 2 / per_room_cap 1 / per_band_cap 5`** (cost 3 was rejected on the
+roster's threat-per-credit ladder: charger/ambusher/burrower = 2; splitter's 3 buys
+self-multiplication; an always-visible, always-throw-killable static sheller sits at 2). U2b's
+Phase-3 settled **sentry `credit_cost 2 / per_room_cap 1 / per_band_cap 5`** (cap raised 4→5).
+The body's "lobber 3/5" assumption (§3.4, §4.3, OQ7) is overridden. **Cross-doc note:** U2b A4's
+closing claim that "the `5/5/4/1 = 15` pin holds exactly" was computed against the pre-U2a
+lobber-cost-3 assumption and is superseded; **this section's pin is the canonical deck outcome.**
+*Binding.*
+
+**RD-2 — The recomputed deterministic deck pin: `lobber 5 / sentry 5 / charger 4 / bomb 6 = 20`,
+spending the 34-credit budget exactly to 0.** Budget: `instability(4) = 1.0 + 0.15·3 = 1.45` →
+`int(floor(24 · 1.45)) = int(floor(34.8)) = 34` (re-confirmed against `encounter_builder.gd:64,
+:299`; the 27/31 band-2/3 controls verify the same rounding). Eligible pieces on the authored
+64×64 / `chunk_cells 8` arena: 8×8 = 64 chunk-pieces, minus the entry piece (`:313-314`) →
+**P ≈ 63** (sparse cover ⇒ every chunk holds valid floor; the body's "40-60" and U0-default "~34"
+figures both re-based). Demand per def = `base_count 1 · P ≈ 63` — never binds. The walk, in
+authored order, against the final cards:
+
+```
+budget 34 → lobber  n=min(63, 34/2=17, 5)=5   (spend 10, budget 24)
+          → sentry  n=min(63, 24/2=12, 5)=5   (spend 10, budget 14)
+          → charger n=min(63, 14/2= 7, 4)=4   (spend  8, budget  6)
+          → bomb    n=min(63,  6/1= 6, ∞)=6   (spend  6, budget  0)
+          = 5 + 5 + 4 + 6 = 20 spawns, budget spends EXACTLY to 0
+```
+
+Credit check: `5·2 + 5·2 + 4·2 + 6·1 = 10 + 10 + 8 + 6 = 34`. Determinism/satisfiability: the
+bomb's `DeckEntry{base_count: 1}` demand is per-eligible-piece (Σ = 63 ≥ 6), so **the budget
+remainder — not the wrapper — sets the count**: the bomb row is a *remainder sponge* (U2a's
+structural fact (i)); with every cost-2 def spending in even increments off an even budget, the
+remainder is always even — **no exactly-one-bomb pin is reachable at these cards** (U2a's fact
+(ii)). Each capped def's even-spread placements (`round(i/(n−1)·62)` → lobber {0,16,31,47,62},
+sentry idem, charger {0,21,41,62}, bomb {0,12,25,37,50,62}) are distinct pieces per def, so
+`per_room_cap 1` (per-def, per-chunk) never refuses; `&"new_hazards"` ceiling 48 ≫ 20. The plan
+is refusal-free and deterministic on every seed. *Binding.*
+
+**RD-3 — Alternatives worked and rejected (the bomb row STAYS).** The four real options at 34:
+- **(a) Keep the bomb row → `5/5/4/6 = 20`, spend-to-0 — CHOSEN.** Six always-visible static
+  mines even-spread across ~63 chunks (~1 per 10 chunks) *punctuate* the open crossing without
+  adding chase bodies; the exposed-crossing "watch where you step" read (b1) is *served*, not
+  crowded; the deck stays a byte-shape clone of `band_three.tres` (natives + supporting def +
+  bomb `DeckEntry`) — the compounding pattern §4.1 sells; and the budget spends to exactly 0,
+  preserving the D-RAT-6-style pin and the full +45% difficulty step.
+- **(b) Drop the bomb row → `5/5/4 = 14`, 6 credits stranded — REJECTED.** Legal (the lane
+  tolerates a non-zero remainder; the test would pin 14 spawns + `remaining == 6`), but band 4
+  would *spend* 28 credits vs band 3's 31 — the deepest band fielding **less** than band 3,
+  inverting the difficulty ladder for nothing.
+- **(c) Splitter variants — REJECTED.** Alongside charger (`[lobber, sentry, charger, splitter]`):
+  `5/5/4/2 = 16`, spend-to-0 (`10+10+8+6`) — clean, but 2 splitters (→ up to 6 chase bodies on
+  death) are geometry-agnostic filler that dilutes the ranged showcase and loses the
+  exposed-center mine spice. In place of charger (`[lobber, sentry, splitter, bomb]`):
+  `5/5/4/2 = 16` (`10+10+12+2`) — loses the "cave's cast-off, alive in the open field" identity
+  story (§2.4), the deck's strongest evidence. No uncapped cost-2 sponge exists in the roster
+  (charger/ambusher/burrower are all band-capped), so cost-1 `bomb` remains the only universal
+  remainder-soak; these stay Director alternates under D2, not the recommendation.
+- **(d) Change the budget — REJECTED STRUCTURALLY.** `band_depth` is locked at 4 by the
+  breakdown → 34 is locked; `ScatterBandConfig` does not feed the budget.
+**C6 and DoD 5 re-base to `EXPECT_SPAWNS = {lobber: 5, sentry: 5, charger: 4, bomb: 6} = 20`,
+budget exactly 0**, finalized (per the §4.3 caveat, unchanged) against the *shipped*
+`lobber.tres`/`sentry.tres`. The deck-mix *aesthetics* — ranged dominance now 10/20 = 50% of
+spawns (vs the dead pin's 67%), 6 mines on an open field — go to the Director inside the deck
+bundle (breakdown OQ11 → D2 below). *Binding arithmetic; composition Director-ratified.*
+
+### The re-based scatter config (supersedes §3.3/§4.2 — U0 RD-11 is the canonical schema)
+
+**RD-4 — `scatter_config_band_four.tres` re-authored on the LANDED schema (OQ5 CLOSED).** U0
+RD-11 (binding) renames/retypes the body's assumed fields and **deletes two**; RD-5 drops the
+retry scaffold; RD-8 clamps; RD-12 confirms the sparse point. The authored instance:
+
+| Canonical field (U0 RD-11) | Value | Was (§4.2) | Note |
+|---|---|---|---|
+| `grid_width` | **64** | `arena_width 64` | `chunks_x = ceil(64/8) = 8 ≥ 5` — passes RD-8's depth clamp. |
+| `grid_height` | **64** | `arena_height 64` | ≥ 12 ✓. |
+| `cover_density_pct` | **8** | `cover_density 8` | integer **percent** per-stratum stamp chance; RD-12 confirms 8 sits in the identity-compatible sparse range `[5, 40]`. |
+| `min_cover_spacing` | **4** | 4 | ≥ 3 clamp ✓; Chebyshev; stratum side `s = 6` → cover ≤ 4/36 ≈ 11% of interior by construction (RD-4/RD-6). |
+| `border_margin` | **2** | *(absent)* | new mandatory field, at default. |
+| `cover_w_1x1 / 2x1 / 1x2 / 2x2` | **4 / 1 / 1 / 1** | `cover_size_mix [4,2,1]` | RD-11's own suggested small-biased mapping of U3's intent (sum 7 ≥ 1); rare 2×2 wrecks vs U0's default 4/2/2/3. |
+| `edge_cover_bias_pct` | **60** | `edge_cover_bias 60` | integer percent, positive = rim (RD-17 two-zone) → exposed center. |
+| `clear_lane_width` | **3** | 2 | re-pinned to U0's tested default: the lane is the S11(a) identity row-set and the guaranteed crossing; at 16 px cells a 3-wide (48 px) lane honestly clears the 28 px player body + the sentry-corridor read, and buys this at ~zero cover cost (lane rows admit no cover either way). 2 was legal; the body's cave-parity rationale is weaker than staying on the tested point. |
+| `chunk_cells` | **8** | 8 | confirmed on the schema (RD-11) — OQ5(a) answered; 8×8 = 64 chunks, `max_depth ≥ chunks_x − 1 = 7 ≥ 4`. |
+| `cell_size_px` | **16** | 16 | ✓. |
+| ~~`min_floor_cells`~~ | **DROPPED** | 500 | not on the schema (RD-5 — no retry/undershoot mode exists). |
+| ~~`max_attempts`~~ | **DROPPED** | 8 | idem. |
+
+U0's standing offer (RD-12) holds: it sanity-runs this authored set on the seed matrix and
+reports region/sightline/`max_depth` at U3 build time. Any residual mismatch at build is a
+flagged deviation, not a silent U3 edit. *Binding; closes OQ5.*
+
+**RD-5 — Contract-test re-base (C0/C3/C6).** **C0:** the scatter-config field checks assert the
+RD-4 table (canonical names; no `min_floor_cells`/`max_attempts`). **C3** ("total floor cells ≥
+`min_floor_cells`") is **replaced** per U0 RD-11's instruction: assert the RD-4 integer
+cover-budget bound **`cover_cells · (min_cover_spacing + 2)² ≤ 4 · interior_cells`** (⇒ floor ≥
+(1 − 4/36) ≈ 89% of the interior at spacing 4 — integer, non-flaky, by-construction) **plus**
+`pieces.size() >= 2`; optionally pin the exact per-seed floor count measured at build as golden
+constants (RD-11's alternative — programmer's call, both are stable). **C6:** the RD-2/RD-3 pin
+(`5/5/4/6 = 20`, budget exactly 0). C1/C2/C4/C5/C10/C11 stand as written (C11's threshold: N is
+U0's ratified S11 tiering — assert the S11(a) extents-independent form, some row run
+`== grid_width − 2 = 62`). *Binding.*
+
+### Identity, curve, and the remaining OQs
+
+**RD-6 (OQ1/D1) — Identity pitch: NEEDS DIRECTOR REVIEW; recommendation Pitch A "The Far Field",
+ENDORSED — with the portal glow PINNED to `Color(0.15, 0.25, 1.0)` (saturated indigo).** The
+body's §3.1 glow analysis was directionally right (deep-cold-blue family) but pre-dated U4's
+Phase-3 feasible set; per the U4 §2.5 seam (U4 owns the set, U3 picks within it), the pick is
+now pinned to **one exact value from U4's two-candidate shortlist**: **`Color(0.15, 0.25, 1.0)`
+saturated indigo/ultramarine** (renders ≈ (0.11, 0.08, 1.0) — deepest free render, max
+separation from portal 1's violet and portal 3's teal; U4's own recommendation), gate wash ≈
+`Color(0.55, 0.62, 1.0)`. §3.1's illustrative `Color(0.28, 0.42, 1.0)` is superseded. The
+feasible alternate, if the Director rejects a third blue-family glow, is U4's option 2
+**magenta-fuchsia `Color(1.0, 0.0, 0.55)`** (renders (0.76, 0.0, 0.55); riskier — portal 1's hue
+neighbor). All three pitches share the pinned glow; the Director eyeballs all four glows together
+at UG1 (U4's noted risk). **One bundle to ratify: name + `palette_tint` + this glow.** *Rec: A +
+indigo.*
+
+**RD-7 — `palette_tint` stands as authored per pitch:** Pitch A `Color(0.42, 0.46, 0.62, 1)`
+(B/C values as tabled). Tint and portal glow are separate channels (the T3 correction-5
+precedent); the D1 pick governs `display_name` + `palette_tint` only; U4 stamps the pinned glow.
+*Confirmed.*
+
+**RD-8 (OQ2/D2) — Supporting draw: NEEDS DIRECTOR REVIEW; recommendation `[lobber, sentry,
+charger, bomb(DeckEntry)]` ENDORSED, now yielding `5/5/4/6 = 20`.** The charger "same def,
+opposite band" story survives the recompute untouched (still 4, still the frozen 2/4 card). What
+changed and needs the Director's eye inside the OQ11 bundle: the bomb row is now **6 mines, not
+1** (RD-2/RD-3) — the "single exposed-center mine" framing in §3.4 becomes "a sparse minefield
+punctuating the crossing," and ranged dominance is 50% of spawns (10/20) rather than 67%.
+Resolver's read: 6 static, always-visible, cost-1 mines on a 64×64 flat *strengthen* the
+open-field "read the ground" identity and are the honest price of the natives' cheaper final
+cards; the splitter alternates (RD-3c) remain the swap if the Director judges mines-as-filler
+off-tone. *Rec: ship as recomputed.*
+
+**RD-9 (OQ3/D3) — Native exclusivity: RESOLVED-ENDORSED, `min_band = 4` both natives,
+band-4-exclusive for M1.11.** Structural (deck filter `:302`), cheap to lift later (one field +
+a deck add — U2a OQ-7's verified promotion path). **Disposition jointly with U2a OQ-7 and U2b
+OQ-5 — one Director verdict, three docs** (U2b's own request). Surface to the Director only as
+that joint ratification; the working assumption for the build is exclusive. *Rec: yes.*
+
+**RD-10 (OQ4/D4) — Difficulty step: NEEDS DIRECTOR REVIEW (ratify); recommendation ENDORSED —
+ship the locked 1.45 → 34.** Resolver addition: RD-3(a) is load-bearing here — keeping the bomb
+sponge means band 4 actually *spends* all 34 credits (vs 31 in band 3); option (b) would have
+quietly shrunk the felt step to below band 3's. UG2 deaths-by-band / time-to-gate is the widening
+evidence. *Rec: ship 1.45.*
+
+**RD-11 (OQ8+OQ9/D5) — Reward curve: value 1.45→2.9 and tier floor 4 → ceiling 5 CONFIRMED;
+density RE-PINNED to `1.0 → 1.2` per chunk-piece (was 1.0→1.4) on the corrected piece count.**
+The body's density arithmetic used "~40-64 pieces"; the authored arena emits **~64 junk-bearing
+chunk-pieces** (8×8; sparse cover keeps every chunk floored — vs U0's default-arena ~34 figure,
+which corrects the *deck* estimate, not this one). At 1.0→1.4 (mean ≈ 1.2) that is ~77 items —
+overshooting the stated ~55-75 band-total and nearly doubling band 3's measured ~45-60 target on
+*count*, contradicting the body's own "escalation carried by value + tier floor, not raw count."
+**`density_curve = 1.0 → 1.2`** (mean ≈ 1.1 → band-total ≈ 70, inside target). Endpoints stay
+integration-tunable against the measured plan-size; the worklog records the measured band-total
+(TG2 rule: compare band-total *value*). Tier-6 "reality-warping / lore-core" items stay an M2
+content follow-up; the shared `junk_catalog.tres` is reused (OQ9 CONFIRMED — no bespoke catalog).
+*Rec to Director: confirm as re-pinned.*
+
+**RD-12 (OQ6) — Exposed-center loot-value bias: RESOLVED as recommended.** Ship the geometry
+half (`edge_cover_bias_pct 60` → exposed center); log **"JunkPlacer `exposure_value_bias`" as an
+M2 candidate**; carry the felt push-or-cash-out read as a **UG2/UG3 watch-item**. Confirmed
+against `junk_placer.gd`: placement is depth-on-`floor_cells` with no center/edge notion —
+half-expressibility is real, not a config gap. *Binding (not a build blocker).*
+
+**RD-13 (OQ7) — Native cost/cap coordination: CLOSED, inverted.** The body flagged targets *to*
+U2a/U2b; both have since resolved their cards (RD-1) and the dependency now runs the other way —
+U3 re-bases (done, RD-2). Nothing remains open; the §4.3 finalize-against-shipped-defs caveat
+stands as the build-time safety net. *Closed.*
+
+**RD-14 (OQ10) — Flavors EMPTY: CONFIRMED, mechanically mandatory.** U0 RD-10 (binding) fail-louds
+the scatter `validate()` branch on non-empty flavors, does **not** require `piece_pool`, and
+warn-ignores `archetype` — all three §3.2 coordination notes answered exactly as the body hoped.
+`flavors = []` ships; the test asserts it. *Closed.*
+
+**RD-15 — Cost-ledger prediction unchanged.** Nothing in this resolution adds production code:
+every re-base lands in the 3 `.tres` + the mirrored test. The 0-line N=3 prediction (§5.2)
+stands. *Confirmed.*
+
+### NEEDS DIRECTOR REVIEW — updated queue (supersedes the body's D1–D5 table)
+
+| # | Question | Recommendation |
+|---|---|---|
+| D1 | Band identity: **A "The Far Field"** / B "The Reliquary" / C "The Threshing Floor" — one bundle: name + `palette_tint` + **portal glow `Color(0.15, 0.25, 1.0)` indigo** (alternate: magenta `Color(1.0, 0.0, 0.55)`) | **A + indigo**; eyeball all four glows at UG1 |
+| D2 | Deck mix at the recomputed pin **`lobber 5 / sentry 5 / charger 4 / bomb 6 = 20`** (spend-to-0; 50% ranged; 6 mines) — or a splitter alternate (RD-3c: `5/5/4/2 = 16` either shape) | **Ship as recomputed** (mines serve the read-the-ground identity; charger story intact) |
+| D3 | Natives band-4-exclusive (`min_band 4`) — joint verdict with U2a OQ-7 / U2b OQ-5 | **Yes, exclusive**; UG3 decides graduation |
+| D4 | Difficulty step: locked 1.45 → 34 credits, fully spent | **Ship 1.45**; UG2 evidence drives widening |
+| D5 | Reward curve: value 1.45→2.9, tier floor 4 / ceiling 5, **density re-pinned 1.0→1.2** (~70 items band-total on ~64 pieces); tier-6 loot = M2 | **Confirm as re-pinned** |
+
+Everything else above is resolved on technical merit and **binding on the Wave-3 build**: the
+`5/5/4/6 = 20` spend-to-0 pin (RD-2), the bomb-row keep (RD-3), the RD-11-canonical scatter
+config with `clear_lane_width 3` and no retry fields (RD-4), the C0/C3/C6 test re-bases (RD-5),
+tint/glow channel split with the pinned indigo glow (RD-6/7), density 1.0→1.2 (RD-11, pending
+D5), the OQ6 watch-item (RD-12), and the OQ7/OQ10 closures (RD-13/14).

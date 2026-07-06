@@ -481,3 +481,140 @@ deviation AND a UG3 finding.
    interactable re-opens the plaza geometry). *Recommendation: YES — pin exactly 5, with a
    comment naming the band-select forcing function; the tripping task consciously updates
    the pin. Resolve on merit (Phase 3), Director veto welcome at UG3.*
+
+---
+
+## Resolved Decisions (Phase 3) — BINDING
+
+> Fresh-eyes resolution, 2026-07-06, against the working tree at `main` (post-FBM-A2,
+> `f555f5c`) — a different agent than the Phase-2 author. Every load-bearing §2 claim was
+> re-verified against the repo (files read; geometry and color arithmetic independently
+> recomputed; the pixel-count claims taken as stated per the Phase-3 brief). Verdicts are
+> binding on the U4 build except where marked **NEEDS DIRECTOR REVIEW** / **blocked on U3
+> ratification**. Sibling seam checked: `U3_band_four.md` read in full (its own Phase-3
+> section has not landed yet — the coupling rule in OQ-1 below is written to be robust to
+> that).
+
+### As-built verification (all cites re-checked — no corrections that change a verdict)
+
+1. **Code/scene/test cites verify verbatim.** `BAND_ROUTES` three rows + doc comment
+   (`main_game.gd:49-59`); `_band_route_key` (`:110`); `start_run`/`enter_band` tags
+   (`:331-332`); `_resolve_band_profile` consume-on-read + double fallback (`:429-441`);
+   staging seam (`game_state.gd:100, :134, :219-220, :226-229` — the doc's ":226-228" is
+   one line short of the func body, cosmetic only); telemetry stamp truly key-generic —
+   `"band_id": String(band_id)` at `telemetry.gd:167` inside `_on_run_started` (`:142`),
+   no key whitelist or per-band branch anywhere in the file, `band_depth_reached` mirror
+   at `:178-182`; portal exports/push-down/guards (`departure_portal.gd:19, :25, :33-34,
+   :40-41, :52-63, :70-84`); 48×64 Interactable rect + root layer/mask 0 + child layer 4
+   (`departure_portal.tscn:8-9, :12-13, :27-28`); shop rect exactly 48×64
+   (`shop.tscn:10-11`); detector radius 36 (`interaction_detector.tscn:7`); hub anchors —
+   walls ±368/±232 (`hub.tscn:32-46`), spawn `(0,120)` (`:48-49`), portal 1 `(0,-150)`
+   (`:54-55`), portal 2 `(220,-150)` (`:57-64`), portal 3 `(110,-20)` (`:66-73`), shop
+   `(-220,-150)` (`:75-79`); yard 340/216 (`hub_ground.gd:44-45`); `test_hub_contract`
+   H1 list `:69-71`, H4 dict `:106-111`, `EMBER_ORANGE` `:25`, `CAVE_TEAL` `:26`, OK
+   print `:56`, H7 at `:188-221` (push-down sub-asserts `:211-221`);
+   `test_band_routing` C7 `:143-174`, the three C5 drives `:179-240`, `_free_band`
+   null-guard `:259-264`. Grep re-run: **only `test_hub_contract.gd` loads `hub.tscn`**
+   — the "no other test pins the hub interactable set" claim holds.
+2. **Geometry independently recomputed — all correct.** Portal-4 rect x `[-134,-86]`,
+   y `[-52,12]`; rect gaps √(62²+66²) ≈ **90.55 px** to portal 1 AND to the shop (the
+   mirror is exact — shop rect 48×64 confirmed), **172 px** to portal 3; spawn distance
+   ≈ 138 px (> 36, no prompt at spawn); spawn→shop diagonal P(t) = (−220t, 120−270t)
+   inside the rect's y-band for t ∈ [0.40, 0.637] (x −88 → −140.1), intersecting the rect
+   for x ∈ [−134, −88]; the no-valid-mirror-slot window — 72 px bar forces
+   |x₀| ∈ [76.8, 143.2] ((|x₀|−48)² ≥ 72²−66² = 828 → |x₀| ≥ 76.77; 220−|x₀|−48 ≥ 28.77
+   → |x₀| ≤ 143.2) while a miss requires x₀ < −164 or x₀ > −64 — recomputes exactly:
+   **every admissible west slot intersects the shop diagonal; the transit caveat is
+   inherent, not a defect of `(-110, -20)`.**
+3. **Glow multiply arithmetic recomputed.** Dominant pixel (193,85,255) → (0.757, 0.333,
+   1.0); option 1 `Color(0.15, 0.25, 1.0)` renders (0.114, 0.083, 1.0) ✓; option 2
+   `Color(1.0, 0.0, 0.55)` renders (0.757, 0, 0.55) ✓; the three taken renders match the
+   shipped pins (`hub.tscn:63, :72`; `test_hub_contract.gd:25-26`). Consistent with
+   T4 §RD correction 5 and the amendment-12 story.
+4. **The U3 seam is TIGHTER than this doc's shortlist.** `U3_band_four.md` §3.1 (binding
+   across ALL THREE identity pitches, not per-pitch): *"All three pitches share the
+   deep-cold-blue portal glow family … **Magenta/violet glows are forbidden (clone
+   portal 1)**; ember is forbidden … U4 owns the final `glow_tint`/`gate_tint` within
+   that family."* U3 also confirms `band_depth = 4` → `floor(24·1.45) = 34` credits and
+   "The Far Field" (Pitch A) as its recommended name — consistent with §1/§2.3 here.
+
+### Per-OQ verdicts
+
+- **OQ-1 (glow/gate tint) — RESOLVED to a single candidate; final value rides the U3
+  ratification. The coupling rule (BINDING):** *U4 implements the portal glow from the
+  Director-ratified U3 identity bundle; prompt text = `"Dive — <ratified name>"`.* The
+  intersection of §2.5's feasible set with U3 §3.1's binding all-pitch family constraint
+  (deep-cold-blue only; magenta/violet forbidden) is exactly **option 1: glow
+  `Color(0.15, 0.25, 1.0)`, gate wash `Color(0.55, 0.62, 1.0)`** — which was also this
+  doc's recommendation on separation grounds. **Option 2 (magenta `Color(1.0, 0.0,
+  0.55)`) is STRUCK** as a U4 candidate: U3 forbids the family outright, and it had the
+  weaker portal-1 separation anyway; it revives only if the Director explicitly
+  overrides U3's family pin at ratification — in which case BOTH docs amend together
+  (a joint deviation entry), never a silent U4 substitution. U3's illustrative in-family
+  value `Color(0.28, 0.42, 1.0)` is superseded by option 1 (deeper, better-separated;
+  U3 itself assigns U4 ownership of the final value within the family). H8 pins the
+  implemented value exactly (`BAND4_GLOW`), plus the three pairwise-distinctness asserts
+  (§3.3). Escape hatches stay recorded-not-recommended: retone is a Director-gated
+  follow-up task; the >1.0 overdrive trick is REJECTED for U4 (clips the gradient,
+  untested for the pinned-tint pattern). **NEEDS DIRECTOR REVIEW only via the U3
+  identity ratification** — the hue family needs no separate Director call (both docs
+  derive it independently from the math).
+- **OQ-2 (prompt text + display name) — pattern RESOLVED; name blocked on U3
+  ratification (Director — tone, via U3's D1).** Binding: `prompt_text = "Dive —
+  <ratified name>"`, `display_name = "<ratified name> Portal"`. The depth-signposting
+  sub-question is **RESOLVED: NO** on merit AND precedent — T4 §RD OQ-1 already ratified
+  "name only, no depth signposting in the prompt" as the standing pattern (twice
+  shipped); the forward-rank position + tint + Cyrus/lore carry escalation, and
+  depth-signposting stays a UG2/UG3 watch-item. Recommendation to the Director:
+  **"Dive — The Far Field"** (U3's Pitch A rec). Folding the winner in is one `hub.tscn`
+  override + the H8 string pin — ratification blocks the value, never the build.
+- **OQ-3 (mirror slot / spawn→shop transit prompt) — geometry RESOLVED: build at
+  `(-110, -20)`; H8 pins it. Transit caveat confirmed and accepted; NEEDS DIRECTOR
+  REVIEW only as the UG1 eyeball.** The independent recomputation (verification 2)
+  confirms both the crossing and its inherence — no admissible west slot avoids the
+  shop diagonal, so a slot shuffle buys nothing. Mitigations are the same three that
+  shipped with portal 3 through TG1 without a recorded mis-dive (never-two-in-range at
+  90.6 px gaps, `SWITCH_RATIO = 0.9` hysteresis, band-named prompt) plus the 0.25 s
+  fat-finger lockout. Binding rider on UG1's checklist: the Director eyeball covers
+  **(a) BOTH transit lanes** (spawn→shop over portal 4 — the loop's most-walked lane —
+  and spawn→portal-2 over portal 3) **and (b) the four-glow plaza read** (a third
+  blue-family glow joins violet + teal). If the Director judges the transit pair
+  mis-dive-prone, the fix is pulling the band-select surface forward (OQ-4's forcing
+  function), never a slot shuffle. A post-eyeball nudge is a one-line override + one H8
+  constant.
+- **OQ-4 (pin "the plaza is FULL") — RESOLVED: YES, and strengthen the shape from a bare
+  count to SET EQUALITY.** H4's extension asserts that a recursive scan for
+  `Interactable`-typed nodes under the hub root yields **exactly the 5 expected ids**
+  (`&"portal"`, `&"portal_band_two"`, `&"portal_band_three"`, `&"portal_band_four"`,
+  `&"shop"`) — set equality catches both a silently-added sixth interactable AND a
+  duplicate id, with a self-explaining failure message a bare `count == 5` can't give.
+  On the merits this is sound QA practice, not design pressure baked into a test: **the
+  assert pins as-built reality** (the hub HAS exactly these five), with identical
+  epistemics to H2's exactly-4 walls and H3's exactly-963 cells — the suite's standing
+  exact-pin idiom; the *design* pressure lives in the comment beside it, which MUST name
+  the forcing function ("§2.4: no sixth safe slot exists — any new hub interactable
+  re-opens the plaza geometry; band 5 requires a band-select surface"). The "band 5
+  starts with a red test" property is the point, not a defect — every golden pin in the
+  suite (fps, tints, cell counts) makes unplanned drift start red, and today's
+  subset-only H4 has a real blind spot: a leaked/extra interactable would pass the whole
+  suite silently. A legitimate future interactable (NPC, stash) tripping it is correct
+  behavior — that task consciously updates the pin after re-running the §2.4 geometry.
+  **Both belt and braces ship:** the test pin (enforcement) AND the UG3 watch-item
+  verbatim (the scheduled design conversation) — the pin does not replace the flag.
+  Director veto welcome at UG3, as the doc offers; no pre-build Director call needed.
+
+### NEEDS DIRECTOR REVIEW queue (nothing gates the build start)
+
+- **D-U4-1 — Band-4 identity ratification (= U3's D1; tone).** Fixes `<BAND4_NAME>`
+  (prompt/display/H8 pin) and confirms the glow bundle. **Rec: Pitch A "The Far Field"
+  → `"Dive — The Far Field"` + indigo `Color(0.15, 0.25, 1.0)` / gate
+  `Color(0.55, 0.62, 1.0)`.** Each is a one-line override; the build proceeds on the
+  named parameters.
+- **D-U4-2 — UG1 eyeball (fun/feel, post-build).** Both transit-lane prompt reads + the
+  four-glow plaza read (per OQ-3's binding rider). Escalation path if judged
+  mis-dive-prone: pull the band-select surface forward — never a slot shuffle.
+
+*Resolved by a Phase-3 fresh-eyes subagent (not the Phase-2 author), 2026-07-06. OQ-1's
+final values and OQ-2's name fold in at the U3 ratification; OQ-3 geometry and OQ-4 are
+binding now. Deviations during the build go to `design/DESIGN_DEVIATIONS.md` for the
+Wave-4 close-out sweep.*
