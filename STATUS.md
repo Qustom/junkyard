@@ -121,14 +121,22 @@ See `CLAUDE.md` → "The orchestrator loop".
 > Ambusher description updated in place. **Republished:** `qusto/the-far-yard:html5 @ m1-20260706-8e3a888`
 > (build `#1775586`). **Design watch-item (surfaced, Director-directed):** now a mechanical cousin of the
 > Burrower (both hide-track-strike) — flag at TG2/TG3.
+>
+> **✓ FBM-A2 (2026-07-06, `main`@`d04bd13`) — Director Lurker tuning:** pounce dist 140→**250**, speed
+> 600→**900**, exposed window 1.5→**0.6 s**, stalk speed 130→**232** px/s. Pure data (params + schema
+> defaults + host DEFAULTS mirror synced; all within schema ranges); bijection/mirror green, all-off fp
+> `e943ac9c8bc1` unmoved. **Note: stalk 232 > player ~200 → un-outrunnable** (juke/kill only). Republished
+> `qusto/the-far-yard:html5 @ m1-20260706-d04bd13` (build `#1775901`).
 
 ## ▶ DIRECTOR PLAYTEST (human-gated — the felt loop can't be verified headless)
 
-> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260706-8e3a888`**
-> (itch build `#1775586`; supersedes `3c9644e` — includes the FBM-A1 Ambusher stalker rework). Full checklist:
-> `design/M1_10_Tasks/TG1_playtest_build.md` §5. **Re-check the Ambusher:** invisible at rest (no floating orange
-> arrow) · springs when you approach loot · then it STALKS — vanishes, chases you, re-pounces (tune `track_speed`
-> in the Oppositions tab if 130 feels wrong) · throw-kill it in the exposed beat after a pounce. Other key reads:
+> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build **`m1-20260706-d04bd13`**
+> (itch build `#1775901`; supersedes `8e3a888`/`3c9644e` — FBM-A1 stalker rework + FBM-A2 Director tuning). Full
+> checklist: `design/M1_10_Tasks/TG1_playtest_build.md` §5. **Re-check the Ambusher "The Lurker":** invisible at
+> rest · springs when you approach loot · then STALKS — vanishes, chases, re-pounces. **FBM-A2 tuning (2026-07-06):
+> pounce dist 250 / speed 900 / exposed 0.6 s / stalk 232 px/s — stalk now > player ~200, so it is
+> un-outrunnable (juke the pounce or kill it in the short exposed beat).** All live-tunable in the Oppositions tab.
+> Other key reads:
 > - **The two old portals are unchanged** (band 1 + The Sump play exactly as M1.9 — the control).
 > - **The third portal "Dive — The Warren"** (cave-teal glow, forward of the other two) → a **cave band**:
 >   blobby chambers, bad sightlines, nook-rich — a *different generator*, not rooms-and-corridors.
