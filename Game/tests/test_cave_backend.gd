@@ -293,7 +293,8 @@ func _c8_fail_loud(pipe: BandPipeline, failures: Array[String]) -> void:
 	if pipe.generate(degen, 1) != null:
 		failures.append("C8: degenerate (grid_width=4) cave config did not return null")
 
-	# Still-unwired backend -> null.
+	# Config-less scatter profile -> null (M1.11 U0 wired scatter; the fail-loud
+	# moved from the wiring guard to validate() — assertion unchanged).
 	var scatter := BandProfile.new()
 	scatter.id = &"scatter_x"
 	scatter.backend = "scatter"
