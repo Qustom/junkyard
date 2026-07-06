@@ -21,9 +21,10 @@ extends Node
 ##  (a) HIDDEN = non-lethal + un-hittable: arm_radius 0 (inert) with the player on it
 ##      never ends the run; is_hittable() false; collision_layer == 0 (clean pass-through
 ##      — a thrown item flies through, no kill, Ambusher survives); body.modulate.a ==
-##      concealed_alpha; $FloorTell.a > 0.
-##  (b) arm radius: player inside arm_radius → HIDDEN→ARMED (reveal: $Body.a==1.0, in
-##      "hazard" group, collision_layer==16); arm_radius 0 → permanently inert.
+##      concealed_alpha; $FloorTell.a > 0; $Tell.a == 0 (the telegraph wedge is INVISIBLE
+##      at rest — the "orange arrow at rest" bug fixed).
+##  (b) arm radius: player inside arm_radius → HIDDEN→ARMED (reveal: $Body.a==1.0,
+##      $Tell.a==1.0, in "hazard" group, collision_layer==16); arm_radius 0 → inert.
 ##  (c) tell precedes pounce by the authored lead: ARMED (TELEGRAPH) holds ~tell_lead_s
 ##      before POUNCE (CHARGE); exactly one &"telegraph" row.
 ##  (d) lane lock: a perpendicular step AFTER arming dodges the locked lunge lane.
@@ -32,9 +33,11 @@ extends Node
 ##      kills=false → &"hit_player" fires but the run stays active, no killed row.
 ##  (f) EXPOSED throw-killable: during EXPOSED (post-pounce) a thrown item kills the
 ##      Ambusher (throw_killed_hazard/&"killed_by_throw" kind &"ambusher", queue_free).
-##  (g) one-shot: after a full pounce→exposed cycle with re_hide_s=0 the Ambusher is
-##      SPENT — re-entering arm_radius does NOT re-arm (no 2nd &"telegraph"); is_hittable()
-##      false. With re_hide_s>0 it re-hides and CAN re-arm on a later entry.
+##  (g) STALKER loop (FBM-A1): after the first pounce the Ambusher does NOT spend — it
+##      re-hides (invisible + un-hittable again: layer 0, out of the group, body/wedge
+##      alpha 0, floor smudge still shown), PURSUES the player while hidden (its position
+##      closes the gap — the reused ChaseMove), and re-arms on approach (a 2nd &"telegraph"
+##      → the loop). is_stalking() latches true after the first pounce.
 ##  (h) deterministic placement: the same synthetic band + deck twice through the REAL
 ##      EncounterBuilder + SpawnService yields identical Ambusher spawn cells; per_band_cap
 ##      binds; min_band=3 refuses a band-depth-2 profile entirely.
@@ -99,7 +102,8 @@ func _run() -> void:
 			+ "pass-through), arm radius reveals + joins the hazard group, the tell precedes the "
 			+ "pounce by the authored lead (exactly 1 telegraph row), the locked lunge lane is "
 			+ "dodgeable, the L5 kills gate + BUG6 latch fire exactly once, the EXPOSED window is "
-			+ "throw-killable, the pounce is ONE-SHOT (spent, never re-arms; re_hide_s re-arms), "
+			+ "throw-killable, the telegraph wedge is invisible at rest, after the first pounce it "
+			+ "STALKS (re-hides + pursues hidden + re-pounces — never spends), "
 			+ "Concealment/host are RNG-free, and deck placement is deterministic with "
 			+ "per_band_cap/min_band enforced by the real service.")
 		get_tree().quit(0)
@@ -220,6 +224,9 @@ func _case_hidden_inert(gs: Node, failures: Array[String]) -> void:
 		failures.append("(a) HIDDEN body.modulate.a != concealed_alpha (0.0)")
 	if floor_tell == null or floor_tell.modulate.a <= 0.0:
 		failures.append("(a) HIDDEN floor tell not shown (a <= 0)")
+	var tell: Polygon2D = amb.get_node_or_null("Tell")
+	if tell == null or not is_equal_approx(tell.modulate.a, 0.0):
+		failures.append("(a) HIDDEN telegraph wedge visible (Tell.a != 0 — the 'orange arrow at rest' bug)")
 	# A throw ACROSS the hidden ambusher passes clean through (layer 0 → no body_entered):
 	# the item flies on to its own max-range miss, the ambusher is never killed.
 	var item := _make_thrown(Vector2(-40, 0), Vector2.RIGHT, 300.0, 100.0)
@@ -248,6 +255,9 @@ func _case_arm_radius(gs: Node, failures: Array[String]) -> void:
 	var body: Polygon2D = amb.get_node_or_null("Body")
 	if body == null or not is_equal_approx(body.modulate.a, 1.0):
 		failures.append("(b) ARMED body.modulate.a != 1.0 (did not reveal)")
+	var tell_b: Polygon2D = amb.get_node_or_null("Tell")
+	if tell_b == null or not is_equal_approx(tell_b.modulate.a, 1.0):
+		failures.append("(b) ARMED telegraph wedge not shown (Tell.a != 1.0 on reveal)")
 	if not amb.is_in_group(&"hazard") or not amb.is_hittable():
 		failures.append("(b) ARMED ambusher not in the 'hazard' group (not throw-killable)")
 	if amb.collision_layer != 16:
@@ -379,61 +389,57 @@ func _case_exposed_throw(gs: Node, failures: Array[String]) -> void:
 	await _frames(2)
 
 
-# === (g) one-shot: SPENT after the pounce; re_hide_s re-arms ===================
+# === (g) STALKER loop: re-hide + hidden pursuit + re-pounce (FBM-A1) ===========
 
 func _case_one_shot(gs: Node, failures: Array[String]) -> void:
-	# re_hide_s = 0 → one-shot. Full cycle, then SPENT + never re-arms.
 	_reset_logs()
 	gs.start_run(&"test_band", 7008)
 	gs.set_current_depth(3, 3)
 	var player := _make_player(Vector2(100, 0))
+	# kills=false so the first pounce doesn't end the run; a brisk track_speed so the
+	# hidden pursuit visibly closes a gap; a short inter-pounce pause.
 	var amb := _make_ambusher(Vector2.ZERO, player,
-		_params({ "kills": false, "re_hide_s": 0.0 }))
-	# Drive telegraph→pounce→exposed→dormant(spent).
-	if await _await_state(amb, ChargeLane.State.CHARGE, 30) < 0:
-		failures.append("(g) one-shot ambusher never pounced")
-	# After the recover window it returns to DORMANT and latches SPENT.
-	await _await_spent(amb, 120)
-	if not amb.is_spent():
-		failures.append("(g) ambusher not SPENT after a full cycle (re_hide_s=0 one-shot)")
-	if amb.is_hittable():
-		failures.append("(g) SPENT ambusher still reports is_hittable() true")
-	var telegraphs_after_spend := _count_events(&"ambusher", &"telegraph")
-	# Re-enter the arm radius — a SPENT ambusher must NOT re-arm.
-	player.global_position = Vector2(400, 0)
-	await _frames(4)
-	player.global_position = Vector2(100, 0)
-	await _frames(40)
-	if _count_events(&"ambusher", &"telegraph") != telegraphs_after_spend:
-		failures.append("(g) a SPENT ambusher re-armed (2nd telegraph row) — one-shot broken")
+		_params({ "kills": false, "re_hide_s": 0.3, "track_speed": 300.0 }))
+	# First ambush pounce from stationary hidden.
+	if await _await_state(amb, ChargeLane.State.CHARGE, 40) < 0:
+		failures.append("(g) never pounced (the first ambush)")
+	if not amb.is_stalking():
+		failures.append("(g) is_stalking() false after the first pounce")
+	# After the pounce cycle it RE-HIDES (stalker) — it does NOT spend into a husk.
+	if await _await_state(amb, ChargeLane.State.DORMANT, 160) < 0:
+		failures.append("(g) never returned to DORMANT after the first pounce")
+	if amb.is_hittable() or amb.collision_layer != 0:
+		failures.append("(g) post-pounce ambusher did not re-hide (still hittable / layer != 0)")
+	var g_body: Polygon2D = amb.get_node_or_null("Body")
+	if g_body == null or not is_equal_approx(g_body.modulate.a, 0.0):
+		failures.append("(g) re-hidden body not concealed (a != 0)")
+	var g_tell: Polygon2D = amb.get_node_or_null("Tell")
+	if g_tell == null or not is_equal_approx(g_tell.modulate.a, 0.0):
+		failures.append("(g) re-hidden telegraph wedge visible (Tell.a != 0)")
+	var g_floor: Polygon2D = amb.get_node_or_null("FloorTell")
+	if g_floor == null or g_floor.modulate.a <= 0.0:
+		failures.append("(g) re-hidden floor smudge not shown (the fairness read is gone)")
+	# PURSUE: park the player far so the hidden stalker must close the gap while DORMANT.
+	player.global_position = Vector2(600, 0)
+	await _frames(3)   # settle into DORMANT pursuit (now well outside arm_radius)
 	if amb.lane_state() != ChargeLane.State.DORMANT:
-		failures.append("(g) SPENT ambusher left DORMANT")
+		failures.append("(g) stalker not DORMANT while the player is far out of arm range")
+	if amb.is_hittable():
+		failures.append("(g) stalker hittable while pursuing hidden (un-hittable until it springs)")
+	var dist_before: float = amb.global_position.distance_to(player.global_position)
+	await _frames(24)
+	var dist_after: float = amb.global_position.distance_to(player.global_position)
+	if dist_after >= dist_before:
+		failures.append("(g) hidden stalker did not close the gap (before %.1f, after %.1f)"
+			% [dist_before, dist_after])
+	# RE-POUNCE: bring the player into arm range → a 2nd telegraph fires (the loop).
+	var telegraphs_so_far := _count_events(&"ambusher", &"telegraph")
+	player.global_position = Vector2(amb.global_position.x + 40.0, 0)
+	var second := await _await_state(amb, ChargeLane.State.TELEGRAPH, 120)
+	if second < 0 or _count_events(&"ambusher", &"telegraph") <= telegraphs_so_far:
+		failures.append("(g) stalker never re-pounced (no 2nd telegraph) — the loop is broken")
 	amb.queue_free()
 	player.queue_free()
-	await _frames(1)
-
-	# re_hide_s > 0 → the area-denial variant: re-hides after EXPOSED and CAN re-arm.
-	_reset_logs()
-	gs.start_run(&"test_band", 7009)
-	gs.set_current_depth(3, 3)
-	var player2 := _make_player(Vector2(100, 0))
-	var amb2 := _make_ambusher(Vector2.ZERO, player2,
-		_params({ "kills": false, "re_hide_s": 0.3 }))
-	if await _await_state(amb2, ChargeLane.State.CHARGE, 30) < 0:
-		failures.append("(g) re-hide ambusher never pounced")
-	# Let it cycle back to DORMANT (it re-hides, does NOT spend).
-	if await _await_state(amb2, ChargeLane.State.DORMANT, 120) < 0:
-		failures.append("(g) re-hide ambusher never returned to DORMANT")
-	if amb2.is_spent():
-		failures.append("(g) re_hide_s>0 ambusher latched SPENT (must re-hide, not spend)")
-	if amb2.is_hittable() or amb2.collision_layer != 0:
-		failures.append("(g) re-hidden ambusher not back to HIDDEN (layer 0 / out of group)")
-	# With the player still in range it re-arms after the cooldown → a 2nd telegraph.
-	var second := await _await_state(amb2, ChargeLane.State.TELEGRAPH, 60)
-	if second < 0 or _count_events(&"ambusher", &"telegraph") < 2:
-		failures.append("(g) re_hide_s>0 ambusher did not re-arm (no 2nd telegraph)")
-	amb2.queue_free()
-	player2.queue_free()
 	await _frames(1)
 
 
@@ -574,14 +580,6 @@ func _await_state(amb: AmbusherHazard, want: int, max_frames: int) -> int:
 		await get_tree().physics_frame
 		n += 1
 	return -1 if amb.lane_state() != want else n
-
-
-## Frames until the ambusher latches SPENT (or gives up after max_frames).
-func _await_spent(amb: AmbusherHazard, max_frames: int) -> void:
-	var n := 0
-	while n < max_frames and not amb.is_spent():
-		await get_tree().physics_frame
-		n += 1
 
 
 func _frames(n: int) -> void:
