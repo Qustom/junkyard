@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="ScatterBandConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/bands/scatter_band_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+grid_width = 64
+grid_height = 64
+cover_density_pct = 8
+min_cover_spacing = 4
+border_margin = 2
+cover_w_1x1 = 4
+cover_w_2x1 = 1
+cover_w_1x2 = 1
+cover_w_2x2 = 1
+edge_cover_bias_pct = 60
+clear_lane_width = 3
+chunk_cells = 8
+cell_size_px = 16
