@@ -625,3 +625,17 @@ third's hygiene-pass routing is already recorded in the U1 worklog's follow-ups.
 
 **M1.11 Wave-2 close-out complete.** `DESIGN_DEVIATIONS.md` holds only the M1.10 TG1 entry
 (awaiting the TG3 close-out). **Next: Wave 3 (U3 — `band_four.tres` "The Far Field", ledger target 0).**
+
+---
+
+## M1.11 Wave-3 close-out (2026-07-08) — 1 entry (U3): 1 Reviewed
+
+- **U3/def-menu-golden — charger's IN-DECK chip golden caught up to band_four deck membership**
+  (`"band_two"` → `"band_four, band_two"`; the S4 count-agnostic band-scan surfaced band 4's deck
+  with zero menu code — positive N=3 evidence; U3 flagged and touched nothing, the orchestrator
+  applied the 2-line golden update + stale comment at integration, `72cf997`). — **Reviewed**
+  (test caught up to ratified product behavior; exact TG1-class stale golden). **Reapply:** none —
+  the fix is the catch-up; canonical deck already in the U3 spec RD-2/D-RAT-6.
+
+**M1.11 Wave-3 close-out complete.** `DESIGN_DEVIATIONS.md` holds only the M1.10 TG1 entry
+(awaiting the TG3 close-out). **Next: Wave 4 (U4 — fourth hub portal + band_four routing + plaza-full pin).**

@@ -16,6 +16,7 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 ---
 
 *Current: **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — awaiting Director disposition (non-blocking; TG2 is human-gated behind the playtest anyway).*
+*Prior: **M1.11 Wave 3** (2026-07-08) — U3: 1 Reviewed (archived 2026-07-08).*
 *Prior: **M1.11 Wave 2** (2026-07-07) — U1: 3 Reviewed (archived 2026-07-08).*
 *Prior: **M1.11 Wave 1** (2026-07-06) — U0: 4 Reviewed (archived 2026-07-07), U2a/U2b: none.*
 *Prior: **M1.10 Wave 4** (2026-07-05) — T4: 0 deviations — build complete (T0–T4); portal 3 for 1 bespoke line.*
@@ -36,14 +37,3 @@ test caught up to ratified product behavior; no design change.
 
 ---
 
-*Current also: **M1.11 Wave 3** (2026-07-08) — U3: 1 entry below (rec Reviewed).*
-
-[2026-07-08] U3/def-menu-golden — `test_def_menu_coverage.gd` hard-coded charger's IN-DECK chip as
-`"IN DECK: band_two"`; U3's ratified deck (D-RAT-6: lobber 5 / sentry 5 / charger 4 / bomb 6) correctly
-adds charger to band_four, so the chip now correctly reads `"band_four, band_two"` (the same
-deepest-first convention splitter already uses). U3 flagged it and touched nothing; the orchestrator
-applied the golden update (2 expectation lines + the stale comment) at integration (`72cf997`), suite
-green. · why: the PRODUCT behavior is correct — the S4 count-agnostic band-scan surfaced band_four's
-deck with zero menu code (positive N=3 evidence); only the test's per-id golden was stale, the exact
-class as the M1.10 TG1 splitter entry. Test-only; no production `.gd`/`.tres` touched. · Rec:
-**Reviewed** — test caught up to ratified product behavior; no design change.
