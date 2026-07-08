@@ -28,11 +28,17 @@ extends Node
 ##       cave profile; its pipeline fingerprint is distinct from BOTH controls
 ##       (greybox AND band_two) for the same seed. C5 additionally drives a full
 ##       band-three dive end-to-end and asserts run_started band_id &"band_three".
+##   C8. (U4) routing lands: &"band_four" staged -> the band_four ("The Far Field")
+##       open-field scatter profile; its pipeline fingerprint is distinct from ALL
+##       THREE others (greybox, band_two, band_three) for the same seed. C5
+##       additionally drives a full band-four dive end-to-end and asserts run_started
+##       band_id &"band_four"; C6 gains a band-4 wipe round.
 
 const MAIN_GAME_PATH := "res://scenes/game/main_game.tscn"
 const GREYBOX_PATH := "res://data/bands/band_greybox.tres"
 const BAND_TWO_PATH := "res://data/bands/band_two.tres"
 const BAND_THREE_PATH := "res://data/bands/band_three.tres"
+const BAND_FOUR_PATH := "res://data/bands/band_four.tres"
 const SEED := 12345
 
 var _failures: Array[String] = []
@@ -49,14 +55,15 @@ func _run() -> int:
 	_check_unknown_key()           # C3
 	_check_routing_lands()         # C4
 	_check_routing_lands_band_three()  # C7 (T4 — new route, checked before the async C5)
-	await _check_stamp()           # C5 (full scene — async; drives band_two + band_three + near)
+	_check_routing_lands_band_four()   # C8 (U4 — new route, checked before the async C5)
+	await _check_stamp()           # C5 (full scene — async; drives band_two + band_three + band_four + near)
 	_check_wipe_isolation()        # C6
 
 	if _failures.is_empty():
 		print("BAND_ROUTING OK — staging consume-on-read, &\"near\"/unknown -> greybox ",
-				"control, &\"band_two\" -> The Sump + &\"band_three\" -> The Warren ",
-				"(each distinct fp), run_started band_id == the route key for all three ",
-				"routes, wipe-isolated")
+				"control, &\"band_two\" -> The Sump + &\"band_three\" -> The Warren + ",
+				"&\"band_four\" -> The Far Field (each distinct fp), run_started band_id ",
+				"== the route key for all four routes, wipe-isolated")
 		return 0
 	for f in _failures:
 		printerr("BAND_ROUTING FAIL: ", f)
@@ -174,6 +181,51 @@ func _check_routing_lands_band_three() -> void:
 	_free_band(t2)
 
 
+# --- C8 (U4). Routing lands in band_four, distinct from ALL THREE others ---------------
+
+func _check_routing_lands_band_four() -> void:
+	EventBus.dive_requested.emit(&"band_four")
+	var mg := MainGame.new()
+	var profile: BandProfile = mg._resolve_band_profile()
+	if profile == null or profile.id != &"band_four":
+		_failures.append("C8: staged &\"band_four\" resolved '%s', expected band_four"
+				% (profile.id if profile != null else &"<null>"))
+		mg.free()
+		return
+	if mg._band_route_key != &"band_four":
+		_failures.append("C8: route key is '%s', expected &\"band_four\"" % mg._band_route_key)
+	mg.free()
+
+	# Route distinctness: ONE generate each; fp != greybox AND != band_two AND !=
+	# band_three for the same seed. (Same-seed-twice determinism + connectivity + the
+	# sightline bar are U0/U3's tests — one owner per assertion, the T4 §RD OQ-5 split.)
+	# Scatter emits synthetic pieces (scat_ ids) with p.instance possibly null — the
+	# _free_band null-guard already copes (same note as C7's cave pieces).
+	var band_three := load(BAND_THREE_PATH) as BandProfile
+	var band_two := load(BAND_TWO_PATH) as BandProfile
+	var greybox := load(GREYBOX_PATH) as BandProfile
+	var b4 := BandPipeline.new().generate(profile, SEED)
+	var g := BandPipeline.new().generate(greybox, SEED)
+	var t2 := BandPipeline.new().generate(band_two, SEED)
+	var b3 := BandPipeline.new().generate(band_three, SEED)
+	if b4 == null or g == null or t2 == null or b3 == null:
+		_failures.append("C8: null band from the pipeline (band_four / greybox / band_two / band_three)")
+	else:
+		if b4.fingerprint() == g.fingerprint():
+			_failures.append("C8: band_four fp == band_greybox fp for seed %d (routes indistinct)"
+					% SEED)
+		if b4.fingerprint() == t2.fingerprint():
+			_failures.append("C8: band_four fp == band_two fp for seed %d (routes indistinct)"
+					% SEED)
+		if b4.fingerprint() == b3.fingerprint():
+			_failures.append("C8: band_four fp == band_three fp for seed %d (routes indistinct)"
+					% SEED)
+	_free_band(b4)
+	_free_band(g)
+	_free_band(t2)
+	_free_band(b3)
+
+
 # --- C5. Stamp: the assembled scene tags run_started with the route key --------------
 
 func _check_stamp() -> void:
@@ -231,6 +283,23 @@ func _check_stamp() -> void:
 		_failures.append("C5: portal-3 dive generated profile '%s', expected band_three"
 				% (game._band_profile.id if game._band_profile != null else &"<null>"))
 
+	# U4: a portal-4-style emission drives the FULL assembled open-field dive
+	# end-to-end (pipeline scatter dispatch, U0 + arena materialise, U1) and must tag
+	# run_started &"band_four" (telemetry.gd mirrors the signal arg verbatim, so
+	# asserting the signal asserts the JSONL row's source).
+	GameState.extract_and_end_run()
+	await get_tree().process_frame
+	_run_started_band_ids.clear()
+	EventBus.dive_requested.emit(&"band_four")
+	game.start_new_run()
+	await get_tree().process_frame
+	if _run_started_band_ids.size() != 1 or _run_started_band_ids[0] != &"band_four":
+		_failures.append("C5: portal-4 dive run_started band_id(s) %s, expected [&\"band_four\"]"
+				% str(_run_started_band_ids))
+	if game._band_profile == null or game._band_profile.id != &"band_four":
+		_failures.append("C5: portal-4 dive generated profile '%s', expected band_four"
+				% (game._band_profile.id if game._band_profile != null else &"<null>"))
+
 	# Teardown: end the run and free the scene (leave GameState quiescent for C6).
 	GameState.extract_and_end_run()
 	await get_tree().process_frame
@@ -252,6 +321,12 @@ func _check_wipe_isolation() -> void:
 	var key: StringName = GameState.consume_pending_dive_band()
 	if key != &"band_two":
 		_failures.append("C6: staged key after wipe_meta() is '%s', expected &\"band_two\"" % key)
+	# U4: the same isolation for the newest route key (a band-4 round).
+	EventBus.dive_requested.emit(&"band_four")
+	GameState.wipe_meta()
+	key = GameState.consume_pending_dive_band()
+	if key != &"band_four":
+		_failures.append("C6: staged &\"band_four\" after wipe_meta() is '%s'" % key)
 
 
 # --- Helpers ---------------------------------------------------------------------------

@@ -17,6 +17,10 @@ extends Node
 ##       tints actually applied to the sprites (visually distinct placeholder)
 ##   H6. portal 1: band_id &"near", prompt "Dive", position (0,-150), glow/gate
 ##       modulate WHITE (rendering byte-identical to pre-S8)
+##   H8. (U4) portal 4: band_id &"band_four", prompt names The Far Field, position
+##       (-110,-20) — the D-RAT-9 mirror slot — indigo glow (D-U4-1), pairwise
+##       distinct from WHITE/ember/teal; PLUS the plaza-FULL set-equality pin
+##       (exactly the 5 expected Interactable ids under the hub root)
 
 const HUB_PATH := "res://scenes/hub/hub.tscn"
 const HUB_GROUND_CELLS := 963              # H4 iso paint (worklog 2026-07-02-H4)
@@ -24,6 +28,7 @@ const YARD_X := 340                        # hub_ground.gd dirt-yard half-extent
 const YARD_Y := 216
 const EMBER_ORANGE := Color(1.0, 0.58, 0.24)   # D-RAT-1 band-2 glow
 const CAVE_TEAL := Color(0.3, 0.9, 0.65)       # D-RAT-5 band-3 glow (The Warren)
+const BAND4_GLOW := Color(0.15, 0.25, 1.0)     # D-U4-1 band-4 glow (The Far Field indigo)
 
 var _failures: Array[String] = []
 
@@ -48,15 +53,17 @@ func _run() -> int:
 	_check_portal_two(hub)     # H5
 	_check_portal_one(hub)     # H6
 	_check_portal_three(hub)   # H7
+	_check_portal_four(hub)    # H8 (U4 — portal-4 spec + the plaza-FULL pin)
 
 	hub.queue_free()
 	await get_tree().process_frame
 
 	if _failures.is_empty():
-		print("HUB_CONTRACT OK — paths + 4 walls + %d ground cells + 4 interactables; " % HUB_GROUND_CELLS,
-				"portal 1 unchanged (&\"near\", WHITE), portal 2 routes &\"band_two\" ",
-				"(The Sump prompt, ember-orange, (220,-150) in-yard), portal 3 routes ",
-				"&\"band_three\" (The Warren prompt, cave-teal, (110,-20) in-yard)")
+		print("HUB_CONTRACT OK — paths + 4 walls + %d ground cells + 5 interactables " % HUB_GROUND_CELLS,
+				"(plaza-FULL set pinned); portal 1 unchanged (&\"near\", WHITE), portal 2 routes ",
+				"&\"band_two\" (The Sump prompt, ember-orange, (220,-150) in-yard), portal 3 routes ",
+				"&\"band_three\" (The Warren prompt, cave-teal, (110,-20) in-yard), portal 4 routes ",
+				"&\"band_four\" (The Far Field prompt, indigo, (-110,-20) in-yard)")
 		return 0
 	for f in _failures:
 		printerr("HUB_CONTRACT FAIL: ", f)
@@ -68,7 +75,7 @@ func _run() -> int:
 func _check_node_paths(hub: Node2D) -> void:
 	for path in ["Player", "PlayerSpawn", "HudLayer/QuotaNotice", "HubShop",
 			"DeparturePortal", "DeparturePortalBandTwo", "DeparturePortalBandThree",
-			"Room/Floor", "Room/Walls"]:
+			"DeparturePortalBandFour", "Room/Floor", "Room/Walls"]:
 		if hub.get_node_or_null(path) == null:
 			_failures.append("H1: node path '%s' does not resolve" % path)
 
@@ -107,6 +114,7 @@ func _check_interactables(hub: Node2D) -> void:
 		"DeparturePortal": &"portal",
 		"DeparturePortalBandTwo": &"portal_band_two",
 		"DeparturePortalBandThree": &"portal_band_three",
+		"DeparturePortalBandFour": &"portal_band_four",
 		"HubShop": &"shop",
 	}
 	for owner_path in expected:
@@ -219,3 +227,69 @@ func _check_portal_three(hub: Node2D) -> void:
 	var gate := portal.get_node_or_null("DiveGate") as Sprite2D
 	if gate == null or gate.modulate == Color.WHITE:
 		_failures.append("H7: portal-3 DiveGate modulate not tinted")
+
+
+# --- H8. Portal 4 (the U4 addition — routes to The Far Field) + the plaza-FULL pin --------
+
+func _check_portal_four(hub: Node2D) -> void:
+	var portal := hub.get_node_or_null("DeparturePortalBandFour") as DeparturePortal
+	if portal == null:
+		_failures.append("H8: DeparturePortalBandFour is not a DeparturePortal")
+		return
+	if portal.band_id != &"band_four":
+		_failures.append("H8: portal-4 band_id is '%s', expected &\"band_four\"" % portal.band_id)
+	if portal.interactable_id != &"portal_band_four":
+		_failures.append("H8: portal-4 interactable_id is '%s'" % portal.interactable_id)
+	if portal.position != Vector2(-110, -20):
+		_failures.append("H8: portal-4 position %s, expected (-110, -20)" % portal.position)
+	if absf(portal.position.x) > YARD_X or absf(portal.position.y) > YARD_Y:
+		_failures.append("H8: portal-4 position %s outside the dirt yard" % portal.position)
+	if not String(portal.prompt_text).contains("The Far Field"):
+		_failures.append("H8: portal-4 prompt '%s' does not name The Far Field" % portal.prompt_text)
+	# Visually distinct from ALL THREE shipped portals (contract, not just the ratified pin).
+	if portal.glow_tint == Color.WHITE:
+		_failures.append("H8: portal-4 glow_tint is WHITE — not distinct vs portal 1")
+	if portal.glow_tint.is_equal_approx(EMBER_ORANGE):
+		_failures.append("H8: portal-4 glow_tint == portal-2 ember-orange — not distinct")
+	if portal.glow_tint.is_equal_approx(CAVE_TEAL):
+		_failures.append("H8: portal-4 glow_tint == portal-3 cave-teal — not distinct")
+	if not portal.glow_tint.is_equal_approx(BAND4_GLOW):
+		_failures.append("H8: portal-4 glow_tint %s != D-U4-1 indigo %s"
+				% [portal.glow_tint, BAND4_GLOW])
+	# The _ready push-down actually landed on the child + sprites.
+	var it := portal.get_node_or_null("Interactable") as Interactable
+	if it != null and not String(it.prompt_text).contains("The Far Field"):
+		_failures.append("H8: portal-4 child Interactable prompt '%s' not pushed down" % it.prompt_text)
+	var glow := portal.get_node_or_null("PortalGlow") as Sprite2D
+	if glow == null or not glow.modulate.is_equal_approx(portal.glow_tint):
+		_failures.append("H8: portal-4 PortalGlow modulate not tinted (%s)"
+				% (glow.modulate if glow != null else Color.BLACK))
+	var gate := portal.get_node_or_null("DiveGate") as Sprite2D
+	if gate == null or gate.modulate == Color.WHITE:
+		_failures.append("H8: portal-4 DiveGate modulate not tinted")
+	_check_plaza_full(hub)
+
+
+func _check_plaza_full(hub: Node2D) -> void:
+	# The plaza-FULL pin (U4 §RD OQ-4): a recursive scan for Interactable-typed nodes
+	# under the hub root must yield EXACTLY the 5 expected ids — set equality, so a
+	# silently-added sixth interactable OR a duplicate id fail-louds the suite.
+	# §2.4: no sixth safe slot exists — any new hub interactable re-opens the plaza
+	# geometry; band 5 requires a band-select surface.
+	var expected: Array[StringName] = [&"portal", &"portal_band_two",
+			&"portal_band_three", &"portal_band_four", &"shop"]
+	var found: Array[StringName] = []
+	_collect_interactable_ids(hub, found)
+	expected.sort()
+	found.sort()
+	if found != expected:
+		_failures.append("H8: hub Interactable id set %s != the pinned plaza-FULL set %s"
+				% [str(found), str(expected)])
+
+
+func _collect_interactable_ids(node: Node, out: Array[StringName]) -> void:
+	var it := node as Interactable
+	if it != null:
+		out.append(it.interactable_id)
+	for child in node.get_children():
+		_collect_interactable_ids(child, out)
