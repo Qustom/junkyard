@@ -6,7 +6,7 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.11 (Third generation backend + open-field band + ranged oppositions — Director-directed 2026-07-06, opened ahead of M1.10's TG2/TG3) — **design LOCKED 2026-07-06 (D-RAT-1…8). Waves 1–2 DONE + swept (Wave-2's 3 U1 deviations Director-Reviewed 2026-07-08, archived). ▶ Wave 3 DISPATCHED (U3 — `band_four.tres` "The Far Field", ledger target 0).** *(M1.10 build DONE + TG1 published `m1-20260706-d04bd13` — Director playtest → TG2 → TG3 pending, non-blocking, one Wave-5 deviation rec Reviewed at TG3 close-out; M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
+**Current milestone:** M1.11 (Third generation backend + open-field band + ranged oppositions — Director-directed 2026-07-06, opened ahead of M1.10's TG2/TG3) — **design LOCKED 2026-07-06 (D-RAT-1…8). Waves 1–2 DONE + swept. Wave 3 (U3) DONE + integrated 2026-07-08 — ledger 0 lines: the N=3 trend lands flat at zero (band 2: 1 → band 3: 0 → band 4: 0). ▶ Wave-3 close-out sweep PRESENTED (1 U3 deviation, rec Reviewed); Wave 4 (U4) holds for the disposition.** *(M1.10 build DONE + TG1 published `m1-20260706-d04bd13` — Director playtest → TG2 → TG3 pending, non-blocking, one Wave-5 deviation rec Reviewed at TG3 close-out; M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
 
 > **M1.11 design LOCKED (2026-07-06):** breakdown + 6 per-task designs each with a BINDING
 > `Resolved Decisions (Phase 3)` section (fresh-eyes pass run in two waves — contract owners
@@ -25,7 +25,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 > lines**. FOUR byte-identical controls (all-off fp `e943ac9c8bc1` + greybox/two/three fps).
 > TASKS.md §M1.11 + board items U0–UG3 wired (U0/U2a/U2b In Progress).
 
-**Last updated:** 2026-07-08 (M1.11 Wave-2 close-out COMPLETE — Director dispositioned all 3 U1 deviations **Reviewed**; no design reapply needed (test-only/hygiene); archived. **Wave 3 (U3) dispatched** — game-director-designer, worktree, board In Progress.)
+**Last updated:** 2026-07-08 (M1.11 Wave 3 (U3) DONE — merged + integrated verify ALL GREEN; **cost ledger 0 production lines** (3 `.tres` + 1 mirrored test — the N=3 headline holds). Close-out sweep presented — 1 U3 deviation (def-menu golden, orchestrator-applied at integration), rec Reviewed. Wave 4 (U4) holds for the disposition.)
 
 ## M1.11 Wave 1 — Done + integrated on `main` (2026-07-06)
 | Task | Agent(s) | Merged | Proof |
@@ -55,10 +55,15 @@ See `CLAUDE.md` → "The orchestrator loop".
 > deferred per RD-U1-4 scoping) **Reviewed**. No design reapply (test-only/hygiene; the comment is
 > already on the post-UG3 hygiene-pass list). Archived → `DESIGN_DEVIATIONS_HISTORY.md`.
 >
-> **▶ Wave 3 (U3) DISPATCHED (2026-07-08):** game-director-designer in a worktree on
-> `design/M1_11_Tasks/U3_band_four.md` (§Resolved Decisions RD-1…15 BINDING; D1–D5 already
-> Director-ratified as D-RAT-5/6 at design lock) — 3 `.tres` (`band_four` + `scatter_config_band_four`
-> + `depth_curve_band_four`) + the mirrored contract test; ledger target **0 lines**.
+## M1.11 Wave 3 — Done + integrated on `main` (2026-07-08)
+| Task | Agent(s) | Merged | Proof |
+|---|---|---|---|
+| U3 — `band_four.tres` "The Far Field" (scatter profile + deck + tint) | game-director-designer | merge of br `2e43902` (worklog `1787121`) + integration `72cf997` | **Cost ledger: 0 production lines** (RD-15 — 3 `.tres` + `test_band_four_profile`; N=3 trend: band 2 = 1 line → band 3 = 0 → band 4 = 0). `BAND_FOUR OK` C0–C11, 9 seeds: deck pin **lobber 5 / sentry 5 / charger 4 / bomb 6 = 20 @ 34 credits spend-to-0** (shipped native cards matched RD-1, no re-derivation); measured junk band-total **71.1 mean** (68–75) on RD-11's ~70 target; greybox+band_two+band_three byte-identity pins in-suite. Integrated verify ALL GREEN: import · band_four · def-menu coverage (post-golden) · parity fp **`e943ac9c8bc1`** · band_two/band_three profiles · scatter backend (`44a9a9b3756f`) + materialise · cave materialise · routing · hub contract · 11-def bijection · lobber · sentry · smoke. Worklog `…-U3-game-director-designer.md`. **1 deviation (def-menu golden — U3 flagged, orchestrator applied `72cf997`; rec Reviewed).** |
+
+> **▶ Wave-3 close-out sweep PRESENTED (2026-07-08):** 1 U3 deviation in `design/DESIGN_DEVIATIONS.md`
+> (charger's IN-DECK chip golden `band_two` → `band_four, band_two` — the product was right, the S4
+> band-scan picked up band 4 with zero menu code; exact TG1-class stale golden; rec **Reviewed**).
+> **Wave 4 (U4) dispatches after the Director dispositions.**
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
@@ -114,7 +119,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 > the Director playtest — do NOT dispatch it until the Director has played. Also pending: disposition the one
 > Wave-5 test-fixture deviation (rec Reviewed) at the TG3 close-out.
 
-## ▶ Next action (start here on a cold restart) — M1.11 Wave 3 (U3) is DISPATCHED (worktree; 3 `.tres` + mirrored contract test `test_band_four_profile`; ledger target 0 lines — the N=3 headline measurement). On return: verify the DoD (four control fps byte-identical; `5/5/4/6 = 20` spend-to-0 deck pin; 11-def bijection unchanged — U3 adds no def; ledger = 0), merge, Wave-3 deviation sweep → Wave 4 **U4** (portal 4 + plaza-full pin; one `BAND_ROUTES` row) → Wave 5 (UG1 publish → Director playtest → UG2 → UG3).
+## ▶ Next action (start here on a cold restart) — M1.11 Wave 3 (U3) is DONE + integrated (ledger = 0 lines; deck pin `5/5/4/6 = 20` spend-to-0 verified). The Wave-3 close-out sweep is PRESENTED to the Director (1 U3 deviation, rec Reviewed). **On the Director's disposition: archive it → dispatch Wave 4 U4** (fourth hub portal + `band_four` routing + plaza-full pin — spec `design/M1_11_Tasks/U4_hub_portal_routing.md`; sole `main_game.gd` writer this wave, one `BAND_ROUTES` row + the portal instance; pinned indigo glow `Color(0.15, 0.25, 1.0)` at mirror slot `(-110, -20)`) → Wave 5 (UG1 publish → Director playtest → UG2 → UG3).
 
 > **M1.11 = the N=3 declining-cost proof** (Director-directed 2026-07-06; design LOCKED same day):
 > a **ScatterBackend** (open-field arena + order-stable poisson cover — no pieces, no CA) behind the same
