@@ -16,6 +16,7 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 ---
 
 *Current: **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — awaiting Director disposition (non-blocking; TG2 is human-gated behind the playtest anyway).*
+*Prior: **M1.11 Wave 1** (2026-07-06) — U0: 4 Reviewed (archived 2026-07-06), U2a/U2b: none.*
 *Prior: **M1.10 Wave 4** (2026-07-05) — T4: 0 deviations — build complete (T0–T4); portal 3 for 1 bespoke line.*
 *Prior: **Wave 3** T3: 0 dev (band 3 = 0 lines) · **Wave 2** T1: 0 dev · **Wave 1** T0: 3 Reviewed (archived), T2a/T2b: none.*
 *Prior: **M1.9 Wave 5** (2026-07-03) — 1 entry (S8): 1 Reviewed — build phase S0–S9 fully swept.*
@@ -33,34 +34,3 @@ not updated in the T3 wave. Test-only change; no production `.gd`/`.tres` touche
 test caught up to ratified product behavior; no design change.
 
 ---
-
-*Current also: **M1.11 Wave 1** (2026-07-06) — U0: 4 entries below (all rec Reviewed), U2a/U2b: none.
-Integrated on `main` (merges `bd24204`/`7cbe50f`/`4ff5c49` + CSV `fb3435d`); verify ALL GREEN.*
-
-[2026-07-06] U0/entry-anchor — the scatter entry anchor's tie-break is **lane-aligned** (prefers the
-clear-lane row) rather than the cave's pure min-y "west-most" rule. · why: U0 RD-2 (BINDING) ratified
-lane-alignment so the spawn always sits on the guaranteed highway; the M1.10 amendment-2 wording
-("west-most 2×2-open, min-y tie-break") predates the scatter lane concept. Flagged because the
-breakdown's "entry anchor contract … Scatter inherits all three bars unchanged" reads stricter than
-the RD. · Rec: **Reviewed** — RD-2 is the design; the breakdown's "unchanged" wording should be read
-per-backend (reapply: one clarifying line in the breakdown anchor section at close-out).
-
-[2026-07-06] U0/no-carve — the scatter backend ships **no carve fallback at all**; connectivity +
-2×2 passability hold by construction (RD-6 proof). The breakdown's determinism guardrail says
-"connectivity … by construction **or by deterministic CARVE**". · why: RD-6 (BINDING, adversarially
-re-derived by the Phase-3 resolver) proved the carve arm dead code at every legal knob value; teeth
-live in the pipeline ASSERT + S-suite. · Rec: **Reviewed** — the "or CARVE" clause is satisfied by
-election of the first arm; no design change.
-
-[2026-07-06] U0/S10-strong-form — `test_scatter_backend` S10 asserts the **strong** passability form
-(EVERY floor cell ∈ the 2×2-open set) rather than the spec body's "cave-verbatim" weaker bar (in or
-adjacent). · why: the RD-6 proof yields the strong form for free and U1's M6 asserts the same form —
-matching bars end-to-end. Strictly tighter, never looser. · Rec: **Reviewed** — stronger assertion,
-no design change.
-
-[2026-07-06] U0/RD-16-test-comments — comment-only staleness edits to `test_band_pipeline_parity.gd`
-(P7) + `test_cave_backend.gd` (C8) landed as their own commit (`d2a8a34`): the comments claimed
-"scatter is not wired" while the assertions (which survive byte-identical in behavior) now exercise
-the validate()-null path. · why: RD-16 authorized comment-only touch-ups in a separate commit;
-assertion lines untouched, both suites re-run green pre/post. · Rec: **Reviewed** — comment hygiene
-on T0-owned files; no design change.

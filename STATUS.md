@@ -6,7 +6,7 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.11 (Third generation backend + open-field band + ranged oppositions — Director-directed 2026-07-06, opened ahead of M1.10's TG2/TG3) — **design LOCKED 2026-07-06 (D-RAT-1…8). ▶ Wave 1 DISPATCHED (U0 ∥ U2a ∥ U2b, parallel worktrees).** *(M1.10 build DONE + TG1 published `m1-20260706-d04bd13` — Director playtest → TG2 → TG3 pending, non-blocking, one Wave-5 deviation rec Reviewed at TG3 close-out; M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
+**Current milestone:** M1.11 (Third generation backend + open-field band + ranged oppositions — Director-directed 2026-07-06, opened ahead of M1.10's TG2/TG3) — **design LOCKED 2026-07-06 (D-RAT-1…8). Wave 1 DONE + swept (4 U0 deviations Director-Reviewed 2026-07-07, archived). ▶ Wave 2 DISPATCHED (U1 — sole `main_game.gd` writer).** *(M1.10 build DONE + TG1 published `m1-20260706-d04bd13` — Director playtest → TG2 → TG3 pending, non-blocking, one Wave-5 deviation rec Reviewed at TG3 close-out; M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
 
 > **M1.11 design LOCKED (2026-07-06):** breakdown + 6 per-task designs each with a BINDING
 > `Resolved Decisions (Phase 3)` section (fresh-eyes pass run in two waves — contract owners
@@ -25,7 +25,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 > lines**. FOUR byte-identical controls (all-off fp `e943ac9c8bc1` + greybox/two/three fps).
 > TASKS.md §M1.11 + board items U0–UG3 wired (U0/U2a/U2b In Progress).
 
-**Last updated:** 2026-07-06 (M1.11 Wave 1 integrated + verified; close-out sweep presented to the Director — 4 U0 deviations, all rec Reviewed. Wave 2 (U1) holds for the dispositions.)
+**Last updated:** 2026-07-07 (M1.11 Wave-1 close-out COMPLETE — Director dispositioned all 4 U0 deviations **Reviewed**; reapply = 1 clarifying line in the breakdown's entry-anchor contract; archived to `DESIGN_DEVIATIONS_HISTORY.md`. **Wave 2 (U1) dispatched** — general-purpose, worktree, board In Progress.)
 
 ## M1.11 Wave 1 — Done + integrated on `main` (2026-07-06)
 | Task | Agent(s) | Merged | Proof |
@@ -40,9 +40,14 @@ See `CLAUDE.md` → "The orchestrator loop".
 > coverage · config 91/91 · parity fp `e943ac9c8bc1` · determinism · cave · band_three profile (greybox
 > + band_two golden pins) · cave materialise · routing · hub contract · smoke. Board U0/U2a/U2b = Done.
 >
-> **▶ Wave-1 close-out sweep PRESENTED (2026-07-06):** 4 U0 deviations in `design/DESIGN_DEVIATIONS.md`
-> (entry-anchor lane tie-break · no-carve election · S10 strong form · RD-16 comment edits — all rec
-> **Reviewed**); U2a/U2b none. **Wave 2 (U1) dispatches after the Director dispositions.**
+> **✓ Wave-1 close-out COMPLETE (2026-07-07):** the Director dispositioned all 4 U0 deviations
+> (entry-anchor lane tie-break · no-carve election · S10 strong form · RD-16 comment edits) **Reviewed**;
+> U2a/U2b none. Reapply: one clarifying line in `M1.11_Breakdown.md` §entry-anchor contract ("unchanged"
+> binds the bars; tie-break is per-backend). All 4 archived → `DESIGN_DEVIATIONS_HISTORY.md`.
+>
+> **▶ Wave 2 (U1) DISPATCHED (2026-07-07):** general-purpose in a worktree on
+> `design/M1_11_Tasks/U1_scatter_materialisation.md` (RD-U1-0…8 BINDING) — the `:1076` gate-snap
+> allowlist flip (ledger 1 line) + `test_scatter_materialise` M1–M9; sole `main_game.gd` writer.
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
@@ -98,7 +103,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 > the Director playtest — do NOT dispatch it until the Director has played. Also pending: disposition the one
 > Wave-5 test-fixture deviation (rec Reviewed) at the TG3 close-out.
 
-## ▶ Next action (start here on a cold restart) — M1.11 Wave 1 is DISPATCHED (U0 ∥ U2a ∥ U2b, parallel worktrees, file-disjoint). On return: verify each DoD, apply BOTH defs' `CFG_FIELD_*` gloss rows in ONE merge commit, Wave-1 close-out deviation sweep → Wave 2 **U1** (the 1-line gate-snap flip + materialisation verify; sole `main_game.gd` writer) → Wave 3 **U3** (`band_four.tres`, target 0 lines) → Wave 4 **U4** (portal 4 + plaza-full pin) → Wave 5 (UG1 publish → Director playtest → UG2 → UG3).
+## ▶ Next action (start here on a cold restart) — M1.11 Wave 2 (U1) is DISPATCHED (worktree; the `:1076` gate-snap allowlist flip + `test_scatter_materialise` M1–M9; ledger target 1 line). On return: verify the DoD (four control fps byte-identical, existing suites green UNMODIFIED, ledger = 1), merge, Wave-2 deviation sweep → Wave 3 **U3** (`band_four.tres`, target 0 lines) → Wave 4 **U4** (portal 4 + plaza-full pin) → Wave 5 (UG1 publish → Director playtest → UG2 → UG3).
 
 > **M1.11 = the N=3 declining-cost proof** (Director-directed 2026-07-06; design LOCKED same day):
 > a **ScatterBackend** (open-field arena + order-stable poisson cover — no pieces, no CA) behind the same

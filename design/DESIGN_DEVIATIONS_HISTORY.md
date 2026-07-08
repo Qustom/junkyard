@@ -573,3 +573,32 @@ Decisions + the cost ledger — no design-doc edit required.
 
 **M1.10 Wave-1 close-out complete.** `DESIGN_DEVIATIONS.md` empty. **Next: Wave 2 (T1 — cave
 materialisation, sole `main_game.gd` writer).**
+
+---
+
+## M1.11 Wave-1 close-out (2026-07-06) — 4 entries (U0): 4 Reviewed
+
+Director dispositioned all four **Reviewed** (design fine as-is). U2a/U2b shipped zero deviations.
+One reapply: a clarifying line in the breakdown's entry-anchor contract (see first entry); the
+other three are backend-local as-built facts already canonical in the U0 spec's Resolved Decisions.
+
+- **U0/entry-anchor — scatter's anchor tie-break is lane-aligned** (prefers the clear-lane row)
+  rather than the cave's pure min-y "west-most" rule; ratified by U0 RD-2 (BINDING), flagged only
+  because the breakdown's "Scatter inherits all three bars unchanged" read stricter than the RD. —
+  **Reviewed** (RD-2 is the design; "unchanged" binds the bars, tie-break is per-backend).
+  **Reapply:** clarifying line added to `M1.11_Breakdown.md` §entry-anchor contract (2026-07-06).
+- **U0/no-carve — the scatter backend ships no carve fallback at all**; connectivity + 2×2
+  passability hold by construction (RD-6 proof — carve arm dead code at every legal knob value;
+  teeth live in the pipeline ASSERT + S-suite). — **Reviewed** (the breakdown's "by construction
+  or by deterministic CARVE" clause is satisfied by election of the first arm). **Reapply:** none —
+  canonical in U0 spec RD-6.
+- **U0/S10-strong-form — `test_scatter_backend` S10 asserts the strong passability form** (EVERY
+  floor cell ∈ the 2×2-open set) rather than the spec body's weaker "in or adjacent" bar; the RD-6
+  proof yields the strong form for free and U1's M6 asserts the same form. — **Reviewed** (strictly
+  tighter, never looser). **Reapply:** none.
+- **U0/RD-16-test-comments — comment-only staleness edits** to `test_band_pipeline_parity.gd` (P7)
+  + `test_cave_backend.gd` (C8) as their own commit (`d2a8a34`); assertions untouched, suites green
+  pre/post, authorized by RD-16. — **Reviewed** (comment hygiene on T0-owned files). **Reapply:** none.
+
+**M1.11 Wave-1 close-out complete.** `DESIGN_DEVIATIONS.md` holds only the M1.10 TG1 entry
+(awaiting the TG3 close-out). **Next: Wave 2 (U1 — scatter materialisation, sole `main_game.gd` writer).**
