@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="DepthCurve" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://systems/depth/depth_curve.gd" id="1_band4"]
+
+[sub_resource type="Curve" id="Curve_density_b4"]
+_limits = [0.0, 4.0, 0.0, 1.0]
+_data = [Vector2(0, 1.0), 0.0, 0.0, 0, 0, Vector2(1, 1.2), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Curve" id="Curve_tier_b4"]
+_limits = [3.99, 6.0, 0.0, 1.0]
+_data = [Vector2(0, 4), 0.0, 2.0204, 1, 1, Vector2(0.49, 4.99), 2.0204, 1.0, 1, 1, Vector2(0.5, 5), 1.0, 0.0, 1, 1, Vector2(1, 5), 0.0, 0.0, 1, 1]
+point_count = 4
+
+[sub_resource type="Curve" id="Curve_value_b4"]
+_limits = [0.0, 2.9, 0.0, 1.0]
+_data = [Vector2(0, 1.45), 0.0, 0.0, 0, 0, Vector2(0.5, 2.175), 0.0, 0.0, 0, 0, Vector2(1, 2.9), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[resource]
+script = ExtResource("1_band4")
+value_curve = SubResource("Curve_value_b4")
+density_curve = SubResource("Curve_density_b4")
+tier_threshold_curve = SubResource("Curve_tier_b4")
