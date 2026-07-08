@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.11 (Wave 4)
 - **Branch:** general-purpose/U4
-- **Commit:** d9711b10d4a256c0309c38d398d64a757ee42fd5 (+ the worklog SHA-fill amend commit)
+- **Commit:** 0a12c25e7195a6577e14df31a491ee3edb0dc75c (the full U4 change: code + scene + tests + this worklog; a follow-up worklog-only commit records this SHA)
 
 ## What changed
 
