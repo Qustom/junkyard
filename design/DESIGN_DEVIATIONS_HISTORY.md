@@ -602,3 +602,26 @@ other three are backend-local as-built facts already canonical in the U0 spec's 
 
 **M1.11 Wave-1 close-out complete.** `DESIGN_DEVIATIONS.md` holds only the M1.10 TG1 entry
 (awaiting the TG3 close-out). **Next: Wave 2 (U1 — scatter materialisation, sole `main_game.gd` writer).**
+
+---
+
+## M1.11 Wave-2 close-out (2026-07-08) — 3 entries (U1): 3 Reviewed
+
+Director dispositioned all three **Reviewed** (design fine as-is; all test-only or hygiene-scoping).
+No design-doc reapply needed — the first two are test strengthenings in the RDs' own direction; the
+third's hygiene-pass routing is already recorded in the U1 worklog's follow-ups.
+
+- **U1/M6-size-belt — M6(b) additionally asserts `|T| == |floor|`** alongside single-component (the
+  explicit belt on RD-U1-2's "T == the floor set" claim; zero flakiness cost). — **Reviewed**
+  (test-only strengthening). **Reapply:** none.
+- **U1/M9-socket-raw-pin — M9(a) also pins the socket arm's RAW-offset return value in-suite**
+  (`_pinned_gate_pos == spawn_pos + GATE_SPAWN_OFFSET` on a greybox profile), beyond the spec's cave
+  guard-arm check. — **Reviewed** (test-only strengthening). **Reapply:** none.
+- **U1/exit-candidate-comment — the `_exit_candidate_cells` "on caves" comment left untouched** (not
+  one of RD-U1-4's two listed call-site comments; still literally true, cave-only in phrasing). —
+  **Reviewed** (correct RD-U1-4 diff-purity scoping). **Reapply:** none — already on the post-UG3
+  hygiene-pass list (U1 worklog follow-ups: with the `_materialise_band`/`_build_synthetic_piece`
+  wording + the SocketSealer rename, T1 OQ-7).
+
+**M1.11 Wave-2 close-out complete.** `DESIGN_DEVIATIONS.md` holds only the M1.10 TG1 entry
+(awaiting the TG3 close-out). **Next: Wave 3 (U3 — `band_four.tres` "The Far Field", ledger target 0).**
