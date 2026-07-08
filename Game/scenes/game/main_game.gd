@@ -56,6 +56,7 @@ const BAND_ROUTES: Dictionary = {
 	&"near": &"band_greybox",
 	&"band_two": &"band_two",
 	&"band_three": &"band_three",   # T4 (M1.10): the cave band — T3's "The Warren" profile.
+	&"band_four": &"band_four",     # U4 (M1.11): the open-field band — U3's "The Far Field" profile.
 }
 
 ## Spawn-piece fallback cell size if a piece doesn't report one (B1 authored 16).
