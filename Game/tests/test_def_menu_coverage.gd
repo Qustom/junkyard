@@ -344,12 +344,13 @@ func _case_deck_surface(failures: Array[String], scene: PackedScene) -> void:
 
 	# Honest chip + auto-expand: deck-listed + not config-enabled → the IN-DECK
 	# chip (never OFF), band display name in the tooltip, section EXPANDED at
-	# build. charger is band_two-only; splitter is now in band_three's deck too
-	# (M1.10 T3 D-RAT-6: [ambusher 6 · burrower 3 · splitter 4 · bomb 1]), so its
-	# chip surfaces BOTH bands (band_three listed first). splitter_child spawns
-	# nowhere → OFF + collapsed.
+	# build. charger is in band_two's AND band_four's decks (M1.11 U3 D-RAT-6:
+	# [lobber 5 · sentry 5 · charger 4 · bomb 6]); splitter is in band_three's
+	# deck too (M1.10 T3 D-RAT-6: [ambusher 6 · burrower 3 · splitter 4 ·
+	# bomb 1]) — each chip surfaces ALL its bands, deepest listed first.
+	# splitter_child spawns nowhere → OFF + collapsed.
 	var want_chip_by_id: Dictionary = {
-		"charger": tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_two", "n": 0 }),
+		"charger": tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_four, band_two", "n": 0 }),
 		"splitter": tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_three, band_two", "n": 0 }),
 	}
 	for id: String in ["charger", "splitter"]:
@@ -383,7 +384,7 @@ func _case_deck_surface(failures: Array[String], scene: PackedScene) -> void:
 	menu._stage_override(charger, "charge_speed", 750.0)
 	menu._stage_override(splitter, "aggro_radius", 300.0)
 	menu._stage_override(splitter, "move_speed", 120.0)
-	var tuned_chip: String = tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_two", "n": 2 })
+	var tuned_chip: String = tr("CFG_DEF_CHIP_DECK").format({ "bands": "band_four, band_two", "n": 2 })
 	var charger_chip: Label = menu._def_chips.get("charger", null)
 	if charger_chip != null and charger_chip.text != tuned_chip:
 		failures.append("(E) charger chip after staging 2 knobs != '%s': '%s'"
