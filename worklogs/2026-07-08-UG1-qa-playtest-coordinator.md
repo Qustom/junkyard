@@ -4,7 +4,7 @@
 - **Subagent:** qa-playtest-coordinator
 - **Milestone:** M1.11 (Wave 5)
 - **Branch:** `qa/UG1`
-- **Commit:** <filled at commit — this worklog + `UG1_playtest_build.md` + `changelog.txt`>
+- **Commit:** `90db6cce3fe20e1809023c437e4748322428ae24` (the UG1 doc + `changelog.txt` + this worklog; a follow-up worklog-only commit records this SHA)
 
 ## What changed
 Authored the M1.11 build-verify capstone doc (`design/M1_11_Tasks/UG1_playtest_build.md`,
