@@ -344,11 +344,11 @@ band 5 will require a band-select surface (carried to UG3).**
 
 ### 6.1 Publish record
 
-- **PENDING orchestrator publish from `main`** (as of 2026-07-08 — verify matrix green, doc +
-  changelog committed on `qa/UG1`; the itch push runs from `main` after the orchestrator merges this
-  branch, per §6). Predicted stamp: `m1-<UTC-date>-<main-short-sha>` (`BuildVersion.short_sha` =
-  `main`'s HEAD after merge, stamped by `stamp_build.sh`). Fill this row with the userversion, butler
-  channel/upload/build id, and the live-page confirmation once published.
+- **PUBLISHED 2026-07-08 (orchestrator, from `main` @ `69446d5` — the UG1 merge commit):**
+  `qusto/the-far-yard:html5 @ m1-20260708-69446d5` — butler upload `#18000582`, **build `#1781007`** ✓
+  (from `#1775901`, the M1.10 `d04bd13` build; 492 KiB patch). Verified live via
+  `butler status qusto/the-far-yard:html5`. Live page: `https://qusto.itch.io/the-far-yard`
+  (Chrome/Edge only, password-gated).
 
 ---
 

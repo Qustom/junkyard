@@ -6,7 +6,7 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.11 (Third generation backend + open-field band + ranged oppositions — Director-directed 2026-07-06, opened ahead of M1.10's TG2/TG3) — **design LOCKED 2026-07-06 (D-RAT-1…8). BUILD PHASE COMPLETE: Waves 1–4 DONE + swept (Wave 4: 0 deviations — nothing to disposition). Final N=3 ledger: U1 = 1 line · U3 = 0 lines · U4 = 1 line. ▶ Wave 5 DISPATCHED (UG1 — playtest build + changelog + itch publish).** *(M1.10 build DONE + TG1 published `m1-20260706-d04bd13` — Director playtest → TG2 → TG3 pending, non-blocking, one Wave-5 deviation rec Reviewed at TG3 close-out; M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
+**Current milestone:** M1.11 (Third generation backend + open-field band + ranged oppositions — Director-directed 2026-07-06, opened ahead of M1.10's TG2/TG3) — **design LOCKED 2026-07-06 (D-RAT-1…8). BUILD + UG1 COMPLETE: Waves 1–4 swept, UG1 verify matrix ALL GREEN + PUBLISHED `m1-20260708-69446d5` (build `#1781007`). Final N=3 ledger: U1 = 1 · U3 = 0 · U4 = 1 line. ▶ DIRECTOR PLAYTEST (human-gated) → UG2 → UG3.** *(M1.10 build DONE + TG1 published `m1-20260706-d04bd13` — Director playtest → TG2 → TG3 pending, non-blocking, one Wave-5 deviation rec Reviewed at TG3 close-out; M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
 
 > **M1.11 design LOCKED (2026-07-06):** breakdown + 6 per-task designs each with a BINDING
 > `Resolved Decisions (Phase 3)` section (fresh-eyes pass run in two waves — contract owners
@@ -25,7 +25,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 > lines**. FOUR byte-identical controls (all-off fp `e943ac9c8bc1` + greybox/two/three fps).
 > TASKS.md §M1.11 + board items U0–UG3 wired (U0/U2a/U2b In Progress).
 
-**Last updated:** 2026-07-08 (M1.11 Wave 4 (U4) DONE — merged + integrated verify ALL GREEN; **ledger 1 line** (the `BAND_ROUTES` row); **0 deviations → Wave-4 sweep trivially complete**. Build phase U0–U4 CLOSED. **Wave 5 (UG1) dispatched** — qa-playtest-coordinator, worktree, board In Progress.)
+**Last updated:** 2026-07-08 (M1.11 UG1 DONE + PUBLISHED — verify matrix ALL GREEN on `main`; changelog M1.10→M1.11 committed; **itch build `#1781007` @ `m1-20260708-69446d5`** pushed from `main`@`69446d5`. UG1 deviations: none. **▶ The Director playtest is the next gate** — UG2 is BlockedBy it.)
 
 ## M1.11 Wave 1 — Done + integrated on `main` (2026-07-06)
 | Task | Agent(s) | Merged | Proof |
@@ -74,10 +74,37 @@ See `CLAUDE.md` → "The orchestrator loop".
 > band 0 lines (U3) · portal/routing 1 line (U4) · oppositions ~110 + ~191 component lines (U2a/U2b)** —
 > the N=3 declining-cost evidence UG3 judges.
 >
-> **▶ Wave 5 (UG1) DISPATCHED (2026-07-08):** qa-playtest-coordinator in a worktree — build-verify doc
-> from the TG1 template, full M1.11 verify matrix, `changelog.txt` M1.10→M1.11 delta, **publish to itch**
-> (`BUTLER=/mnt/c/wsl-libraries/butler/butler bash Game/tools/push_itch.sh`). Then Director playtest
-> (rider: BOTH transit lanes + the four-glow plaza read) → UG2 → UG3.
+> **✓ Wave 5 (UG1) DONE + PUBLISHED (2026-07-08):** verify matrix ALL GREEN (four controls byte-identical
+> `e943ac9c8bc1` + greybox/two/three · scatter `44a9a9b3756f` · 91/91 · 11-def bijection · deck pin
+> `5/5/4/6 = 20 @ 34` · save v4 unchanged; `test_rg1_m13_verify` PASS on attempt 1 — re-run flake =
+> pre-existing BUG-M13FLAKE, not a regression). Build-verify doc `design/M1_11_Tasks/UG1_playtest_build.md`
+> + M1.11 changelog block committed (br `90db6cc`, merge `69446d5`). **Published (orchestrator, from
+> `main`): `qusto/the-far-yard:html5 @ m1-20260708-69446d5`, butler build `#1781007`** ✓. UG1
+> deviations: none. Worklog `…-UG1-qa-playtest-coordinator.md`. Board UG1 = Done.
+
+## ▶ DIRECTOR PLAYTEST — M1.11 build (human-gated; UG2 is BlockedBy this)
+
+> Play **https://qusto.itch.io/the-far-yard** (Chrome/Edge only, password-gated), build
+> **`m1-20260708-69446d5`** (itch build `#1781007`; supersedes M1.10's `d04bd13`). Full checklist:
+> `design/M1_11_Tasks/UG1_playtest_build.md` §5. Key reads:
+> - **The fourth portal "Dive — The Far Field"** (indigo glow, WEST at `(-110, -20)` — mirror of
+>   The Warren's slot) → the **open-field band**: one vast flat arena, sparse rim-biased cover, long
+>   sightlines, a full-width clear-lane "highway" — a *third* generator (not rooms, not caves).
+> - **Lobber "The Mortar"** — static sheller; ground-ring marker locks at fire, shell arcs over
+>   EVERYTHING (cover does not protect — keep moving); throw-kill silences the rain.
+> - **Sentry** — always-visible lane down a long sightline; windup flash → wall-blocked bolt (cover
+>   DOES protect); crossable cooldown; throw-kill disables it permanently.
+> - **The charger** ("The Wrecker") — cut from the cave for lack of lanes — comes alive in the open
+>   field; 6 mines punctuate the exposed crossing. Deck: lobber 5 / sentry 5 / charger 4 / bomb 6.
+> - **D-U4-2 eyeball rider (binding):** (a) BOTH transit lanes — spawn→portal-2 (over portal 3) AND
+>   spawn→shop (over portal 4, the most-walked lane) — any mis-dive pressure? (b) the FOUR-glow plaza
+>   read (violet · ember · teal · indigo) — distinct at a glance? (c) bands 1–3 unchanged (controls).
+> - Watch-items: open field *tense* vs *empty*; the 1.45 step felt vs band 3; lane-as-highway;
+>   sentry piñata (throw-disable); exposed-center loot. **Export telemetry** (P → Meta tab) → UG2.
+>
+> Then **UG2** (qa four-band telemetry/balance) → **UG3** verdict (go/iterate/pivot) in
+> `design/M1_11_Tasks/G4_findings_M1.11.md` — where the N=3 cost-ledger trend + the plaza-full
+> band-5 forcing function get judged. Do NOT dispatch UG2 until the Director has played.
 
 > **⚙ Repo layout (since 2026-06-27):** the **Godot project is under `Game/`**; repo root holds only design/docs/meta
 > (`design/`, `worklogs/`, `*.md`, `changelog.txt`, `.github/`, dotfiles). Run godot with **`--path Game`** (or `cd Game`);
@@ -133,7 +160,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 > the Director playtest — do NOT dispatch it until the Director has played. Also pending: disposition the one
 > Wave-5 test-fixture deviation (rec Reviewed) at the TG3 close-out.
 
-## ▶ Next action (start here on a cold restart) — M1.11 Wave 5 (UG1) is DISPATCHED (qa, worktree: build-verify doc + full verify matrix + changelog M1.10→M1.11 delta + itch publish). On return: verify the matrix + the live build, merge, UG1 sweep → **Director playtest** (human-gated; rider: BOTH transit lanes + four-glow plaza read; export telemetry) → UG2 (telemetry/balance, BlockedBy the playtest) → UG3 verdict in `design/M1_11_Tasks/G4_findings_M1.11.md`.
+## ▶ Next action (start here on a cold restart) — M1.11 build + UG1 are DONE + PUBLISHED (`m1-20260708-69446d5`, build `#1781007`). **Waiting on the Director playtest** (block above — checklist `design/M1_11_Tasks/UG1_playtest_build.md` §5; export telemetry). After the playtest: dispatch UG2 (qa telemetry/balance) → UG3 verdict in `design/M1_11_Tasks/G4_findings_M1.11.md`. Also still open (non-blocking): M1.10 TG2/TG3 + its one TG1 deviation; M1.9 SG2/SG3; M1.7/M1.6 RG2/RG3.
 
 > **M1.11 = the N=3 declining-cost proof** (Director-directed 2026-07-06; design LOCKED same day):
 > a **ScatterBackend** (open-field arena + order-stable poisson cover — no pieces, no CA) behind the same
