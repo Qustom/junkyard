@@ -15,8 +15,9 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*Current: **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — awaiting Director disposition (non-blocking; TG2 is human-gated behind the playtest anyway).*
-*Prior: **M1.11 Wave 1** (2026-07-06) — U0: 4 Reviewed (archived 2026-07-06), U2a/U2b: none.*
+*Current: **M1.11 Wave 2** (2026-07-07) — U1: 3 entries below (all rec Reviewed) — awaiting Director disposition.*
+*Current also: **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — awaiting Director disposition (non-blocking; TG2 is human-gated behind the playtest anyway).*
+*Prior: **M1.11 Wave 1** (2026-07-06) — U0: 4 Reviewed (archived 2026-07-07), U2a/U2b: none.*
 *Prior: **M1.10 Wave 4** (2026-07-05) — T4: 0 deviations — build complete (T0–T4); portal 3 for 1 bespoke line.*
 *Prior: **Wave 3** T3: 0 dev (band 3 = 0 lines) · **Wave 2** T1: 0 dev · **Wave 1** T0: 3 Reviewed (archived), T2a/T2b: none.*
 *Prior: **M1.9 Wave 5** (2026-07-03) — 1 entry (S8): 1 Reviewed — build phase S0–S9 fully swept.*
@@ -34,3 +35,21 @@ not updated in the T3 wave. Test-only change; no production `.gd`/`.tres` touche
 test caught up to ratified product behavior; no design change.
 
 ---
+
+[2026-07-07] U1/M6-size-belt — `test_scatter_materialise` M6(b) additionally asserts `|T| == |floor|`
+alongside single-component. · why: the explicit belt on RD-U1-2's "T == the floor set" claim (T ⊆ floor
+by construction; M6(a) gives the other inclusion; the size check makes the equality a direct assertion).
+Zero flakiness cost, strictly tighter tripwire on U0's predicates. · Rec: **Reviewed** — test-only
+strengthening in the RD's own direction; no design change.
+
+[2026-07-07] U1/M9-socket-raw-pin — M9(a) also pins the socket arm's RAW-offset return value in-suite
+(`_pinned_gate_pos == spawn_pos + GATE_SPAWN_OFFSET` on a greybox profile), beyond the spec's cave
+guard-arm check. · why: a 3-line byte-identity pin on the flipped guard's socket arm, complementing the
+external `test_exit_placement` proof. · Rec: **Reviewed** — test-only strengthening; no design change.
+
+[2026-07-07] U1/exit-candidate-comment — the `_exit_candidate_cells` comment ("Exclude the SNAPPED
+pinned cell on caves…") also names the old guard arms but was left untouched. · why: it is NOT one of
+RD-U1-4's two listed call-site comments; RD-U1-4's diff-purity scoping defers it to the post-UG3
+hygiene pass (with the `_materialise_band`/`_build_synthetic_piece` wording + the SocketSealer rename).
+Still literally true, just cave-only in phrasing. · Rec: **Reviewed** — correct RD-U1-4 scoping; add
+the comment to the post-UG3 hygiene-pass list (done in the U1 worklog's follow-ups).
