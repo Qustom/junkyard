@@ -1,6 +1,81 @@
 THE FAR YARD — CHANGELOG
 ========================
 
+M1.11 — "The Far Field"   (changes since M1.10)
+-----------------------------------------------
+
+Until now every dive led to a place with walls close around you — rooms and corridors, or
+a winding cave. M1.11 adds a FOURTH dive band that is the opposite: one wide-open field
+where you can see (and be seen) clear across the whole space. It is built by a THIRD kind
+of level generator, and it comes with two new dangers that only make sense out in the open
+— threats that reach you AT RANGE instead of chasing you down. The first three dives are
+completely unchanged (walk into any of the three old gates and they play exactly as
+M1.10). The new band is a deeper, more exposed place where standing still gets you killed.
+
+
+A FOURTH DIVE — "THE FAR FIELD" (new)
+-------------------------------------
+* NEW — A fourth dive portal on the hub. Opposite the cave-teal Warren gate there's now a
+  fourth gate with an indigo glow, prompt "Dive — The Far Field". Walk into it to dive into
+  the new open-field band. The three original gates still dive into band 1, The Sump, and
+  The Warren exactly as before — all four now sit around the yard so you choose where to go.
+* NEW — The Far Field: an open field, not a building or a cave. Where band 1 and The Sump
+  are assembled from rooms and corridors and The Warren is a winding cave, The Far Field is
+  carved by a NEW open-field generator — one vast flat arena with cover scattered sparsely
+  across it (hugging the edges), and long sightlines everywhere. It plays completely
+  differently: instead of reading doorways or poking cave nooks, the whole game becomes
+  "where do I stand, and what can see me." A full-width clear lane runs across it — a fast,
+  exposed highway — while the loot sits out on the open floor, tempting you off cover. A
+  cold-indigo "a wrong, too-open expanse" tint sets it apart. It sits a step deeper than The
+  Warren, with a heavier opposition budget to match.
+
+
+TWO NEW HAZARDS — Far-Field-only, and they hit you FROM RANGE (new)
+-------------------------------------------------------------------
+* NEW — The Lobber ("The Mortar"). A slow, stand-still sheller. On a rhythm it reads your
+  position and drops a ground-circle MARKER where you're standing, then lobs an arcing shell
+  onto that spot after a short flight — the marker is your fair window to walk off it. Its
+  whole identity: the shell ARCS, so it IGNORES cover — ducking behind a wall does NOT save
+  you, only MOVING does. Camp a safe-looking corner and it will rain you out. A thrown item
+  kills it and silences the rain.
+* NEW — The Sentry. A stationary emplacement that watches one straight LANE, its line always
+  drawn on the ground so you can read it. Step into the lane and it flashes (a windup you can
+  react to), then fires a fast bolt straight down the lane — but a wall or a piece of cover
+  STOPS the bolt cold. This is the band's cover dialogue: the Sentry is why cover keeps you
+  safe, the Lobber is why you can't just sit behind it. You beat a Sentry three ways: route
+  around its lane, cross during its cooldown gap, or throw an item to KILL IT PERMANENTLY —
+  spend an item to open that route for good.
+* The Wrecker (charger) also returns in The Far Field's deck — its telegraphed straight dash
+  reads differently out in the open, with a long run-up and room to dodge — alongside a
+  scattering of proximity mines that punctuate the crossing.
+* Both new hazards are exclusive to The Far Field in this build — bands 1, The Sump, and The
+  Warren stay exactly as they were, so you can feel the difference cleanly.
+* The debug Oppositions tab (press P) now tunes these two as well — every hazard, old and
+  new, exposes its own sliders there, and The Far Field's natives are marked "IN DECK" and
+  open pre-expanded, so you can set values in the hub and dive in to feel them.
+
+
+NOT YET IN THIS BUILD
+---------------------
+* The new open-field generator is THE FAR FIELD ONLY — bands 1, The Sump, and The Warren are
+  unchanged (still their own generators). The Far Field is the proof that a third, totally
+  different kind of level generation slots in cleanly.
+* The new hazards are FAR-FIELD-ONLY — they do not appear in the other three bands (a
+  deliberate clean A/B for this build; whether they graduate to other bands is a later call).
+* The Far Field's floor, walls, and cover are greybox geometry with a tint pass, not a
+  bespoke tileset. The loot out in the exposed center is worth the same as loot near cover
+  for now — a "risk pays more" value bias is a later addition.
+* The Lobber currently drops its shell where you STOOD, not where you're heading — leading
+  your movement is a difficulty dial saved for later.
+* The hub plaza is now FULL at four dive gates plus the shop — a fifth band will need a
+  proper band-select screen rather than another gate in the yard.
+* Save format is UNCHANGED (meta v4 / run v1) — which band you pick is per-dive, not saved.
+* The loop, hub, shop, economy, quota, and timer are otherwise unchanged from M1.10.
+
+
+====================================================================================
+
+
 M1.10 — "The Warren"   (changes since M1.9)
 -------------------------------------------
 
