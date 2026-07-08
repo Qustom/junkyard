@@ -1062,18 +1062,23 @@ func _entry_spawn_position(band: Band) -> Vector2:
 	return Vector2.ZERO
 
 
-## M1.10 (T1, D-RAT-7): the pinned/near-spawn gate position. Socket bands (and every
-## non-cave harness path): EXACTLY today's fixed offset spawn_pos + GATE_SPAWN_OFFSET —
-## the guard short-circuits before any band walk, so byte-identity is by inspection and the
-## untouched suites prove it. Cave bands: the offset cell (10 cells due east) is wall/void
-## on most seeds (§2.5), so SNAP to the NEAREST floor cell — deterministic tie-break
+## M1.10 (T1, D-RAT-7) / M1.11 (U1): the pinned/near-spawn gate position. Guard is
+## ALLOWLIST-form (was denylist `!= "cave"` in the two-backend world): socket bands —
+## whose authored entry pieces make the fixed offset historically safe — and the
+## null-profile harness paths return EXACTLY today's fixed offset spawn_pos +
+## GATE_SPAWN_OFFSET; the guard short-circuits before any band walk, so byte-identity is
+## by inspection and the untouched suites prove it. EVERY synthetic backend (cave +
+## scatter + future) falls through to the SNAP to the NEAREST floor cell — the offset
+## cell can be wall/void/cover on generated layouts — deterministic tie-break
 ## (dist², y, x) via Vector3i's lexicographic <, pure geometry over floor_cells, ZERO RNG,
 ## run-state only (never enters fingerprint()). gate-at-deepest would invert the extraction
 ## loop on the play preset (the pinned gate is likely the only gate) — snap keeps the "way
-## home near where you came in" contract uniform across backends.
+## home near where you came in" contract uniform across backends. When the offset cell IS
+## floor the snap degenerates to the identical cell centre (d2 == 0), so it only acts on
+## layouts that would otherwise softlock.
 func _pinned_gate_pos(band: Band, spawn_pos: Vector2) -> Vector2:
 	var want := spawn_pos + GameState.GATE_SPAWN_OFFSET
-	if _band_profile == null or _band_profile.backend != "cave":
+	if _band_profile == null or _band_profile.backend == "socket":
 		return want                                  # socket / harness path: today's exact value
 	var want_cell := _world_to_cell(want)
 	var best := want_cell
@@ -1102,7 +1107,7 @@ func _place_gate(band: Band, spawn_pos: Vector2, rc: RunConfig) -> void:
 
 	# --- All-off control: exactly today's single fixed gate (no RNG, no candidate pool). ---
 	if rc == null or not rc.exit_enabled:
-		_spawn_gate_at(_pinned_gate_pos(band, spawn_pos))   # cave: snap-to-floor (D-RAT-7); socket: today's value
+		_spawn_gate_at(_pinned_gate_pos(band, spawn_pos))   # synthetic backends: snap-to-floor (D-RAT-7); socket: today's value
 		EventBus.exits_placed.emit(1, _band_max_depth(band))
 		return
 
@@ -1114,7 +1119,7 @@ func _place_gate(band: Band, spawn_pos: Vector2, rc: RunConfig) -> void:
 
 	# exit_keep_one_at_spawn: pin ONE gate at the legacy offset, place the rest in the level.
 	if rc.exit_keep_one_at_spawn:
-		positions.append(_pinned_gate_pos(band, spawn_pos))   # cave: snap-to-floor (D-RAT-7); socket: today's value
+		positions.append(_pinned_gate_pos(band, spawn_pos))   # synthetic backends: snap-to-floor (D-RAT-7); socket: today's value
 
 	var remaining: int = count - positions.size()
 	if remaining > 0:
