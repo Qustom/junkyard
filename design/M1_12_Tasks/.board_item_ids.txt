@@ -1,0 +1,15 @@
+# M1.12 GitHub Project board item ids (project PVT_kwHOAAXnOs4BasyM, status field PVTSSF_lAHOAAXnOs4BasyMzhVic7M)
+# options: Todo=f75ad846 InProgress=47fc9ee4 Done=98236657
+V1=PVTI_lAHOAAXnOs4BasyMzgyXnNQ
+V5=PVTI_lAHOAAXnOs4BasyMzgyXnPY
+V7=PVTI_lAHOAAXnOs4BasyMzgyXnQg
+V8=PVTI_lAHOAAXnOs4BasyMzgyXnSI
+V9=PVTI_lAHOAAXnOs4BasyMzgyXnT8
+V2=PVTI_lAHOAAXnOs4BasyMzgyXnVE
+V6=PVTI_lAHOAAXnOs4BasyMzgyXnWM
+V4=PVTI_lAHOAAXnOs4BasyMzgyXnXc
+V3=PVTI_lAHOAAXnOs4BasyMzgyXnYc
+V3b=PVTI_lAHOAAXnOs4BasyMzgyXnZw
+VG1=PVTI_lAHOAAXnOs4BasyMzgyXnbk
+VG2=PVTI_lAHOAAXnOs4BasyMzgyXndI
+VG3=PVTI_lAHOAAXnOs4BasyMzgyXneE

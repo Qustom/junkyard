@@ -6,7 +6,21 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.11 (Third generation backend + open-field band + ranged oppositions — Director-directed 2026-07-06, opened ahead of M1.10's TG2/TG3) — **design LOCKED 2026-07-06 (D-RAT-1…8). BUILD + UG1 COMPLETE: Waves 1–4 swept, UG1 verify matrix ALL GREEN + PUBLISHED `m1-20260708-69446d5` (build `#1781007`). Final N=3 ledger: U1 = 1 · U3 = 0 · U4 = 1 line. ▶ DIRECTOR PLAYTEST (human-gated) → UG2 → UG3.** *(M1.10 build DONE + TG1 published `m1-20260706-d04bd13` — Director playtest → TG2 → TG3 pending, non-blocking, one Wave-5 deviation rec Reviewed at TG3 close-out; M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
+**Current milestone:** M1.12 (Scaling Debt Paydown — pre-M2 architecture cleanup; Director-directed 2026-07-10, opened ahead of M1.11's UG2/UG3) — **design LOCKED 2026-07-10 (D-RAT-1…7; V3b pursuer-migration design pending). Implements the M1.11 systems-state report's R2–R10 (R1/CSV deferred). Master contract: behavior-preserving (4 control layout fps byte-identical + full suite green); measure = the debt ledger (net LOC removed). ▶ Wave 1 build dispatching (V1 ∥ V5 ∥ V7 ∥ V8 ∥ V9).** *(M1.11 build+UG1 published `m1-20260708-69446d5` — Director playtest → UG2 → UG3 pending, non-blocking. M1.10 TG2/TG3, M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
+
+> **M1.12 design LOCKED (2026-07-10):** breakdown + 10 per-task designs (V1–V9 + V3b), each with a
+> binding `Resolved Decisions (Phase 3)` (fresh-eyes pass: contract owners V1/V2/V6 first, then
+> consumers V3/V4/V5/V7/V8/V9). Director ratifications **D-RAT-1…7** folded into
+> `design/M1_12_Tasks/M1.12_Breakdown.md`. Task→recommendation map (report R#): V1←R2 (by-id spawn
+> weights + wire CI catalog check) · V2←R3 (retire 6 dual-emit signals, EventBus 60→54) · V3←R4.1
+> (K5 lane→deck) · **V3b←R4.2 (R1 pursuer→deck — Director "fold all four", design pending)** · V4←R5
+> (facade-preserving GameState split, verified 0 caller edits) · V5←R6 (InteractionOwner helper) ·
+> V6←R7 (RNG.substream + substream_hashed, 2 forms — the .seed vs .seed+.state trap) · V7←R8
+> (2 MB telemetry rotation + analyze argv) · V8←R9 (CI wall-clock, sharding deferred) · V9←R10
+> (delete all 4 empty folders + run.sav). Two Director calls went against Claude's rec: V3 folds the
+> pursuer too (D-RAT-3), and V9 deletes recipes/upgrades too (D-RAT-6). Waves: 1 = V1∥V5∥V7∥V8∥V9,
+> 2 = V2∥V6, 3 = V4, 4 = V3→V3b, 5 = VG1→VG2→VG3 (regression gate per D-RAT-1). TASKS.md §M1.12 +
+> board items V1…VG3 wired (Wave-1 In Progress).
 
 > **M1.11 design LOCKED (2026-07-06):** breakdown + 6 per-task designs each with a BINDING
 > `Resolved Decisions (Phase 3)` section (fresh-eyes pass run in two waves — contract owners
@@ -25,7 +39,7 @@ See `CLAUDE.md` → "The orchestrator loop".
 > lines**. FOUR byte-identical controls (all-off fp `e943ac9c8bc1` + greybox/two/three fps).
 > TASKS.md §M1.11 + board items U0–UG3 wired (U0/U2a/U2b In Progress).
 
-**Last updated:** 2026-07-08 (M1.11 UG1 DONE + PUBLISHED — verify matrix ALL GREEN on `main`; changelog M1.10→M1.11 committed; **itch build `#1781007` @ `m1-20260708-69446d5`** pushed from `main`@`69446d5`. UG1 deviations: none. **▶ The Director playtest is the next gate** — UG2 is BlockedBy it.)
+**Last updated:** 2026-07-10 (M1.12 opened + design LOCKED — four-phase authoring complete: breakdown + 10 designs + fresh-eyes resolve; Director dispositioned D-RAT-1…7. Phase-4 wire-up done: TASKS.md §M1.12 + 13 board items (Wave-1 In Progress). **▶ Wave 1 build dispatching (V1∥V5∥V7∥V8∥V9); V3b pursuer-migration design authoring in parallel.** M1.11 UG1 build `#1781007` @ `m1-20260708-69446d5` still the live itch build; its Director playtest → UG2/UG3 pending, non-blocking.)
 
 ## M1.11 Wave 1 — Done + integrated on `main` (2026-07-06)
 | Task | Agent(s) | Merged | Proof |
@@ -160,7 +174,11 @@ See `CLAUDE.md` → "The orchestrator loop".
 > the Director playtest — do NOT dispatch it until the Director has played. Also pending: disposition the one
 > Wave-5 test-fixture deviation (rec Reviewed) at the TG3 close-out.
 
-## ▶ Next action (start here on a cold restart) — M1.11 build + UG1 are DONE + PUBLISHED (`m1-20260708-69446d5`, build `#1781007`). **Waiting on the Director playtest** (block above — checklist `design/M1_11_Tasks/UG1_playtest_build.md` §5; export telemetry). After the playtest: dispatch UG2 (qa telemetry/balance) → UG3 verdict in `design/M1_11_Tasks/G4_findings_M1.11.md`. Also still open (non-blocking): M1.10 TG2/TG3 + its one TG1 deviation; M1.9 SG2/SG3; M1.7/M1.6 RG2/RG3.
+## ▶ Next action (start here on a cold restart) — **M1.12 Wave 1 build** (V1∥V5∥V7∥V8∥V9, file-disjoint worktrees) is dispatching; each is design-LOCKED (`design/M1_12_Tasks/V<n>_*.md` + its `Resolved Decisions (Phase 3)`). In parallel, **V3b (pursuer migration) design is authoring** (Phase-2 → Phase-3 resolve) — it must lock before Wave 4. After each wave lands + integrates on `main`: run the wave close-out deviation sweep (Director dispositions), then dispatch the next (Wave 2 = V2∥V6, Wave 3 = V4, Wave 4 = V3→V3b, Wave 5 = VG1→VG2→VG3). Master contract every wave: 4 control layout fps (`e943ac9c8bc1` + band_greybox/two/three) byte-identical + full suite green. Breakdown + D-RAT-1…7: `design/M1_12_Tasks/M1.12_Breakdown.md`; queue: `TASKS.md` §M1.12; board ids: `design/M1_12_Tasks/.board_item_ids.txt`.
+>
+> **Non-blocking, still open:** M1.11 Director playtest → UG2/UG3 (`design/M1_11_Tasks/UG1_playtest_build.md` §5); M1.10 TG2/TG3 + its one TG1 deviation; M1.9 SG2/SG3; M1.7/M1.6 RG2/RG3.
+
+## (archived) ▶ prior next-action — M1.11 build + UG1 DONE + PUBLISHED (`m1-20260708-69446d5`, build `#1781007`); Director playtest → UG2 → UG3 pending (checklist `design/M1_11_Tasks/UG1_playtest_build.md` §5).
 
 > **M1.11 = the N=3 declining-cost proof** (Director-directed 2026-07-06; design LOCKED same day):
 > a **ScatterBackend** (open-field arena + order-stable poisson cover — no pieces, no CA) behind the same
