@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (+ general-purpose sub-agent for the verify-matrix test re-points)
 - **Milestone:** M1.12
 - **Branch:** feat/V3b-pursuer-migration
-- **Commit:** a697d87a225f0ecd229ec91fd82f76a685d2952d   ← V3b: migrate R1 pursuer machine onto the deck lane
+- **Commit:** f4dddffac04fba966b59bcaf126f7b05431f9d29   ← V3b: migrate R1 pursuer machine onto the deck lane
 
 ## What changed
 
