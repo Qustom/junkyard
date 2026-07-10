@@ -44,15 +44,18 @@ func _run() -> int:
 	add_child(player)
 
 	var cfg := RunConfig.new()
-	cfg.hpp_enabled = true
-	cfg.hpp_speed = 100.0
+	# V3 (M1.12): the K5 entities read magnitudes from spawn_ctx["params"] (the deck lane's
+	# ctx-merged def knob bag) — the retired cfg.hpp_* knobs no longer exist. Speed rides the
+	# params channel (the charger unit-test pattern); cfg is just the run-config snapshot guard.
+	var pp_speed := 100.0
+	var pp_params := {"speed": pp_speed}
 
-	# --- (a) SAFE CONSTRUCTION with an empty spawn_ctx -----------------------
+	# --- (a) SAFE CONSTRUCTION with a params-only spawn_ctx ------------------
 	var hz_a := scene.instantiate() as PingPongHazard
 	add_child(hz_a)
 	hz_a.global_position = Vector2.ZERO
 	player.global_position = Vector2(1000, 1000)   # far away — no kill
-	hz_a.setup(cfg, player)                        # empty dict (default)
+	hz_a.setup(cfg, player, {"params": pp_params})
 	if not hz_a.velocity.is_equal_approx(Vector2.RIGHT * 100.0):
 		failures.append("(a) empty spawn_ctx: velocity %s != default RIGHT * speed" % str(hz_a.velocity))
 
@@ -68,7 +71,7 @@ func _run() -> int:
 	var hz_b := scene.instantiate() as PingPongHazard
 	add_child(hz_b)
 	hz_b.global_position = Vector2.ZERO
-	hz_b.setup(cfg, player, {"initial_dir": Vector2(1, 1)})
+	hz_b.setup(cfg, player, {"initial_dir": Vector2(1, 1), "params": pp_params})
 	var want_v := Vector2(1, 1).normalized() * 100.0
 	if not hz_b.velocity.is_equal_approx(want_v):
 		failures.append("(b) initial_dir (1,1): velocity %s != normalized*speed %s" % [str(hz_b.velocity), str(want_v)])
@@ -79,7 +82,7 @@ func _run() -> int:
 	var room := Rect2(Vector2(-50, -50), Vector2(100, 100))   # x in [-50, 50]
 	var hz_c := scene.instantiate() as PingPongHazard
 	add_child(hz_c)
-	hz_c.setup(cfg, player, {"initial_dir": Vector2.RIGHT, "room_bounds": room})
+	hz_c.setup(cfg, player, {"initial_dir": Vector2.RIGHT, "room_bounds": room, "params": pp_params})
 	# Place it past the right edge so the clamp reflects this frame.
 	hz_c.global_position = Vector2(80, 0)
 	# Step a physics frame so _physics_process runs (move_and_slide + _confine_to_room).
@@ -103,7 +106,7 @@ func _run() -> int:
 	hz_d.global_position = Vector2(500, 500)
 	player.global_position = Vector2(500, 500)   # ON TOP — well within CONTACT_RADIUS (24)
 	# No room bounds (pure-wall mode) so the clamp can't move the body off the player.
-	hz_d.setup(cfg, player, {})
+	hz_d.setup(cfg, player, {"params": pp_params})
 	# Step a couple physics frames so the contact test trips.
 	await get_tree().physics_frame
 	await get_tree().physics_frame
@@ -122,14 +125,12 @@ func _run() -> int:
 	EventBus.opposition_event.connect(_on_opposition_hit)
 	GameState.start_run(&"test_band", 12345)
 	var cfg_g := RunConfig.new()
-	cfg_g.hpp_enabled = true
-	cfg_g.hpp_speed = 100.0
-	cfg_g.hpp_kills = false
+	# V3 (M1.12): kills is entity-local (DEFAULTS.kills), overridden via params["kills"].
 	var hz_g := scene.instantiate() as PingPongHazard
 	add_child(hz_g)
 	hz_g.global_position = Vector2(700, 700)
 	player.global_position = Vector2(700, 700)   # ON TOP — within CONTACT_RADIUS
-	hz_g.setup(cfg_g, player, {})
+	hz_g.setup(cfg_g, player, {"params": {"speed": pp_speed, "kills": false}})
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	if not GameState.run_active:
@@ -166,15 +167,15 @@ func _run() -> int:
 	add_child(hz_f)
 	# Start just inside the corner, heading down-right INTO the vertex.
 	hz_f.global_position = corner - Vector2(60, 60)
-	hz_f.setup(cfg, player, {"initial_dir": Vector2(1, 1)})
+	hz_f.setup(cfg, player, {"initial_dir": Vector2(1, 1), "params": pp_params})
 	var start_pos := hz_f.global_position
 	# Step many physics frames so it hits the corner and (must) bounce back out.
 	for _i in 90:
 		await get_tree().physics_frame
 	# Still travelling at ~constant speed (never stalled / ground to a halt).
 	var spd := hz_f.velocity.length()
-	if not is_equal_approx(spd, cfg.hpp_speed):
-		failures.append("(f) corner anti-stall: speed %f != _speed %f after 90 frames (stalled/ground down)" % [spd, cfg.hpp_speed])
+	if not is_equal_approx(spd, pp_speed):
+		failures.append("(f) corner anti-stall: speed %f != _speed %f after 90 frames (stalled/ground down)" % [spd, pp_speed])
 	# It must NOT be parked AT the corner vertex — it has to have bounced away from it.
 	if hz_f.global_position.distance_to(corner) <= 30.0:
 		failures.append("(f) corner anti-stall: parked at corner (dist %f <= 30) — did not bounce out" % hz_f.global_position.distance_to(corner))

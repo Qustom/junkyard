@@ -8,22 +8,21 @@ extends RefCounted
 ## the credit budget and every plan decision live HERE (budget-in-builder /
 ## caps-in-service, spec §0).
 ##
-## ONE public entry point (`populate`) with two internal lanes, dispatched on the band's
-## profile (spec §2.3):
-##   • LEGACY lane — empty `opposition_deck` (band 1 / band_greybox): the K5 fair-share
-##     machine relocated VERBATIM from main_game._spawn_new_hazards (main @ 6fbded1
-##     :385-524, post-S0 shape), driven by the untouched rc.hpp_*/hbomb_*/hspike_* knobs
-##     through the legacy adapter. Credits are NOT consulted (§7.2 Q5): the fair-share
-##     ceiling split IS this lane's budget, byte-for-byte. All-off → empty active set →
-##     zero spawn calls → the e943ac9c8bc1 baseline holds.
-##   • DECK lane — non-empty `opposition_deck` (band_two, S7): the credit machine.
-##     Budget = floor(BASE_CREDITS * instability(profile.band_depth)); deck filtered by
-##     min_band against profile.band_depth (breakdown amendment 10); deterministic
-##     authored-order draw (spawn_weight RESERVED this version — §7.2 Q6(iii)); per-def
+## ONE public entry point (`populate`), ONE internal lane — the DECK lane (V3, M1.12:
+## the legacy K5 fair-share machine was retired; band_greybox now carries a real deck of
+## pingpong/bomb/spike, so band 1 routes through the same credit machine as every other
+## band — "exactly one way to add an opposition"):
+##   • DECK lane — the credit machine. Budget = BandProfile.opposition_credits when > 0
+##     (band_greybox = 48, the preserved K5 body density), else
+##     floor(BASE_CREDITS * instability(profile.band_depth)) (band_two/three/four); deck
+##     filtered by min_band against profile.band_depth (breakdown amendment 10);
+##     deterministic authored-order draw (spawn_weight RESERVED — §7.2 Q6(iii)); per-def
 ##     spawn-card counts read off d.params["base_count"]/["count_per_depth"] (amendment
-##     10); the service's caps are the hard stop and a refused spawn never spends budget;
-##     placements are EVEN-SPREAD across the eligible piece depth range per def
-##     (FBM19/FB2 — deepest pieces reachable by construction, see _populate_deck).
+##     10); the service's caps are the hard stop (per-room + per-band + the &"new_hazards"
+##     cap-group ceiling 48) and a refused spawn never spends budget; placements are
+##     EVEN-SPREAD across the eligible piece depth range per def (FBM19/FB2 — deepest
+##     pieces reachable by construction, see _populate_deck). All-off → every card neutral
+##     → is_inert() true → zero spawn calls → the e943ac9c8bc1 baseline holds.
 ## The generic levers overlay both lanes (§3.3): rc.oppositions_enabled is an ADDITIVE
 ## enable-list riding the deck machinery (never subtracts a band author's deck — §7.2
 ## Q6(i)); rc.param_overrides re-tunes DEF-DRIVEN params only, at ctx-merge time (§7.2
@@ -41,15 +40,6 @@ const BASE_CREDITS: int = 24
 ## the golden angle (~137.5°) so successive instances fan out without repeating, NO RNG.
 ## RELOCATED from main_game.NEW_HAZARD_GOLDEN_ANGLE (S3; no test reads it off MainGame).
 const GOLDEN_ANGLE: float = 2.39996322972865332   # PI * (3 - sqrt(5))
-
-## The legacy adapter's def paths (S0's authored defs). Loaded LAZILY — only for ACTIVE
-## (enabled + non-neutral) types, so all-off loads NO def and NO scene (the exploration's
-## guarantee; host_scene is an ExtResource, so def load == scene load).
-const LEGACY_DEF_PATHS: Dictionary = {
-	&"pingpong": "res://data/oppositions/pingpong.tres",   # K5a
-	&"bomb": "res://data/oppositions/bomb.tres",           # K5b
-	&"spike": "res://data/oppositions/spike.tres",         # K5c
-}
 
 ## Canonical scan root for rc.oppositions_enabled ids (S0 §9: one def per
 ## res://data/oppositions/<id>.tres).
@@ -123,18 +113,41 @@ static func legacy_ctx(kind: StringName, p: PlacedPiece, k: int, index: int,
 
 ## True iff populate() would issue ZERO service calls for this (profile, rc) — the
 ## façade's pre-flight so the ALL-OFF path never even creates the SpawnService node
-## (S0's "all-off loads nothing, builds nothing" rule, preserved through S3). Cheap and
-## load-free on the all-off path: the deck/extras checks are pure emptiness tests and
-## the legacy adapter only load()s defs for enabled + non-neutral types (none, when
-## all-off).
+## (S0's "all-off loads nothing, builds nothing" rule). Cheap and load-free on the
+## all-off path: the extras check is a pure emptiness test and the neutral-deck test
+## reads only already-loaded def params.
+##
+## V3 (M1.12): with band_greybox now carrying a K5 deck (pingpong/bomb/spike), a
+## NON-EMPTY deck no longer implies "builds something": an all-off rc leaves every card
+## NEUTRAL (base_count 0, count_per_depth 0 after the merge) → zero demand → zero spawns.
+## The `_deck_all_neutral` fast-path is the direct replacement for the retired
+## `_legacy_active_specs(rc).is_empty()` clause — it keeps the byte-exact all-off scene
+## tree (no empty SpawnService node) for greybox. band_two's charger/splitter carry real
+## authored magnitudes → not neutral → false → builds (correct, unchanged).
 func is_inert(profile: BandProfile, rc: RunConfig) -> bool:
 	if rc == null:
 		return true
-	if profile != null and not profile.opposition_deck.is_empty():
-		return false
 	if not rc.oppositions_enabled.is_empty():
 		return false
-	return _legacy_active_specs(rc).is_empty()
+	if profile == null or profile.opposition_deck.is_empty():
+		return true
+	return _deck_all_neutral(profile, rc)
+
+
+## True iff EVERY card in the profile's authored deck has zero effective spawn demand
+## (base_count <= 0 AND count_per_depth <= 0) under the full ctx-merge (def params <
+## deck-entry overrides < rc.param_overrides). The exact analog of the retired
+## `_legacy_active_specs` neutrality test, generalized to the deck lane. Load-free: the
+## deck defs are already resolved on the profile; only params dictionaries are read.
+func _deck_all_neutral(profile: BandProfile, rc: RunConfig) -> bool:
+	var deck_overrides: Dictionary = {}
+	var deck: Array[OppositionDef] = _authored_deck(profile, deck_overrides)
+	for d in deck:
+		var params: Dictionary = _effective_params(d, rc, deck_overrides)
+		if int(params.get("base_count", 0)) > 0 \
+				or float(params.get("count_per_depth", 0.0)) > 0.0:
+			return false
+	return true
 
 
 ## THE one public entry point. Dispatch (§2.3): non-empty deck => deck lane; else legacy
@@ -146,128 +159,20 @@ func populate(band: Band, profile: BandProfile, rc: RunConfig, svc: SpawnService
 	if rc == null or band == null or svc == null:
 		return
 	var band_depth: int = profile.band_depth if profile != null else 1
+	var credits_override: int = profile.opposition_credits if profile != null else 0
 	var deck_overrides: Dictionary = {}   # def id -> deck-entry override bag (S9)
 	var deck: Array[OppositionDef] = _authored_deck(profile, deck_overrides)
 	var extras: Array[OppositionDef] = _extras_defs(rc, deck)
-	if not deck.is_empty():
-		# Deck-driven band: ONE deck walk over deck + extras (extras appended after the
-		# authored entries — the band author's priority list stays the head of the draw),
-		# ONE credit budget (§2.3/§3.3). Deck-entry overrides ride along keyed by id;
-		# extras have none (the lever appends plain defs — S9).
-		var effective: Array[OppositionDef] = deck.duplicate()
-		effective.append_array(extras)
-		_populate_deck(band, effective, band_depth, rc, svc, deck_overrides)
-	else:
-		# Band 1 / band_greybox: the byte-exact parity path. Credits never consulted.
-		_populate_legacy(band, rc, svc)
-		# Extras on a deck-less band seed a one-off deck through the same machinery at
-		# the defs' authored spawn cards (instability(1) = 1.0 → exactly BASE_CREDITS).
-		if not extras.is_empty():
-			_populate_deck(band, extras, band_depth, rc, svc)
-
-
-# --- Legacy lane: main_game._spawn_new_hazards relocated VERBATIM (the parity path) ---
-
-## The K5 fair-share machine (P3-P10), statement-for-statement the post-S0
-## main_game.gd:416-523 policy body. Deviating from the source ordering here breaks the
-## byte-exact preset bar (§7.2 Q1) — the stride is computed AFTER svc.valid_cells()
-## (filter-then-stride, §2.6.b), the clamps run per-room-cap → type slice → shared
-## ceiling IN THAT ORDER (P7), and `spawned_total` (the CROSS-TYPE accumulator) threads
-## into the ping-pong ctx fan (P10).
-func _populate_legacy(band: Band, rc: RunConfig, svc: SpawnService) -> void:
-	var active: Array[Dictionary] = _legacy_active_specs(rc)
-	if active.is_empty():
-		return   # all-off / neutral: zero service calls — the baseline holds
-	var ceiling: int = SpawnService.NEW_HAZARD_BAND_CEILING   # P11: the constant is service-side
-	var n_active: int = active.size()
-	var base_share: int = ceiling / n_active
-	var remainder: int = ceiling % n_active
-	var spawned_total: int = 0                   # band-wide accumulator ACROSS all new types
-	var pieces: Array[PlacedPiece] = pieces_depth_sorted(band)   # P4: the single shared walk
-
-	for ti in n_active:
-		if spawned_total >= ceiling:
-			break
-		var d: Dictionary = active[ti]
-		# This type's fair slice of the ceiling; earlier descriptor-order types absorb
-		# the remainder so the per-type slices sum to exactly the ceiling (L6 fix).
-		var type_budget: int = base_share + (1 if ti < remainder else 0)
-		var type_spawned: int = 0
-		var base: int = d["base"]
-		var per_depth: float = d["per_depth"]
-		var per_room_cap: int = d["cap"]
-		var def: OppositionDef = d["def"]
-		var kind: StringName = d["kind"]
-
-		# Walk pieces shallow-first so truncation starves the deepest pieces first
-		# within a type, reproducibly (P3/P7 starvation semantics).
-		for p in pieces:
-			if spawned_total >= ceiling:
-				break
-			if type_spawned >= type_budget:
-				break   # this type has used its fair slice — leave the rest for the others
-			var depth: int = p.depth_index
-			# BUG7 policy half (P5): never place a new hazard in the depth-0 entry piece.
-			if depth <= 0:
-				continue
-			# P6: "more with depth" — base at depth 0, +per_depth per within-band depth.
-			var n: int = base + int(floor(per_depth * float(depth)))
-			if per_room_cap > 0:
-				n = mini(n, per_room_cap)                    # P7, in
-			n = mini(n, type_budget - type_spawned)          #   this
-			n = mini(n, ceiling - spawned_total)             #   order
-			if n <= 0:
-				continue
-			# P8: the service's BUG7 predicate applied BEFORE the stride (load-bearing —
-			# a refuse-at-spawn design would shift every stride index).
-			var cells: Array[Vector2i] = svc.valid_cells(piece_sorted_cells(p))
-			if cells.is_empty():
-				continue
-			var room_bounds: Rect2 = _floor_bounds_world(cells, svc)
-			var stride: int = maxi(cells.size() / maxi(n, 1), 1)   # P9
-			for k in n:
-				var cell: Vector2i = cells[(k * stride) % cells.size()]
-				# The per-kind entity ctx (P10) + the S0 service-read reserved keys.
-				var ctx: Dictionary = legacy_ctx(kind, p, k, spawned_total, room_bounds)
-				ctx["depth"] = p.depth_index
-				ctx["run_t_ms"] = 0   # band build ≈ run start; the service never invents a clock
-				# The accumulators count SUCCESSFUL spawns. On this parity path the plan
-				# already honors every cap the service checks, so refusal never happens
-				# (test_encounter_builder asserts a refusal-free preset plan).
-				if svc.spawn(def, cell, ctx) != null:
-					spawned_total += 1
-					type_spawned += 1
-
-
-## The legacy adapter (§3.2): rc knob groups -> ordered active specs. Reproduces
-## P1 (the descriptor table) + P2 (enabled ∧ non-neutral ∧ def-resolves pre-filter)
-## exactly; row order = remainder priority (pingpong → bomb → spike), as today. The ONLY
-## place the old knob names survive inside the builder. Type-specific entity knobs
-## (hpp_speed, hbomb_blast_radius, …) never pass through here — entities snapshot rc at
-## setup(), unchanged (S2 discipline).
-func _legacy_active_specs(rc: RunConfig) -> Array[Dictionary]:
-	var table: Array[Dictionary] = [
-		{ "kind": &"pingpong", "enabled": rc.hpp_enabled, "base": rc.hpp_base_count,
-			"per_depth": rc.hpp_count_per_depth, "cap": rc.hpp_per_room_cap },
-		{ "kind": &"bomb", "enabled": rc.hbomb_enabled, "base": rc.hbomb_base_count,
-			"per_depth": rc.hbomb_count_per_depth, "cap": rc.hbomb_per_room_cap },
-		{ "kind": &"spike", "enabled": rc.hspike_enabled, "base": rc.hspike_base_count,
-			"per_depth": rc.hspike_count_per_depth, "cap": rc.hspike_per_room_cap },
-	]
-	var out: Array[Dictionary] = []
-	for row in table:
-		if not row["enabled"]:
-			continue   # type off → never load its def/scene (all-off-equivalent)
-		if int(row["base"]) <= 0 and float(row["per_depth"]) <= 0.0:
-			continue   # neutral knobs → no node for this type (all-off-equivalent)
-		var def := load(LEGACY_DEF_PATHS[row["kind"]]) as OppositionDef
-		if def == null or def.host_scene == null:
-			push_error("EncounterBuilder: opposition def missing at %s."
-				% LEGACY_DEF_PATHS[row["kind"]])
-			continue
-		row["def"] = def
-		out.append(row)
-	return out
+	# V3 (M1.12): ONE lane. Deck + extras (extras appended after the authored entries —
+	# the band author's priority list stays the head of the draw), ONE credit budget
+	# (§2.3/§3.3). A deck-less band with no extras spawns nothing; the extras lever seeds
+	# a one-off deck through the same machinery. The retired legacy K5 lane is now the
+	# band_greybox deck (pingpong/bomb/spike), so band 1 routes here like every other band.
+	var effective: Array[OppositionDef] = deck.duplicate()
+	effective.append_array(extras)
+	if effective.is_empty():
+		return
+	_populate_deck(band, effective, band_depth, rc, svc, deck_overrides, credits_override)
 
 
 # --- Deck lane: the credit machine (exploration v2, concretized per §7) ---------------
@@ -295,8 +200,14 @@ func _legacy_active_specs(rc: RunConfig) -> Array[Dictionary]:
 ## the all-off/band_greybox controls are untouched by construction (this lane only
 ## runs on deck bands / the extras lever).
 func _populate_deck(band: Band, deck: Array[OppositionDef], band_depth: int,
-		rc: RunConfig, svc: SpawnService, deck_overrides: Dictionary = {}) -> void:
-	var budget: int = int(floor(float(BASE_CREDITS) * instability(band_depth)))
+		rc: RunConfig, svc: SpawnService, deck_overrides: Dictionary = {},
+		credits_override: int = 0) -> void:
+	# V3 (M1.12): a positive per-profile override (BandProfile.opposition_credits) wins
+	# over the standard depth-scaled pool; 0 = the current behaviour for every other band
+	# (band_two/three/four unchanged). band_greybox sets 48 to preserve the historical K5
+	# body density (the old NEW_HAZARD_BAND_CEILING).
+	var budget: int = credits_override if credits_override > 0 \
+		else int(floor(float(BASE_CREDITS) * instability(band_depth)))
 	var eligible: Array[OppositionDef] = []
 	for d in deck:
 		if band_depth >= d.min_band:   # min_band gates off the PROFILE's depth (amendment 10)

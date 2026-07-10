@@ -36,6 +36,8 @@ var _state: int = State.IDLE
 var _player: Node2D                  # resolved at setup
 var _pulse_t: float = 0.0            # seconds since arming — HOST-side accumulator (Q1):
                                      # drives detonation deterministically
+var _pulse_seconds: float = 0.0      # snapshot of the resolved pulse duration (V3: was
+                                     # read live off _cfg.hbomb_pulse_seconds — now def-driven)
 var _time_alive: float = 0.0         # self-timed run clock (host-owned)
 
 var _prox: ProximityTrigger = null
@@ -64,23 +66,31 @@ func setup(cfg: RunConfig, player: Node2D, _spawn_ctx: Dictionary = {}) -> void:
 	_state = State.IDLE
 	_pulse_t = 0.0
 	_time_alive = 0.0
-	var p := _resolve_params(cfg)
+	var p := _resolve_params(_spawn_ctx)
+	_pulse_seconds = float(p["pulse_seconds"])
 	_prox.bind(self, player, p, _spawn_ctx)
 	_fsm.bind(self, player, p, _spawn_ctx)
 	_lethal.bind(self, player, p, _spawn_ctx)
 	_throw.bind(self, player, p, _spawn_ctx)
 	if _ring != null:
-		_draw_idle_ring(cfg.hbomb_proximity_radius if cfg != null else 0.0)
+		_draw_idle_ring(float(p["proximity_radius"]))
 	_set_tell_idle()
 
 
-## S2 resolve order: LEGACY KNOBS ONLY (defs mirror inertly; nothing reads params).
-func _resolve_params(cfg: RunConfig) -> Dictionary:
+## V3 (M1.12) resolve order: the DECK lane's ctx-merged def knob bag
+## (spawn_ctx["params"] = bomb.tres params < deck-entry overrides < rc.param_overrides)
+## over the DEFAULTS mirror — the charger pattern. Replaces the retired direct cfg.hbomb_*
+## reads. `kills` is entity-local (defaults true, params["kills"] overridable).
+const DEFAULTS := {   # mirror bomb.tres neutral params
+	"proximity_radius": 0.0, "pulse_seconds": 0.0, "blast_radius": 0.0, "kills": true,
+}
+func _resolve_params(spawn_ctx: Dictionary) -> Dictionary:
+	var dp: Dictionary = spawn_ctx.get("params", {})
 	return {
-		"proximity_radius": cfg.hbomb_proximity_radius if cfg != null else 0.0,
-		"pulse_seconds": cfg.hbomb_pulse_seconds if cfg != null else 0.0,
-		"blast_radius": cfg.hbomb_blast_radius if cfg != null else 0.0,
-		"kills": cfg.hbomb_kills if cfg != null else true,
+		"proximity_radius": float(dp.get("proximity_radius", DEFAULTS.proximity_radius)),
+		"pulse_seconds": float(dp.get("pulse_seconds", DEFAULTS.pulse_seconds)),
+		"blast_radius": float(dp.get("blast_radius", DEFAULTS.blast_radius)),
+		"kills": bool(dp.get("kills", DEFAULTS.kills)),
 		"def_id": &"bomb",
 		"lethal_mode": &"on_command",
 		"throw_mode": &"die",
@@ -103,7 +113,7 @@ func _physics_process(delta: float) -> void:
 			# COMMITTED once-armed: leaving the ring does NOT defuse. Detonation is
 			# _pulse_t-driven (deterministic, host accumulator — Q1), NOT a tween callback.
 			_pulse_t += delta
-			if _pulse_t >= _cfg.hbomb_pulse_seconds:
+			if _pulse_t >= _pulse_seconds:
 				_detonate()
 		State.EXPLODED:
 			pass   # one-shot terminal: frees itself after the explode flash

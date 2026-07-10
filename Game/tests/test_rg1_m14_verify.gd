@@ -194,28 +194,28 @@ func _verify_default_preset_shape() -> void:
 		_failures.append("RG1/K4: default preset timer_warning_channel=%d, expected 0 (visual_only — audio M2-gated)"
 			% preset.timer_warning_channel)
 
-	# --- K5: all three new hazard types ON, each non-inert, each with per_room_cap > 0. ---
-	_assert_hazard_on(preset, "hpp", preset.hpp_enabled, preset.hpp_base_count,
-		preset.hpp_count_per_depth, preset.hpp_per_room_cap)
-	_assert_hazard_on(preset, "hbomb", preset.hbomb_enabled, preset.hbomb_base_count,
-		preset.hbomb_count_per_depth, preset.hbomb_per_room_cap)
-	_assert_hazard_on(preset, "hspike", preset.hspike_enabled, preset.hspike_base_count,
-		preset.hspike_count_per_depth, preset.hspike_per_room_cap)
-	# Type-specific knobs must be non-inert (the entities read them).
-	if preset.hpp_speed <= 0.0:
-		_failures.append("RG1/K5a: default preset hpp_speed<=0 (ping-pong would not move)")
-	if preset.hbomb_pulse_seconds <= 0.0 or preset.hbomb_blast_radius <= 0.0 or preset.hbomb_proximity_radius <= 0.0:
+	# --- K5 (V3 M1.12): all three hazard types ship as band_greybox DECK cards; the play
+	# magnitudes ride param_overrides (the retired hpp_/hbomb_/hspike_ knobs are gone). ---
+	_assert_k5_override_on(preset, "pingpong", ["count_per_depth"])   # base 0, ramps in with depth
+	_assert_k5_override_on(preset, "bomb", ["count_per_depth"])       # base 0, ramps in
+	_assert_k5_override_on(preset, "spike", ["base_count", "count_per_depth"])   # base 1 from entry
+	# Type-specific magnitudes must be non-inert (the entities read them from params).
+	var pp: Dictionary = preset.param_overrides.get("pingpong", {})
+	var bm: Dictionary = preset.param_overrides.get("bomb", {})
+	var sp: Dictionary = preset.param_overrides.get("spike", {})
+	if float(pp.get("speed", 0.0)) <= 0.0:
+		_failures.append("RG1/K5a: default preset pingpong speed<=0 (ping-pong would not move)")
+	if float(bm.get("pulse_seconds", 0.0)) <= 0.0 or float(bm.get("blast_radius", 0.0)) <= 0.0 \
+			or float(bm.get("proximity_radius", 0.0)) <= 0.0:
 		_failures.append("RG1/K5b: default preset bomb proximity/pulse/blast not all > 0 (bomb inert)")
-	if preset.hspike_arm_length <= 0.0 or is_zero_approx(preset.hspike_rotation_speed):
+	if float(sp.get("arm_length", 0.0)) <= 0.0 or is_zero_approx(float(sp.get("rotation_speed", 0.0))):
 		_failures.append("RG1/K5c: default preset spike arm_length/rotation_speed inert")
-	# L5: the shipped preset is LETHAL — the three K5 *_kills toggles must default true. Only the
-	# driven copy (_default_preset) turns them off; the real make_default_play_preset() never does.
-	if not preset.hpp_kills:
-		_failures.append("RG1/K5a: default preset hpp_kills is false (the shipped preset must kill)")
-	if not preset.hbomb_kills:
-		_failures.append("RG1/K5b: default preset hbomb_kills is false (the shipped preset must kill)")
-	if not preset.hspike_kills:
-		_failures.append("RG1/K5c: default preset hspike_kills is false (the shipped preset must kill)")
+	# L5 (V3): kills is entity-local (DEFAULTS.kills = true); the shipped preset must NOT set
+	# kills:false in any K5 override. Only the driven copy (_default_preset) turns them off.
+	for k5_id: String in ["pingpong", "bomb", "spike"]:
+		var ov: Dictionary = preset.param_overrides.get(k5_id, {})
+		if ov.has("kills") and not bool(ov["kills"]):
+			_failures.append("RG1/K5: default preset disables kills for '%s' (the shipped preset must kill)" % k5_id)
 
 	# --- K7 exits ON (Director pre-playtest tweak): enabled, base 1 / per_depth 0.1 /
 	# keep-one-at-spawn / cap 7. ---
@@ -235,26 +235,32 @@ func _verify_default_preset_shape() -> void:
 	var fresh := RunConfigScript.new() as RunConfig
 	if not fresh.all_oppositions_disabled():
 		_failures.append("RG1: RunConfig.new() is NOT all-off after make_default_play_preset() -- the preset leaked!")
-	# The new K4/K5/K7 knobs must stay at their all-off code defaults on a fresh config.
-	if fresh.timer_enabled or fresh.hpp_enabled or fresh.hbomb_enabled or fresh.hspike_enabled or fresh.exit_enabled:
-		_failures.append("RG1: a fresh RunConfig.new() has a K4/K5/K7 master ON (baseline contaminated)")
-	if fresh.hpp_per_room_cap != 0 or fresh.hbomb_per_room_cap != 0 or fresh.hspike_per_room_cap != 0:
-		_failures.append("RG1: a fresh RunConfig.new() has a non-zero K5 per_room_cap (baseline contaminated)")
+	# The K4/K7 masters must stay at their all-off code defaults on a fresh config. V3 (M1.12):
+	# the K5 masters/caps were retired — a fresh config's K5 neutrality is now an empty
+	# param_overrides (the deck cards stay neutral).
+	if fresh.timer_enabled or fresh.exit_enabled:
+		_failures.append("RG1: a fresh RunConfig.new() has a K4/K7 master ON (baseline contaminated)")
+	if not fresh.param_overrides.is_empty():
+		_failures.append("RG1: a fresh RunConfig.new() has non-empty param_overrides (K5 baseline contaminated)")
 
 
-func _assert_hazard_on(preset: RunConfig, name: String, enabled: bool, base: int,
-		per_depth: float, cap: int) -> void:
-	if not enabled:
-		_failures.append("RG1/K5: default preset %s_enabled is false (all three K5 hazards must be ON)" % name)
-	# Non-inert: enabled but base 0 AND per_depth 0 means no node ever spawns (the spawn loop
-	# skips it). The preset MUST pick provably non-inert magnitudes (per K5i: base>0 OR per_depth>0).
-	if base <= 0 and per_depth <= 0.0:
-		_failures.append("RG1/K5: default preset %s is enabled-but-inert (base=%d AND per_depth=%f)"
-			% [name, base, per_depth])
-	# Mandatory per-room cap (the K5i perf guard; the all-off default is 0/uncapped).
-	if cap <= 0:
-		_failures.append("RG1/K5: default preset %s_per_room_cap=%d <= 0 (the per-room cap is MANDATORY)"
-			% [name, cap])
+## V3 (M1.12): assert a K5 def's play magnitudes ride param_overrides and are non-inert
+## (the deck-lane demand math reads base_count/count_per_depth from the merged params). The
+## per-room cap is now on the SHARED def (pingpong/bomb 2, spike 1), not a RunConfig knob.
+func _assert_k5_override_on(preset: RunConfig, id: String, count_keys: Array) -> void:
+	if not preset.param_overrides.has(id):
+		_failures.append("RG1/K5: default preset param_overrides missing '%s' (K5 deck magnitudes)" % id)
+		return
+	var ov: Dictionary = preset.param_overrides[id]
+	# Non-inert: at least one of the count keys (base_count / count_per_depth) must be > 0, else
+	# the deck lane's demand is 0 and no node ever spawns.
+	var any_positive := false
+	for k: String in count_keys:
+		if float(ov.get(k, 0.0)) > 0.0:
+			any_positive = true
+	if not any_positive:
+		_failures.append("RG1/K5: default preset '%s' override is inert (no positive %s): %s"
+			% [id, str(count_keys), str(ov)])
 
 
 # --- config-marked telemetry: to_flat_dict carries every K-knob -----------------
@@ -268,12 +274,8 @@ func _verify_flat_dict_keys() -> void:
 		"cam_enabled", "cam_visible_world_width", "cam_zoom_policy",
 		# K4 timer
 		"timer_enabled", "timer_length_s", "timer_warning_threshold_s", "timer_warning_channel",
-		# K5a/b/c hazards
-		"hpp_enabled", "hpp_base_count", "hpp_count_per_depth", "hpp_speed", "hpp_per_room_cap",
-		"hbomb_enabled", "hbomb_base_count", "hbomb_count_per_depth", "hbomb_proximity_radius",
-		"hbomb_pulse_seconds", "hbomb_blast_radius", "hbomb_per_room_cap",
-		"hspike_enabled", "hspike_base_count", "hspike_count_per_depth", "hspike_rotation_speed",
-		"hspike_arm_length", "hspike_per_room_cap",
+		# V3 (M1.12): the 21 K5a/b/c hpp_/hbomb_/hspike_ stamp keys were RETIRED with the knobs
+		# (the K5 hazards are deck-driven data; magnitudes stamp as param_overrides.* dotted rows).
 		# K7 exits
 		"exit_enabled", "exit_base_count", "exit_count_per_depth", "exit_keep_one_at_spawn", "exit_max_count",
 	]
@@ -284,75 +286,56 @@ func _verify_flat_dict_keys() -> void:
 
 # --- new-hazard spawn plan (pure descriptor path, deterministic, no scene) -------
 
-## Mirror the K5i count math from _spawn_new_hazards EXACTLY (descriptor → per-piece
-## n = base + floor(per_depth*depth), bounded by per_room_cap then the shared 48 ceiling)
-## over a real graded band under the preset, asserting >=1 of each kind can spawn and the
-## combined total is bounded by NEW_HAZARD_BAND_CEILING. This is the deterministic plan-level
-## form of the matrix "new hazards spawn" row (stronger than reading runtime rows).
+## V3 (M1.12): drive the REAL migrated K5 deck through the façade (_spawn_new_hazards →
+## EncounterBuilder deck lane on the resolved band_greybox profile) on a real graded band
+## under the preset, asserting >=1 of each kind spawns and the combined total is bounded by
+## NEW_HAZARD_BAND_CEILING. This replaces the retired fair-share count mirror; the full
+## legacy→deck equivalence is proven in test_greybox_deck_equivalence.
 func _verify_new_hazard_spawn_plan() -> void:
 	var band := _graded_band(BASELINE_FP_SEED)
 	if band == null:
 		_failures.append("K5i: could not build a graded band for the spawn-plan check")
 		return
 	var preset := RunConfigScript.make_default_play_preset() as RunConfig
-	var mg = (load(MAIN_GAME_SCRIPT) as GDScript).new()
-	var ceiling: int = mg.NEW_HAZARD_BAND_CEILING
-	mg.free()
+	var mg_script := load(MAIN_GAME_SCRIPT) as GDScript
+	var ceiling: int = mg_script.NEW_HAZARD_BAND_CEILING
 
-	var pieces_sorted := _pieces_depth_sorted(band)
-	var per_kind := _plan_counts(preset, pieces_sorted, ceiling)
+	var per_kind := _deck_plan_counts(mg_script, preset, band)
+	var total := 0
 	for kind in ["pingpong", "bomb", "spike"]:
-		# bomb has base 0 in the preset (ramps in with depth) — it still earns >=1 from
-		# count_per_depth on a graded band with depth>=1, so all three should produce >=1.
+		# bomb/pingpong have base 0 in the preset (ramp in with depth) — they still earn >=1
+		# from count_per_depth on a graded band; spike ships base 1. All three should produce >=1.
 		if int(per_kind.get(kind, 0)) < 1:
-			_failures.append("K5i: spawn plan produced %d %s hazards under the preset -- expected >=1"
+			_failures.append("K5i (V3): greybox deck produced %d %s under the preset -- expected >=1"
 				% [int(per_kind.get(kind, 0)), kind])
-	var total: int = int(per_kind.get("pingpong", 0)) + int(per_kind.get("bomb", 0)) + int(per_kind.get("spike", 0))
+		total += int(per_kind.get(kind, 0))
 	if total > ceiling:
-		_failures.append("K5i: combined new-hazard plan spawned %d > the %d band ceiling (perf guard breached)"
+		_failures.append("K5i: combined deck total %d > the %d band ceiling (perf guard breached)"
 			% [total, ceiling])
-	# Determinism: same band + rc → same plan.
-	var per_kind2 := _plan_counts(preset, pieces_sorted, ceiling)
+	# Determinism: same band + rc → same plan (the deck lane is RNG-free).
+	var per_kind2 := _deck_plan_counts(mg_script, preset, band)
 	if str(per_kind) != str(per_kind2):
-		_failures.append("K5i: new-hazard spawn plan is not deterministic")
+		_failures.append("K5i: greybox deck spawn plan is not deterministic")
 
 
-## Replicate _spawn_new_hazards' count math (descriptor order pingpong→bomb→spike with the
-## SHARED band-ceiling starvation accumulator + the per_room_cap) without instancing scenes.
-func _plan_counts(rc: RunConfig, pieces_sorted: Array, ceiling: int) -> Dictionary:
+## Drive the façade once on a fresh container and tally spawned hazard nodes by def id
+## (get_def_id), exactly as test_new_hazard_spawn does — the real deck lane on the real
+## resolved band_greybox profile (deck + opposition_credits).
+func _deck_plan_counts(mg_script: GDScript, rc: RunConfig, band: Band) -> Dictionary:
+	var mg = mg_script.new()
+	var container := Node2D.new()
+	add_child(container)
+	mg._band_container = container
+	mg._band_cell_size_px = 16
+	mg._spawn_new_hazards(rc, band)
 	var out := {"pingpong": 0, "bomb": 0, "spike": 0}
-	var descs := [
-		["pingpong", rc.hpp_enabled, rc.hpp_base_count, rc.hpp_count_per_depth, rc.hpp_per_room_cap],
-		["bomb", rc.hbomb_enabled, rc.hbomb_base_count, rc.hbomb_count_per_depth, rc.hbomb_per_room_cap],
-		["spike", rc.hspike_enabled, rc.hspike_base_count, rc.hspike_count_per_depth, rc.hspike_per_room_cap],
-	]
-	var spawned_total := 0
-	for d in descs:
-		var kind: String = d[0]
-		if not d[1]:
-			continue
-		if spawned_total >= ceiling:
-			break
-		var base: int = d[2]
-		var per_depth: float = d[3]
-		var per_room_cap: int = d[4]
-		if base <= 0 and per_depth <= 0.0:
-			continue
-		for p in pieces_sorted:
-			if spawned_total >= ceiling:
-				break
-			var depth: int = p.depth_index
-			var n: int = base + int(floor(per_depth * float(depth)))
-			if per_room_cap > 0:
-				n = mini(n, per_room_cap)
-			n = mini(n, ceiling - spawned_total)
-			if n <= 0:
-				continue
-			var cells: Array = _piece_cells(p)
-			if cells.is_empty():
-				continue
-			out[kind] = int(out[kind]) + n
-			spawned_total += n
+	for child in container.get_children():
+		if child.has_method(&"get_def_id"):
+			var id := String(child.call(&"get_def_id"))
+			if out.has(id):
+				out[id] = int(out[id]) + 1
+	container.queue_free()
+	mg.free()
 	return out
 
 
@@ -369,13 +352,17 @@ func _verify_cfg_boots_default_preset() -> void:
 		return
 	if working.all_oppositions_disabled():
 		_human_deferred.append("RG1: CFG booted all-off rather than the default play-preset -- confirm config_menu seeds make_default_play_preset() (deferred: may be a fixture-mode boot)")
+	# V3 (M1.12): the K5 hazards are deck-driven data (param_overrides for pingpong/bomb/spike),
+	# not hpp_/hbomb_/hspike_ masters. The fun stack is lvl/r1/r4/timer/exit ON + the K5 overrides.
 	elif not (working.lvl_enabled and working.r1_enabled and working.r4_enabled
-			and working.timer_enabled and working.hpp_enabled and working.hbomb_enabled
-			and working.hspike_enabled and working.exit_enabled):
-		_failures.append("RG1: CFG boot config is not the M1.4 fun stack (lvl=%s r1=%s r4=%s timer=%s hpp=%s hbomb=%s hspike=%s exit=%s)"
+			and working.timer_enabled and working.exit_enabled
+			and working.param_overrides.has("pingpong") and working.param_overrides.has("bomb")
+			and working.param_overrides.has("spike")):
+		_failures.append("RG1: CFG boot config is not the M1.4 fun stack (lvl=%s r1=%s r4=%s timer=%s exit=%s K5-overrides=%s)"
 			% [str(working.lvl_enabled), str(working.r1_enabled), str(working.r4_enabled),
-				str(working.timer_enabled), str(working.hpp_enabled), str(working.hbomb_enabled),
-				str(working.hspike_enabled), str(working.exit_enabled)])
+				str(working.timer_enabled), str(working.exit_enabled),
+				str(working.param_overrides.has("pingpong") and working.param_overrides.has("bomb")
+					and working.param_overrides.has("spike"))])
 
 
 # --- new-hazard spawn THROUGH the assembled build (real nodes) -------------------
@@ -444,15 +431,14 @@ func _default_preset() -> RunConfig:
 	c.seed_override = 12345
 	# Keep R1 non-fatal for the driven run so the hazard can't pre-empt our chosen end-cause.
 	c.r1_catch_kills = false
-	# L5: keep the three K5 hazards non-lethal for the driven end-cause matrix. The entities
-	# now SPAWN and behave (hpp/hbomb/hspike_enabled stay TRUE — the real preset), they just
-	# cannot end the run, so the scripted extract/timeout cause wins. This retires the old
-	# _driven_default_preset() which disabled the entities entirely; the driven run now
-	# exercises the REAL K5 spawn. The lethal-preset guarantee is asserted by
-	# _verify_default_preset_shape (the shipped make_default_play_preset() keeps *_kills TRUE).
-	c.hpp_kills = false
-	c.hbomb_kills = false
-	c.hspike_kills = false
+	# L5 (V3 M1.12): keep the three K5 hazards non-lethal for the driven end-cause matrix. They
+	# still SPAWN and behave (band_greybox deck cards), they just cannot end the run, so the
+	# scripted extract/timeout cause wins. Kills is entity-local, disabled via a
+	# param_overrides["<id>"]["kills"] = false rider on the preset's magnitudes.
+	for k5_id: String in ["pingpong", "bomb", "spike"]:
+		var ov: Dictionary = c.param_overrides.get(k5_id, {})
+		ov["kills"] = false
+		c.param_overrides[k5_id] = ov
 	return c
 
 
@@ -512,9 +498,10 @@ func _inspect_log() -> void:
 	var started_by_tag := {}
 	var ended_rows: Array = []
 	var expected_keys := (RunConfigScript.new() as RunConfig).to_flat_dict().keys()
+	# V3 (M1.12): the K5 hpp_/hbomb_/hspike_ snapshot keys were retired; the M1.4 snapshot
+	# still carries timer_ + exit_ (the K5 magnitudes now stamp as param_overrides.* rows).
 	var m14_new_keys := ["timer_enabled", "timer_length_s", "timer_warning_threshold_s",
-		"timer_warning_channel", "hpp_enabled", "hbomb_enabled", "hspike_enabled",
-		"hpp_per_room_cap", "exit_enabled", "exit_max_count"]
+		"timer_warning_channel", "exit_enabled", "exit_max_count"]
 
 	for r in rows:
 		var t := String(r.get("type", ""))

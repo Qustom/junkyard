@@ -71,9 +71,9 @@ const SECTIONS := [
 	{"prefix": "quota_", "title_key": "CFG_SEC_QUOTA", "gloss_key": "CFG_GLOSS_QUOTA", "master": "quota_enabled", "collapsible": true},
 	{"prefix": "cam_", "title_key": "CFG_SEC_CAM", "gloss_key": "CFG_GLOSS_CAM", "master": "cam_enabled", "collapsible": true},
 	{"prefix": "timer_", "title_key": "CFG_SEC_TIMER", "gloss_key": "CFG_GLOSS_TIMER", "master": "timer_enabled", "collapsible": true},
-	{"prefix": "hpp_", "title_key": "CFG_SEC_HPP", "gloss_key": "CFG_GLOSS_HPP", "master": "hpp_enabled", "collapsible": true},
-	{"prefix": "hbomb_", "title_key": "CFG_SEC_HBOMB", "gloss_key": "CFG_GLOSS_HBOMB", "master": "hbomb_enabled", "collapsible": true},
-	{"prefix": "hspike_", "title_key": "CFG_SEC_HSPIKE", "gloss_key": "CFG_GLOSS_HSPIKE", "master": "hspike_enabled", "collapsible": true},
+	# V3 (M1.12): the hpp_/hbomb_/hspike_ K5 sections were RETIRED with their RunConfig knobs.
+	# The ping-pong/bomb/spike hazards now render in the GENERATED Oppositions tab (their defs
+	# carry param_schema), exactly like the six modern hazards.
 	{"prefix": "exit_", "title_key": "CFG_SEC_EXIT", "gloss_key": "CFG_GLOSS_EXIT", "master": "exit_enabled", "collapsible": true},
 	# M1.5 (L0) — ONE new section (throw_). The L2 pursuer knobs + the L5 *_kills
 	# toggles join EXISTING sections (r1_ / hpp_ / hbomb_ / hspike_), no new section.
@@ -134,26 +134,8 @@ const MANIFEST := {
 		# K4 — dive timer + near-end warning: master + length/threshold floats + channel enum.
 		"timer_enabled", "timer_length_s", "timer_warning_threshold_s", "timer_warning_channel",
 	],
-	"hpp_": [
-		# K5a — ping-pong hazard: spawn-seam ints/float + the type-specific speed float.
-		"hpp_enabled", "hpp_base_count", "hpp_count_per_depth", "hpp_speed", "hpp_per_room_cap",
-		# L5 (M1.5) — lethality toggle (default true = M1.4 lethal).
-		"hpp_kills",
-	],
-	"hbomb_": [
-		# K5b — bomb hazard: spawn-seam + proximity/pulse/blast type-specific floats.
-		"hbomb_enabled", "hbomb_base_count", "hbomb_count_per_depth",
-		"hbomb_proximity_radius", "hbomb_pulse_seconds", "hbomb_blast_radius", "hbomb_per_room_cap",
-		# L5 (M1.5) — lethality toggle (default true = M1.4 lethal).
-		"hbomb_kills",
-	],
-	"hspike_": [
-		# K5c — rotating spikes: spawn-seam + rotation (signed deg/s) + arm-length floats.
-		"hspike_enabled", "hspike_base_count", "hspike_count_per_depth",
-		"hspike_rotation_speed", "hspike_arm_length", "hspike_per_room_cap",
-		# L5 (M1.5) — lethality toggle (default true = M1.4 lethal).
-		"hspike_kills",
-	],
+	# V3 (M1.12): the hpp_/hbomb_/hspike_ manifest blocks were RETIRED with their RunConfig knobs
+	# (the three hazards are now def-driven data, surfaced by the generated Oppositions tab).
 	"exit_": [
 		# K7 — exit placement: master + base/per-depth count + keep-at-spawn bool + max cap.
 		"exit_enabled", "exit_base_count", "exit_count_per_depth", "exit_keep_one_at_spawn", "exit_max_count",
@@ -217,7 +199,7 @@ const BANDS_DIR := "res://data/bands"
 ## sub-group. PURE PRESENTATION: coverage is keyed off _rows + SECTIONS masters, never
 ## off this table — regrouping into tabs cannot change the 89-field bound set.
 const TABS := [
-	{"title_key": "CFG_TAB_HAZARDS",   "sections": ["r1_", "hpp_", "hbomb_", "hspike_"]},
+	{"title_key": "CFG_TAB_HAZARDS",   "sections": ["r1_"]},   # V3 (M1.12): K5 half retired (r1_ pursuer stays)
 	{"title_key": "CFG_TAB_LEVELGEN",  "sections": ["lvl_", "r4_"]},          # r4_ here = MAZE rows only
 	{"title_key": "CFG_TAB_VISION",    "sections": [R4_VISION_KEY]},          # the split-out vision rows
 	{"title_key": "CFG_TAB_TIMEQUOTA", "sections": ["timer_", "quota_"]},
@@ -289,24 +271,7 @@ const FIELD_RANGE := {
 	# K4 timer.
 	"timer_length_s": RANGE_TIMER,
 	"timer_warning_threshold_s": RANGE_SECONDS,
-	# K5a ping-pong.
-	"hpp_base_count": RANGE_COUNT_SMALL,
-	"hpp_count_per_depth": RANGE_PER_DEPTH,
-	"hpp_speed": RANGE_SPEED,
-	"hpp_per_room_cap": RANGE_ROOM_CAP,
-	# K5b bomb.
-	"hbomb_base_count": RANGE_COUNT_SMALL,
-	"hbomb_count_per_depth": RANGE_PER_DEPTH,
-	"hbomb_proximity_radius": RANGE_RADIUS,
-	"hbomb_pulse_seconds": RANGE_SECONDS,
-	"hbomb_blast_radius": RANGE_RADIUS,
-	"hbomb_per_room_cap": RANGE_ROOM_CAP,
-	# K5c rotating spikes.
-	"hspike_base_count": RANGE_COUNT_SMALL,
-	"hspike_count_per_depth": RANGE_PER_DEPTH,
-	"hspike_rotation_speed": RANGE_ROTATION,
-	"hspike_arm_length": RANGE_RADIUS,
-	"hspike_per_room_cap": RANGE_ROOM_CAP,
+	# V3 (M1.12): the K5a/K5b/K5c hpp_/hbomb_/hspike_ ranges were RETIRED with their knobs.
 	# K7 exits.
 	"exit_base_count": RANGE_COUNT_SMALL,
 	"exit_count_per_depth": RANGE_PER_DEPTH,
@@ -1974,8 +1939,8 @@ func _prefix_of(field: String) -> String:
 	for p in ["r1_", "r2_", "r3_", "r4_", "lvl_",
 			# M1.4 (K0): the 7 new section prefixes — without these a new knob's live
 			# chip/summary refresh would mis-route to the Meta section.
-			"quota_", "cam_", "timer_", "hpp_", "hbomb_", "hspike_", "exit_",
-			# M1.5 (L0): the new throw_ section prefix (r1_/hpp_/hbomb_/hspike_ already listed).
+			"quota_", "cam_", "timer_", "exit_",   # V3 (M1.12): hpp_/hbomb_/hspike_ prefixes retired
+			# M1.5 (L0): the new throw_ section prefix.
 			"throw_"]:
 		if field.begins_with(p):
 			return p

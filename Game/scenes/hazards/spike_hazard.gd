@@ -62,8 +62,8 @@ func setup(cfg: RunConfig, player: Node2D, spawn_ctx: Dictionary = {}) -> void:
 	_cfg = cfg
 	_player = player
 	_alive_time = 0.0
-	_arm_length = cfg.hspike_arm_length if cfg != null else 0.0
-	var p := _resolve_params(cfg)
+	var p := _resolve_params(spawn_ctx)
+	_arm_length = float(p["arm_length"])
 	_spin.bind(self, player, p, spawn_ctx)     # sets the phase + host rotation (legacy setup)
 	_lethal.bind(self, player, p, spawn_ctx)   # resets the (permanent) latch for a re-setup
 	_throw.bind(self, player, p, spawn_ctx)
@@ -72,14 +72,19 @@ func setup(cfg: RunConfig, player: Node2D, spawn_ctx: Dictionary = {}) -> void:
 		_tell.color = COLOR_SPIKE
 
 
-## S2 resolve order: LEGACY KNOBS ONLY (defs mirror inertly; nothing reads params).
-func _resolve_params(cfg: RunConfig) -> Dictionary:
+## V3 (M1.12) resolve order: the DECK lane's ctx-merged def knob bag
+## (spawn_ctx["params"] = spike.tres params < deck-entry overrides < rc.param_overrides)
+## over the DEFAULTS mirror — the charger pattern. Replaces the retired direct cfg.hspike_*
+## reads. `kills` is entity-local (defaults true, params["kills"] overridable).
+const DEFAULTS := { "rotation_speed": 0.0, "arm_length": 0.0, "kills": true }   # mirror spike.tres
+func _resolve_params(spawn_ctx: Dictionary) -> Dictionary:
+	var dp: Dictionary = spawn_ctx.get("params", {})
 	return {
-		"rotation_speed_deg": cfg.hspike_rotation_speed if cfg != null else 0.0,
-		"arm_length": cfg.hspike_arm_length if cfg != null else 0.0,
+		"rotation_speed_deg": float(dp.get("rotation_speed", DEFAULTS.rotation_speed)),
+		"arm_length": float(dp.get("arm_length", DEFAULTS.arm_length)),
 		"arm_count": ARM_COUNT,
 		"kill_radius": PLAYER_RADIUS + KILL_PAD,
-		"kills": cfg.hspike_kills if cfg != null else true,
+		"kills": bool(dp.get("kills", DEFAULTS.kills)),
 		"def_id": &"spike",
 		"lethal_mode": &"arm_segments",
 		"latch_rearm": false,          # RD-3: the spike latch is PERMANENT (no re-arm)

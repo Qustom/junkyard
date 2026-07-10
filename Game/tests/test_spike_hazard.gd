@@ -46,11 +46,11 @@ func _run() -> int:
 	add_child(player)
 
 	# --- (a) constructs safely with an EMPTY spawn_ctx -----------------------------
-	var rc := _rc(90.0, 64.0)   # 90 deg/s, 64px arms
+	var sp := _spike_params(90.0, 64.0)   # 90 deg/s, 64px arms
 	var hz_empty: SpikeHazard = scene.instantiate()
 	add_child(hz_empty)
 	hz_empty.global_position = Vector2(500, 500)
-	hz_empty.setup(rc, player)   # no spawn_ctx → default {} → phase_salt 0
+	hz_empty.setup(RunConfig.new(), player, {"params": sp})   # no phase_salt → default 0
 	var angle_empty: float = hz_empty._angle
 	# phase_salt 0 ⇒ angle 0.
 	if not is_equal_approx(angle_empty, 0.0):
@@ -84,15 +84,15 @@ func _run() -> int:
 	var hz_s7b: SpikeHazard = scene.instantiate()
 	add_child(hz_s7a)
 	add_child(hz_s7b)
-	hz_s7a.setup(rc, player, {"phase_salt": 7})
-	hz_s7b.setup(rc, player, {"phase_salt": 7})
+	hz_s7a.setup(RunConfig.new(), player, {"phase_salt": 7, "params": sp})
+	hz_s7b.setup(RunConfig.new(), player, {"phase_salt": 7, "params": sp})
 	if not is_equal_approx(hz_s7a._angle, hz_s7b._angle):
 		failures.append("(b) same phase_salt 7 gave different angles (%f vs %f) — not deterministic"
 			% [hz_s7a._angle, hz_s7b._angle])
 	# A different salt should generally produce a different phase (variety, not lock-step).
 	var hz_s8: SpikeHazard = scene.instantiate()
 	add_child(hz_s8)
-	hz_s8.setup(rc, player, {"phase_salt": 8})
+	hz_s8.setup(RunConfig.new(), player, {"phase_salt": 8, "params": sp})
 	if is_equal_approx(hz_s8._angle, hz_s7a._angle):
 		failures.append("(b) salts 7 and 8 produced the same phase (no per-instance variety)")
 	# The expected closed form: deg_to_rad(posmod(salt*47, 360)).
@@ -104,12 +104,12 @@ func _run() -> int:
 	# Anchor a non-rotating spike (omega 0) at a known hub with a known phase so the arms
 	# are fixed and we can place the player precisely. phase_salt 0 ⇒ _angle 0 ⇒ arm 0
 	# points along +X. With ARM_COUNT 3 the arms point at 0, 120, 240 degrees.
-	var rc_static := _rc(0.0, 64.0)   # omega 0 → arms don't move during this check
+	var sp_static := _spike_params(0.0, 64.0)   # omega 0 → arms don't move during this check
 	var hz: SpikeHazard = scene.instantiate()
 	add_child(hz)
 	var hub := Vector2(1000, 1000)
 	hz.global_position = hub
-	hz.setup(rc_static, player, {"phase_salt": 0})
+	hz.setup(RunConfig.new(), player, {"phase_salt": 0, "params": sp_static})
 
 	# ON arm 0 (+X), well within arm length: player at hub + (40, 0) → on the blade.
 	if not hz._is_player_on_any_arm(hub + Vector2(40, 0)):
@@ -140,7 +140,7 @@ func _run() -> int:
 	var hz_kill: SpikeHazard = scene.instantiate()
 	add_child(hz_kill)
 	hz_kill.global_position = Vector2(2000, 2000)
-	hz_kill.setup(rc_static, player, {"phase_salt": 0})
+	hz_kill.setup(RunConfig.new(), player, {"phase_salt": 0, "params": sp_static})
 	# Park the player squarely on arm 0 so the per-frame test fires.
 	player.global_position = hz_kill.global_position + Vector2(40, 0)
 	# Drive several physics frames; the kill must register and emit exactly once.
@@ -167,12 +167,12 @@ func _run() -> int:
 			killed_g.append(id)
 	EventBus.opposition_event.connect(sink_g)
 	GameState.start_run(&"test_band", 54321)
-	var rc_off := _rc(0.0, 64.0)
-	rc_off.hspike_kills = false
+	var sp_off := _spike_params(0.0, 64.0)
+	sp_off["kills"] = false   # V3: kills entity-local, via params
 	var hz_g: SpikeHazard = scene.instantiate()
 	add_child(hz_g)
 	hz_g.global_position = Vector2(3000, 3000)
-	hz_g.setup(rc_off, player, {"phase_salt": 0})
+	hz_g.setup(RunConfig.new(), player, {"phase_salt": 0, "params": sp_off})
 	player.global_position = hz_g.global_position + Vector2(40, 0)   # on arm 0
 	hz_g._physics_process(0.016)
 	hz_g._physics_process(0.016)
@@ -199,11 +199,8 @@ func _run() -> int:
 	return 1
 
 
-## A spike-on RunConfig with the K5c knobs set for the entity behaviour under test.
-## (Placement/count knobs are K5i's; the entity reads only rotation_speed + arm_length.)
-func _rc(rotation_speed: float, arm_length: float) -> RunConfig:
-	var rc := RunConfig.new()
-	rc.hspike_enabled = true
-	rc.hspike_rotation_speed = rotation_speed
-	rc.hspike_arm_length = arm_length
-	return rc
+## A spike PARAMS bag with the K5c magnitudes for the entity behaviour under test.
+## V3 (M1.12): the entity reads rotation_speed + arm_length from spawn_ctx["params"]
+## (the deck lane's ctx-merged def knob bag) — the retired hspike_* knobs are gone.
+func _spike_params(rotation_speed: float, arm_length: float) -> Dictionary:
+	return { "rotation_speed": rotation_speed, "arm_length": arm_length }

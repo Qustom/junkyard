@@ -64,7 +64,7 @@ func setup(cfg: RunConfig, player: Node2D, spawn_ctx: Dictionary = {}) -> void:
 	_cfg = cfg
 	_player = player
 	_spawn_time = 0.0
-	var p := _resolve_params(cfg)
+	var p := _resolve_params(spawn_ctx)
 	_move.bind(self, player, p, spawn_ctx)     # seeds velocity = dir * speed (legacy setup)
 	_lethal.bind(self, player, p, spawn_ctx)   # resets the BUG6 latch (re-setup safe)
 	_throw.bind(self, player, p, spawn_ctx)
@@ -72,13 +72,20 @@ func setup(cfg: RunConfig, player: Node2D, spawn_ctx: Dictionary = {}) -> void:
 		_tell.color = COLOR_LIVE
 
 
-## S2 resolve order: LEGACY KNOBS ONLY (the no-double-driving contract — defs mirror
-## inertly; nothing reads OppositionDef.params at runtime in M1.9's legacy lane).
-func _resolve_params(cfg: RunConfig) -> Dictionary:
+## V3 (M1.12) resolve order: the DECK lane's ctx-merged def knob bag
+## (spawn_ctx["params"] = pingpong.tres params < deck-entry overrides < rc.param_overrides,
+## merged by EncounterBuilder) over the DEFAULTS mirror — the charger pattern
+## (charger_hazard.gd:112). Replaces the retired direct cfg.hpp_* reads: the K5 hazards
+## are now def-driven data like every modern hazard (no bespoke RunConfig knob group).
+## `kills` is entity-local (NOT a deck-threaded param): defaults true (matching the three
+## defs' top-level kills + the play preset), overridable via params["kills"].
+const DEFAULTS := { "speed": 0.0, "kills": true }   # mirror pingpong.tres neutral params
+func _resolve_params(spawn_ctx: Dictionary) -> Dictionary:
+	var dp: Dictionary = spawn_ctx.get("params", {})
 	return {
-		"speed": maxf(cfg.hpp_speed, 0.0) if cfg != null else 0.0,
+		"speed": maxf(float(dp.get("speed", DEFAULTS.speed)), 0.0),
 		"contact_radius": CONTACT_RADIUS,
-		"kills": cfg.hpp_kills if cfg != null else true,
+		"kills": bool(dp.get("kills", DEFAULTS.kills)),
 		"def_id": &"pingpong",
 		"lethal_mode": &"radius",
 		"latch_rearm": true,

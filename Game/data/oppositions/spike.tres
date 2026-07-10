@@ -13,8 +13,8 @@ credit_cost = 1
 spawn_weight = 1.0
 min_band = 0
 cap_group = &"new_hazards"
-per_room_cap = 0
-per_band_cap = 0
+per_room_cap = 1
+per_band_cap = 16
 params = {
 "arm_length": 0.0,
 "base_count": 0,

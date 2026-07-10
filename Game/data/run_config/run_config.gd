@@ -290,75 +290,15 @@ const LVL_LOOT_AREA_UNIT: int = 96
 @export_enum("visual_only", "visual_audio") var timer_warning_channel: int = 0
 
 # =============================================================================
-# K5a (M1.4) — Ping-pong hazard (bounces off room walls, lethal on contact). The
-# spawn-seam knobs (enabled/base_count/count_per_depth/per_room_cap) are read by
-# K5i's descriptor table; the type-specific knob (speed) is read by the entity.
-# All-off default = no hazard spawned (pure run-state, never feeds fingerprint()).
+# K5a/K5b/K5c (M1.4) — Ping-pong / Bomb / Rotating-spikes hazards.
+# V3 (M1.12): the 21 bespoke hpp_/hbomb_/hspike_ RunConfig knobs were RETIRED. These
+# three hazards are now pure OppositionDef + DeckEntry data like the six modern hazards
+# (charger/splitter/…): band_greybox authors them in its opposition_deck, per-room caps
+# ride the shared defs (pingpong/bomb 2, spike 1), and the play magnitudes ride the play
+# preset's `param_overrides` (see make_default_play_preset). "Exactly one way to add an
+# opposition" — author a def, add a deck row; no special-case knob group, no fair-share
+# descriptor, no entity cfg.h*_* read. The config surface shrank 91 → 70.
 # =============================================================================
-@export_group("K5a Ping-Pong Hazard", "hpp_")
-## Master toggle. OFF = no ping-pong hazard exists (M1.3 behaviour).
-@export var hpp_enabled: bool = false
-## Spawn count at within-band depth 0.
-@export var hpp_base_count: int = 0
-## Additive count scaling per unit of within-band depth.
-@export var hpp_count_per_depth: float = 0.0
-## Travel speed (px/s, greybox). Entity-read.
-@export var hpp_speed: float = 0.0
-## Hard cap on count per room (perf guard). 0 = uncapped (preset MUST set > 0).
-@export var hpp_per_room_cap: int = 0
-## L5 (M1.5): whether a contact KILLS (true = today's lethal behaviour) or is non-lethal.
-## Default true = preserves M1.4 (the all-off-equivalent for an already-lethal hazard);
-## false expresses a non-lethal preset (mirrors r1_catch_kills). L0 declares; L5 reads.
-@export var hpp_kills: bool = true
-
-# =============================================================================
-# K5b (M1.4) — Bomb hazard (proximity pulse ~2s then explode; kills in radius).
-# Spawn-seam knobs read by K5i; the type-specific knobs (proximity/pulse/blast)
-# read by the entity. All-off default = no bomb (pure run-state).
-# =============================================================================
-@export_group("K5b Bomb Hazard", "hbomb_")
-## Master toggle. OFF = no bomb hazard exists (M1.3 behaviour).
-@export var hbomb_enabled: bool = false
-## Spawn count at within-band depth 0.
-@export var hbomb_base_count: int = 0
-## Additive count scaling per unit of within-band depth.
-@export var hbomb_count_per_depth: float = 0.0
-## Proximity that starts the pulse (px). Entity-read.
-@export var hbomb_proximity_radius: float = 0.0
-## Pulse duration before detonation (s; Director ~2s preset). Entity-read.
-@export var hbomb_pulse_seconds: float = 0.0
-## Lethal radius at detonation (px). Entity-read.
-@export var hbomb_blast_radius: float = 0.0
-## Hard cap on count per room (perf guard). 0 = uncapped (preset MUST set > 0).
-@export var hbomb_per_room_cap: int = 0
-## L5 (M1.5): whether a detonation in-radius KILLS (true = M1.4 lethal) or is non-lethal.
-## Default true = preserves today's behaviour; false expresses a non-lethal preset. L0
-## declares; L5 reads.
-@export var hbomb_kills: bool = true
-
-# =============================================================================
-# K5c (M1.4) — Rotating-spikes hazard (rotates in place, lethal on contact).
-# Spawn-seam knobs read by K5i; the type-specific knobs (rotation/arm) read by
-# the entity. (Arm count is an in-file const, NOT a knob — Director K5 verdict.)
-# All-off default = no spikes (pure run-state).
-# =============================================================================
-@export_group("K5c Rotating Spikes", "hspike_")
-## Master toggle. OFF = no rotating-spikes hazard exists (M1.3 behaviour).
-@export var hspike_enabled: bool = false
-## Spawn count at within-band depth 0.
-@export var hspike_base_count: int = 0
-## Additive count scaling per unit of within-band depth.
-@export var hspike_count_per_depth: float = 0.0
-## Rotation speed (deg/s; signed → direction). Entity-read.
-@export var hspike_rotation_speed: float = 0.0
-## Reach of the lethal arm (px). Entity-read.
-@export var hspike_arm_length: float = 0.0
-## Hard cap on count per room (perf guard). 0 = uncapped (preset MUST set > 0).
-@export var hspike_per_room_cap: int = 0
-## L5 (M1.5): whether arm contact KILLS (true = M1.4 lethal) or is non-lethal. Default
-## true = preserves today's behaviour; false expresses a non-lethal preset. L0 declares;
-## L5 reads.
-@export var hspike_kills: bool = true
 
 # =============================================================================
 # K7 (M1.4) — Exit placement rework (random/multiple exits, run-config-keyed for
@@ -555,27 +495,9 @@ func to_flat_dict() -> Dictionary:
 		"timer_length_s": timer_length_s,
 		"timer_warning_threshold_s": timer_warning_threshold_s,
 		"timer_warning_channel": timer_warning_channel,
-		# K5a (M1.4) — ping-pong hazard config knobs
-		"hpp_enabled": hpp_enabled,
-		"hpp_base_count": hpp_base_count,
-		"hpp_count_per_depth": hpp_count_per_depth,
-		"hpp_speed": hpp_speed,
-		"hpp_per_room_cap": hpp_per_room_cap,
-		# K5b (M1.4) — bomb hazard config knobs
-		"hbomb_enabled": hbomb_enabled,
-		"hbomb_base_count": hbomb_base_count,
-		"hbomb_count_per_depth": hbomb_count_per_depth,
-		"hbomb_proximity_radius": hbomb_proximity_radius,
-		"hbomb_pulse_seconds": hbomb_pulse_seconds,
-		"hbomb_blast_radius": hbomb_blast_radius,
-		"hbomb_per_room_cap": hbomb_per_room_cap,
-		# K5c (M1.4) — rotating-spikes hazard config knobs
-		"hspike_enabled": hspike_enabled,
-		"hspike_base_count": hspike_base_count,
-		"hspike_count_per_depth": hspike_count_per_depth,
-		"hspike_rotation_speed": hspike_rotation_speed,
-		"hspike_arm_length": hspike_arm_length,
-		"hspike_per_room_cap": hspike_per_room_cap,
+		# V3 (M1.12): the 21 K5a/K5b/K5c hpp_/hbomb_/hspike_ stamp rows were RETIRED with
+		# the knobs — the K5 hazards are now deck-driven data (band_greybox.opposition_deck
+		# + the play preset's param_overrides), stamped via the param_overrides rows below.
 		# K7 (M1.4) — exit-placement config knobs
 		"exit_enabled": exit_enabled,
 		"exit_base_count": exit_base_count,
@@ -589,10 +511,9 @@ func to_flat_dict() -> Dictionary:
 		# L2 (M1.5) — spawn-room pursuer behaviour knobs (additive payload)
 		"r1_spawn_room_only": r1_spawn_room_only,
 		"r1_patrol_speed": r1_patrol_speed,
-		# L5 (M1.5) — per-hazard lethality toggles (default true = M1.4 lethal behaviour)
-		"hpp_kills": hpp_kills,
-		"hbomb_kills": hbomb_kills,
-		"hspike_kills": hspike_kills,
+		# V3 (M1.12): the L5 hpp_kills/hbomb_kills/hspike_kills stamp rows were RETIRED with
+		# the knobs — lethality is now entity-local (DEFAULTS.kills = true) + an optional
+		# param_overrides["<id>"]["kills"] = false, stamped via the param_overrides rows.
 		# S3 (M1.9) — generic opposition levers (additive payload; SG2 segments def
 		# sweeps). Neutral configs stamp an empty Array + empty Dictionary.
 		"oppositions_enabled": _stringname_array_to_strings(oppositions_enabled),
@@ -830,66 +751,33 @@ static func make_default_play_preset() -> RunConfig:
 	c.timer_warning_threshold_s = 60.0          # Director pre-playtest tweak: warn with 60s left
 	c.timer_warning_channel = 0                 # visual_only (audio gated to M2 — Phase-3 lock)
 
-	# --- K5 (M1.4): the three new greybox hazard types ON at RG1 SWEEP-START magnitudes. The
-	# Director's Phase-3 verdict: "magnitudes are RG1 sweeps" — these are SANE GREYBOX STARTING
-	# values to give the re-gate something to play + tune, NOT balanced finals. Each type gets a
-	# small base_count, a modest count_per_depth (so danger scales with depth), and a MANDATORY
-	# per_room_cap > 0 (the K5i perf guard — the all-off default is 0/uncapped; the preset MUST
-	# set it > 0). The shared NEW_HAZARD_BAND_CEILING (48) bounds all three combined. These knobs
-	# are pure run-state (never feed fingerprint()) so the all-off control stays byte-identical.
-	# inert_enabled_oppositions() does NOT track the new hazards (they are NOT R-oppositions), but
-	# these values are provably non-inert anyway (enabled + non-zero base/per_depth + cap>0).
-
-	# NOTE on the shared budget (K5i NEW_HAZARD_BAND_CEILING=48, starvation order
-	# pingpong→bomb→spike): the per-type magnitudes below are deliberately MODEST so all THREE
-	# types fit comfortably under the combined 48-body ceiling on a deep (~15-depth) band and
-	# spikes are NOT starved to zero by the earlier types (spikes are placed LAST, so big
-	# pingpong/bomb totals would eat the budget first). Worked estimate on the default ~19-room
-	# /~15-depth band:
-	#   • pingpong: base 0, per_depth 0.15, cap 2 → ~0 in shallow rooms, ~1 mid, ~2 deep ⇒ ~9 total.
-	#   • bomb:     base 0, per_depth 0.15, cap 2 → same shape ⇒ ~9 total.
-	#   • spike:    base 1, per_depth 0.1, cap 1 → exactly 1 per eligible room (cap clamps the
-	#               ramp) ⇒ ~19 total (≈ the eligible-room count).
-	# Combined ≈ 37, comfortably under the 48 ceiling, so spikes get their full share and the
-	# re-gate SEES all three. Keeping pingpong/bomb base_count at 0 (only a gentle per-depth ramp)
-	# is what protects the spike budget — pushing pingpong/bomb base/per_depth/cap up would saturate
-	# the shared 48 with the earlier types and starve spikes, so those stay where they are. Spikes
-	# now ship base 1 (RG1 Feedback #3) so they actually APPEAR at shallow depth; pingpong/bomb keep
-	# base 0 so their danger still "ramps with depth" (shallow rooms stay calmer on those two).
-
-	# K5a ping-pong (bounces off room walls, lethal on contact). speed ~70 px/s greybox.
-	c.hpp_enabled = true
-	c.hpp_base_count = 0                        # sweep start: none at depth 0 (ramps in with depth)
-	c.hpp_count_per_depth = 0.15               # sweep start: +1 every ~7 within-band depths
-	c.hpp_speed = 70.0                          # sweep start travel speed (px/s, greybox)
-	c.hpp_per_room_cap = 2                      # MANDATORY > 0 (K5i perf guard); sweepable in RG1
-
-	# K5b bomb (proximity pulse ~2s then explodes; committed/no-defuse — Director K5 verdict).
-	c.hbomb_enabled = true
-	c.hbomb_base_count = 0                      # sweep start: none at depth 0 (ramps in with depth)
-	c.hbomb_count_per_depth = 0.15            # sweep start: +1 every ~7 within-band depths
-	c.hbomb_proximity_radius = 64.0            # sweep start: starts pulsing within ~64 px
-	c.hbomb_pulse_seconds = 2.0                # Director ~2s pulse before detonation
-	c.hbomb_blast_radius = 48.0               # sweep start lethal radius at detonation
-	c.hbomb_per_room_cap = 2                   # MANDATORY > 0 (K5i perf guard); sweepable in RG1
-
-	# K5c rotating spikes (rotates in place, lethal on contact; 3 arms = in-file const, NOT a knob).
-	# RG1 Feedback #3: at the old base 0 + per_depth 0.1, floor(0.1*depth) stayed 0 until depth 10,
-	# so rotating spikes effectively NEVER appeared in a normal ~15-depth run — the playtester never
-	# saw them. base_count is now 1 so at least one spike RELIABLY spawns from the very first eligible
-	# room (shallow depth), and the per_room_cap is dropped to 1 so each room gets exactly one spike —
-	# this keeps the spike band total ~equal to the eligible-room count (~19) regardless of the depth
-	# ramp, well under the shared 48 ceiling even after pingpong+bomb take their share (see the budget
-	# note above). Because pingpong/bomb keep base 0 and only ramp gently, spikes are NOT starved by
-	# the pingpong→bomb→spike placement order. base_count>=1 at the entry is now SAFE: BUG7 (sibling
-	# Wave-5 task) adds spawn-room/entry-cell exclusion to _spawn_new_hazards, so a shallow spike can
-	# no longer spawn-kill the player at the band entry.
-	c.hspike_enabled = true
-	c.hspike_base_count = 1                     # RG1 #3: >=1 spike from the first eligible room (was 0 → never appeared)
-	c.hspike_count_per_depth = 0.1            # gentle ramp; the cap=1 below holds each room to one spike anyway
-	c.hspike_rotation_speed = 90.0            # sweep start: 90 deg/s (signed → direction)
-	c.hspike_arm_length = 48.0                # sweep start lethal arm reach (px)
-	c.hspike_per_room_cap = 1                  # RG1 #3: one spike per room (MANDATORY > 0 — K5i perf guard); bounds the band total
+	# --- K5 (M1.4 · V3 M1.12): the three greybox hazard types (ping-pong / bomb / spike) ON at
+	# the RG1 sweep-start magnitudes. V3 retired the bespoke hpp_/hbomb_/hspike_ knob groups: the
+	# hazards are now band_greybox deck cards, so the play magnitudes ride `param_overrides`
+	# (keyed by def id), merged over the neutral def params by EncounterBuilder — the SAME surface
+	# that drives every modern hazard. base_count/count_per_depth drive the deck-lane spawn counts;
+	# speed/proximity_radius/pulse_seconds/blast_radius/rotation_speed/arm_length are read by the
+	# entities from spawn_ctx["params"]. Lethality stays true (the entities' DEFAULTS.kills = true,
+	# matching the three defs); a non-lethal preset would add "kills": false here. The per-room caps
+	# (pingpong/bomb 2, spike 1) live on the SHARED defs; the &"new_hazards" cap-group ceiling (48)
+	# + band_greybox.opposition_credits (48) bound all three combined. Pure run-state — never feeds
+	# fingerprint(), so the all-off control stays byte-identical (e943ac9c8bc1); an all-off rc has
+	# param_overrides = {} → neutral deck → is_inert() true → zero hazards.
+	#
+	# Worked density (default ~19-room / ~15-depth greybox band, per the frozen K5 equivalence
+	# fixture tests/goldens/greybox_k5_legacy_plan.json): pingpong ~16-17, bomb ~16-17, spike ~14,
+	# combined = the 48 ceiling — the historical K5 body density, preserved (V3 D-RAT-8).
+	c.param_overrides = {
+		# K5a ping-pong: base 0 (ramps in with depth), +1 every ~7 depths, 70 px/s greybox travel.
+		"pingpong": { "count_per_depth": 0.15, "speed": 70.0 },
+		# K5b bomb: base 0, gentle ramp; ~64 px proximity, ~2s Director pulse, 48 px blast.
+		"bomb": { "count_per_depth": 0.15, "proximity_radius": 64.0,
+			"pulse_seconds": 2.0, "blast_radius": 48.0 },
+		# K5c spike: base 1 (RG1 #3 — appears from the first eligible room), gentle ramp (cap 1
+		# holds each room to one), 90 deg/s signed rotation, 48 px arm reach.
+		"spike": { "base_count": 1, "count_per_depth": 0.1,
+			"rotation_speed": 90.0, "arm_length": 48.0 },
+	}
 
 	# --- K7 (M1.4): exits ON for this playtest (Director pre-playtest tweak, supersedes the
 	# earlier Phase-3 "ship exits OFF" lock). Multiple depth-scaled exits scattered across the

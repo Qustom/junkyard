@@ -63,6 +63,19 @@ extends Resource
 ## post-integration follow-up, not an M1.9 must.
 @export var opposition_deck: Array[Resource] = []
 
+## V3 (M1.12) — per-profile opposition credit budget OVERRIDE (D-RAT-3b/D-RAT-8:
+## PRESERVE DENSITY). CONTENT-DATA, not a RunConfig/config-menu knob (it never touches
+## the frozen 89/91 bijection). 0 (the default for every band) = use the standard
+## `BASE_CREDITS * instability(band_depth)` deck budget — so band_two/three/four are
+## byte-unchanged. A band that needs more/less hazard density than its depth implies
+## sets a positive value: band_greybox = 48 so the migrated K5 deck reproduces the
+## historical K5 fair-share body density (the old NEW_HAZARD_BAND_CEILING); the K5
+## per-room caps (2/2/1) + the &"new_hazards" cap-group ceiling (48) are the binding
+## constraint on K5 counts, so this field stays robust when V3b raises it (~55-65) to
+## additionally fund the pursuer's separate (no-cap-group) body share. Never moves a
+## layout fp (budget is hazard-side, placed as pure run-state after generation).
+@export var opposition_credits: int = 0
+
 # --- Band-depth placement (bands-as-biomes ordering) -----------------------
 @export var band_depth: int = 1   # dive tier; drives Instability I at S3
 

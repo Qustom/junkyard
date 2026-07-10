@@ -98,22 +98,16 @@ func _ready() -> void:
 		"cam_enabled", "cam_visible_world_width", "cam_zoom_policy",
 		# K4 (M1.4) — timer + warning config knobs.
 		"timer_enabled", "timer_length_s", "timer_warning_threshold_s", "timer_warning_channel",
-		# K5a (M1.4) — ping-pong hazard config knobs.
-		"hpp_enabled", "hpp_base_count", "hpp_count_per_depth", "hpp_speed", "hpp_per_room_cap",
-		# K5b (M1.4) — bomb hazard config knobs.
-		"hbomb_enabled", "hbomb_base_count", "hbomb_count_per_depth",
-		"hbomb_proximity_radius", "hbomb_pulse_seconds", "hbomb_blast_radius", "hbomb_per_room_cap",
-		# K5c (M1.4) — rotating-spikes hazard config knobs.
-		"hspike_enabled", "hspike_base_count", "hspike_count_per_depth",
-		"hspike_rotation_speed", "hspike_arm_length", "hspike_per_room_cap",
+		# V3 (M1.12): the 21 K5a/K5b/K5c hpp_/hbomb_/hspike_ knobs were RETIRED (the three
+		# hazards are now deck-driven data; magnitudes ride the play preset's param_overrides).
 		# K7 (M1.4) — exit-placement config knobs.
 		"exit_enabled", "exit_base_count", "exit_count_per_depth", "exit_keep_one_at_spawn", "exit_max_count",
 		# L1 (M1.5) — throwing config knobs.
 		"throw_enabled", "throw_speed", "throw_max_range",
 		# L2 (M1.5) — spawn-room pursuer behaviour knobs.
 		"r1_spawn_room_only", "r1_patrol_speed",
-		# L5 (M1.5) — per-hazard lethality toggles (default true = M1.4 lethal behaviour).
-		"hpp_kills", "hbomb_kills", "hspike_kills",
+		# V3 (M1.12): the L5 hpp_kills/hbomb_kills/hspike_kills toggles were RETIRED with the
+		# K5 knobs (lethality is now entity-local DEFAULTS.kills + optional param_overrides).
 		# S3 (M1.9) — generic opposition levers (plain @export since S4's Wave-4
 		# promotion; SG2 segments def sweeps).
 		# param_overrides has NO base key: it stamps as flat dotted rows

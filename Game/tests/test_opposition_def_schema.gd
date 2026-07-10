@@ -33,6 +33,10 @@ const OPTIONAL_FIELDS: Array[String] = ["min", "max", "step", "gloss", "options"
 const VALID_TYPES: Array[String] = ["bool", "int", "float", "enum"]
 
 ## Mirror map (§3.3 tables as corrected): def id → { param_key: RunConfig property }.
+## V3 (M1.12): pingpong/bomb/spike DROPPED from the mirror — their bespoke RunConfig
+## knobs (hpp_/hbomb_/hspike_) were retired; they are now pure deck-driven data whose
+## params mirror NO RunConfig field (magnitudes ride the play preset's param_overrides).
+## The pursuer stays (the R1 machine + its r1_* knobs survive until V3b).
 const MIRROR := {
 	&"pursuer": {
 		"depth_threshold": "r1_depth_threshold",
@@ -44,32 +48,13 @@ const MIRROR := {
 		"spawn_room_only": "r1_spawn_room_only",
 		"patrol_speed": "r1_patrol_speed",
 	},
-	&"pingpong": {
-		"base_count": "hpp_base_count",
-		"count_per_depth": "hpp_count_per_depth",
-		"speed": "hpp_speed",
-	},
-	&"bomb": {
-		"base_count": "hbomb_base_count",
-		"count_per_depth": "hbomb_count_per_depth",
-		"proximity_radius": "hbomb_proximity_radius",
-		"pulse_seconds": "hbomb_pulse_seconds",
-		"blast_radius": "hbomb_blast_radius",
-	},
-	&"spike": {
-		"base_count": "hspike_base_count",
-		"count_per_depth": "hspike_count_per_depth",
-		"rotation_speed": "hspike_rotation_speed",
-		"arm_length": "hspike_arm_length",
-	},
 }
 
-## The typed `kills` def field mirrors the legacy L5 gate knob (def id → knob).
+## The typed `kills` def field mirrors the legacy L5 gate knob (def id → knob). V3
+## (M1.12): only the pursuer's r1_catch_kills survives; the K5 defs' `kills` no longer
+## mirrors a RunConfig knob (it is entity-local — the entities' DEFAULTS.kills = true).
 const KILLS_MIRROR := {
 	&"pursuer": "r1_catch_kills",
-	&"pingpong": "hpp_kills",
-	&"bomb": "hbomb_kills",
-	&"spike": "hspike_kills",
 }
 
 ## Per-def trap_if_neutral flag (exactly one, on the mechanism-critical magnitude).
