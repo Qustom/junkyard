@@ -12,7 +12,8 @@ extends Node
 ##         (piece count differs; effective px/cell differs) and the all-off band stays
 ##         byte-identical to the M1.0/M1.1 baseline fingerprint (fp=e943ac9c8bc1).
 ##   - I2  hazard fix: r1_catch_radius_per_depth is in the schema + snapshot and an
-##         R1 run still routes a catch -> death (hazard_caught + run_ended.death).
+##         R1 run still routes a catch -> death (opposition_event(&"hit_player") +
+##         run_ended.death — V2 retired the legacy hazard_caught row).
 ##   - I3  R2/R3 cues: R2/R3 still emit the signals the cues project (return_cost_incurred,
 ##         exposure_crossed/exposure_penalty) -- cue VISUALS are human-deferred.
 ##   - I4  vision rework: R4 spawns its vision/fog + lost proxy and emits nav rows; the
@@ -540,6 +541,12 @@ func _inspect_log() -> void:
 		else:
 			if current_tag != "" and rows_in_run.has(current_tag):
 				(rows_in_run[current_tag] as Array).append(t)
+				# V2: R1's legacy hazard_awoke/hazard_caught rows collapsed into the
+				# generic opposition_event family — keep awoke/hit_player granularity
+				# by also recording an "opposition_event:<event>" token.
+				if t == "opposition_event":
+					var ev := String((r.get("data", {}) as Dictionary).get("event", ""))
+					(rows_in_run[current_tag] as Array).append("opposition_event:" + ev)
 
 	# Every config we ran appears.
 	for tag in ["rg1-m12-M0-all-off", "rg1-m12-M1-i1-scale", "rg1-m12-M2-i2-hazard",
@@ -548,22 +555,25 @@ func _inspect_log() -> void:
 		if not started_by_tag.has(tag):
 			_failures.append("V13: no run_started row for config '%s'" % tag)
 
-	var hazard_types := ["hazard_awoke", "hazard_caught"]
+	# V2: R1's legacy hazard_awoke/hazard_caught rows retired → the generic
+	# opposition_event(event=&"awoke"/&"hit_player", id=="pursuer") carries the same
+	# moments; the collector's "opposition_event:<event>" tokens preserve granularity.
+	var hazard_types := ["opposition_event:awoke", "opposition_event:hit_player"]
 	var r2_types := ["return_cost_incurred"]
 	var r3_types := ["exposure_crossed", "exposure_penalty", "exposure_meter_changed"]
 	var r4_types := ["nav_branch_taken", "nav_lost_proxy"]
 
-	# M0/V14: all-off run has NO opposition rows.
+	# M0/V14: all-off run has NO opposition rows (stronger: no opposition_event at all).
 	var off_rows: Array = rows_in_run.get("rg1-m12-M0-all-off", [])
-	for opp in hazard_types + r2_types + ["exposure_crossed", "exposure_penalty"] + r4_types:
+	for opp in ["opposition_event"] + r2_types + ["exposure_crossed", "exposure_penalty"] + r4_types:
 		if off_rows.has(opp):
 			_failures.append("M0/V14: all-off run emitted opposition row '%s' (baseline contaminated)" % opp)
 
 	# I2/M2: R1 run shows a hazard row (+ the catch the M1.1 build never made -- deferred
 	# strict below if the depth-scaled catch is timing-sensitive headless).
 	_assert_any_row("M2/I2", "rg1-m12-M2-i2-hazard", hazard_types, rows_in_run)
-	if not (rows_in_run.get("rg1-m12-M2-i2-hazard", []) as Array).has("hazard_caught"):
-		_human_deferred.append("M2/I2: hazard_caught row in the assembled loop (covered green by test_pursuing_hazard; depth-scaled catch is timing-sensitive headless)")
+	if not (rows_in_run.get("rg1-m12-M2-i2-hazard", []) as Array).has("opposition_event:hit_player"):
+		_human_deferred.append("M2/I2: opposition_event(&\"hit_player\") catch row in the assembled loop (covered green by test_pursuing_hazard; depth-scaled catch is timing-sensitive headless)")
 	# I3/M3: R2 + R3 cue-backing rows fire.
 	_assert_any_row("M3/I3-R2", "rg1-m12-M3-i3-r2r3", r2_types, rows_in_run)
 	_assert_any_row("M3/I3-R3", "rg1-m12-M3-i3-r2r3", r3_types, rows_in_run)

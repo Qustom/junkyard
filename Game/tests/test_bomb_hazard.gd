@@ -23,8 +23,8 @@ extends Node
 
 const BOMB_SCENE := "res://scenes/hazards/bomb_hazard.tscn"
 
-var _pulse_started: Array[int] = []           # depth per bomb_pulse_started
-var _killed_kinds: Array[StringName] = []     # kind per new_hazard_killed
+var _pulse_started: Array[int] = []           # depth per opposition_event(&"telegraph") (V2)
+var _killed_kinds: Array[StringName] = []     # kind per opposition_event(&"hit_player") (V2)
 var _run_ended_reasons: Array[StringName] = []
 
 
@@ -42,8 +42,10 @@ func _run() -> void:
 		get_tree().quit(1)
 		return
 
-	eb.bomb_pulse_started.connect(_on_pulse_started)
-	eb.new_hazard_killed.connect(_on_hazard_killed)
+	# V2: the legacy bomb_pulse_started / new_hazard_killed signals retired → the
+	# generic opposition_event carries both (event=&"telegraph" for the pulse commit,
+	# event=&"hit_player" for the fatal contact) at the identical sites/moments.
+	eb.opposition_event.connect(_on_opposition_event)
 	eb.run_ended.connect(_on_run_ended)
 
 	await _case_commit_then_fatal(gs, failures)
@@ -270,12 +272,12 @@ func _reset_signal_logs() -> void:
 	_run_ended_reasons.clear()
 
 
-func _on_pulse_started(depth: int, _run_t_ms: int) -> void:
-	_pulse_started.append(depth)
-
-
-func _on_hazard_killed(kind: StringName, _depth: int, _run_t_ms: int) -> void:
-	_killed_kinds.append(kind)
+func _on_opposition_event(id: StringName, event: StringName, depth: int, _run_t_ms: int) -> void:
+	# V2: route the generic family to the same sinks the legacy signals fed.
+	if event == &"telegraph":
+		_pulse_started.append(depth)
+	elif event == &"hit_player":
+		_killed_kinds.append(id)
 
 
 func _on_run_ended(reason: StringName, _duration_s: float, _depth_reached: int) -> void:

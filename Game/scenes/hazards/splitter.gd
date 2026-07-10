@@ -120,7 +120,6 @@ func setup(cfg: RunConfig, player: Node2D, spawn_ctx: Dictionary = {}) -> void:
 		"contact_radius": float(_params.get("catch_radius", 0.0)),
 		"kills": _resolve_kills(spawn_ctx),
 		"def_id": def_id,
-		"emit_family": &"new_hazard_killed",   # K5 hazard-kills-player family (kind = id)
 		"lethal_mode": &"radius",              # auto per-frame flat-radius test + BUG6 latch
 		"latch_rearm": true,
 		"throw_mode": &"die",                  # inert — death_handler overrides resolution

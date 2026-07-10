@@ -3,9 +3,11 @@ extends OppositionComponent
 ## DepthLingerTrigger (S2) — the R1 pursuer's awaken condition, transplanted VERBATIM
 ## from hazard_entity.gd `_should_awaken()`: live within-band depth reaching
 ## `depth_threshold` OR time-in-band reaching `linger_seconds` (>0) — first to fire.
-## Records which condition fired in `pending_trigger` (&"depth"/&"linger") for the
-## hazard_awoke telemetry. The DORMANT→AWAKE latch itself (no re-sleep) stays a HOST
-## state flip — this block is the pure condition.
+## Records which condition fired in `pending_trigger` (&"depth"/&"linger"); the host
+## reads it locally at the awaken site (V2: the retired hazard_awoke signal no longer
+## carries it — the generic opposition_event(&"awoke") marks the wake). The
+## DORMANT→AWAKE latch itself (no re-sleep) stays a HOST state flip — this block is
+## the pure condition.
 ##
 ## Reused by: R1; S6a's Charger may reuse it as a proximity-free arm gate.
 ## Params read: `depth_threshold`, `linger_seconds`. The HOST passes the live depth

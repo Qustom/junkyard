@@ -126,11 +126,14 @@ func _run() -> int:
 	if not hz._is_player_on_any_arm(hub):
 		failures.append("(c) player AT the hub was NOT detected as a hit")
 
-	# --- (d) kill emits new_hazard_killed(&"spike",..) ONCE + routes through fail_run ---
+	# --- (d) kill emits opposition_event(&"spike", &"hit_player") ONCE + routes through fail_run ---
+	# V2: the legacy new_hazard_killed signal retired → the generic
+	# opposition_event(event=&"hit_player", id==kind) fires at the identical site/moment.
 	var killed_events: Array = []
-	var sink := func(kind: StringName, depth: int, run_t_ms: int) -> void:
-		killed_events.append([kind, depth, run_t_ms])
-	EventBus.new_hazard_killed.connect(sink)
+	var sink := func(id: StringName, event: StringName, depth: int, run_t_ms: int) -> void:
+		if event == &"hit_player":
+			killed_events.append([id, depth, run_t_ms])
+	EventBus.opposition_event.connect(sink)
 
 	# Make sure no prior run-end latch blocks fail_run for this check (clears _run_ended).
 	GameState.start_run(&"test_band", 12345)
@@ -144,23 +147,25 @@ func _run() -> int:
 	hz_kill._physics_process(0.016)
 	hz_kill._physics_process(0.016)
 	hz_kill._physics_process(0.016)
-	EventBus.new_hazard_killed.disconnect(sink)
+	EventBus.opposition_event.disconnect(sink)
 
 	if killed_events.size() != 1:
-		failures.append("(d) new_hazard_killed emitted %d times, expected exactly 1 (one-shot latch)"
+		failures.append("(d) opposition_event(&\"hit_player\") emitted %d times, expected exactly 1 (one-shot latch)"
 			% killed_events.size())
 	elif killed_events[0][0] != &"spike":
-		failures.append("(d) new_hazard_killed kind was %s, expected &\"spike\"" % str(killed_events[0][0]))
+		failures.append("(d) opposition_event id was %s, expected &\"spike\"" % str(killed_events[0][0]))
 	if not GameState._run_ended:
 		failures.append("(d) GameState.fail_run did not end the run (player not killed)")
 
 	# --- (g) KILLS-OFF (L5): hspike_kills=false → contact does NOT kill, but still emits ---
-	# A fresh run (the (d) case ended the prior one). The spike still emits new_hazard_killed
-	# (emit-always) but fail_run is gated, so the run stays active. Proves the hspike_kills knob.
+	# A fresh run (the (d) case ended the prior one). The spike still emits the generic
+	# opposition_event(&"hit_player") (emit-always) but fail_run is gated, so the run stays
+	# active. Proves the hspike_kills knob. (V2: replaces the retired new_hazard_killed sink.)
 	var killed_g: Array = []
-	var sink_g := func(kind: StringName, _depth: int, _run_t_ms: int) -> void:
-		killed_g.append(kind)
-	EventBus.new_hazard_killed.connect(sink_g)
+	var sink_g := func(id: StringName, event: StringName, _depth: int, _run_t_ms: int) -> void:
+		if event == &"hit_player":
+			killed_g.append(id)
+	EventBus.opposition_event.connect(sink_g)
 	GameState.start_run(&"test_band", 54321)
 	var rc_off := _rc(0.0, 64.0)
 	rc_off.hspike_kills = false
@@ -171,9 +176,9 @@ func _run() -> int:
 	player.global_position = hz_g.global_position + Vector2(40, 0)   # on arm 0
 	hz_g._physics_process(0.016)
 	hz_g._physics_process(0.016)
-	EventBus.new_hazard_killed.disconnect(sink_g)
+	EventBus.opposition_event.disconnect(sink_g)
 	if killed_g.size() != 1:
-		failures.append("(g) kills-off: new_hazard_killed emitted %d times, expected 1 (emit-always)" % killed_g.size())
+		failures.append("(g) kills-off: opposition_event(&\"hit_player\") emitted %d times, expected 1 (emit-always)" % killed_g.size())
 	if not GameState.run_active:
 		failures.append("(g) kills-off: run ended despite hspike_kills=false (fail_run not gated)")
 

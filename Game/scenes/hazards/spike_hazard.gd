@@ -81,7 +81,6 @@ func _resolve_params(cfg: RunConfig) -> Dictionary:
 		"kill_radius": PLAYER_RADIUS + KILL_PAD,
 		"kills": cfg.hspike_kills if cfg != null else true,
 		"def_id": &"spike",
-		"emit_family": &"new_hazard_killed",
 		"lethal_mode": &"arm_segments",
 		"latch_rearm": false,          # RD-3: the spike latch is PERMANENT (no re-arm)
 		"throw_mode": &"die",

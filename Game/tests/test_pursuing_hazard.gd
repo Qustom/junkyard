@@ -15,10 +15,9 @@ extends Node
 ## Run: godot --headless res://tests/test_pursuing_hazard.tscn
 
 var _awoke_depths: Array[int] = []
-var _awoke_triggers: Array[StringName] = []
-var _caught: Array[Vector2i] = []          # (depth, run_t_ms) per hazard_caught
+var _caught: Array[Vector2i] = []          # (depth, run_t_ms) per opposition_event(&"hit_player")
 var _run_ended_reasons: Array[StringName] = []
-var _pursuer_states: Array[StringName] = []   # L2 (M1.5): hazard_pursuer_state marks (rising-edge)
+var _pursuer_states: Array[StringName] = []   # L2: opposition_event(&"state") marks (rising-edge)
 
 
 func _ready() -> void:
@@ -35,10 +34,10 @@ func _run() -> void:
 		get_tree().quit(1)
 		return
 
-	eb.hazard_awoke.connect(_on_hazard_awoke)
-	eb.hazard_caught.connect(_on_hazard_caught)
+	# V2: the retired R1 legacy signals (hazard_awoke/hazard_caught/hazard_pursuer_state)
+	# map onto the generic opposition_event family — one router filters by event.
+	eb.opposition_event.connect(_on_opposition_event)
 	eb.run_ended.connect(_on_run_ended)
-	eb.hazard_pursuer_state.connect(_on_pursuer_state)   # L2 (M1.5)
 
 	await _case_depth_awaken_chase_catch(gs, failures)
 	await _case_linger_awaken(gs, failures)
@@ -143,10 +142,11 @@ func _case_depth_awaken_chase_catch(gs: Node, failures: Array[String]) -> void:
 	# Cross the depth threshold → awaken exactly once with trigger=depth.
 	gs.set_current_depth(3, 3)
 	await _frames(1)
+	# V2: the awaken now logs as opposition_event(&"awoke"); the trigger label
+	# (depth/linger) is no longer carried on the signal (OQ-1). The depth-triggered
+	# awaken is still proven by count==1 + the threshold-crossing setup above.
 	if _awoke_depths.size() != 1:
-		failures.append("c1: expected 1 hazard_awoke at threshold, got %d" % _awoke_depths.size())
-	elif _awoke_triggers[0] != &"depth":
-		failures.append("c1: awaken trigger was '%s' (expected 'depth')" % _awoke_triggers[0])
+		failures.append("c1: expected 1 opposition_event(&\"awoke\") at threshold, got %d" % _awoke_depths.size())
 
 	# Chase: hazard must close distance toward the player over several frames.
 	var dist_before := hz.global_position.distance_to(player.global_position)
@@ -190,10 +190,10 @@ func _case_linger_awaken(gs: Node, failures: Array[String]) -> void:
 		failures.append("c2: hazard awoke before linger_seconds elapsed")
 	# Pump well past the linger threshold (physics step ≈ 1/60s; 30 frames ≈ 0.5s).
 	await _frames(30)
+	# V2: trigger label (linger) no longer carried on the signal (OQ-1); the linger-
+	# triggered awaken is proven by count==1 + the linger-pumped setup above.
 	if _awoke_depths.size() != 1:
 		failures.append("c2: expected 1 linger awaken, got %d" % _awoke_depths.size())
-	elif _awoke_triggers[0] != &"linger":
-		failures.append("c2: awaken trigger was '%s' (expected 'linger')" % _awoke_triggers[0])
 
 	hz.queue_free()
 	player.queue_free()
@@ -378,8 +378,11 @@ func _case_l2_in_room_chases_and_catches(gs: Node, failures: Array[String]) -> v
 	var dist_after := hz.global_position.distance_to(player.global_position)
 	if dist_after >= dist_before:
 		failures.append("L2a: in-room hazard did not chase the player (%.1f -> %.1f)" % [dist_before, dist_after])
-	if not _pursuer_states.has(&"chase"):
-		failures.append("L2a: no 'chase' pursuer-state mark while player in room (got %s)" % str(_pursuer_states))
+	# V2: opposition_event(&"state") no longer carries the chase/patrol label (OQ-3);
+	# assert a state MARK fired. The chase distinction is proven by the motion check
+	# above (dist decreased) + the fatal catch below.
+	if _pursuer_states.is_empty():
+		failures.append("L2a: no pursuer-state mark while player in room (got %s)" % str(_pursuer_states))
 	# Catch: snap the player onto the hazard → fatal catch.
 	player.global_position = hz.global_position
 	await _frames(1)
@@ -408,8 +411,10 @@ func _case_l2_out_of_room_patrols_no_catch(gs: Node, failures: Array[String]) ->
 	# Run many frames: the patroller must STAY inside the room rect (never leak toward the
 	# distant player) and never catch. The 'patrol' state mark fires on the first AWAKE frame.
 	await _frames(40)
-	if not _pursuer_states.has(&"patrol"):
-		failures.append("L2b: no 'patrol' pursuer-state mark while player out of room (got %s)" % str(_pursuer_states))
+	# V2: state mark no longer carries the patrol label (OQ-3); assert a mark fired.
+	# The patrol distinction is proven by "stays in room" + "never catches" below.
+	if _pursuer_states.is_empty():
+		failures.append("L2b: no pursuer-state mark while player out of room (got %s)" % str(_pursuer_states))
 	if not L2_ROOM.has_point(hz.global_position):
 		failures.append("L2b: patrolling hazard left its room rect (pos %s not in %s)"
 			% [str(hz.global_position), str(L2_ROOM)])
@@ -501,8 +506,9 @@ func _case_l2_idle_pivot_zero_speed(gs: Node, failures: Array[String]) -> void:
 	if hz.global_position.distance_to(pos_before) > 1.0:
 		failures.append("L2e: patrol_speed 0 idle-pivot translated (%s -> %s)"
 			% [str(pos_before), str(hz.global_position)])
-	if not _pursuer_states.has(&"patrol"):
-		failures.append("L2e: patrol_speed 0 did not emit a 'patrol' state mark (got %s)" % str(_pursuer_states))
+	# V2: state mark no longer carries the patrol label (OQ-3); assert a mark fired.
+	if _pursuer_states.is_empty():
+		failures.append("L2e: patrol_speed 0 did not emit a state mark (got %s)" % str(_pursuer_states))
 
 	hz.queue_free()
 	player.queue_free()
@@ -511,24 +517,27 @@ func _case_l2_idle_pivot_zero_speed(gs: Node, failures: Array[String]) -> void:
 # --- signal sinks ------------------------------------------------------------
 func _reset_signal_logs() -> void:
 	_awoke_depths.clear()
-	_awoke_triggers.clear()
 	_caught.clear()
 	_run_ended_reasons.clear()
 	_pursuer_states.clear()
 
 
-func _on_hazard_awoke(depth: int, trigger: StringName) -> void:
-	_awoke_depths.append(depth)
-	_awoke_triggers.append(trigger)
-
-
-func _on_hazard_caught(depth: int, run_t_ms: int) -> void:
-	_caught.append(Vector2i(depth, run_t_ms))
+func _on_opposition_event(_id: StringName, event: StringName, depth: int, run_t_ms: int) -> void:
+	# V2: the retired R1 legacy signals map onto the generic family:
+	#   hazard_awoke         -> &"awoke"   (the wake trigger label is no longer carried,
+	#                                        OQ-1; the wake count/depth is preserved),
+	#   hazard_caught        -> &"hit_player",
+	#   hazard_pursuer_state -> &"state"   (the patrol/chase discriminant is no longer
+	#                                        carried, OQ-3; the transition MARK is preserved,
+	#                                        chase-vs-patrol stays covered by the catch/motion checks).
+	match event:
+		&"awoke":
+			_awoke_depths.append(depth)
+		&"hit_player":
+			_caught.append(Vector2i(depth, run_t_ms))
+		&"state":
+			_pursuer_states.append(event)
 
 
 func _on_run_ended(reason: StringName, _duration_s: float, _depth_reached: int) -> void:
 	_run_ended_reasons.append(reason)
-
-
-func _on_pursuer_state(state: StringName, _depth: int, _run_t_ms: int) -> void:
-	_pursuer_states.append(state)

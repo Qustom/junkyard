@@ -82,7 +82,6 @@ func _resolve_params(cfg: RunConfig) -> Dictionary:
 		"blast_radius": cfg.hbomb_blast_radius if cfg != null else 0.0,
 		"kills": cfg.hbomb_kills if cfg != null else true,
 		"def_id": &"bomb",
-		"emit_family": &"new_hazard_killed",
 		"lethal_mode": &"on_command",
 		"throw_mode": &"die",
 	}
@@ -110,8 +109,8 @@ func _physics_process(delta: float) -> void:
 			pass   # one-shot terminal: frees itself after the explode flash
 
 
-## IDLE -> PULSING once: amber flash + start the accelerating throb, emit
-## bomb_pulse_started (+ the S2 generic &"telegraph" twin).
+## IDLE -> PULSING once: amber flash + start the accelerating throb, emit the
+## generic opposition_event(&"telegraph").
 func _arm() -> void:
 	_state = State.PULSING
 	_pulse_t = 0.0
@@ -119,7 +118,6 @@ func _arm() -> void:
 	_fsm.start_throb()                            # juice only — detonation is _pulse_t-driven
 	var depth: int = GameState.current_depth_index
 	var run_t_ms: int = run_clock_ms()
-	EventBus.bomb_pulse_started.emit(depth, run_t_ms)
 	EventBus.opposition_event.emit(&"bomb", &"telegraph", depth, run_t_ms)
 
 

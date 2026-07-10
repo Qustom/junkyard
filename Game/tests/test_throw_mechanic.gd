@@ -4,9 +4,10 @@ extends Node
 ## Runs as a SCENE (godot --headless res://tests/test_throw_mechanic.tscn) so the
 ## EventBus autoload is registered (the projectile references it directly). Asserts
 ## the L1 locked contract:
-##   - a hazard-layer body hit → throw_killed_hazard(item_id, kind, depth, t) fires,
-##     the body is freed (kill), the projectile is freed, the item is CONSUMED
-##     (NOT re-dropped: no junk_dropped),
+##   - a hazard-layer body hit → opposition_event(kind, &"killed_by_throw", depth, t)
+##     fires (V2: the legacy throw_killed_hazard signal was retired — the hazard kind
+##     rides as `id`; the throwing item_id is no longer on the payload, OQ-2), the body
+##     is freed (kill), the projectile is freed, the item is CONSUMED (NOT re-dropped),
 ##   - a miss (non-hazard / wall body) → throw_missed(item_id, depth, t) fires AND
 ##     junk_dropped(item, pos) fires (the re-drop path), the projectile is freed,
 ##   - the kind is &"pursuer" for a HazardEntity-grouped body, else name fallback,
@@ -42,8 +43,12 @@ func _ready() -> void:
 	var killed: Array = []
 	var missed: Array = []
 	var dropped: Array = []
-	EventBus.throw_killed_hazard.connect(func(item_id, kind, depth, t):
-		killed.append({"id": item_id, "kind": kind, "depth": depth}))
+	# V2: legacy throw_killed_hazard retired → opposition_event(&"killed_by_throw")
+	# fires at the identical site/moment; the hazard kind rides as `id` (the throwing
+	# item_id is no longer on the payload — OQ-2, unconsumed telemetry).
+	EventBus.opposition_event.connect(func(id, event, depth, t):
+		if event == &"killed_by_throw":
+			killed.append({"kind": id, "depth": depth}))
 	EventBus.throw_missed.connect(func(item_id, depth, t):
 		missed.append({"id": item_id, "depth": depth}))
 	EventBus.junk_dropped.connect(func(item, pos):
@@ -60,12 +65,12 @@ func _ready() -> void:
 	proj1._on_body_entered(hazard)
 
 	if killed.size() != 1:
-		failures.append("CASE1: expected 1 throw_killed_hazard, got %d" % killed.size())
+		failures.append("CASE1: expected 1 opposition_event(&\"killed_by_throw\"), got %d" % killed.size())
 	else:
-		if killed[0]["id"] != &"gear":
-			failures.append("CASE1: throw_killed_hazard item_id = %s (want &\"gear\")" % str(killed[0]["id"]))
+		# item_id sub-assertion dropped (OQ-2: the generic payload carries the hazard
+		# kind as `id`, not the throwing item; no production consumer read item_id).
 		if killed[0]["depth"] != 3:
-			failures.append("CASE1: throw_killed_hazard depth = %d (want 3)" % killed[0]["depth"])
+			failures.append("CASE1: killed_by_throw depth = %d (want 3)" % killed[0]["depth"])
 	if not dropped.is_empty():
 		failures.append("CASE1: a kill must NOT re-drop the item (got %d junk_dropped)" % dropped.size())
 	await get_tree().process_frame
@@ -147,7 +152,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 
 	if failures.is_empty():
-		print("L1+L6 OK — throw projectile verified: hazard-hit kills body + consumes item (no re-drop) + emits throw_killed_hazard; miss emits throw_missed + junk_dropped re-drop; one-shot _spent guard resolves exactly once; CASE4 throw flies along player.aim (L6).")
+		print("L1+L6 OK — throw projectile verified: hazard-hit kills body + consumes item (no re-drop) + emits opposition_event(&\"killed_by_throw\"); miss emits throw_missed + junk_dropped re-drop; one-shot _spent guard resolves exactly once; CASE4 throw flies along player.aim (L6).")
 		get_tree().quit(0)
 	else:
 		for f in failures:

@@ -28,7 +28,7 @@
 27|Vector2(0, 0)|-|0|0.0|
 28|Vector2(0, 0)|-|0|0.0|
 29|Vector2(0, 0)|-|0|0.0|
-30|Vector2(0, 0)|-|1|0.0|bomb_pulse_started(0,516)
+30|Vector2(0, 0)|-|1|0.0|opposition_event(bomb,telegraph,0,516)
 31|Vector2(0, 0)|-|1|0.0|
 32|Vector2(0, 0)|-|1|0.0|
 33|Vector2(0, 0)|-|1|0.0|
@@ -88,7 +88,7 @@
 87|Vector2(0, 0)|-|1|0.0|
 88|Vector2(0, 0)|-|1|0.0|
 89|Vector2(0, 0)|-|1|0.0|
-90|Vector2(0, 0)|-|2|0.0|new_hazard_killed(bomb,0,1516)
+90|Vector2(0, 0)|-|2|0.0|opposition_event(bomb,hit_player,0,1516)
 91|Vector2(0, 0)|-|2|0.0|
 92|Vector2(0, 0)|-|2|0.0|
 93|Vector2(0, 0)|-|2|0.0|

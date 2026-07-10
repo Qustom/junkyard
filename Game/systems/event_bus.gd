@@ -82,12 +82,11 @@ signal depth_changed(depth_index: int, max_depth: int)
 # === M1.1 opposition signals (sole event_bus.gd edit, wave 1, owner = TEL) ====
 # Declared centrally so wave-2 R1–R4 only EMIT — they never edit this file.
 # `depth_changed` above is the BUG2 foundation signal (already on main); the
-# eleven signals below are TEL's wave-1 add. Telemetry-row payloads are
-# PRIMITIVES ONLY so Telemetry serializes straight to JSONL (TEL spec §3/§4).
-
-# --- R1 Pursuing / awakening hazard (telemetry rows) -------------------------
-signal hazard_awoke(depth: int, trigger: StringName)
-signal hazard_caught(depth: int, run_t_ms: int)
+# signals below are TEL's wave-1 add. Telemetry-row payloads are PRIMITIVES ONLY
+# so Telemetry serializes straight to JSONL (TEL spec §3/§4).
+# NOTE (M1.12/V2): R1's legacy per-type signals hazard_awoke / hazard_caught were
+# retired here — the generic opposition_event family (below) is the sole opposition
+# telemetry family. See the M1.9 block comment + V2 worklog.
 
 # --- R2 Costlier return trip (telemetry row) ---------------------------------
 signal return_cost_incurred(depth: int, cost_kind: StringName, magnitude: float)
@@ -143,12 +142,11 @@ signal camera_view_set(visible_world_width: float, zoom: float)
 ## (dive_clock_changed/dive_clock_timeout already exist above.) Owner: K4.
 signal dive_clock_warning(seconds_remaining: float, maximum: float)
 
-# --- K5a/b/c new hazards (telemetry rows; the kill flows through player_died) --
-## A new-hazard kill (kind = &"pingpong"/&"bomb"/&"spike"). The shared kill-telemetry
-## row for all three new hazards (parallels hazard_caught). Owners: K5a/K5b/K5c.
-signal new_hazard_killed(kind: StringName, depth: int, run_t_ms: int)
-## A bomb began its proximity pulse (telemetry: how often bombs are triggered). Owner: K5b.
-signal bomb_pulse_started(depth: int, run_t_ms: int)
+# --- K5a/b/c new hazards -----------------------------------------------------
+# (M1.12/V2) The legacy per-type kill/telegraph signals new_hazard_killed +
+# bomb_pulse_started were retired here — a K5 fatal contact now flows through the
+# generic opposition_event(&"hit_player") and a bomb telegraph through
+# opposition_event(&"telegraph"). See the M1.9 block comment + V2 worklog.
 
 # --- K7 Exits ----------------------------------------------------------------
 ## Emitted once per band after exits are placed (telemetry: exit count + depth). Owner: K7.
@@ -159,8 +157,7 @@ signal exits_placed(count: int, depth: int)
 # pre-declare rule, M1.5 Breakdown §6/Phase-4 Lock). Telemetry-row payloads are
 # PRIMITIVES ONLY (straight to JSONL). The miss re-drop reuses the existing
 # junk_dropped(item, world_pos) gameplay event above (the ref-carrying path).
-# L5 declares NO signal: a non-lethal K5 hazard still emits new_hazard_killed; only
-# the fail_run call is gated by the *_kills knobs.
+# L5 declares NO signal: the fail_run call is gated by the *_kills knobs.
 
 # --- L1 Throwing (telemetry rows) --------------------------------------------
 ## A throw was launched (telemetry: how often the player uses agency). Owner: L1.
@@ -168,17 +165,16 @@ signal item_thrown(item_id: StringName, depth: int, run_t_ms: int)
 ## A thrown item MISSED (wall / max-range / lifetime) and was re-dropped. Telemetry
 ## row; the actual re-spawn flows through junk_dropped(item, world_pos). Owner: L1.
 signal throw_missed(item_id: StringName, depth: int, run_t_ms: int)
-## A thrown item KILLED a hazard-layer body. kind = &"pursuer" (R1) or a K5 kind
-## (e.g. &"pingpong"). DEDICATED (not new_hazard_killed, whose kill direction is the
-## OPPOSITE — hazard-kills-player — so reusing it would poison RG2's death counts).
-## Owner: L1.
-signal throw_killed_hazard(item_id: StringName, kind: StringName, depth: int, run_t_ms: int)
+# (M1.12/V2) The legacy throw_killed_hazard signal was retired here — a thrown-item
+# kill now flows through the generic opposition_event(&"killed_by_throw") (kept a
+# separate event string from &"hit_player" so kill-direction never poisons death
+# counts, exactly as the legacy signal did). See the M1.9 block comment + V2 worklog.
 
-# --- L2 Spawn-room pursuer (telemetry row, rising-edge) ----------------------
-## The pursuer changed chase/patrol state. state = &"patrol" (player outside the
-## spawn room) or &"chase" (player inside). Rising-edge-latched (no per-frame storm).
-## Owner: L2.
-signal hazard_pursuer_state(state: StringName, depth: int, run_t_ms: int)
+# --- L2 Spawn-room pursuer ---------------------------------------------------
+# (M1.12/V2) The legacy rising-edge hazard_pursuer_state signal was retired here —
+# a pursuer chase/patrol transition now emits generic opposition_event(&"state").
+# The patrol-vs-chase discriminant was unconsumed telemetry (dropped per V2 D-RAT-7);
+# the transition count/timing is preserved on &"state". See the M1.9 block + V2 worklog.
 
 # === M1.6 signals (sole event_bus.gd edit this milestone, owner = M0) =========
 # Pre-declared up front so M1/M2/M3/M4 only EMIT/CONNECT — they never edit this
@@ -254,10 +250,11 @@ signal debug_player_anim_config_changed(lock_mode: int, lock_on_pickup: bool, pl
 # === M1.9 signals (sole event_bus.gd edit this milestone, owner = S0) =========
 # Pre-declared up front so S2/S3/S4/S6/S8 only EMIT/CONNECT — they never edit this
 # file (the M1.1 pre-declare rule, M1.9 Breakdown §Scope). Payloads PRIMITIVES ONLY
-# (straight to JSONL). Legacy per-type opposition signals above (hazard_awoke,
-# hazard_caught, new_hazard_killed, bomb_pulse_started, throw_killed_hazard,
-# hazard_pursuer_state) DUAL-EMIT alongside these throughout the migration —
-# retirement is post-gate (SG3 watch-item), never in M1.9.
+# (straight to JSONL). The generic family below is the SOLE opposition signal family
+# — M1.12/V2 retired the six legacy per-type signals (hazard_awoke, hazard_caught,
+# new_hazard_killed, bomb_pulse_started, throw_killed_hazard, hazard_pursuer_state)
+# that DUAL-EMITTED alongside these during the M1.9 migration; the generic path they
+# shadowed is now authoritative. See DESIGN_DEVIATIONS_HISTORY / the V2 worklog.
 
 # --- Generic opposition telemetry (v2 §EventBus contract) ---------------------
 ## Any opposition lifecycle event. id = OppositionDef.id (== the legacy kind, so
@@ -268,10 +265,9 @@ signal debug_player_anim_config_changed(lock_mode: int, lock_on_pickup: bool, pl
 ## SpawnService + S2 components emit.
 signal opposition_event(id: StringName, event: StringName, depth: int, run_t_ms: int)
 ## The dedicated death channel — an opposition ACTUALLY ended the run (the *_kills-
-## gated fail_run fired), kept separate from opposition_event exactly as L1 kept
-## throw_killed_hazard separate from new_hazard_killed (line ~175) so kill-direction
-## never poisons death counts. NOT emitted by anything in S0 (the kill sites live in
-## entity internals — S2's dual-emit; see S0 design §5). Owner: S0 declares; S2 emits.
+## gated fail_run fired), kept separate from opposition_event so kill-direction never
+## poisons the &"hit_player" contact counts. NOT emitted by anything in S0 (the kill
+## sites live in entity internals — see S0 design §5). Owner: S0 declares; S2 emits.
 signal opposition_killed_player(id: StringName, depth: int, run_t_ms: int)
 
 # --- S4 debug live-edit (tooling telemetry marker) ----------------------------

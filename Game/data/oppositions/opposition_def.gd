@@ -3,9 +3,9 @@ extends Resource
 ## OppositionDef — one opposition type as DATA (M1.9 S0, exploration v2 §data layer).
 ## The "content is data, not code" pattern data/item.gd establishes, applied to
 ## oppositions (hazards now; the umbrella covers M2 enemies / Fields / Fixtures later).
-## Authored as .tres in res://data/oppositions/ — ids MUST equal the legacy telemetry
-## kinds (new_hazard_killed / throw_killed_hazard vocabulary) so opposition_event ids
-## are continuous with historical telemetry.
+## Authored as .tres in res://data/oppositions/ — ids MUST equal the historical
+## telemetry kinds (the &"hit_player" / &"killed_by_throw" opposition_event id
+## vocabulary) so opposition_event ids are continuous with historical telemetry.
 ##
 ## Phase A (S0): id / host_scene / cap_group are load-bearing (read by SpawnService);
 ## the spawn-card fields are authored neutral and unread until S3's EncounterBuilder;

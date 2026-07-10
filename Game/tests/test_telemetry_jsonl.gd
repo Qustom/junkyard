@@ -100,15 +100,22 @@ func _run() -> int:
 		if not (ld.has("value") and ld.has("cause") and ld.has("depth")):
 			failures.append("junk_lost.data missing value/cause/depth")
 
-	# new_hazard_killed row: a K5a/b/c fatal hit is attributable by kind
-	if not by_type.has(Schema.NEW_HAZARD_KILLED):
-		failures.append("expected a new_hazard_killed row on a hazard-death run, found none")
+	# opposition_event row: a K5a/b/c fatal hit is attributable by kind (== id).
+	# V2 equivalence: legacy new_hazard_killed retired → the generic
+	# opposition_event(event=&"hit_player") fires at the identical site/moment; the
+	# hazard kind rides as `id`, so the death is attributable exactly as before.
+	if not by_type.has(Schema.OPPOSITION_EVENT):
+		failures.append("expected an opposition_event row on a hazard-death run, found none")
 	else:
-		var nhk: Dictionary = (by_type[Schema.NEW_HAZARD_KILLED] as Array)[0]
+		var nhk: Dictionary = (by_type[Schema.OPPOSITION_EVENT] as Array)[0]
 		var nhkd: Dictionary = nhk.get("data", {})
-		for f in ["kind", "depth", "run_t_ms"]:
+		for f in ["id", "event", "depth", "run_t_ms"]:
 			if not nhkd.has(f):
-				failures.append("new_hazard_killed.data missing '%s'" % f)
+				failures.append("opposition_event.data missing '%s'" % f)
+		if String(nhkd.get("event", "")) != "hit_player":
+			failures.append("opposition_event.event == %s, expected 'hit_player'" % str(nhkd.get("event")))
+		if String(nhkd.get("id", "")) != "spike":
+			failures.append("opposition_event.id == %s, expected 'spike'" % str(nhkd.get("id")))
 
 	# debug_kill row: the K-key kill is self-identifying (precedes the death run_ended)
 	if not by_type.has(Schema.DEBUG_KILL):
@@ -148,9 +155,10 @@ func _drive_run(bus: Node, cause: StringName) -> void:
 	bus.junk_picked_up.emit(&"scrap_coil", 12, 1, Vector2.ZERO, true)
 	bus.band_entered.emit(&"deep", 2)
 	bus.junk_picked_up.emit(&"engine_block", 40, 6, Vector2.ZERO, true)
-	# A new-hazard (K5a/b/c) fatal hit emits new_hazard_killed before death; mirror it.
+	# A new-hazard (K5a/b/c) fatal hit emits opposition_event(&"hit_player") before
+	# death; mirror it (V2: replaces the retired new_hazard_killed drive — same moment).
 	if cause == &"death":
-		bus.new_hazard_killed.emit(&"spike", 2, 0)
+		bus.opposition_event.emit(&"spike", &"hit_player", 2, 0)
 	# The K-key debug_kill fires player_died(&"death") just before the run ends; emit it
 	# here so the death run mirrors the real flow (debug_kill → player_died → fail_run).
 	if cause == &"death":

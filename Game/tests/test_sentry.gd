@@ -72,9 +72,9 @@ const PLAYER_SPEED := 200.0
 
 var _opp_events: Array = []                    # [id, event] pairs per opposition_event
 var _opp_killed: Array[StringName] = []        # id per opposition_killed_player
-var _killed_kinds: Array[StringName] = []      # kind per new_hazard_killed
+var _killed_kinds: Array[StringName] = []      # kind per opposition_event(&"hit_player") (V2)
 var _run_ended_reasons: Array[StringName] = []
-var _throw_kills: Array[StringName] = []       # kind per throw_killed_hazard
+var _throw_kills: Array[StringName] = []       # kind per opposition_event(&"killed_by_throw") (V2)
 
 
 func _ready() -> void:
@@ -93,9 +93,7 @@ func _run() -> void:
 
 	eb.opposition_event.connect(_on_opposition_event)
 	eb.opposition_killed_player.connect(_on_opposition_killed)
-	eb.new_hazard_killed.connect(_on_hazard_killed)
 	eb.run_ended.connect(_on_run_ended)
-	eb.throw_killed_hazard.connect(_on_throw_killed)
 
 	_case_def_contract(failures)
 	_case_all_off_gate(failures)
@@ -757,19 +755,17 @@ func _reset_logs() -> void:
 
 func _on_opposition_event(id: StringName, event: StringName, _depth: int, _ms: int) -> void:
 	_opp_events.append([id, event])
+	# V2: the legacy new_hazard_killed / throw_killed_hazard signals retired — derive
+	# the kind-count arrays from the generic family (same site/moment; kind == id).
+	if event == &"hit_player":
+		_killed_kinds.append(id)
+	elif event == &"killed_by_throw":
+		_throw_kills.append(id)
 
 
 func _on_opposition_killed(id: StringName, _depth: int, _ms: int) -> void:
 	_opp_killed.append(id)
 
 
-func _on_hazard_killed(kind: StringName, _depth: int, _ms: int) -> void:
-	_killed_kinds.append(kind)
-
-
 func _on_run_ended(reason: StringName, _duration_s: float, _depth_reached: int) -> void:
 	_run_ended_reasons.append(reason)
-
-
-func _on_throw_killed(_item_id: StringName, kind: StringName, _depth: int, _ms: int) -> void:
-	_throw_kills.append(kind)

@@ -31,8 +31,8 @@ extends OppositionComponent
 ##                      emit/gate machinery, contact math supplied from outside.
 ##
 ## Params read: `contact_radius`, `contact_radius_per_depth`, `blast_radius`,
-## `arm_length`, `arm_count`, `kill_radius`, `kills`, `def_id`, `emit_family`
-## (&"hazard_caught" | &"new_hazard_killed"), `lethal_mode`, `latch_rearm`.
+## `arm_length`, `arm_count`, `kill_radius`, `kills`, `def_id`, `lethal_mode`,
+## `latch_rearm`.
 
 var _mode: StringName = &"radius"
 var _radius: float = 0.0
@@ -43,7 +43,6 @@ var _arm_count: int = 0
 var _kill_radius: float = 0.0
 var _kills: bool = false
 var _def_id: StringName = &""
-var _emit_family: StringName = &"new_hazard_killed"
 var _rearm: bool = true          # spike: false (RD-3 — the latch is PERMANENT)
 var _latched: bool = false       # BUG6: true while the player is CONTINUOUSLY in contact
 
@@ -63,7 +62,6 @@ func _configure(p: Dictionary, _ctx: Dictionary) -> void:
 	_kill_radius = float(p.get("kill_radius", 0.0))
 	_kills = bool(p.get("kills", false))
 	_def_id = StringName(p.get("def_id", &""))
-	_emit_family = StringName(p.get("emit_family", &"new_hazard_killed"))
 	_rearm = bool(p.get("latch_rearm", true))
 	_latched = false                 # re-setup starts un-latched (BUG6 pooled-respawn rule)
 
@@ -135,18 +133,14 @@ func point_on_any_arm(point: Vector2) -> bool:
 	return false
 
 
-## A contact lands. ALWAYS emit the legacy telemetry row (fatal or not) + the S2
-## generic twin; the L5 kills gate alone decides fail_run (its _run_ended guard is
-## the single source of run-end idempotency — never a local "already ended" bool).
+## A contact lands. ALWAYS emit the generic &"hit_player" opposition row (fatal or
+## not); the L5 kills gate alone decides fail_run (its _run_ended guard is the single
+## source of run-end idempotency — never a local "already ended" bool).
 ## opposition_killed_player fires ONLY when the kills gate actually fires fail_run
 ## (the kill/contact distinction lives here at the gate — S0 §5).
 func _fire() -> void:
 	var depth: int = GameState.current_depth_index   # live within-band depth (BUG2)
 	var run_t_ms: int = _host_run_t_ms()             # the host-owned self-timed clock
-	if _emit_family == &"hazard_caught":
-		EventBus.hazard_caught.emit(depth, run_t_ms)
-	else:
-		EventBus.new_hazard_killed.emit(_def_id, depth, run_t_ms)
 	EventBus.opposition_event.emit(_def_id, &"hit_player", depth, run_t_ms)
 	if _kills:
 		GameState.fail_run(&"death")   # existing end path; _run_ended owns idempotency

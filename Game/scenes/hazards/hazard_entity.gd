@@ -56,8 +56,8 @@ var _stun: float = 0.0               # >0 → frozen, doesn't chase (host-side t
 # Rect2 (no area) == "no room known" → the r1_spawn_room_only gate falls back to
 # chase-everywhere (RD-4, never freeze/crash). Host-side: the mode switch reads it.
 var _room_bounds: Rect2 = Rect2()
-# L2: rising-edge latch for the hazard_pursuer_state telemetry mark (BUG6 pattern —
-# emit once per patrol↔chase transition). Empty == no state emitted yet.
+# L2: rising-edge latch for the opposition_event(&"state") telemetry mark (BUG6
+# pattern — emit once per patrol↔chase transition). Empty == no state emitted yet.
 var _last_pursuer_state: StringName = &""
 
 var _trigger: DepthLingerTrigger = null
@@ -118,7 +118,6 @@ func _resolve_params(cfg: RunConfig) -> Dictionary:
 		"patrol_speed": cfg.r1_patrol_speed if cfg != null else 0.0,
 		"kills": cfg.r1_catch_kills if cfg != null else false,
 		"def_id": &"pursuer",
-		"emit_family": &"hazard_caught",
 		"lethal_mode": &"radius_gated",
 		"latch_rearm": true,
 		"throw_mode": &"die",
@@ -178,26 +177,26 @@ func _chase_and_catch(delta: float) -> void:
 
 ## L2: rising-edge-only telemetry mark for the patrol↔chase flip (BUG6 latch
 ## pattern). Self-times run_t_ms from the host clock. Only emitted in room-bound
-## mode (the caller); the chase-everywhere path never marks state. Dual-emits the
-## S2 generic &"state" twin beside the legacy row (same timestamp).
+## mode (the caller); the chase-everywhere path never marks state. Emits the generic
+## opposition_event(&"state") — the patrol/chase discriminant is not carried (V2:
+## the legacy hazard_pursuer_state signal that carried it was retired; the transition
+## count/timing is preserved on the &"state" event).
 func _emit_pursuer_state(state: StringName) -> void:
 	if state == _last_pursuer_state:
 		return
 	_last_pursuer_state = state
 	var run_t_ms: int = int(_time_in_band * 1000.0)
 	var depth: int = GameState.current_depth_index
-	EventBus.hazard_pursuer_state.emit(state, depth, run_t_ms)
 	EventBus.opposition_event.emit(&"pursuer", &"state", depth, run_t_ms)
 
 
-## Transition dormant → awake ONCE: flip the tell hot (+ wake flash) and emit
-## hazard_awoke (+ the S2 generic &"awoke" twin). No re-sleep — once awake it stays
-## awake the whole run.
+## Transition dormant → awake ONCE: flip the tell hot (+ wake flash) and emit the
+## generic opposition_event(&"awoke"). No re-sleep — once awake it stays awake the
+## whole run.
 func _awaken() -> void:
 	_state = State.AWAKE
 	_set_tell_awake()
 	var depth: int = GameState.current_depth_index
-	EventBus.hazard_awoke.emit(depth, _trigger.pending_trigger)
 	EventBus.opposition_event.emit(&"pursuer", &"awoke", depth, run_clock_ms())
 
 

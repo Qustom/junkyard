@@ -42,8 +42,8 @@ const EXPOSURE_THRESHOLD: String = "exposure_threshold"
 # --- M1.1 opposition event types (TEL spec §3) -------------------------------
 # Additive `type` strings + `data` payloads only — NO envelope/schema bump. Each
 # maps 1:1 to a pre-declared EventBus signal (TEL spec §4); R1–R4 emit, TEL logs.
-const HAZARD_AWOKE: String = "hazard_awoke"                  # R1: dormant→awake
-const HAZARD_CAUGHT: String = "hazard_caught"                # R1: catch-radius reached
+# (M1.12/V2: R1's HAZARD_AWOKE / HAZARD_CAUGHT row types were retired with their
+# legacy signals — the awoke/hit-player moments now log as OPPOSITION_EVENT rows.)
 const RETURN_COST_INCURRED: String = "return_cost_incurred"  # R2: retreat/egress cost applied
 const EXPOSURE_CROSSED: String = "exposure_crossed"          # R3: meter crosses a threshold level
 const EXPOSURE_PENALTY: String = "exposure_penalty"          # R3: penalty fires at a crossed level
@@ -57,11 +57,9 @@ const NAV_LOST_PROXY: String = "nav_lost_proxy"              # R4: lost-proxy me
 const CORRIDOR_SUMMARY: String = "corridor_summary"          # J4: per-run corridor vs. room time
 
 # --- M1.4 new-hazard kill (K5a/K5b/K5c) --------------------------------------
-# The three new M1.4 hazards (ping-pong / bomb / spike) emit EventBus.new_hazard_killed
-# on a fatal hit, then route death through the same GameState.fail_run(&"death"). Logging
-# it (parallel to HAZARD_CAUGHT for R1) makes a new-hazard death attributable by `kind`
-# instead of a bare cause=death run_ended. ADDITIVE event-type string — SCHEMA_VERSION STAYS 1.
-const NEW_HAZARD_KILLED: String = "new_hazard_killed"        # K5a/b/c: fatal hit by kind
+# (M1.12/V2: the NEW_HAZARD_KILLED row type was retired with its legacy signal — a
+# K5 fatal contact now logs as an OPPOSITION_EVENT row with event=&"hit_player" and
+# id=<kind>, attributable by kind exactly as before.)
 
 # --- Debug/dev events --------------------------------------------------------
 # The debug-only `debug_kill` action (key K, game_state.gd:_unhandled_input) emits
@@ -95,9 +93,7 @@ const ALL_TYPES: Array[String] = [
 	BAND_DEPTH_REACHED,
 	CURRENCY_IN,
 	EXPOSURE_THRESHOLD,
-	# M1.1 opposition rows
-	HAZARD_AWOKE,
-	HAZARD_CAUGHT,
+	# M1.1 opposition rows (V2 retired HAZARD_AWOKE / HAZARD_CAUGHT → OPPOSITION_EVENT)
 	RETURN_COST_INCURRED,
 	EXPOSURE_CROSSED,
 	EXPOSURE_PENALTY,
@@ -105,8 +101,7 @@ const ALL_TYPES: Array[String] = [
 	NAV_LOST_PROXY,
 	# J4 (M1.3) corridor-time summary row
 	CORRIDOR_SUMMARY,
-	# M1.4 new-hazard kill row
-	NEW_HAZARD_KILLED,
+	# (V2 retired NEW_HAZARD_KILLED → OPPOSITION_EVENT event=&"hit_player")
 	# Debug/dev rows
 	DEBUG_KILL,
 	# M1.9 (S4) generic opposition rows + sweep hygiene
