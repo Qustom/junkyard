@@ -4,7 +4,7 @@
 - **Subagent:** qa-playtest-coordinator
 - **Milestone:** M1.12 (Scaling Debt Paydown), Wave 1
 - **Branch:** feat/V8-ci-wallclock
-- **Commit:** (see below)
+- **Commit:** c4d9c9c6ecd73d0f811a8ac0cbad91ac01617ee6
 
 ## What changed
 
