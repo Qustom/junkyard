@@ -11,5 +11,10 @@ extends Resource
 
 # Authored spawn pool. B2 generator + tooling read from here.
 @export var items: Array[JunkItem] = []
-# Per-item spawn weight, index-aligned with `items` (higher = more common).
-@export var spawn_weights: PackedFloat32Array = PackedFloat32Array()
+
+## Per-item spawn weight, keyed by JunkItem.id (higher = more common). By-id, NOT
+## index-aligned: inserting/removing/reordering `items` can never misalign a weight.
+## Rarity stays a spawn-context property of THIS catalog (see class docstring), so a
+## second catalog can reweight the shared item set by authoring a different map.
+## An item with no entry defaults to weight 1.0 at pick time (JunkPlacer).
+@export var spawn_weights_by_id: Dictionary[StringName, float] = {}
