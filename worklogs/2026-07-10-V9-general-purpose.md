@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.12 (Wave 1)
 - **Branch:** feat/V9-housekeeping
-- **Commit:** (see commit created immediately after this worklog — SHA recorded below post-commit)
+- **Commit:** `0af12815309bd110dc81ad0fe59dc75114381ebd`
 
 ## What changed
 Per `design/M1_12_Tasks/V9_housekeeping.md`'s Resolved Decisions (RD-V9-1..5) and the Director's
