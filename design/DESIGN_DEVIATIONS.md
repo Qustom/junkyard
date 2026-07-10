@@ -15,7 +15,7 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*Current: **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — awaiting Director disposition (non-blocking; TG2 is human-gated behind the playtest anyway).*
+*Current: **M1.12 Wave 2** (V2) — 1 entry (telemetry payload-field drop), **pre-dispositioned via D-RAT-7 (Director accepted at design lock)** — records the shape change; no new Director action. **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — awaiting Director disposition (non-blocking).*
 *Prior: **M1.11 Wave 3** (2026-07-08) — U3: 1 Reviewed (archived 2026-07-08).*
 *Prior: **M1.11 Wave 2** (2026-07-07) — U1: 3 Reviewed (archived 2026-07-08).*
 *Prior: **M1.11 Wave 1** (2026-07-06) — U0: 4 Reviewed (archived 2026-07-07), U2a/U2b: none.*
@@ -34,6 +34,19 @@ expectation to a per-id map (charger → band_two; splitter → band_three, band
 behavior is correct (the menu surfaces true deck membership); only the test's expectation was stale and
 not updated in the T3 wave. Test-only change; no production `.gd`/`.tres` touched. · Rec: **Reviewed** —
 test caught up to ratified product behavior; no design change.
+
+---
+
+[2026-07-10] M1.12 V2/telemetry-payload-drop — retiring the six dual-emit legacy opposition signals
+drops three telemetry payload fields with no production/analysis consumer: `hazard_awoke.trigger`
+(near-constant), `throw_killed_hazard.item_id` (orphan; still local in `killer_ctx`),
+`hazard_pursuer_state.state` (patrol/chase; the generic `&"state"` mark preserves count/timing). These
+are the only observable telemetry-shape changes in V2; the generic `opposition_event` family carries
+every still-consumed field, and no `SCHEMA_VERSION` bump results (envelope untouched; no save change).
+· why: the fields cannot be preserved without a forbidden `opposition_event` arity change, and nothing
+reads them. · **Disposition: pre-ratified via D-RAT-7 (Director accepted at the 2026-07-10 design
+lock)** — recorded for the trail; archive to `DESIGN_DEVIATIONS_HISTORY.md` at the M1.12 close (no new
+Director action needed).
 
 ---
 
