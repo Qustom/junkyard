@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose (programmer)
 - **Milestone:** M1.12 (behavior-preserving refactor, Wave 1)
 - **Branch:** feat/V5-interaction-owner
-- **Commit:** <SHA_PLACEHOLDER>   ← set below after commit
+- **Commit:** fef4042574375cb7e599b9f91b19902448742d29
 
 ## What changed
 Extracted the id-guard + parent-check + fat-finger-lockout mechanism that was
