@@ -26,37 +26,17 @@ extends Area2D
 ## interact, further interacts on this gate are ignored until the window elapses.
 @export var input_lockout_s: float = 0.25
 
-## True between an accepted interact and the lockout expiring.
-var _locked: bool = false
+## M1.12 V5: id-guard + parent-check + lockout mechanism extracted to a shared
+## helper (interaction_owner.gd), constructed here in _ready() (no .tscn edit).
+var _io: InteractionOwner
 
 
 func _ready() -> void:
-	EventBus.interaction_requested.connect(_on_interaction_requested)
+	_io = InteractionOwner.new(self, interactable_id, input_lockout_s)
+	add_child(_io)
+	_io.activated.connect(_on_activated)
 
 
-## A2 contract: the detector announces the request; the owner (this gate) checks the
-## id and acts. We ignore requests for other interactables and our own re-presses
-## during the lockout.
-func _on_interaction_requested(id: StringName, target: Node) -> void:
-	if id != interactable_id:
-		return
-	# Only respond when WE are the focused target (guards against another gate /
-	# stale id collision); the detector always passes the focused Interactable.
-	if target != null and target.get_parent() != self:
-		return
-	if _locked:
-		return
-	_locked = true
-	_start_lockout()
+## The gate's one owner-specific action, run once id + parenthood + lockout all pass.
+func _on_activated(_target: Node) -> void:
 	GameState.extract_and_end_run()
-
-
-## Arm the fat-finger lockout. Uses a SceneTree timer so it is frame-rate
-## independent and needs no _process polling.
-func _start_lockout() -> void:
-	var tree := get_tree()
-	if tree == null:
-		_locked = false
-		return
-	var timer := tree.create_timer(input_lockout_s)
-	timer.timeout.connect(func() -> void: _locked = false)
