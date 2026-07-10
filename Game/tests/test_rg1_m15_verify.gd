@@ -52,12 +52,13 @@ const PIECE_CATALOG_PATH := "res://data/piece_catalog.tres"
 const BASELINE_FP := "e943ac9c8bc1"
 const BASELINE_FP_SEED := 12345
 
-## M1.5 added 8 knobs to the M1.4 count (81). Asserted as a SET below (the count itself is
-## pinned by test_run_config / test_config_menu); these are the contract-named new keys.
+## M1.5 added 8 knobs to the M1.4 count. Asserted as a SET below (the count itself is pinned
+## by test_run_config / test_config_menu); these are the contract-named new keys. V3 (M1.12):
+## the 3 L5 hpp_kills/hbomb_kills/hspike_kills toggles were RETIRED with the K5 knob groups
+## (lethality is now entity-local, default true) — only the throw_/r1_ M1.5 levers remain here.
 const M15_NEW_KEYS := [
 	"throw_enabled", "throw_speed", "throw_max_range",
 	"r1_spawn_room_only", "r1_patrol_speed",
-	"hpp_kills", "hbomb_kills", "hspike_kills",
 ]
 
 var _failures: Array[String] = []
@@ -202,20 +203,21 @@ func _verify_default_preset_shape() -> void:
 		_failures.append("RG1/K3: default preset cam_enabled is false (camera must be ON)")
 	if not preset.timer_enabled:
 		_failures.append("RG1/K4: default preset timer_enabled is false (the dive timer must be ON)")
-	if not (preset.hpp_enabled and preset.hbomb_enabled and preset.hspike_enabled):
-		_failures.append("RG1/K5: default preset is missing a K5 hazard master (hpp=%s hbomb=%s hspike=%s)"
-			% [str(preset.hpp_enabled), str(preset.hbomb_enabled), str(preset.hspike_enabled)])
+	# V3 (M1.12): the K5 hazards are now band_greybox DECK cards (not hpp_/hbomb_/hspike_
+	# masters). The shipped preset carries their play magnitudes in param_overrides.
+	for k5_id: String in ["pingpong", "bomb", "spike"]:
+		if not preset.param_overrides.has(k5_id):
+			_failures.append("RG1/K5: default preset param_overrides missing '%s' (K5 deck magnitudes)" % k5_id)
 	if not preset.exit_enabled:
 		_failures.append("RG1/K7: default preset exit_enabled is false (the M1.4 stack ships exits ON)")
 
-	# --- L5: the shipped preset is LETHAL — the three K5 *_kills toggles default true.
-	# Only the DRIVEN copy (_default_preset) turns them off; the real preset never does. ---
-	if not preset.hpp_kills:
-		_failures.append("RG1/L5: default preset hpp_kills is false (the shipped preset must kill)")
-	if not preset.hbomb_kills:
-		_failures.append("RG1/L5: default preset hbomb_kills is false (the shipped preset must kill)")
-	if not preset.hspike_kills:
-		_failures.append("RG1/L5: default preset hspike_kills is false (the shipped preset must kill)")
+	# --- L5: the shipped preset is LETHAL — V3 (M1.12): kills is entity-local (DEFAULTS.kills
+	# = true), so the preset must NOT set kills:false in any K5 param_overrides. Only the DRIVEN
+	# copy (_default_preset) turns them off; the real preset never does. ---
+	for k5_id: String in ["pingpong", "bomb", "spike"]:
+		var ov: Dictionary = preset.param_overrides.get(k5_id, {})
+		if ov.has("kills") and not bool(ov["kills"]):
+			_failures.append("RG1/L5: default preset disables kills for '%s' (the shipped preset must kill)" % k5_id)
 
 	# --- L1 throw lever ON: throw_enabled true, speed/range non-inert (the projectile reads them). ---
 	if not preset.throw_enabled:
@@ -253,9 +255,10 @@ func _verify_default_preset_shape() -> void:
 		_failures.append("RG1: a fresh RunConfig.new() has r1_spawn_room_only ON (baseline contaminated)")
 	if not is_zero_approx(fresh.r1_patrol_speed):
 		_failures.append("RG1: a fresh RunConfig.new() has r1_patrol_speed != 0 (baseline contaminated)")
-	# The lone non-false LEVER default: the K5 *_kills toggles ship TRUE (contract-preserving).
-	if not (fresh.hpp_kills and fresh.hbomb_kills and fresh.hspike_kills):
-		_failures.append("RG1/L5: a fresh RunConfig.new() does not have all *_kills TRUE (the kill toggles must default true)")
+	# V3 (M1.12): the K5 *_kills RunConfig toggles were retired; a fresh all-off config has an
+	# empty param_overrides (K5 lethality now defaults true entity-side, off a neutral deck).
+	if not fresh.param_overrides.is_empty():
+		_failures.append("RG1: a fresh RunConfig.new() has non-empty param_overrides (baseline contaminated)")
 
 
 # --- config-marked telemetry: to_flat_dict carries every M1.5 knob --------------
@@ -449,15 +452,14 @@ func _default_preset() -> RunConfig:
 	c.seed_override = 12345
 	# Keep R1 non-fatal for the driven run so the hazard can't pre-empt our chosen end-cause.
 	c.r1_catch_kills = false
-	# L5: keep the three K5 hazards non-lethal for the driven end-cause matrix. The entities
-	# still SPAWN and behave (hpp/hbomb/hspike_enabled stay TRUE — the real preset), they just
-	# cannot end the run, so the scripted extract/timeout cause wins. This is the retirement of
-	# the old _driven_default_preset(): the driven run now exercises the REAL K5 spawn. The
-	# lethal-preset guarantee is asserted by _verify_default_preset_shape (the shipped
-	# make_default_play_preset() keeps *_kills TRUE).
-	c.hpp_kills = false
-	c.hbomb_kills = false
-	c.hspike_kills = false
+	# L5 (V3 M1.12): keep the three K5 hazards non-lethal for the driven end-cause matrix. The
+	# entities still SPAWN and behave (they are band_greybox deck cards), they just cannot end
+	# the run, so the scripted extract/timeout cause wins. Kills is now entity-local, disabled
+	# via a param_overrides["<id>"]["kills"] = false rider on the preset's magnitudes.
+	for k5_id: String in ["pingpong", "bomb", "spike"]:
+		var ov: Dictionary = c.param_overrides.get(k5_id, {})
+		ov["kills"] = false
+		c.param_overrides[k5_id] = ov
 	return c
 
 

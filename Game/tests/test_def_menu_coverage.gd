@@ -407,6 +407,14 @@ func _case_deck_surface(failures: Array[String], scene: PackedScene) -> void:
 		failures.append("(E) band_two pipeline returned null")
 		menu.queue_free()
 		return
+	# V3 (M1.12): the menu seeds make_default_play_preset(), whose param_overrides now carry the
+	# greybox K5 magnitudes (pingpong/bomb/spike). param_overrides is a GLOBAL def-id lever, so
+	# it also activates band_two's (otherwise-neutral) K5 deck cards — which, drawn before
+	# charger/splitter, would eat band_two's budget. That leak is benign in M1 (band_two is never
+	# dived under the play preset — greybox is), but this test's intent is the charger/splitter
+	# staging seam, so drop the greybox-only K5 overrides to isolate it. (Logged as a V3 deviation.)
+	for k5_id: String in ["pingpong", "bomb", "spike"]:
+		rc.param_overrides.erase(k5_id)
 	var svc := FakeSpawnService.new()
 	var container := Node2D.new()
 	add_child(container)

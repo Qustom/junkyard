@@ -62,3 +62,33 @@ required. Batched to the Wave-4 Director boundary.
 
 ---
 
+
+---
+
+[2026-07-10] M1.12 V3/K5-per-band-cap — the V3 design (step 4 / OQ-F) put the K5 per-room caps
+(pingpong/bomb 2, spike 1) on the shared defs and relied on the `&"new_hazards"` cap-group ceiling (48)
+alone to bound the combined total. On a deep (~30-room) greybox band this is insufficient: the deck's
+authored draw-order (pingpong→bomb→spike) lets pingpong+bomb saturate the 48 ceiling and starve spike to
+0 — a hazard-type COVERAGE failure vs the old fair-share machine, which explicitly split the ceiling
+16/16/16. V3 added `per_band_cap = 16` (the fair-share slice, 48/3) to each K5 def, restoring per-type
+balance. Result: the legacy→deck equivalence is now EXACT (0.0% Δ per type) on every fixture band, and all
+three types always appear. Inert for band_two (its K5 cards are neutral → never spawn → the cap never
+binds); layout fps unmoved. · why: without it, "exact type coverage" (D-RAT-3a) breaks on deep bands. ·
+Rec: **Reviewed** — a faithful reproduction of the retired fair-share slice as data, not a design change.
+
+---
+
+[2026-07-10] M1.12 V3/param-overrides-cross-band-leak — the K5 play magnitudes ride the play preset's
+`rc.param_overrides` (per the V3 design step 4 — required so an all-off run = neutral deck = zero hazards;
+baking magnitudes into `band_greybox`'s deck entries would spawn K5 on an all-off greybox run and break the
+"all-off = M1.0 loop" baseline). But `rc.param_overrides` is keyed by def id and applies GLOBALLY: any band
+that decks pingpong/bomb/spike gets the override. `band_two`'s deck carries those three as neutral refs, so
+under the play preset band_two's K5 cards ACTIVATE and (drawn before charger/splitter) can eat its budget.
+Benign in M1 — band_two is never dived under the play preset (greybox is the only dived band) — and
+band_two's PROFILE stays byte-identical (`test_band_two_profile` green). `test_def_menu_coverage` (which
+artificially generates band_two under the menu's default preset to test charger/splitter staging) drops the
+greybox-only K5 overrides to isolate its intent. · why: inherent to the design's `rc.param_overrides` choice
+(the correct one for the all-off baseline). · Rec: **Reviewed** — surface to the Director; flag for V3b and
+any future band that shares K5 def ids that the global lever is the intended re-tuning surface.
+
+---

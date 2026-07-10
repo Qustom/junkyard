@@ -106,31 +106,25 @@ func _build_traces() -> void:
 		"frames": 300, "cfg": cfg_p2, "ctx": {"room_bounds": Rect2(-100, -100, 200, 200)},
 		"start_pos": Vector2.ZERO, "player_body": true})
 
-	var cfg_pp := RunConfig.new()
-	cfg_pp.hpp_enabled = true
-	cfg_pp.hpp_speed = 120.0
-	cfg_pp.hpp_kills = false
+	# V3 (M1.12): the K5 entities read magnitudes from spawn_ctx["params"] (the deck lane's
+	# ctx-merged def knob bag) — the retired hpp_/hbomb_/hspike_ knobs are gone. The SAME
+	# magnitudes moved from cfg into ctx["params"] → entity behaviour is byte-identical, so
+	# the pre-refactor goldens (trace_pingpong/bomb/spike.txt) still match frame-for-frame.
 	_traces.append({"id": "pingpong", "scene": "res://scenes/hazards/pingpong_hazard.tscn",
-		"frames": 300, "cfg": cfg_pp,
-		"ctx": {"initial_dir": Vector2(1, 0.5), "room_bounds": Rect2(-80, -60, 160, 120)},
+		"frames": 300, "cfg": RunConfig.new(),
+		"ctx": {"initial_dir": Vector2(1, 0.5), "room_bounds": Rect2(-80, -60, 160, 120),
+			"params": {"speed": 120.0, "kills": false}},
 		"start_pos": Vector2.ZERO, "player_body": false})
 
-	var cfg_b := RunConfig.new()
-	cfg_b.hbomb_enabled = true
-	cfg_b.hbomb_proximity_radius = 50.0
-	cfg_b.hbomb_pulse_seconds = 1.0     # arm at frame 30 → detonate at frame 90
-	cfg_b.hbomb_blast_radius = 40.0
-	cfg_b.hbomb_kills = false
 	_traces.append({"id": "bomb", "scene": "res://scenes/hazards/bomb_hazard.tscn",
-		"frames": 96, "cfg": cfg_b, "ctx": {}, "start_pos": Vector2.ZERO, "player_body": false})
+		"frames": 96, "cfg": RunConfig.new(),
+		"ctx": {"params": {"proximity_radius": 50.0, "pulse_seconds": 1.0,   # arm f30 → detonate f90
+			"blast_radius": 40.0, "kills": false}},
+		"start_pos": Vector2.ZERO, "player_body": false})
 
-	var cfg_s := RunConfig.new()
-	cfg_s.hspike_enabled = true
-	cfg_s.hspike_rotation_speed = 90.0
-	cfg_s.hspike_arm_length = 60.0
-	cfg_s.hspike_kills = false
 	_traces.append({"id": "spike", "scene": "res://scenes/hazards/spike_hazard.tscn",
-		"frames": 300, "cfg": cfg_s, "ctx": {"phase_salt": 1},
+		"frames": 300, "cfg": RunConfig.new(),
+		"ctx": {"phase_salt": 1, "params": {"rotation_speed": 90.0, "arm_length": 60.0, "kills": false}},
 		"start_pos": Vector2.ZERO, "player_body": false})
 
 

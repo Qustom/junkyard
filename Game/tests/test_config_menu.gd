@@ -64,14 +64,16 @@ func _run() -> int:
 	for f in exported:
 		if not generic_levers.has(f):
 			legacy_exported.append(f)
-	if legacy_exported.size() != 89:
-		failures.append("expected 89 LEGACY exported RunConfig fields (frozen M1.1–M1.8 surface), got %d"
+	# V3 (M1.12): the 21 K5 hpp_/hbomb_/hspike_ knobs were RETIRED (the three hazards are
+	# now deck-driven data), so the frozen legacy surface drops 89 → 68 and the total 91 → 70.
+	if legacy_exported.size() != 68:
+		failures.append("expected 68 LEGACY exported RunConfig fields (post-V3 surface: was 89, −21 K5 knobs), got %d"
 			% legacy_exported.size())
 	for lever in generic_levers:
 		if not exported.has(lever):
 			failures.append("S4: generic lever '%s' missing from the exported set (promotion to @export failed?)" % lever)
-	if exported.size() != 91:
-		failures.append("expected 91 exported RunConfig fields total (89 legacy + 2 levers), schema has %d"
+	if exported.size() != 70:
+		failures.append("expected 70 exported RunConfig fields total (68 legacy + 2 levers), schema has %d"
 			% exported.size())
 
 	var bound := menu._rows.keys()   # bound controls; masters are included as CheckButtons

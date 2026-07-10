@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="BandProfile" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="BandProfile" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://data/bands/band_profile.gd" id="1"]
 [ext_resource type="Resource" path="res://data/bandgen_config.tres" id="2"]
@@ -6,6 +6,9 @@
 [ext_resource type="Resource" path="res://data/piece_catalog_ext.tres" id="6"]
 [ext_resource type="Resource" path="res://systems/depth/depth_curve.tres" id="4"]
 [ext_resource type="Resource" path="res://data/junk/junk_catalog.tres" id="5"]
+[ext_resource type="Resource" path="res://data/oppositions/pingpong.tres" id="7"]
+[ext_resource type="Resource" path="res://data/oppositions/bomb.tres" id="8"]
+[ext_resource type="Resource" path="res://data/oppositions/spike.tres" id="9"]
 
 [resource]
 script = ExtResource("1")
@@ -21,6 +24,7 @@ principles = Array[Resource]([])
 flavors = Array[Resource]([])
 depth_curve = ExtResource("4")
 junk_catalog = ExtResource("5")
-opposition_deck = Array[Resource]([])
+opposition_deck = Array[Resource]([ExtResource("7"), ExtResource("8"), ExtResource("9")])
+opposition_credits = 48
 band_depth = 1
 palette_tint = Color(1, 1, 1, 1)

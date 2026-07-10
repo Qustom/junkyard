@@ -51,11 +51,14 @@ func _run() -> int:
 	var off_n: int = mg_off._band_container.get_child_count()
 	if off_n != 0:
 		failures.append("(i) all-off produced %d nodes, expected 0" % off_n)
-	# all-off via enabled-but-neutral knobs (base=0, per_depth=0) also → 0.
+	# all-off via neutral param_overrides (base=0, per_depth=0) also → 0 (V3: the deck cards
+	# are present in band_greybox but a neutral override keeps their demand 0 → skipped).
 	var rc_neutral := _rc()
-	rc_neutral.hpp_enabled = true
-	rc_neutral.hbomb_enabled = true
-	rc_neutral.hspike_enabled = true       # enabled but base/per_depth left 0 → neutral
+	rc_neutral.param_overrides = {
+		"pingpong": {"base_count": 0, "count_per_depth": 0.0},
+		"bomb": {"base_count": 0, "count_per_depth": 0.0},
+		"spike": {"base_count": 0, "count_per_depth": 0.0},
+	}
 	var mg_neu := _fresh_mg(mg_script)
 	mg_neu._spawn_new_hazards(rc_neutral, band3)
 	if mg_neu._band_container.get_child_count() != 0:
@@ -65,9 +68,9 @@ func _run() -> int:
 	# --- (ii) base>0 puts a hazard in every eligible room ---------------------------
 	# BUG7: the depth-0 ENTRY piece is excluded from new-hazard placement (the player spawns
 	# there), so bomb base 1, no depth scaling → one per ELIGIBLE room = the 2 deeper rooms.
+	# (V3: only bomb is overridden non-neutral → pingpong/spike stay neutral → don't spawn.)
 	var rc_base := _rc()
-	rc_base.hbomb_enabled = true
-	rc_base.hbomb_base_count = 1
+	rc_base.param_overrides = {"bomb": {"base_count": 1, "count_per_depth": 0.0}}
 	var mg_base := _fresh_mg(mg_script)
 	mg_base._spawn_new_hazards(rc_base, band3)
 	if mg_base._band_container.get_child_count() != 2:
@@ -75,12 +78,12 @@ func _run() -> int:
 			% mg_base._band_container.get_child_count())
 
 	# --- (ii) DEPTH SCALING: a deeper room earns >= a shallower one (per_depth > 0) --
-	# spikes only, base 0, per_depth 1.0 → room at depth d earns floor(1.0*d) = d.
-	# depth 0 → 0, depth 1 → 1, depth 2 → 2 (rooms big enough to hold them).
+	# V3: pingpong only (per_room_cap 2 on its def, so the ramp is visible up to 2), base 0,
+	# per_depth 1.0 → the deck's even-spread places more in the deeper room: depth 1 → 1,
+	# depth 2 → 2 (the FBM19 even-spread reaches deeper by construction — DR-3a). (spike's
+	# def cap is 1, so it can't show a per-room ramp; pingpong's cap-2 def can.)
 	var rc_scale := _rc()
-	rc_scale.hspike_enabled = true
-	rc_scale.hspike_base_count = 0
-	rc_scale.hspike_count_per_depth = 1.0
+	rc_scale.param_overrides = {"pingpong": {"base_count": 0, "count_per_depth": 1.0}}
 	var per_room := _count_per_room(mg_script, rc_scale, _make_band([16, 16, 16]))
 	if per_room.size() == 3:
 		if not (per_room[0] <= per_room[1] and per_room[1] <= per_room[2]):
@@ -92,12 +95,12 @@ func _run() -> int:
 		failures.append("(ii) expected 3 rooms, got %d depth buckets" % per_room.size())
 
 	# --- (iii) PER-ROOM CAP bounds the per-room count -------------------------------
-	# spikes, base 10, cap 2 → each ELIGIBLE room capped to 2. BUG7: the depth-0 entry room is
-	# excluded, so 2 eligible rooms (depths 1,2) → 4 total (was 6 before the entry exclusion).
+	# V3: pingpong base 10 (huge demand), and the pingpong DEF carries per_room_cap 2, enforced
+	# service-side (a refused over-cap spawn does not spend). BUG7: the depth-0 entry room is
+	# excluded, so 2 eligible rooms (depths 1,2) → 4 total (2 per room). The per-room cap now
+	# lives on the shared def, not a RunConfig knob (V3 OQ-F resolution).
 	var rc_cap := _rc()
-	rc_cap.hspike_enabled = true
-	rc_cap.hspike_base_count = 10
-	rc_cap.hspike_per_room_cap = 2
+	rc_cap.param_overrides = {"pingpong": {"base_count": 10, "count_per_depth": 0.0}}
 	var mg_cap := _fresh_mg(mg_script)
 	mg_cap._spawn_new_hazards(rc_cap, _make_band([16, 16, 16]))
 	if mg_cap._band_container.get_child_count() != 4:
@@ -111,12 +114,9 @@ func _run() -> int:
 		areas.append(400)
 	var explode := _make_band(areas)
 	var rc_explode := _rc()
-	rc_explode.hpp_enabled = true
-	rc_explode.hpp_base_count = 50
-	rc_explode.hbomb_enabled = true
-	rc_explode.hbomb_base_count = 50
-	rc_explode.hspike_enabled = true
-	rc_explode.hspike_base_count = 50
+	rc_explode.param_overrides = {
+		"pingpong": {"base_count": 50}, "bomb": {"base_count": 50}, "spike": {"base_count": 50},
+	}
 	var mg_exp := _fresh_mg(mg_script)
 	mg_exp._spawn_new_hazards(rc_explode, explode)
 	var total: int = mg_exp._band_container.get_child_count()
@@ -128,13 +128,11 @@ func _run() -> int:
 
 	# --- (v) DETERMINISM: two builds → byte-identical positions ---------------------
 	var rc_det := _rc()
-	rc_det.hpp_enabled = true
-	rc_det.hpp_base_count = 2
-	rc_det.hbomb_enabled = true
-	rc_det.hbomb_base_count = 1
-	rc_det.hspike_enabled = true
-	rc_det.hspike_base_count = 1
-	rc_det.hspike_count_per_depth = 0.5
+	rc_det.param_overrides = {
+		"pingpong": {"base_count": 2},
+		"bomb": {"base_count": 1},
+		"spike": {"base_count": 1, "count_per_depth": 0.5},
+	}
 	var pos_a := _positions(mg_script, rc_det, _make_band([16, 25, 36]))
 	var pos_b := _positions(mg_script, rc_det, _make_band([16, 25, 36]))
 	if pos_a != pos_b:
@@ -174,12 +172,9 @@ func _run() -> int:
 	var entry_cell: Vector2i = bug7_band.entry_piece.floor_cells[0]
 	var entry_pos: Vector2 = Vector2(entry_cell * CELL) + Vector2(CELL, CELL) * 0.5
 	var rc_bug7 := _rc()
-	rc_bug7.hpp_enabled = true
-	rc_bug7.hpp_base_count = 3
-	rc_bug7.hbomb_enabled = true
-	rc_bug7.hbomb_base_count = 3
-	rc_bug7.hspike_enabled = true
-	rc_bug7.hspike_base_count = 3
+	rc_bug7.param_overrides = {
+		"pingpong": {"base_count": 3}, "bomb": {"base_count": 3}, "spike": {"base_count": 3},
+	}
 	var mg_bug7 := _fresh_mg(mg_script)
 	mg_bug7._spawn_new_hazards(rc_bug7, bug7_band)   # spawn_pos recomputed from band topology
 	var safe_px: float = safe_cells * float(CELL)

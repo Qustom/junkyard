@@ -128,6 +128,16 @@ func _scatter_profile() -> BandProfile:
 	p.archetype = "linear"
 	p.band_depth = 4
 	p.palette_tint = TEST_TINT
+	# V3 (M1.12): the legacy K5 hazard lane was retired — populate() spawns only from the
+	# profile's opposition_deck (or the oppositions_enabled extras lever). Give this synthetic
+	# arena a K5 deck so M7's "populate spawns on the arena" check exercises the deck lane; the
+	# play preset's param_overrides (pingpong/bomb/spike magnitudes) activate the neutral cards.
+	var deck: Array[Resource] = [
+		load("res://data/oppositions/pingpong.tres"),
+		load("res://data/oppositions/bomb.tres"),
+		load("res://data/oppositions/spike.tres"),
+	]
+	p.opposition_deck = deck
 	return p
 
 

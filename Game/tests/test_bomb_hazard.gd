@@ -52,7 +52,7 @@ func _run() -> void:
 	await _case_kills_off_survives(gs, failures)
 	await _case_fizzle_survives(gs, failures)
 	await _case_committed_no_defuse(gs, failures)
-	_case_all_off_inert(failures)
+	await _case_all_off_inert(failures)
 	_case_tell_renders(failures)
 
 	if failures.is_empty():
@@ -72,9 +72,9 @@ func _run() -> void:
 ## ACTUALLY RENDER — guards the invisible-blade class of bug (a self-intersecting polygon
 ## triangulates to 0 triangles and renders nothing, like the K5c spike Tell did).
 func _case_tell_renders(failures: Array[String]) -> void:
-	var rc := _bomb_config()
+	var params := _bomb_params()
 	var player := _make_player(Vector2(9999, 9999))   # far away — stays idle
-	var bomb := _make_bomb(Vector2.ZERO, rc, player)
+	var bomb := _make_bomb(Vector2.ZERO, params, player)
 	for child_name in ["Core", "IdleRing"]:
 		var poly: Polygon2D = bomb.get_node(child_name)
 		if poly == null:
@@ -85,14 +85,15 @@ func _case_tell_renders(failures: Array[String]) -> void:
 	player.queue_free()
 
 
-## A bomb-on config; caller overrides specifics. proximity >= blast (the Q3 invariant).
-func _bomb_config() -> RunConfig:
-	var rc := RunConfig.new()
-	rc.hbomb_enabled = true
-	rc.hbomb_proximity_radius = 80.0
-	rc.hbomb_blast_radius = 40.0
-	rc.hbomb_pulse_seconds = 0.3       # short fuse so the test pumps quickly
-	return rc
+## A bomb-on PARAMS bag; caller overrides specifics. proximity >= blast (the Q3
+## invariant). V3 (M1.12): the bomb reads magnitudes from spawn_ctx["params"] (the deck
+## lane's ctx-merged def knob bag) — the retired rc.hbomb_* knobs no longer exist.
+func _bomb_params() -> Dictionary:
+	return {
+		"proximity_radius": 80.0,
+		"blast_radius": 40.0,
+		"pulse_seconds": 0.3,          # short fuse so the test pumps quickly
+	}
 
 
 func _make_player(pos: Vector2) -> CharacterBody2D:
@@ -102,12 +103,12 @@ func _make_player(pos: Vector2) -> CharacterBody2D:
 	return p
 
 
-func _make_bomb(pos: Vector2, rc: RunConfig, player: Node2D) -> Node2D:
+func _make_bomb(pos: Vector2, params: Dictionary, player: Node2D) -> Node2D:
 	var scn := load(BOMB_SCENE) as PackedScene
 	var bomb := scn.instantiate() as Node2D
 	bomb.global_position = pos
 	add_child(bomb)
-	bomb.setup(rc, player)             # third spawn_ctx param is optional + ignored
+	bomb.setup(RunConfig.new(), player, {"params": params})   # magnitudes via the params channel
 	return bomb
 
 
@@ -125,8 +126,8 @@ func _case_commit_then_fatal(gs: Node, failures: Array[String]) -> void:
 
 	# Player starts FAR (outside the 80px proximity ring): bomb stays IDLE.
 	var player := _make_player(Vector2(400, 0))
-	var rc := _bomb_config()
-	var bomb := _make_bomb(Vector2.ZERO, rc, player)
+	var params := _bomb_params()
+	var bomb := _make_bomb(Vector2.ZERO, params, player)
 
 	await _frames(5)
 	if not _pulse_started.is_empty():
@@ -166,10 +167,10 @@ func _case_kills_off_survives(gs: Node, failures: Array[String]) -> void:
 	gs.start_run(&"test_band", 44)
 	gs.set_current_depth(2, 2)
 
-	var rc := _bomb_config()
-	rc.hbomb_kills = false
+	var params := _bomb_params()
+	params["kills"] = false   # V3: kills is entity-local, overridden via params
 	var player := _make_player(Vector2.ZERO)   # ON the bomb → arms + inside blast
-	var bomb := _make_bomb(Vector2.ZERO, rc, player)
+	var bomb := _make_bomb(Vector2.ZERO, params, player)
 
 	await _frames(1)
 	if _pulse_started.size() != 1:
@@ -196,10 +197,10 @@ func _case_fizzle_survives(gs: Node, failures: Array[String]) -> void:
 	gs.start_run(&"test_band", 22)
 	gs.set_current_depth(2, 2)
 
-	var rc := _bomb_config()             # proximity 80, blast 40
+	var params := _bomb_params()             # proximity 80, blast 40
 	# Player parked at distance 60: INSIDE proximity (arms) but OUTSIDE blast (survives).
 	var player := _make_player(Vector2(60, 0))
-	var bomb := _make_bomb(Vector2.ZERO, rc, player)
+	var bomb := _make_bomb(Vector2.ZERO, params, player)
 
 	await _frames(1)
 	if _pulse_started.size() != 1:
@@ -224,9 +225,9 @@ func _case_committed_no_defuse(gs: Node, failures: Array[String]) -> void:
 	gs.start_run(&"test_band", 33)
 	gs.set_current_depth(2, 2)
 
-	var rc := _bomb_config()
+	var params := _bomb_params()
 	var player := _make_player(Vector2.ZERO)   # start ON the bomb → arms immediately
-	var bomb := _make_bomb(Vector2.ZERO, rc, player)
+	var bomb := _make_bomb(Vector2.ZERO, params, player)
 
 	await _frames(1)
 	if _pulse_started.size() != 1:
@@ -252,17 +253,22 @@ func _case_committed_no_defuse(gs: Node, failures: Array[String]) -> void:
 	player.queue_free()
 
 
-# === Case 4: all-off config arms nothing ====================================
-## The spawn loop (K5i) is gated on hbomb_enabled; here we also assert that an off
-## proximity radius keeps an instantiated bomb permanently inert (defence-in-depth).
+# === Case 4: neutral params arm nothing =====================================
+## V3 (M1.12): the all-off gate is now DATA — a neutral card (base_count 0, count_per_depth
+## 0) never spawns (EncounterBuilder skips it), so no bomb node exists. Defence-in-depth at
+## the ENTITY level: a bomb instantiated with NEUTRAL params (proximity_radius 0 — the
+## DEFAULTS mirror) stays permanently inert even with the player sitting on top of it.
 func _case_all_off_inert(failures: Array[String]) -> void:
-	var off := RunConfig.new()           # all-off default == M1.0 baseline
-	if off.hbomb_enabled:
-		failures.append("c4: all-off config has hbomb_enabled = true (gate is wrong)")
-	if off.hbomb_proximity_radius != 0.0:
-		failures.append("c4: all-off proximity radius != 0 (would arm)")
-	if off.hbomb_blast_radius != 0.0:
-		failures.append("c4: all-off blast radius != 0 (would be lethal)")
+	_reset_signal_logs()
+	var player := _make_player(Vector2.ZERO)              # ON the bomb
+	var bomb := _make_bomb(Vector2.ZERO, {}, player)       # empty params → DEFAULTS (proximity 0)
+	await _frames(10)
+	if not _pulse_started.is_empty():
+		failures.append("c4: neutral-param bomb armed (proximity 0 must never trigger)")
+	if not _killed_kinds.is_empty():
+		failures.append("c4: neutral-param bomb detonated (must stay inert)")
+	bomb.queue_free()
+	player.queue_free()
 
 
 # --- signal sinks ------------------------------------------------------------

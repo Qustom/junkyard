@@ -97,8 +97,10 @@ func _run() -> int:
 	var failures: Array[String] = []
 
 	_case_all_off(failures)
-	_case_preset_parity(failures)
-	_case_fair_share(failures)
+	# V3 (M1.12): _case_preset_parity + _case_fair_share (the legacy K5 fair-share lane) were
+	# RETIRED with _populate_legacy. The K5 deck's equivalence to that lane is proven by
+	# tests/test_greybox_deck_equivalence.gd (the DR-3 golden re-pin).
+	_case_greybox_deck(failures)
 	_case_budget(failures)
 	_case_min_band(failures)
 	_case_draw_order(failures)
@@ -109,9 +111,9 @@ func _run() -> int:
 	_case_band_two_depth_spread(failures)
 
 	if failures.is_empty():
-		print("S3 OK — EncounterBuilder verified: all-off inert (zero requests), preset "
-			+ "byte-parity vs the pre-S3 mirror (cells + ctx + order, refusal-free), "
-			+ "fair-share 16/16/16 + 24/24 with deepest-first starvation, deck budget "
+		print("S3 OK — EncounterBuilder verified: all-off inert (zero requests), the migrated "
+			+ "K5 greybox deck routes on the real profile (all three kinds, caps + ceiling held, "
+			+ "deterministic — full legacy equivalence in test_greybox_deck_equivalence), deck budget "
 			+ "floor(24*I) with refusals not spending, min_band gating off "
 			+ "profile.band_depth, deterministic id-deduped authored-order draw, "
 			+ "oppositions_enabled/param_overrides additive + neutral-when-empty, "
@@ -140,84 +142,57 @@ func _case_all_off(failures: Array[String]) -> void:
 	if not svc.refusals.is_empty():
 		failures.append("(1) all-off produced refusals")
 	_free_fake(svc)
-	if builder.is_inert(profile, RunConfig.make_default_play_preset()):
-		failures.append("(1) is_inert() true on the default play preset")
+	# V3 (M1.12): the default play preset is inert on a DECK-LESS profile (nothing to spawn —
+	# the K5 lane is gone), but NON-inert on the real band_greybox profile (its K5 deck + the
+	# preset's param_overrides make the cards non-neutral).
+	if not builder.is_inert(profile, RunConfig.make_default_play_preset()):
+		failures.append("(1) is_inert() false on a deck-less profile + play preset (no lane to spawn)")
+	var greybox := load(PROFILE_PATH) as BandProfile
+	if builder.is_inert(greybox, RunConfig.make_default_play_preset()):
+		failures.append("(1) is_inert() TRUE on band_greybox + play preset (the K5 deck should spawn)")
+	# ...and inert on band_greybox with an all-off rc (neutral deck → no service node).
+	if not builder.is_inert(greybox, RunConfig.new()):
+		failures.append("(1) is_inert() false on band_greybox + all-off rc (neutral deck must stay inert)")
 
 
-# --- (2) preset byte-parity vs the verbatim pre-S3 mirror -------------------------
+# --- (2+3 → V3) the migrated K5 DECK on the real band_greybox profile ----------------
+# The legacy fair-share cases were retired with _populate_legacy; the full legacy→deck
+# equivalence proof lives in test_greybox_deck_equivalence.gd. Here we assert the deck
+# routes correctly on the REAL band_greybox profile (deck + opposition_credits) under the
+# play preset: all three K5 types spawn, the plan is refusal-tolerant, caps hold, and the
+# &"new_hazards" ceiling (48) bounds the total.
 
-func _case_preset_parity(failures: Array[String]) -> void:
+func _case_greybox_deck(failures: Array[String]) -> void:
 	var rc := RunConfig.make_default_play_preset()
-	# A band shaped like the real preset's (~15 depths): the hpp/hbomb per-depth ramps
-	# (0.15) only produce a first instance at depth >= 7, so the band must be DEEP
-	# enough that all three preset kinds actually spawn (the m14 >=1-of-each floor).
+	var greybox := load(PROFILE_PATH) as BandProfile
+	if greybox == null or greybox.opposition_deck.is_empty():
+		failures.append("(2) band_greybox has no opposition_deck (V3 authoring missing)")
+		return
+	# A ~15-depth band so the 0.15 per-depth ramps produce all three kinds (bomb/pingpong
+	# ramp in at depth >= 7; spike from base 1).
 	var band := _make_band([16, 25, 36, 49, 64, 100, 120,
 		64, 81, 100, 64, 81, 100, 64, 81])
 	var entry_pos := _entry_pos(band)
 	var svc := _fresh_fake(rc, entry_pos)
-	EncounterBuilder.new().populate(band, _empty_profile(1), rc, svc)
-	var mirror := _mirror_legacy_plan(rc, band, entry_pos)
+	EncounterBuilder.new().populate(band, greybox, rc, svc)
 	if svc.requests.is_empty():
-		failures.append("(2) preset produced no requests (test mis-set)")
-	if not svc.refusals.is_empty():
-		failures.append("(2) preset plan was NOT refusal-free (%d refusals)" % svc.refusals.size())
-	if svc.requests.size() != mirror.size():
-		failures.append("(2) plan size %d != mirror size %d" % [svc.requests.size(), mirror.size()])
-	else:
-		for i in mirror.size():
-			var got: Dictionary = svc.requests[i]
-			var want: Dictionary = mirror[i]
-			if got["id"] != want["id"] or got["cell"] != want["cell"] or got["ctx"] != want["ctx"]:
-				failures.append("(2) plan diverges from the pre-S3 mirror at index %d: got %s expected %s"
-					% [i, str(got), str(want)])
-				break
-	# Every preset kind actually appears (the m14-style >=1-of-each floor).
+		failures.append("(2) greybox deck produced no requests under the play preset")
+	# Every preset kind appears (the m14-style >=1-of-each floor).
 	for kind: StringName in [&"pingpong", &"bomb", &"spike"]:
 		if _count_id(svc.requests, kind) < 1:
-			failures.append("(2) preset plan spawned 0 of %s" % kind)
-	_free_fake(svc)
-
-
-# --- (3) fair-share + starvation ---------------------------------------------------
-
-func _case_fair_share(failures: Array[String]) -> void:
-	# Demand >> 48 across all three types, uncapped per-room → 16/16/16.
-	var rc := RunConfig.new()
-	rc.hpp_enabled = true
-	rc.hpp_base_count = 50
-	rc.hbomb_enabled = true
-	rc.hbomb_base_count = 50
-	rc.hspike_enabled = true
-	rc.hspike_base_count = 50
-	var band := _make_band([16, 100, 100])
-	var svc := _fresh_fake(rc, Vector2.INF)
-	EncounterBuilder.new().populate(band, _empty_profile(1), rc, svc)
-	if svc.requests.size() != CEILING:
-		failures.append("(3) saturated demand spawned %d, expected the %d ceiling"
+			failures.append("(2) greybox deck spawned 0 of %s under the preset" % kind)
+	# The K5 total is bounded by the greybox deck budget (opposition_credits 48). (Per-room /
+	# cap-group ENFORCEMENT is service-side and cap-blind in this plan-level FakeSpawnService;
+	# it is proven against a real-cap recorder in test_greybox_deck_equivalence.)
+	if svc.requests.size() > CEILING:
+		failures.append("(2) greybox deck total %d > the %d budget/ceiling"
 			% [svc.requests.size(), CEILING])
-	for kind: StringName in [&"pingpong", &"bomb", &"spike"]:
-		if _count_id(svc.requests, kind) != 16:
-			failures.append("(3) %s got %d of the fair share, expected 16"
-				% [kind, _count_id(svc.requests, kind)])
-	# Starvation is shallow-first fill: with a 50-demand in the depth-1 room, the slice
-	# is exhausted there — the DEEPEST room gets nothing (deepest starved first).
-	for r in svc.requests:
-		if int((r["cell"] as Vector2i).x) >= 200:
-			failures.append("(3) a request landed in the deepest room — starvation should bite deepest-first")
-			break
+	# Determinism: same band + rc + profile twice → identical ordered plan.
+	var svc2 := _fresh_fake(rc, entry_pos)
+	EncounterBuilder.new().populate(band, greybox, rc, svc2)
+	if str(svc.requests) != str(svc2.requests):
+		failures.append("(2) greybox deck plan is not deterministic across builds")
 	_free_fake(svc)
-
-	# 2-type case → 24/24.
-	var rc2 := RunConfig.new()
-	rc2.hpp_enabled = true
-	rc2.hpp_base_count = 50
-	rc2.hbomb_enabled = true
-	rc2.hbomb_base_count = 50
-	var svc2 := _fresh_fake(rc2, Vector2.INF)
-	EncounterBuilder.new().populate(_make_band([16, 100, 100]), _empty_profile(1), rc2, svc2)
-	if _count_id(svc2.requests, &"pingpong") != 24 or _count_id(svc2.requests, &"bomb") != 24:
-		failures.append("(3) 2-type split %d/%d, expected 24/24"
-			% [_count_id(svc2.requests, &"pingpong"), _count_id(svc2.requests, &"bomb")])
 	_free_fake(svc2)
 
 
@@ -517,90 +492,6 @@ func _case_band_two_depth_spread(failures: Array[String]) -> void:
 	_free_band(band2)
 
 
-# --- the verbatim pre-S3 mirror (main_game._spawn_new_hazards @ 6fbded1, post-S0 shape) ----
-
-## Independent re-implementation of the OLD policy math — kept deliberately separate
-## from EncounterBuilder so a faithful relocation and a drifted one are distinguishable
-## (extends the test_rg1_m14_verify count mirror to cells + ctx, per §7.2 Q1).
-func _mirror_legacy_plan(rc: RunConfig, band: Band, entry_pos: Vector2) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	var defs := {
-		&"pingpong": load("res://data/oppositions/pingpong.tres") as OppositionDef,
-		&"bomb": load("res://data/oppositions/bomb.tres") as OppositionDef,
-		&"spike": load("res://data/oppositions/spike.tres") as OppositionDef,
-	}
-	var table := [
-		[&"pingpong", rc.hpp_enabled, rc.hpp_base_count, rc.hpp_count_per_depth, rc.hpp_per_room_cap],
-		[&"bomb", rc.hbomb_enabled, rc.hbomb_base_count, rc.hbomb_count_per_depth, rc.hbomb_per_room_cap],
-		[&"spike", rc.hspike_enabled, rc.hspike_base_count, rc.hspike_count_per_depth, rc.hspike_per_room_cap],
-	]
-	var active: Array = []
-	for row: Array in table:
-		if not row[1]:
-			continue
-		if int(row[2]) <= 0 and float(row[3]) <= 0.0:
-			continue
-		if defs[row[0]] == null:
-			continue
-		active.append(row)
-	if active.is_empty():
-		return out
-	var n_active: int = active.size()
-	var base_share: int = CEILING / n_active
-	var remainder: int = CEILING % n_active
-	var spawned_total := 0
-	var pieces := _pieces_sorted(band)
-	var safe_px := SAFE_CELLS * float(CELL)
-	for ti in n_active:
-		if spawned_total >= CEILING:
-			break
-		var row: Array = active[ti]
-		var kind: StringName = row[0]
-		var type_budget: int = base_share + (1 if ti < remainder else 0)
-		var type_spawned := 0
-		for p in pieces:
-			if spawned_total >= CEILING:
-				break
-			if type_spawned >= type_budget:
-				break
-			var depth: int = p.depth_index
-			if depth <= 0:
-				continue
-			var n: int = int(row[2]) + int(floor(float(row[3]) * float(depth)))
-			if int(row[4]) > 0:
-				n = mini(n, int(row[4]))
-			n = mini(n, type_budget - type_spawned)
-			n = mini(n, CEILING - spawned_total)
-			if n <= 0:
-				continue
-			# BUG7 filter BEFORE stride (the load-bearing sequence point).
-			var cells: Array[Vector2i] = []
-			for c in _cells_sorted(p):
-				if entry_pos == Vector2.INF or _cell_world(c).distance_to(entry_pos) >= safe_px:
-					cells.append(c)
-			if cells.is_empty():
-				continue
-			var bounds := Rect2(_cell_world(cells[0]), Vector2.ZERO)
-			for c in cells:
-				bounds = bounds.expand(_cell_world(c))
-			var stride: int = maxi(cells.size() / maxi(n, 1), 1)
-			for k in n:
-				var cell: Vector2i = cells[(k * stride) % cells.size()]
-				var ctx: Dictionary = {}
-				match kind:
-					&"pingpong":
-						ctx = { "initial_dir": Vector2.from_angle(float(spawned_total) * GOLDEN),
-							"room_bounds": bounds }
-					&"spike":
-						ctx = { "phase_salt": p.depth_index * 131 + k }
-					_:
-						ctx = {}
-				ctx["depth"] = p.depth_index
-				ctx["run_t_ms"] = 0
-				out.append({ "id": kind, "cell": cell, "ctx": ctx })
-				spawned_total += 1
-				type_spawned += 1
-	return out
 
 
 func _pieces_sorted(band: Band) -> Array[PlacedPiece]:
