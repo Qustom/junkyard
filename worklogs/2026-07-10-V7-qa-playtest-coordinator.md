@@ -4,7 +4,7 @@
 - **Subagent:** qa-playtest-coordinator
 - **Milestone:** M1.12
 - **Branch:** feat/V7-telemetry-rotation
-- **Commit:** <filled in after commit — see below>
+- **Commit:** 9ac91e5
 
 ## What changed
 
