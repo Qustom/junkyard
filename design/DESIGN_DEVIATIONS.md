@@ -15,7 +15,7 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*Current: **M1.12 Wave 2** (V2) — 1 entry (telemetry payload-field drop), **pre-dispositioned via D-RAT-7 (Director accepted at design lock)** — records the shape change; no new Director action. **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — awaiting Director disposition (non-blocking).*
+*Current: **M1.12 Wave 3** (V4) — 1 entry (private `_evaluate_quota` facade delegate), rec Reviewed — awaiting Director disposition (non-blocking; batched to the Wave-4 boundary). **M1.12 Wave 2** (V2) — 1 entry (telemetry payload-field drop), **pre-dispositioned via D-RAT-7** — records the shape change; no new Director action. **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — non-blocking.*
 *Prior: **M1.11 Wave 3** (2026-07-08) — U3: 1 Reviewed (archived 2026-07-08).*
 *Prior: **M1.11 Wave 2** (2026-07-07) — U1: 3 Reviewed (archived 2026-07-08).*
 *Prior: **M1.11 Wave 1** (2026-07-06) — U0: 4 Reviewed (archived 2026-07-07), U2a/U2b: none.*
@@ -47,6 +47,18 @@ every still-consumed field, and no `SCHEMA_VERSION` bump results (envelope untou
 reads them. · **Disposition: pre-ratified via D-RAT-7 (Director accepted at the 2026-07-10 design
 lock)** — recorded for the trail; archive to `DESIGN_DEVIATIONS_HISTORY.md` at the M1.12 close (no new
 Director action needed).
+
+---
+
+[2026-07-10] M1.12 V4/private-quota-delegate — the V4 GameState split moved quota eval into the new
+`QuotaLadder` sub-object, but `test_quota_system` white-box-calls the *private* `GameState._evaluate_quota(sold_total)`
+at 6 sites (the design's public-surface facade audit enumerated only the public API, not private methods a
+test reaches into). To honor the zero-caller-edits contract, V4 kept a private `_evaluate_quota` delegate on
+the GameState facade forwarding to `_quota.evaluate(...)` with byte-identical pre-V4 semantics — no test
+edited, no behavior changed. · why: preserving the private method (vs editing the 6 test sites) keeps the
+facade truly transparent and the test suite untouched. · Rec: **Reviewed** — behavior-preserving facade
+delegate; the alternative (rewrite the test onto `QuotaLadder.evaluate`) is a fine future cleanup but not
+required. Batched to the Wave-4 Director boundary.
 
 ---
 
