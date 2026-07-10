@@ -178,7 +178,7 @@ func start_run(band_id: StringName, seed: int) -> void:
 		# at start (preserving the all-off control's byte-identical-to-M1.3 guarantee).
 		quota_target = qc.quota_base
 		run_number = 1
-		SaveManager.save_meta(0)
+		SaveManager.save_meta(0)  # TODO(multi-slot UI, M1.12 V9): hardcoded slot 0 — see main_menu.gd's SAVE_SLOT const / OQ4; V4's GameState split is a natural seam for GameState.active_slot.
 	RNG.seed_from(seed)
 	EventBus.run_started.emit(band_id, seed)
 
@@ -304,7 +304,7 @@ func extract_and_end_run() -> void:
 	# Persist the updated meta synchronously (atomic write + .bak). SaveManager's
 	# only persist-meta entry point is save_meta(slot); use the default slot 0.
 	# A higher layer (save/slot UI, not yet built in M1) will own slot selection.
-	SaveManager.save_meta(0)
+	SaveManager.save_meta(0)  # TODO(multi-slot UI, M1.12 V9): hardcoded slot 0 — see main_menu.gd's SAVE_SLOT const / OQ4; V4's GameState split is a natural seam for GameState.active_slot.
 
 	EventBus.haul_banked.emit(banked_value)
 
@@ -384,7 +384,7 @@ func purchase(item_id: StringName, price: int) -> bool:
 		return false
 	add_currency(&"money", -price, &"shop")   # ONE ledger event; mirrors sell_banked_junk's credit
 	owned_items.append(item_id)
-	SaveManager.save_meta(0)                   # atomic write + .bak, slot 0 (every meta op's path)
+	SaveManager.save_meta(0)                   # atomic write + .bak, slot 0 (every meta op's path) — TODO(multi-slot UI, M1.12 V9): see main_menu.gd's SAVE_SLOT const / OQ4; V4's GameState split is a natural seam for GameState.active_slot.
 	EventBus.item_purchased.emit(item_id, price, money)   # money = post-debit balance
 	return true
 
@@ -429,7 +429,7 @@ func sell_banked_junk(source: StringName = &"sell") -> Array[Dictionary]:
 	add_currency(&"money", total, source)
 
 	# Persist the new Money total + emptied bank (slot 0; same path as E1/E3).
-	SaveManager.save_meta(0)
+	SaveManager.save_meta(0)  # TODO(multi-slot UI, M1.12 V9): hardcoded slot 0 — see main_menu.gd's SAVE_SLOT const / OQ4; V4's GameState split is a natural seam for GameState.active_slot.
 
 	# K2 (M1.4): evaluate the quota AFTER the credit + save — `money` is only final
 	# for the run here (Q2 lock). `total` is the sum just sold this call (the
@@ -471,7 +471,7 @@ func _evaluate_quota(sold_total: int) -> Dictionary:
 		# Escalate: bump the run number AND raise the next quota, then persist.
 		run_number += 1
 		quota_target += _quota_step_snapshot
-		SaveManager.save_meta(0)
+		SaveManager.save_meta(0)  # TODO(multi-slot UI, M1.12 V9): hardcoded slot 0 — see main_menu.gd's SAVE_SLOT const / OQ4; V4's GameState split is a natural seam for GameState.active_slot.
 		EventBus.quota_advanced.emit(run_number, quota_target)
 		_quota_result = {"checked": true, "met": true, "achieved": achieved, "target": quota_target}
 	else:
@@ -553,7 +553,7 @@ func wipe_meta() -> void:
 	run_number = 1
 	quota_target = 0
 	# Persist the wiped state through the SAME atomic path (slot 0) as every meta op.
-	SaveManager.save_meta(0)
+	SaveManager.save_meta(0)  # TODO(multi-slot UI, M1.12 V9): hardcoded slot 0 — see main_menu.gd's SAVE_SLOT const / OQ4; V4's GameState split is a natural seam for GameState.active_slot.
 	# Fire AFTER the persist so observers (HUD/Telemetry/GameOver) read settled state.
 	EventBus.meta_wiped.emit(prev_run_number)
 	# Nudge any money-projection HUD to repaint to 0.
@@ -605,7 +605,7 @@ func fail_run(cause: StringName) -> void:
 
 	# Persist the kept pockets synchronously via the SAME atomic write + .bak path
 	# as extract (slot 0). Kept pockets are a real, persistent meta gain.
-	SaveManager.save_meta(0)
+	SaveManager.save_meta(0)  # TODO(multi-slot UI, M1.12 V9): hardcoded slot 0 — see main_menu.gd's SAVE_SLOT const / OQ4; V4's GameState split is a natural seam for GameState.active_slot.
 
 	# Parity with extract: report the kept amount through haul_banked. run_ended is
 	# fixed-arity (reason, duration_s, depth) so value_lost can't ride on it — it's

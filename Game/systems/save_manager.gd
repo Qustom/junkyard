@@ -5,15 +5,15 @@ extends Node
 ##     with FileAccess.store_var(value, full_objects = false) — object
 ##     serialization OFF, so there is no .tres code-execution risk, the blob is
 ##     compact, and it stays migration-friendly.
-##   * Per-slot files: meta.sav (persists) + run.sav (resumable in-progress dive),
-##     each carrying an integer schema_version.
+##   * Per-slot file: meta.sav (persists), carrying an integer schema_version.
+##     (A resumable-dive run.sav was declared here but never implemented; M2 re-adds
+##     it if/when resumable dives are actually designed — see M1.12 V9/DR-6.)
 ##   * Migrations are an ordered, stepwise chain (v -> v+1 -> ...).
 ##   * Writes are atomic (tmp -> rename) with a .bak of the previous good file,
 ##     so autosave-on-sleep/extract can never corrupt meta-state.
 
 const SAVE_ROOT := "user://saves"
 const META_SCHEMA_VERSION := 4
-const RUN_SCHEMA_VERSION := 1
 
 func slot_dir(slot: int) -> String:
 	return "%s/slot_%d" % [SAVE_ROOT, slot]
