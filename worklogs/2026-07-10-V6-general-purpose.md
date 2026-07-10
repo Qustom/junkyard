@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.12
 - **Branch:** feat/V6-rng-substream
-- **Commit:** ed003f8e143f011c1d062364a4a99d5dc632eaa6
+- **Commit:** a6d8086260f8e9b333bedae0780ec1cb384c0016 (code + worklog); SHA recorded in a follow-up commit
 
 ## What changed
 Behavior-preserving refactor: promoted the five hand-rolled deterministic
