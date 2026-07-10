@@ -1175,8 +1175,7 @@ func _exit_placement_positions(band: Band, rc: RunConfig, n: int, spawn_pos: Vec
 	if pool.is_empty():
 		return [spawn_pos + GameState.GATE_SPAWN_OFFSET]                  # degenerate band → one fixed gate
 
-	var rng := RandomNumberGenerator.new()
-	rng.seed = GameState.run_seed ^ GameState.EXITS_RNG_SALT              # local sub-stream, like POCKETS/JUNK
+	var rng := RNG.substream(GameState.run_seed, GameState.EXITS_RNG_SALT)  # local sub-stream, like POCKETS/JUNK
 	# Fisher–Yates over a COPY, then take the first n (distinct cells, no global RNG).
 	for i in range(pool.size() - 1, 0, -1):
 		var j: int = rng.randi_range(0, i)

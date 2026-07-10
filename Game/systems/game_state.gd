@@ -647,8 +647,7 @@ func _resolve_pockets() -> Array[JunkItem]:
 			# Deterministic shuffle via a LOCAL RNG (B3 sub-stream pattern): seed from
 			# run_seed ^ salt so the order is reproducible per run and never touches
 			# the global RNG autoload. RNG has no shuffle(), so Fisher–Yates here.
-			var rng := RandomNumberGenerator.new()
-			rng.seed = run_seed ^ POCKETS_RNG_SALT
+			var rng := RNG.substream(run_seed, POCKETS_RNG_SALT)
 			for i in range(ordered.size() - 1, 0, -1):
 				var j: int = rng.randi_range(0, i)
 				var tmp: JunkItem = ordered[i]

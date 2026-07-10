@@ -15,9 +15,10 @@ extends RefCounted
 ## methods because GDScript cannot shadow a base-class const (the spec's
 ## MUTATES_PIECES / RESHAPES_FLOOR consts, same contract).
 ##
-## RNG DISCIPLINE (spec §0): a stage draws ONLY from a local
-## RandomNumberGenerator seeded from stage_seed (resolved_seed ⊕ salt ⊕ index,
-## the JunkPlacer sub-stream pattern). No stage ever touches the RNG autoload.
+## RNG DISCIPLINE (spec §0): a stage draws ONLY from the local
+## RandomNumberGenerator the pipeline hands it — derived via
+## RNG.substream_hashed(resolved_seed, salt, index) (the JunkPlacer sub-stream
+## pattern, V6). No stage ever touches the RNG autoload.
 
 
 ## Pipeline re-grades (DepthGrader) after this stage when true.
@@ -37,5 +38,5 @@ func journal() -> Array:
 	return []
 
 
-func apply(_band: Band, _profile: BandProfile, _stage_seed: int) -> void:
+func apply(_band: Band, _profile: BandProfile, _rng: RandomNumberGenerator) -> void:
 	pass
