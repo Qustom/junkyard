@@ -104,7 +104,6 @@ func _resolve_params(spawn_ctx: Dictionary) -> Dictionary:
 		p[key] = dp.get(key, DEFAULTS[key])
 	# LethalContact &"external" wiring (the ChargeLane resolve shape):
 	p["def_id"] = &"burrower"
-	p["emit_family"] = &"new_hazard_killed"
 	p["lethal_mode"] = &"external"
 	p["latch_rearm"] = true
 	p["throw_mode"] = &"die"

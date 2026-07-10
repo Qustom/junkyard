@@ -266,7 +266,7 @@ func _verify_default_preset_shape() -> void:
 ##   - even_spread with count>=4 spans >1 distinct depth_index (the F2 fix), and
 ##   - single_gate collapses to ONE depth (the M1.2-equivalent placement).
 ## This is the EXACT, deterministic form of the matrix "J2 spread takes effect" row —
-## stronger than reading timing-sensitive runtime hazard_awoke depths.
+## stronger than reading timing-sensitive runtime opposition_event(&"awoke") depths.
 func _verify_j2_spread_plan() -> void:
 	var band := _graded_band(BASELINE_FP_SEED)
 	if band == null:
@@ -698,7 +698,11 @@ func _inspect_log() -> void:
 		if not started_by_tag.has(tag):
 			_failures.append("V13: no run_started row for config '%s'" % tag)
 
-	var hazard_types := ["hazard_awoke", "hazard_caught"]
+	# V2: R1's legacy hazard_awoke/hazard_caught rows retired → the generic
+	# opposition_event row (event=&"awoke"/&"hit_player") carries the R1 moments; each
+	# check here is "at least one R1 opposition row appears", so it filters on the
+	# generic type directly.
+	var hazard_types := ["opposition_event"]
 	var r2_types := ["return_cost_incurred"]
 	var r3_types := ["exposure_crossed", "exposure_penalty", "exposure_meter_changed"]
 	var r4_types := ["nav_branch_taken", "nav_lost_proxy"]

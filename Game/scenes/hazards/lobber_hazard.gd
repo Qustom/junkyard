@@ -109,7 +109,6 @@ func _resolve_params(spawn_ctx: Dictionary) -> Dictionary:
 	# consumed by MortarCycle's own distance test (&"external" ignores the
 	# component's _blast_radius).
 	p["def_id"] = &"lobber"
-	p["emit_family"] = &"new_hazard_killed"
 	p["lethal_mode"] = &"external"
 	p["latch_rearm"] = true
 	p["throw_mode"] = &"die"

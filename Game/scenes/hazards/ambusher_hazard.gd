@@ -155,7 +155,6 @@ func _resolve_params(spawn_ctx: Dictionary) -> Dictionary:
 	p["wall_crash_recover_mult"] = 1.0           # no bonus stun (short pounce, no wall-baiting)
 	# Reused LethalContact / ThrowInteraction seam flags.
 	p["def_id"] = &"ambusher"
-	p["emit_family"] = &"new_hazard_killed"
 	p["lethal_mode"] = &"external"
 	p["latch_rearm"] = true
 	p["throw_mode"] = &"die"

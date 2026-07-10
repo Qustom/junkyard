@@ -11,7 +11,7 @@ extends Area2D
 ## collision_mask = world(2) | hazard(16) = 18, body_entered-driven.
 ##   - Hit a `hazard`-group body (the R1 HazardEntity pursuer OR the K5 ping-pong
 ##     CharacterBody2D): queue_free() the body (kill) + destroy the projectile +
-##     CONSUME the item (NOT re-dropped). Emits EventBus.throw_killed_hazard.
+##     CONSUME the item (NOT re-dropped). Emits EventBus.opposition_event(&"killed_by_throw").
 ##   - Miss (a `world` body/wall, OR travel reaches max_range, OR a hidden in-script
 ##     lifetime fallback expires): re-drop the item via EventBus.junk_dropped (the
 ##     existing JunkSpawner re-spawn path → a grabbable pickup) + EventBus.throw_missed.
@@ -86,18 +86,18 @@ func _on_body_entered(body: Node) -> void:
 ## kind = the body's type for the telemetry row (&"pursuer" for the R1 HazardEntity,
 ## &"pingpong" for the K5 bouncer, else the node name lower-cased as a fallback).
 ##
-## S2 (M1.9, Resolved Decisions Q5 — the LOCKED delegation seam): the emit site is
-## unchanged and FIRST (throw_killed_hazard keeps its exact site, payload, kind
-## resolution, and Time.get_ticks_msec() clock source), then the S2 generic
-## &"killed_by_throw" twin, then the duck-typed death dispatch: a body implementing
-## `resolve_throw_death(killer_ctx) -> bool` may handle its own death (true = "do
-## not free me again" — S6b's Splitter splits then frees itself); false/absent =
-## today's queue_free(), verbatim, same frame, same call order.
+## S2 (M1.9, Resolved Decisions Q5 — the LOCKED delegation seam): the generic
+## opposition_event(&"killed_by_throw") emit is FIRST (V2 retired the legacy
+## throw_killed_hazard signal; the &"killed_by_throw" event carries the hazard kind
+## as its id — the throwing item_id is no longer on the signal payload but still
+## rides the local killer_ctx below), then the duck-typed death dispatch: a body
+## implementing `resolve_throw_death(killer_ctx) -> bool` may handle its own death
+## (true = "do not free me again" — S6b's Splitter splits then frees itself);
+## false/absent = today's queue_free(), verbatim, same frame, same call order.
 func _hit_hazard(body: Node) -> void:
 	_spent = true
 	var item_id: StringName = _item.id if _item != null else &""
 	var kind: StringName = _hazard_kind(body)
-	EventBus.throw_killed_hazard.emit(item_id, kind, _depth, _run_t_ms())
 	EventBus.opposition_event.emit(kind, &"killed_by_throw", _depth, _run_t_ms())
 	var handled := false
 	if body.has_method(&"resolve_throw_death"):

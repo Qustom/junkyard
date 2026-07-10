@@ -8,9 +8,10 @@ extends Node
 ## shipped hazard entities for N physics frames under a FIXED config + a SCRIPTED
 ## player-position sequence + a fixed delta, recording per frame:
 ##   global_position (full precision, var_to_str) · velocity (CharacterBody2D hosts) ·
-##   the host FSM state (`_state`, when the host has one) · rotation · the LEGACY
-##   emit log (hazard_awoke / hazard_caught / new_hazard_killed / bomb_pulse_started /
-##   hazard_pursuer_state, with full args).
+##   the host FSM state (`_state`, when the host has one) · rotation · the generic
+##   opposition_event emit log (V2 retired the six legacy per-type signals — the sole
+##   generic family &"awoke"/&"hit_player"/&"telegraph"/&"state"/&"killed_by_throw" is
+##   now the traced emit vocabulary, with full args).
 ##
 ## WORKFLOW (binding, per the S2 Resolved Decisions): the goldens under
 ## res://tests/goldens/ were CAPTURED FROM THE PRE-REFACTOR SCRIPTS (the harness'
@@ -51,27 +52,20 @@ var _capture: bool = false
 var _failures: Array[String] = []
 var _done: bool = false
 
-## S2 dual-emit contract check (added with the refactor commit — the goldens stay
-## LEGACY-ONLY so the pre-refactor capture remains the parity baseline): every
-## legacy emit must be accompanied, in order, by exactly one generic
-## opposition_event twin with the S0 §5 vocabulary + the def id, sharing the
-## depth + the host's run clock; opposition_killed_player must NOT fire in any
-## trace (every trace runs *_kills = false). Expected rows are derived from the
-## legacy emits as they land; -1 run_t means "not comparable" (hazard_awoke has no
-## run_t in its legacy payload).
-var _expected_twins: Array[Array] = []
-var _actual_twins: Array[Array] = []
+## V2: the dual-emit twin check is retired with the six legacy signals — the emit-log
+## column below IS the generic opposition_event vocabulary, checked byte-identically
+## against the (regenerated) golden. The one surviving cross-family invariant:
+## opposition_killed_player must NOT fire in any trace (every trace runs *_kills = false).
 var _killed_player_rows: int = 0
 
 
 func _ready() -> void:
 	_capture = OS.get_environment("S2_TRACE_CAPTURE") == "1"
 	_build_traces()
-	EventBus.hazard_awoke.connect(_on_hazard_awoke)
-	EventBus.hazard_caught.connect(_on_hazard_caught)
-	EventBus.new_hazard_killed.connect(_on_new_hazard_killed)
-	EventBus.bomb_pulse_started.connect(_on_bomb_pulse_started)
-	EventBus.hazard_pursuer_state.connect(_on_hazard_pursuer_state)
+	# V2: the six legacy per-type signals were retired — the harness records the SOLE
+	# generic opposition_event family as its emit-log column (the goldens' telemetry
+	# column is regenerated to the generic vocabulary; position/velocity/state/rotation
+	# are unchanged). opposition_killed_player must still never fire (kills=false traces).
 	EventBus.opposition_event.connect(_on_opposition_event)
 	EventBus.opposition_killed_player.connect(_on_opposition_killed_player)
 
@@ -218,8 +212,6 @@ func _next_trace() -> void:
 	_hz.setup(t["cfg"], _player, t["ctx"])
 	_frame = 0
 	_lines = PackedStringArray()
-	_expected_twins = []
-	_actual_twins = []
 	_killed_player_rows = 0
 
 
@@ -254,28 +246,17 @@ func _finish_trace() -> void:
 			print("S2 TRACE CAPTURED: %s (%d frames)" % [path, _lines.size()])
 	else:
 		_compare_golden(id, path)
-	_check_dual_emit(id)
+	_check_no_kill(id)
 	if is_instance_valid(_hz):
 		_hz.queue_free()
 	_hz = null
 
 
-## The S0 §5 dual-emit mapping, asserted 1:1 IN ORDER against the legacy emit log
-## (twin follows its legacy row synchronously, so the sequences align). Payloads are
-## primitives by signal signature; ids must equal the def ids.
-func _check_dual_emit(id: String) -> void:
-	if _actual_twins.size() != _expected_twins.size():
-		_failures.append("%s: dual-emit count %d != legacy emit count %d"
-			% [id, _actual_twins.size(), _expected_twins.size()])
-		return
-	for i: int in _expected_twins.size():
-		var want: Array = _expected_twins[i]
-		var got: Array = _actual_twins[i]
-		var run_t_ok: bool = int(want[3]) == -1 or int(want[3]) == int(got[3])
-		if StringName(want[0]) != StringName(got[0]) or StringName(want[1]) != StringName(got[1]) \
-				or int(want[2]) != int(got[2]) or not run_t_ok:
-			_failures.append("%s: twin %d mismatch — expected %s got %s" % [id, i, str(want), str(got)])
-			return
+## V2: the dual-emit twin check retired with the six legacy signals (the emit-log
+## column is now the generic family, verified byte-identically against the golden).
+## The surviving cross-family invariant: kills=false in every trace, so the dedicated
+## death channel must never fire.
+func _check_no_kill(id: String) -> void:
 	if _killed_player_rows != 0:
 		_failures.append("%s: opposition_killed_player fired %d times (kills=false traces must never)"
 			% [id, _killed_player_rows])
@@ -312,35 +293,13 @@ func _summarize_and_quit() -> void:
 	get_tree().quit(1)
 
 
-# --- Legacy emit log (full args — these ARE the golden's telemetry column) --------
-
-func _on_hazard_awoke(depth: int, trigger: StringName) -> void:
-	_frame_emits.append("hazard_awoke(%d,%s)" % [depth, trigger])
-	_expected_twins.append([&"pursuer", &"awoke", depth, -1])
-
-
-func _on_hazard_caught(depth: int, run_t_ms: int) -> void:
-	_frame_emits.append("hazard_caught(%d,%d)" % [depth, run_t_ms])
-	_expected_twins.append([&"pursuer", &"hit_player", depth, run_t_ms])
-
-
-func _on_new_hazard_killed(kind: StringName, depth: int, run_t_ms: int) -> void:
-	_frame_emits.append("new_hazard_killed(%s,%d,%d)" % [kind, depth, run_t_ms])
-	_expected_twins.append([kind, &"hit_player", depth, run_t_ms])
-
-
-func _on_bomb_pulse_started(depth: int, run_t_ms: int) -> void:
-	_frame_emits.append("bomb_pulse_started(%d,%d)" % [depth, run_t_ms])
-	_expected_twins.append([&"bomb", &"telegraph", depth, run_t_ms])
-
-
-func _on_hazard_pursuer_state(state: StringName, depth: int, run_t_ms: int) -> void:
-	_frame_emits.append("hazard_pursuer_state(%s,%d,%d)" % [state, depth, run_t_ms])
-	_expected_twins.append([&"pursuer", &"state", depth, run_t_ms])
-
+# --- Generic opposition emit log (full args — this IS the golden's telemetry column) --
+# V2: the six legacy per-type signals were retired; the sole generic opposition_event
+# family is now the traced emit vocabulary (&"awoke"/&"hit_player"/&"telegraph"/&"state"/
+# &"killed_by_throw"). id == the def id; run_t_ms is the host's deterministic run clock.
 
 func _on_opposition_event(id: StringName, event: StringName, depth: int, run_t_ms: int) -> void:
-	_actual_twins.append([id, event, depth, run_t_ms])
+	_frame_emits.append("opposition_event(%s,%s,%d,%d)" % [id, event, depth, run_t_ms])
 
 
 func _on_opposition_killed_player(_id: StringName, _depth: int, _run_t_ms: int) -> void:

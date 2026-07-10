@@ -103,7 +103,6 @@ func _resolve_params(spawn_ctx: Dictionary) -> Dictionary:
 	for key: String in DEFAULTS:
 		p[key] = dp.get(key, DEFAULTS[key])
 	p["def_id"] = &"sentry"
-	p["emit_family"] = &"new_hazard_killed"
 	p["lethal_mode"] = &"external"
 	p["latch_rearm"] = true
 	p["throw_mode"] = &"die"

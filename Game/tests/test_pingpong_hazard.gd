@@ -93,7 +93,7 @@ func _run() -> int:
 	# --- (d) DISTANCE-TEST KILL ends the run + emits new_hazard_killed once --
 	# Establish an active run so fail_run has a run to end.
 	_killed_events.clear()
-	EventBus.new_hazard_killed.connect(_on_new_hazard_killed)
+	EventBus.opposition_event.connect(_on_opposition_hit)
 	GameState.start_run(&"test_band", 12345)
 	if not GameState.run_active:
 		failures.append("(d) setup: GameState.run_active false after start_run")
@@ -113,13 +113,13 @@ func _run() -> int:
 		failures.append("(d) kill: new_hazard_killed fired %d times, expected exactly 1 (BUG6 latch)" % _killed_events.size())
 	elif _killed_events[0][0] != &"pingpong":
 		failures.append("(d) kill: new_hazard_killed kind %s != &\"pingpong\"" % str(_killed_events[0][0]))
-	EventBus.new_hazard_killed.disconnect(_on_new_hazard_killed)
+	EventBus.opposition_event.disconnect(_on_opposition_hit)
 
 	# --- (g) KILLS-OFF (L5): hpp_kills=false => contact does NOT end the run, but still emits --
 	# Mirrors (d) but with the L5 toggle off: the bouncer behaves identically (emits the contact
 	# row) yet fail_run is gated, so the run stays active. Proves the *_kills knob.
 	_killed_events.clear()
-	EventBus.new_hazard_killed.connect(_on_new_hazard_killed)
+	EventBus.opposition_event.connect(_on_opposition_hit)
 	GameState.start_run(&"test_band", 12345)
 	var cfg_g := RunConfig.new()
 	cfg_g.hpp_enabled = true
@@ -136,7 +136,7 @@ func _run() -> int:
 		failures.append("(g) kills-off: run ended despite hpp_kills=false (fail_run was not gated)")
 	if _killed_events.size() != 1:
 		failures.append("(g) kills-off: new_hazard_killed fired %d times, expected exactly 1 (emit-always)" % _killed_events.size())
-	EventBus.new_hazard_killed.disconnect(_on_new_hazard_killed)
+	EventBus.opposition_event.disconnect(_on_opposition_hit)
 	hz_g.queue_free()
 	GameState.fail_run(&"death")   # tidy: end the still-active run before the next case
 
@@ -240,5 +240,8 @@ func _make_wall(top_left: Vector2, size: Vector2) -> StaticBody2D:
 	return body
 
 
-func _on_new_hazard_killed(kind: StringName, depth: int, run_t_ms: int) -> void:
-	_killed_events.append([kind, depth, run_t_ms])
+func _on_opposition_hit(id: StringName, event: StringName, depth: int, run_t_ms: int) -> void:
+	# V2: legacy new_hazard_killed retired → filter the generic family on &"hit_player"
+	# (identical site/moment; id == the hazard kind).
+	if event == &"hit_player":
+		_killed_events.append([id, depth, run_t_ms])

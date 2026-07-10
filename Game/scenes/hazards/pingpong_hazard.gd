@@ -80,7 +80,6 @@ func _resolve_params(cfg: RunConfig) -> Dictionary:
 		"contact_radius": CONTACT_RADIUS,
 		"kills": cfg.hpp_kills if cfg != null else true,
 		"def_id": &"pingpong",
-		"emit_family": &"new_hazard_killed",
 		"lethal_mode": &"radius",
 		"latch_rearm": true,
 		"throw_mode": &"die",

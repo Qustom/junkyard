@@ -242,8 +242,8 @@ func _all_on() -> RunConfig:
 	c.r4_lost_proxy_threshold = r4.r4_lost_proxy_threshold
 	c.seed_override = r4.seed_override   # pinned forking seed so V5's nav row is deterministic
 	c.build_tag = "rg1-V5-all-on"
-	# Keep a hazard present so it awakens (emits hazard_awoke, V5 needs an R1 row), but
-	# make catches NON-fatal so it can't end the run before we drive the chosen end-cause.
+	# Keep a hazard present so it awakens (emits opposition_event(&"awoke"), V5 needs an
+	# R1 row), but make catches NON-fatal so it can't end the run before the chosen end-cause.
 	c.r1_catch_kills = false
 	c.r1_spawn_count = 1
 	c.r1_depth_threshold = 0   # awakens immediately so the row fires within the frame budget
@@ -409,7 +409,10 @@ func _inspect_log() -> void:
 			_failures.append("V13: no run_started row for config '%s'" % tag)
 
 	# V14 / V1-V4: opposition rows present when ON, ABSENT in the all-off baseline.
-	var hazard_types := ["hazard_awoke", "hazard_caught"]
+	# V2: R1's legacy hazard_awoke/hazard_caught rows retired → the generic
+	# opposition_event row (event=&"awoke"/&"hit_player") carries the R1 moments; each
+	# check is "at least one R1 opposition row appears", so it filters the generic type.
+	var hazard_types := ["opposition_event"]
 	var r2_types := ["return_cost_incurred"]
 	var r3_types := ["exposure_crossed", "exposure_penalty"]
 	var r4_types := ["nav_branch_taken", "nav_lost_proxy"]

@@ -71,8 +71,8 @@ func _ready() -> void:
 	# M1.1 opposition listeners (TEL spec §5b). Each opposition (R1–R4) emits its
 	# own EventBus signal only when its config is enabled, so a disabled opposition
 	# writes nothing — _emit_row already short-circuits when telemetry is OFF.
-	EventBus.hazard_awoke.connect(_on_hazard_awoke)
-	EventBus.hazard_caught.connect(_on_hazard_caught)
+	# (M1.12/V2: R1's legacy hazard_awoke/hazard_caught listeners retired — the
+	# generic opposition_event family below now logs the awoke/hit-player moments.)
 	EventBus.return_cost_incurred.connect(_on_return_cost_incurred)
 	EventBus.exposure_crossed.connect(_on_exposure_crossed)
 	EventBus.exposure_penalty.connect(_on_exposure_penalty)
@@ -80,18 +80,14 @@ func _ready() -> void:
 	EventBus.nav_lost_proxy.connect(_on_nav_lost_proxy)
 	# J4 (M1.3): per-run corridor-time summary (additive row; no schema/arity change).
 	EventBus.corridor_time_summary.connect(_on_corridor_time_summary)
-	# M1.4: the three new hazards (ping-pong/bomb/spike) emit new_hazard_killed on a
-	# fatal hit (parallels R1's hazard_caught). Log it so a new-hazard death is
-	# attributable by kind (additive row; no schema/arity change).
-	EventBus.new_hazard_killed.connect(_on_new_hazard_killed)
 	# Debug/dev: the K-key debug_kill emits player_died(&"death"). Log it so a debug
 	# kill is self-identifying in the log instead of a bare, reasonless cause=death
 	# run_ended (additive row; no schema/arity change). Only fires from debug_kill.
 	EventBus.player_died.connect(_on_player_died)
 	# M1.9 (S4): the GENERIC opposition rows — SG2 counts spawns/hits/deaths BY DEF ID
-	# off these. Entities/the SpawnService dual-emit the legacy per-type signals above
-	# alongside these until post-gate retirement; the legacy subscriptions stay
-	# byte-identical. Analysis counts from ONE family (SG2's brief: the generic one).
+	# off these. As of M1.12/V2 this is the SOLE opposition family (the legacy per-type
+	# signals that dual-emitted alongside these were retired) — analysis counts from
+	# this one family, structurally (there is no other).
 	EventBus.opposition_event.connect(_on_opposition_event)
 	EventBus.opposition_killed_player.connect(_on_opposition_killed_player)
 	# M1.9 (S4) sweep hygiene: a debug-menu live tweak dirties the ACTIVE run — an
@@ -222,33 +218,15 @@ func _on_exposure_threshold(threshold: int) -> void:
 # Payloads are PRIMITIVES ONLY (JSONL-clean). TEL trusts the emitter's `depth`
 # (authoritative at the event moment) and stamps run-elapsed itself where the
 # spec calls for it. Opt-in is inherited from _emit_row's short-circuit.
-
-# --- R1 ----------------------------------------------------------------------
-func _on_hazard_awoke(depth: int, trigger: StringName) -> void:
-	_emit_row(Schema.HAZARD_AWOKE, {"depth": depth, "trigger": String(trigger)})
-
-
-func _on_hazard_caught(depth: int, _run_t_ms: int) -> void:
-	# TEL stamps run-elapsed itself for consistency with the envelope t_ms; the
-	# signal's run_t_ms arg is emitter-convenience only (R1 may pass 0).
-	_emit_row(Schema.HAZARD_CAUGHT, {"depth": depth, "run_t_ms": _elapsed_ms()})
-	if _writer != null:
-		_writer.flush()  # high-value: precedes a death run_ended
-
-
-func _on_new_hazard_killed(kind: StringName, depth: int, _run_t_ms: int) -> void:
-	# K5a/b/c fatal hit. Like HAZARD_CAUGHT this precedes the death run_ended; TEL stamps
-	# run-elapsed itself (the signal's run_t_ms is emitter-convenience). Flush for crash safety.
-	_emit_row(Schema.NEW_HAZARD_KILLED, {"kind": String(kind), "depth": depth, "run_t_ms": _elapsed_ms()})
-	if _writer != null:
-		_writer.flush()  # high-value: precedes a death run_ended
-
+# (M1.12/V2: the R1/K5 legacy handlers _on_hazard_awoke / _on_hazard_caught /
+# _on_new_hazard_killed were retired — the generic _on_opposition_event below now
+# logs those moments via the &"awoke"/&"hit_player" events at the identical sites.)
 
 func _on_player_died(cause: StringName) -> void:
 	# Debug-only: player_died is emitted ONLY by the K-key debug_kill action
 	# (game_state.gd). Log a self-identifying row so the resulting cause=death
-	# run_ended is no longer a reasonless death in the log. Like HAZARD_CAUGHT this
-	# precedes the death run_ended and stamps run-elapsed itself; flush for crash safety.
+	# run_ended is no longer a reasonless death in the log. Like OPPOSITION_KILLED_PLAYER
+	# this precedes the death run_ended and stamps run-elapsed itself; flush for crash safety.
 	_emit_row(Schema.DEBUG_KILL, {"cause": String(cause), "depth": _current_depth(), "run_t_ms": _elapsed_ms()})
 	if _writer != null:
 		_writer.flush()
@@ -268,8 +246,8 @@ func _on_opposition_event(id: StringName, event: StringName, depth: int, _run_t_
 
 
 func _on_opposition_killed_player(id: StringName, depth: int, _run_t_ms: int) -> void:
-	# The dedicated death channel — a def ACTUALLY ended the run. Like HAZARD_CAUGHT
-	# this precedes the death run_ended; flush for crash safety.
+	# The dedicated death channel — a def ACTUALLY ended the run. This precedes the
+	# death run_ended; flush for crash safety.
 	_emit_row(Schema.OPPOSITION_KILLED_PLAYER, {
 		"id": String(id),
 		"depth": depth,
@@ -304,7 +282,7 @@ func _on_return_cost_incurred(depth: int, cost_kind: StringName, magnitude: floa
 
 # --- R3 ----------------------------------------------------------------------
 func _on_exposure_crossed(level: int, depth: int, _run_t_ms: int) -> void:
-	# TEL stamps run-elapsed itself (see _on_hazard_caught note).
+	# TEL stamps run-elapsed itself (see _on_opposition_event note).
 	_emit_row(Schema.EXPOSURE_CROSSED, {"level": level, "depth": depth, "run_t_ms": _elapsed_ms()})
 	if _writer != null:
 		_writer.flush()  # threshold crossing = funnel-defining
@@ -448,7 +426,7 @@ func _active_inert_defs() -> Array:
 
 
 ## Monotonic run-elapsed milliseconds (same basis as the envelope t_ms). TEL stamps
-## this onto hazard_caught / exposure_crossed so their times are authoritative and
+## this onto opposition_event / exposure_crossed so their times are authoritative and
 ## consistent regardless of the emitter's own clock (TEL spec §3 / §5b).
 func _elapsed_ms() -> int:
 	return Time.get_ticks_msec() - _run_t0_ms

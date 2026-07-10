@@ -12,7 +12,8 @@ extends Node
 ##       as FLAT DOTTED rows (param_overrides.<def_id>.<param_key> → primitive, NO
 ##       base key — the Wave-3 close-out shape), inert_enabled_defs rides beside the
 ##       legacy BUG6 list, the generic opposition_event / opposition_killed_player
-##       rows land (dual-emit: the legacy new_hazard_killed row still lands too),
+##       rows land (V2: the generic family is the sole opposition family — the legacy
+##       new_hazard_killed row was retired),
 ##       debug_run_dirtied → a debug_dirtied row + debug_dirty:true on run_ended,
 ##       and a clean second run stamps debug_dirty:false;
 ##   (D) tier-v1 live edit: _on_respawn_pressed despawns + respawns every live
@@ -157,10 +158,10 @@ func _run() -> int:
 		failures.append("(C) set_enabled(true) did not enable telemetry")
 
 	bus.run_started.emit(&"surface", 424242)
-	# Generic rows (S4 migration) + a legacy row (dual-emit continuity).
+	# Generic opposition rows (V2: the sole opposition family — the legacy
+	# new_hazard_killed drive was retired; the spawn/kill moments carry identically).
 	bus.opposition_event.emit(&"spike", &"spawned", 2, 0)
 	bus.opposition_killed_player.emit(&"spike", 2, 0)
-	bus.new_hazard_killed.emit(&"spike", 2, 0)
 	# A live tweak dirties THIS run.
 	bus.debug_run_dirtied.emit(&"respawn_params", 1234)
 	bus.run_ended.emit(&"death", 30.0, 2)
@@ -205,8 +206,8 @@ func _run() -> int:
 		if not sdata.has("inert_enabled_oppositions"):
 			failures.append("(C) legacy inert_enabled_oppositions stamp disappeared")
 
-	# --- the generic rows landed, primitives-only, beside the legacy row ---------
-	for t: String in [Schema.OPPOSITION_EVENT, Schema.OPPOSITION_KILLED_PLAYER, Schema.NEW_HAZARD_KILLED]:
+	# --- the generic rows landed, primitives-only (V2: sole opposition family) ---
+	for t: String in [Schema.OPPOSITION_EVENT, Schema.OPPOSITION_KILLED_PLAYER]:
 		if not by_type.has(t):
 			failures.append("(C) expected a '%s' row, found none" % t)
 			continue
