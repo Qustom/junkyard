@@ -1,11 +1,16 @@
 # RG2 — M1.2 telemetry analysis helper (feeds design/M1_2_Tasks/G4_findings_M1.2.md).
 # Reads the cumulative JSONL playtest log, partitions runs by build SHA + run_config,
 # and prints cohort counts, per-config distributions, and per-fix event evidence.
-# Run from repo root:  python3 tools/playtest/analyze_m1_2.py
-import json, statistics
+# Run from repo root:  python3 Game/tools/playtest/analyze_m1_2.py [path-to-jsonl]
+#     Defaults to the frozen M1.2 round's log when no path is given (unchanged
+#     behavior for the existing no-arg invocation); pass an explicit path for any
+#     later round, e.g.:
+#       python3 Game/tools/playtest/analyze_m1_2.py playtest_data/M1.12/run_log_YYYY-MM-DD.jsonl
+import sys, json, statistics
 from collections import Counter, defaultdict
 
-PATH='playtest_data/M1.2/run_log_2026-06-19.jsonl'
+DEFAULT_PATH = 'playtest_data/M1.2/run_log_2026-06-19.jsonl'
+PATH = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_PATH
 
 runs={}   # run_id -> dict
 events_by_run=defaultdict(list)

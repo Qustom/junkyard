@@ -16,9 +16,16 @@ class_name TelemetrySchema
 ##   {v, ts, t_ms, run_id, session_id, type, data:{...}}
 const SCHEMA_VERSION: int = 1
 
-## On-disk log path. One rolling JSONL file for M1 (rotation deferred to G4 if the
-## file grows painful). `user://` resolves to the per-OS app-data dir.
+## On-disk log path. One rolling JSONL file for M1. `user://` resolves to the
+## per-OS app-data dir. Rotation (V7, M1.12): `JsonlWriter` itself size-caps this
+## file at `MAX_LOG_BYTES`, rolling the overflow to `LOG_PATH + ".1"` — this
+## constant always names the freshest, currently-writable log, rotated or not.
 const LOG_PATH: String = "user://telemetry/run_log.jsonl"
+
+## Size cap (bytes) for the active log before `JsonlWriter` rotates the current
+## file to a single `.1` generation and starts a fresh one at `LOG_PATH`. File-
+## lifecycle only — no row/envelope shape change, no SCHEMA_VERSION bump.
+const MAX_LOG_BYTES: int = 2 * 1024 * 1024
 
 # --- Event types (string constants; the `type` field on every row) -----------
 # Kept as plain Strings (not an enum) so they serialize directly into JSON and
