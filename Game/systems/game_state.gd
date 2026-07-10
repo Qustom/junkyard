@@ -329,6 +329,13 @@ func purchase(item_id: StringName, price: int) -> bool:
 func owns(item_id: StringName) -> bool:
 	return _economy.owns(item_id)
 
+## M1.12 V4b: public read accessor for the value of the haul banked but not yet
+## sold (the live banked_junk pile). Forwards Economy.held_haul_value() — used by
+## evaluate_quota_on_return() internally, and by white-box test callers driving
+## quota_ladder().evaluate(...) directly with the same basis GameState itself uses.
+func held_haul_value() -> int:
+	return _economy.held_haul_value()
+
 ## F1: convert the whole banked junk pile → Money (Economy.sell), then evaluate the
 ## quota AFTER the credit + save — `money` is only final for the run here (Q2 lock),
 ## and held_haul is 0 because Economy.sell already emptied the pile. Returns F2's
@@ -353,13 +360,15 @@ func evaluate_quota_on_return() -> Dictionary:
 func last_quota_result() -> Dictionary:
 	return _quota.last_result()
 
-## K2 (M1.4): sell-time quota eval shim, preserved on the facade for white-box
-## callers (test_quota_system drives this directly). `sold_total` is the value sold
-## THIS call (the this_run_banked basis); cumulative_money reads post-credit `money`
-## + the still-held haul — exactly the pre-V4 _evaluate_quota(sold_total) contract,
-## now delegated to QuotaLadder.evaluate.
-func _evaluate_quota(sold_total: int) -> Dictionary:
-	return _quota.evaluate(_economy.money, sold_total, _economy.held_haul_value())
+## M1.12 V4b: public read accessor for the owned QuotaLadder sub-object. Lets
+## white-box callers (test_quota_system) drive QuotaLadder.evaluate(...) directly
+## against the real owned instance — the same object start_run()/end_run() already
+## coordinate (begin_run/set_end_reason) — instead of through a private GameState
+## delegate. GameState itself keeps using the coordinator methods above
+## (sell_banked_junk / evaluate_quota_on_return) for real callers; this accessor
+## exists for tests that need the lower-level evaluate() call directly.
+func quota_ladder() -> QuotaLadder:
+	return _quota
 
 ## K2 (M1.4): the full roguelite wipe (Director FINAL). Fans out to the sub-objects
 ## (_economy.wipe / _quota.wipe) and resets core's own progression counters, then

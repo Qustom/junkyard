@@ -3,6 +3,11 @@ extends Node
 ## Run as a SCENE so the autoloads resolve:
 ##   godot --headless res://tests/test_quota_system.tscn
 ##
+## M1.12 V4b: direct quota-eval assertions drive QuotaLadder.evaluate(...) through
+## GameState's public quota_ladder()/held_haul_value() accessors (the owned
+## instance start_run()/end_run() already coordinate), NOT a private GameState
+## delegate — the delegate (_evaluate_quota) has been removed.
+##
 ## Verifies (against the REAL GameState API, no mocks):
 ##   1. A MET quota (cumulative_money basis, every_run_end) bumps run_number + raises
 ##      quota_target by step, persists, and emits quota_advanced.
@@ -83,7 +88,7 @@ func _run() -> int:
 	gs.money = 60   # cumulative balance clears the $50 bar
 	_evaluated_events.clear()
 	_advanced_events.clear()
-	var r1: Dictionary = gs._evaluate_quota(60)
+	var r1: Dictionary = gs.quota_ladder().evaluate(gs.money, 60, gs.held_haul_value())
 	if not bool(r1.get("met", false)):
 		failures.append("C1: expected MET (money 60 >= 50)")
 	if gs.run_number != 2:
@@ -97,7 +102,7 @@ func _run() -> int:
 
 	# --- Case 3: idempotency — second eval in same run does NOT double-advance ----
 	_advanced_events.clear()
-	var r1b: Dictionary = gs._evaluate_quota(60)
+	var r1b: Dictionary = gs.quota_ladder().evaluate(gs.money, 60, gs.held_haul_value())
 	if gs.run_number != 2 or gs.quota_target != 100:
 		failures.append("C3: second eval double-advanced (run=%d target=%d)" % [gs.run_number, gs.quota_target])
 	if _advanced_events.size() != 0:
@@ -115,7 +120,7 @@ func _run() -> int:
 	_drive_run(gs, cfg2, &"extract")
 	gs.money = 120   # below the 150 bar → miss
 	_wiped_events.clear()
-	var rm: Dictionary = gs._evaluate_quota(120)
+	var rm: Dictionary = gs.quota_ladder().evaluate(gs.money, 120, gs.held_haul_value())
 	if bool(rm.get("met", true)):
 		failures.append("C2: expected MISS (money 120 < 150)")
 	if gs.money != 120 or gs.salvage != 7:
@@ -136,7 +141,7 @@ func _run() -> int:
 	var cfg4 := _make_cfg(true, 50, 50, 0, 1)   # on_extract
 	_drive_run(gs, cfg4, &"timeout")
 	gs.money = 999
-	var r4: Dictionary = gs._evaluate_quota(999)
+	var r4: Dictionary = gs.quota_ladder().evaluate(gs.money, 999, gs.held_haul_value())
 	if bool(r4.get("checked", true)):
 		failures.append("C4: on_extract evaluated on a timeout end (should skip)")
 	if gs.run_number != 1:
@@ -147,7 +152,7 @@ func _run() -> int:
 	var cfg5 := _make_cfg(true, 50, 50, 1, 0)   # this_run_banked
 	_drive_run(gs, cfg5, &"extract")
 	gs.money = 1000   # huge cumulative, but...
-	var r5miss: Dictionary = gs._evaluate_quota(30)   # ...only $30 banked THIS run → miss
+	var r5miss: Dictionary = gs.quota_ladder().evaluate(gs.money, 30, gs.held_haul_value())   # ...only $30 banked THIS run → miss
 	if bool(r5miss.get("met", true)):
 		failures.append("C5: this_run_banked should MISS (sold 30 < 50) despite money=1000")
 	if r5miss.get("achieved", -1) != 30:
@@ -166,7 +171,7 @@ func _run() -> int:
 	gs._run_ended = true
 	gs.end_run(&"extract", 1.0)
 	gs.money = 5000
-	var r6: Dictionary = gs._evaluate_quota(5000)
+	var r6: Dictionary = gs.quota_ladder().evaluate(gs.money, 5000, gs.held_haul_value())
 	if bool(r6.get("checked", true)):
 		failures.append("C6: quota-off evaluated (should be inert)")
 	if gs.last_quota_result().get("checked", true):
