@@ -161,17 +161,24 @@ func _eligible_indices(catalog: JunkCatalog, min_tier: int) -> Array[int]:
 
 
 ## Weighted pick over a subset of catalog indices using the catalog's
-## index-aligned spawn_weights, drawn from the local sub-stream. Integer
+## by-id spawn_weights_by_id map, drawn from the local sub-stream. Integer
 ## cumulative table built per call over the (small) eligible set.
 func _weighted_pick(catalog: JunkCatalog, indices: Array[int],
 		rng: RandomNumberGenerator) -> int:
 	const SCALE := 1000
 	var cum: Array[int] = []
 	var running := 0
+	# DETERMINISM: iterate `indices` (catalog-array order via _eligible_indices),
+	# never spawn_weights_by_id.keys() — the cum table + returned indices[k] mapping
+	# must be built in a fixed order independent of the map's hash order.
 	for idx in indices:
-		var w := 1.0
-		if idx < catalog.spawn_weights.size():
-			w = maxf(catalog.spawn_weights[idx], 0.0)
+		var it: JunkItem = catalog.items[idx]
+		# Null-item is unreachable here (_eligible_indices already filters it != null);
+		# the &"" fallback is harmless belt-and-suspenders. Missing id -> 1.0 default
+		# (== the old `w := 1.0` fallback), same maxf(.,0.0) clamp + int(round(.*SCALE))
+		# with a >=1 floor, so the resolved weight is byte-identical to the index model.
+		var id: StringName = it.id if it != null else &""
+		var w := maxf(float(catalog.spawn_weights_by_id.get(id, 1.0)), 0.0)
 		var iw := int(round(w * SCALE))
 		if iw <= 0:
 			iw = 1

@@ -14,4 +14,13 @@
 [resource]
 script = ExtResource("0")
 items = Array[ExtResource("9")]([ExtResource("1"), ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7"), ExtResource("8")])
-spawn_weights = PackedFloat32Array(40, 30, 18, 14, 4, 8, 5, 2)
+spawn_weights_by_id = Dictionary[StringName, float]({
+&"junk_scrap_bolt": 40.0,
+&"junk_cable_coil": 30.0,
+&"junk_copper_pipe": 18.0,
+&"junk_hubcap": 14.0,
+&"junk_circuit_board": 4.0,
+&"junk_car_battery": 8.0,
+&"junk_radiator": 5.0,
+&"junk_engine_block": 2.0
+})

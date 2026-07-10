@@ -1,7 +1,7 @@
 extends SceneTree
 ## C1 headless data check (game-director-designer): validates the junk catalog
-## loads, references 8 items, has index-aligned weights, and spans the intended
-## ~40x value spread. Run with:
+## loads, references 8 items, has by-id weights (id-coverage + no orphans +
+## non-negative), and spans the intended ~40x value spread. Run with:
 ##
 ##   godot --headless --script res://tools/check_junk_catalog.gd
 ##
@@ -23,9 +23,6 @@ func _initialize() -> void:
 	if cat.items.size() != EXPECTED_ITEMS:
 		failures.append("expected %d items, got %d" % [EXPECTED_ITEMS, cat.items.size()])
 
-	if cat.spawn_weights.size() != cat.items.size():
-		failures.append("spawn_weights (%d) not index-aligned with items (%d)" % [cat.spawn_weights.size(), cat.items.size()])
-
 	var seen_ids := {}
 	var min_val := 1 << 30
 	var max_val := 0
@@ -35,6 +32,9 @@ func _initialize() -> void:
 			continue
 		if it.id == &"":
 			failures.append("item '%s' has an empty id" % it.display_name)
+		# Duplicate id is now doubly load-bearing: a repeated id also silently
+		# collides in spawn_weights_by_id (last-writer-wins), so this walk guards
+		# the by-id weight mapping too.
 		if seen_ids.has(it.id):
 			failures.append("duplicate id: %s" % it.id)
 		seen_ids[it.id] = true
@@ -51,6 +51,28 @@ func _initialize() -> void:
 		var spread := float(max_val) / float(min_val)
 		if spread < MIN_SPREAD:
 			failures.append("value spread %.1fx below required %.0fx (min=%d max=%d)" % [spread, MIN_SPREAD, min_val, max_val])
+
+	# --- by-id spawn-weight mapping (replaces the old size-only alignment check) ---
+	# Semantic mapping-check: id-coverage + no-orphans + non-negative. The old
+	# `spawn_weights.size() == items.size()` gate was a COUNT check that could not
+	# catch a mis-positioned insert; the by-id map makes the check a MAPPING check.
+
+	# id-coverage: every item id must have a weight entry (catch "forgot a weight").
+	for it in cat.items:
+		if it != null and it.id != &"" and not cat.spawn_weights_by_id.has(it.id):
+			failures.append("item '%s' has no spawn_weights_by_id entry" % it.id)
+
+	# no-orphans: every weight key must correspond to a real catalog item id
+	# (catch "weight for a deleted/renamed item").
+	for key in cat.spawn_weights_by_id:
+		if not seen_ids.has(key):
+			failures.append("spawn_weights_by_id has orphan key with no item: %s" % key)
+
+	# non-negative: mirrors JunkPlacer's maxf(.,0.0) intent — a negative authored
+	# weight is an authoring error, not a silent clamp.
+	for key in cat.spawn_weights_by_id:
+		if float(cat.spawn_weights_by_id[key]) < 0.0:
+			failures.append("spawn_weights_by_id[%s] is negative: %s" % [key, cat.spawn_weights_by_id[key]])
 
 	_finish(failures)
 
