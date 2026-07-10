@@ -6,7 +6,7 @@ next action. Full task queue → `TASKS.md`; board mirror → GitHub Projects; c
 superseded status history → `STATUS_ARCHIVE.md`. Update this every time a task is claimed, blocked, or finished.
 See `CLAUDE.md` → "The orchestrator loop".
 
-**Current milestone:** M1.12 (Scaling Debt Paydown — pre-M2 architecture cleanup; Director-directed 2026-07-10, opened ahead of M1.11's UG2/UG3) — **design LOCKED 2026-07-10 (D-RAT-1…7; V3b pursuer-migration design pending). Implements the M1.11 systems-state report's R2–R10 (R1/CSV deferred). Master contract: behavior-preserving (4 control layout fps byte-identical + full suite green); measure = the debt ledger (net LOC removed). ▶ Wave 1 build dispatching (V1 ∥ V5 ∥ V7 ∥ V8 ∥ V9).** *(M1.11 build+UG1 published `m1-20260708-69446d5` — Director playtest → UG2 → UG3 pending, non-blocking. M1.10 TG2/TG3, M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
+**Current milestone:** M1.12 (Scaling Debt Paydown — pre-M2 architecture cleanup; Director-directed 2026-07-10, opened ahead of M1.11's UG2/UG3) — **design LOCKED 2026-07-10 (D-RAT-1…7; V3b pursuer-migration design pending). Implements the M1.11 systems-state report's R2–R10 (R1/CSV deferred). Master contract: behavior-preserving (4 control layout fps byte-identical + full suite green); measure = the debt ledger (net LOC removed). **Wave 1 DONE + integrated on `main`@`65bade6` (5/5, 0 deviations); ▶ Wave 2 (V2 ∥ V6) dispatching. V3b design locked (1 Director call pending at Wave 4: NDR-V3b-1).** *(M1.11 build+UG1 published `m1-20260708-69446d5` — Director playtest → UG2 → UG3 pending, non-blocking. M1.10 TG2/TG3, M1.9 SG2/SG3, M1.7/M1.6 RG2/RG3 Director-pending; M1.8 CLOSED.)*
 
 > **M1.12 design LOCKED (2026-07-10):** breakdown + 10 per-task designs (V1–V9 + V3b), each with a
 > binding `Resolved Decisions (Phase 3)` (fresh-eyes pass: contract owners V1/V2/V6 first, then
@@ -174,7 +174,18 @@ See `CLAUDE.md` → "The orchestrator loop".
 > the Director playtest — do NOT dispatch it until the Director has played. Also pending: disposition the one
 > Wave-5 test-fixture deviation (rec Reviewed) at the TG3 close-out.
 
-## ▶ Next action (start here on a cold restart) — **M1.12 Wave 1 build** (V1∥V5∥V7∥V8∥V9, file-disjoint worktrees) is dispatching; each is design-LOCKED (`design/M1_12_Tasks/V<n>_*.md` + its `Resolved Decisions (Phase 3)`). In parallel, **V3b (pursuer migration) design is authoring** (Phase-2 → Phase-3 resolve) — it must lock before Wave 4. After each wave lands + integrates on `main`: run the wave close-out deviation sweep (Director dispositions), then dispatch the next (Wave 2 = V2∥V6, Wave 3 = V4, Wave 4 = V3→V3b, Wave 5 = VG1→VG2→VG3). Master contract every wave: 4 control layout fps (`e943ac9c8bc1` + band_greybox/two/three) byte-identical + full suite green. Breakdown + D-RAT-1…7: `design/M1_12_Tasks/M1.12_Breakdown.md`; queue: `TASKS.md` §M1.12; board ids: `design/M1_12_Tasks/.board_item_ids.txt`.
+## M1.12 Wave 1 — Done + integrated on `main` (2026-07-10)
+| Task | Agent | Merged | Proof |
+|---|---|---|---|
+| V1 — by-id spawn weights (R2) | general-purpose | `feat/V1-by-id-weights` `17d35d2` | `JUNK BY-ID OK` (mid-list insert leaves weights unshifted); junk fp byte-identical 5 seeds; `check_junk_catalog` now semantic id-coverage + exits non-zero on failure. |
+| V5 — InteractionOwner helper (R6) | general-purpose | `feat/V5-interaction-owner` `fef4042` | 4 copies→1 node; `INTERACTION_OWNER OK` (new lockout test); 4 owner `.tscn` zero-diff; net −55 owner LOC. |
+| V7 — telemetry rotation + argv (R8) | qa | `feat/V7-telemetry-rotation` `9ac91e5` | 2 MB cap → `.1` ring-1 in `jsonl_writer`; `SCHEMA_VERSION`/`LOG_PATH` unchanged; `JSONL ROTATION OK`; `analyze_m1_2.py` argv + default. |
+| V8 — CI wall-clock + wire catalog check (R9 + V1-Q4b) | qa | `feat/V8-ci-wallclock` `c4d9c9c` | YAML OK; per-step + total + `$GITHUB_STEP_SUMMARY`; new gating catalog-check step; every godot cmd byte-identical. |
+| V9 — delete dead folders + run.sav (R10) | general-purpose | `feat/V9-housekeeping` `0af1281` | 4 empty folders + dead run.sav path deleted; 7 slot-0 markers; `SAVE MIGRATION OK` v1/v2/v3→v4, meta v4. |
+
+> **Integrated verify ALL GREEN (`main`@`65bade6`):** import · `check_junk_catalog` · smoke · **parity fp `e943ac9c8bc1`** · band_two · band_three · run_config R0 · config 91/91 · junk by-id · junk_pickup · interaction_owner · hub_contract (5 interactables) · exit_placement · shop_economy · save_migration v1→v4 · telemetry_jsonl · jsonl_rotation. **Wave-1 close-out: 0 deviations — nothing to disposition.** Debt ledger: index-alignment invariant retired (V1) · 4 interaction copies→1 (V5) · unbounded telemetry log bounded (V7) · CI trend now visible (V8) · dead surface removed (V9).
+
+## ▶ Next action (start here on a cold restart) — **M1.12 Wave 2** (V2 ∥ V6, file-disjoint worktrees) dispatching; both design-LOCKED. Then Wave 3 = V4, Wave 4 = V3→V3b (V3b needs the NDR-V3b-1 `opposition_credits` Director call first), Wave 5 = VG1→VG2→VG3. After each wave lands+integrates on `main`: run the close-out deviation sweep (Director dispositions), then dispatch the next. Master contract every wave: 4 control layout fps (`e943ac9c8bc1` + band_greybox/two/three) byte-identical + full suite green. Breakdown + D-RAT-1…7: `design/M1_12_Tasks/M1.12_Breakdown.md`; queue: `TASKS.md` §M1.12; board ids: `design/M1_12_Tasks/.board_item_ids.txt`.
 >
 > **Non-blocking, still open:** M1.11 Director playtest → UG2/UG3 (`design/M1_11_Tasks/UG1_playtest_build.md` §5); M1.10 TG2/TG3 + its one TG1 deviation; M1.9 SG2/SG3; M1.7/M1.6 RG2/RG3.
 
