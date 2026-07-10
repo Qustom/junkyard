@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.12 (Wave 1)
 - **Branch:** feat/V1-by-id-weights
-- **Commit:** db267cc7ad0e0cf8c66ea854dd83f45c9ceb29f8
+- **Commit:** 17d35d28875e5f6ac2b917f4fe030810c83fd3f7
 
 ## What changed
 Replaced `JunkCatalog.spawn_weights: PackedFloat32Array` (index-aligned with `items`)
