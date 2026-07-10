@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://b55ekmcmogvoy"]
-
-[ext_resource type="Script" path="res://tests/test_per_room_density.gd" id="1"]
-
-[node name="TestPerRoomDensity" type="Node"]
-script = ExtResource("1")

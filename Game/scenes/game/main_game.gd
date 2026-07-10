@@ -148,9 +148,6 @@ var _corridor_time_s: float = 0.0
 var _room_time_s: float = 0.0
 ## R4 vision/fog node packed scene (Lever 2). Spawned per dive; inert when R4 off.
 const VISION_FOG_SCENE_PATH := "res://entities/dive/vision_fog.tscn"
-## R1 (M1.1): the pursuing-hazard greybox scene. Instantiated per dive ONLY when
-## r1_enabled && r1_spawn_count > 0; otherwise never loaded (all-off = M1.0).
-const HAZARD_SCENE_PATH := "res://scenes/hazards/hazard_entity.tscn"
 ## BUG2: throttle for the live-depth resolution (~every 9 physics frames). Pure
 ## perf/responsiveness knob — correctness is throttle-independent (we emit on change,
 ## not on tick), so it is safe to tune (ratified Decision 2).
@@ -342,22 +339,14 @@ func start_new_run() -> void:
 	# container so _clear_band() frees them with the band (run-state, never persisted).
 	_spawn_r4_nodes()
 
-	# R1 (M1.1): spawn the pursuing hazard(s). Self-contained, fully gated by the run
-	# config — r1_enabled == false (or r1_spawn_count == 0) skips the loop entirely so
-	# no hazard node is ever instantiated and the all-off control == M1.0 exactly. The
-	# config is readable here (staged + start_run bound it as active_run_config above);
-	# we read run_cfg, the same object. Hazards spawn dormant at/near the piece at
-	# r1_depth_threshold (§9 Q1; clamped to the deepest piece) and go into
-	# _band_container so _clear_band() disposes them with the band for free. setup()
-	# binds the config snapshot + the player so the hazard never re-reads active_run_config.
-	_spawn_r1_hazards(run_cfg, band)
-	# K5i (M1.4): spawn the three new M1.4 hazard types (ping-pong / bomb / spikes) into the
-	# same graded band, each with a per-type depth-scaled count placed through the SAME J3
-	# cell helpers (no duplicated placement math). Fully gated: with every *_enabled false
-	# (the K0 default) no descriptor is enabled → no scene loaded, no node built → all-off is
-	# byte-identical to M1.3 (fp e943ac9c8bc1 UNMOVED). Sibling of _spawn_r1_hazards.
-	# BUG7: thread spawn_pos so the seam can exclude the player's entry cell + a safe radius
-	# around it (the player is already AT spawn_pos by this call → no frame-0 spawn-kill).
+	# Opposition spawn (M1.4 K5i · V3b M1.12): populate the graded band's deck — the K5
+	# hazards (ping-pong / bomb / spikes) AND, since V3b, the R1 pursuer are all deck cards
+	# drawn through EncounterBuilder's one credit machine (the bespoke main_game R1 spawn
+	# machine was retired). Fully gated: an all-off rc leaves every deck card NEUTRAL → the
+	# builder is inert → no scene loaded, no node built → all-off is byte-identical to M1.3
+	# (fp e943ac9c8bc1 UNMOVED). BUG7: thread spawn_pos so the seam can exclude the player's
+	# entry cell + a safe radius around it (the player is already AT spawn_pos by this call
+	# → no frame-0 spawn-kill).
 	_spawn_new_hazards(run_cfg, band, spawn_pos)
 
 
@@ -479,282 +468,26 @@ func _new_hazard_spawn_ctx(kind: StringName, p: PlacedPiece, k: int, index: int,
 	return EncounterBuilder.legacy_ctx(kind, p, k, index, room_bounds)
 
 
-## K5i (M1.4): the encompassing Rect2 of a piece's floor cells, projected to WORLD space via
-## the SAME _density_cell_to_world projection used for placement (so the ping-pong reflects
-## within the real room in world coordinates). Pure topology, NO RNG. Returns an empty Rect2
-## for an empty cell list (the ping-pong then falls back to pure-wall confinement).
-func _piece_floor_bounds_world(cells: Array[Vector2i]) -> Rect2:
-	if cells.is_empty():
-		return Rect2()
-	var bounds := Rect2(_density_cell_to_world(cells[0]), Vector2.ZERO)
-	for c in cells:
-		bounds = bounds.expand(_density_cell_to_world(c))
-	return bounds
-
-
-# --- R1 (M1.1): pursuing hazard spawn ----------------------------------------
-
-## Instantiate r1_spawn_count HazardEntity nodes when R1 is on. Fully gated: with
-## r1_enabled == false (or r1_spawn_count == 0) nothing is loaded/instantiated, so the
-## all-off control is byte-for-byte the M1.0 loop. J2 (M1.3): the hazards are now
-## DISTRIBUTED across depth_index per rc.r1_spawn_distribution (single_gate keeps the
-## M1.2 placement; even_spread/curve scatter them) — STEP 1 decides each hazard's depth,
-## STEP 2 places one hazard at that depth. Placement is pure run-state on the ALREADY-
-## GRADED band (no RNG, never feeds fingerprint()); nodes go into _band_container so
-## _clear_band() frees them. setup() binds the run config snapshot + the player (resolved
-## via the "player" group — the player is already grouped in player.tscn).
-func _spawn_r1_hazards(rc: RunConfig, band: Band) -> void:
-	# Gate: R1 off → nothing. With R1 on, the J2 spread (r1_spawn_count) AND the J3 density
-	# (r1_per_room_density) are independent budgets — either may be zero. All-off-equivalent
-	# (spawn_count 0 AND density 0) instantiates NO node and is byte-identical to M1.2.
-	if rc == null or not rc.r1_enabled:
-		return
-	var spawn_count: int = maxi(rc.r1_spawn_count, 0)
-	var density_on: bool = rc.r1_per_room_density > 0.0
-	if spawn_count <= 0 and not density_on:
-		return
-	var hazard_scene := load(HAZARD_SCENE_PATH) as PackedScene
-	if hazard_scene == null:
-		push_error("MainGame: R1 hazard scene missing at %s." % HAZARD_SCENE_PATH)
-		return
-	var player := get_tree().get_first_node_in_group(&"player") as Node2D
-
-	# J2 — the spread budget: N hazards distributed across depth_index. Unchanged from J2;
-	# skipped entirely (no node) when r1_spawn_count == 0 so density-only runs stay clean.
-	if spawn_count > 0:
-		# STEP 1 — decide the depth for each of the N hazards (the spread concern).
-		var depths: Array[int] = _hazard_spawn_depths(band, rc)   # length == r1_spawn_count
-		# STEP 2 — place one hazard at each chosen depth. _hazard_spawn_position(band, depth,
-		# index) is the stable per-depth placement helper J3 reuses (§A.4 shared-seam contract).
-		for i in spawn_count:
-			var hz := hazard_scene.instantiate() as HazardEntity
-			_band_container.add_child(hz)
-			var pos: Vector2 = _hazard_spawn_position(band, depths[i], i)
-			hz.global_position = pos
-			# M1.7 interp-ghost fix: reset so the hazard doesn't render one interpolated frame
-			# from origin to its spawn position (hazard spawn ghost). Render-only.
-			hz.reset_physics_interpolation()
-			# L2 (M1.5): thread the pursuer's spawn-room bounds (the owning piece's floor-cell
-			# bbox in world space) so r1_spawn_room_only can confine its patrol + gate its chase.
-			# Resolved from the placed position (the J2 path discards the chosen cell). Empty
-			# Rect2 when no owning piece is found → the entity falls back to chase-everywhere.
-			hz.setup(rc, player, { "room_bounds": _piece_bounds_at_world(band, pos) })
-
-	# J3 — the per-room density budget: extra hazards seeded per room, scaled by room size.
-	# Additive on top of J2's population. Skipped entirely (no node) when density is off.
-	if density_on:
-		_populate_room_density(band, rc, hazard_scene, player)
-
-
-# --- J3 (M1.3): per-room size-scaled hazard density --------------------------
-
-## Seed EXTRA hazards per room, scaled by each room's size, additively on top of J2's
-## spread budget (G4 §5 F3b "a hazard per room" — big rooms aren't empty fields). For each
-## eligible piece: n = floor(r1_per_room_density * area / R1_DENSITY_AREA_UNIT), capped per
-## room and band-wide, placed across THAT room's own floor cells. DETERMINISTIC — walks
-## pieces depth-sorted then stable cell order, integer-index, NO RNG (same band+rc → byte-
-## identical positions). These are ordinary HazardEntities (reuse _hazard_spawn_position for
-## floor-cell selection); a density hazard wakes by the same depth/linger rules as any R1
-## hazard (no new wake rule — Q F). Nodes go into _band_container so _clear_band() frees them.
-func _populate_room_density(band: Band, rc: RunConfig, hazard_scene: PackedScene, player: Node2D) -> void:
-	# Instantiate one HazardEntity per planned world position. The PLAN is a pure,
-	# deterministic function of (band, rc) (see _density_spawn_positions) — this loop is the
-	# only impure half (scene-tree mutation), so the budget/placement logic stays unit-testable.
-	# L2 (M1.5): _density_spawn_bounds returns the owning piece's room bounds PARALLEL to the
-	# position plan (same iteration / order / length) so the J3 golden-position contract
-	# (test_per_room_density.gd (f2)) stays byte-identical — the positions list is untouched.
-	var positions: Array[Vector2] = _density_spawn_positions(band, rc)
-	var bounds: Array[Rect2] = _density_spawn_bounds(band, rc)
-	for i in positions.size():
-		var hz := hazard_scene.instantiate() as HazardEntity
-		_band_container.add_child(hz)
-		hz.global_position = positions[i]
-		# M1.7 interp-ghost fix: reset so the density hazard doesn't render one interpolated
-		# frame from origin to its spawn position (hazard spawn ghost). Render-only.
-		hz.reset_physics_interpolation()
-		# L2: thread this density hazard's spawn-room bounds (empty Rect2 if the parallel
-		# plan came up short → entity falls back to chase-everywhere — never crashes).
-		var rb: Rect2 = bounds[i] if i < bounds.size() else Rect2()
-		hz.setup(rc, player, { "room_bounds": rb })
-
-
-## L2 (M1.5): the per-room density room-bounds PLAN — one Rect2 (the owning piece's floor-
-## cell bbox in world space) PARALLEL to _density_spawn_positions (same iteration order +
-## length), so position[i] and bounds[i] describe the same hazard. Kept SEPARATE from
-## _density_spawn_positions (rather than merging the return) so that helper's byte-frozen
-## Array[Vector2] golden contract (test_per_room_density.gd) is untouched. Pure run-state,
-## NO RNG (mirrors the position plan exactly). Re-walks the same loop; each room contributes
-## its single _piece_floor_bounds_world(cells) once per hazard it spawns.
-func _density_spawn_bounds(band: Band, rc: RunConfig) -> Array[Rect2]:
-	var out: Array[Rect2] = []
-	if rc == null or rc.r1_per_room_density <= 0.0:
-		return out
-	var per_room_cap: int = rc.r1_density_per_room_cap
-	var min_area: int = maxi(rc.r1_density_min_area, 0)
-	var spawned_total: int = 0
-	for p in _density_pieces_sorted(band):
-		if spawned_total >= RunConfig.R1_DENSITY_BAND_CEILING:
-			break
-		if rc.r1_density_rooms_only and _is_corridor(p.piece_id):
-			continue
-		var cell_area: int = p.floor_cells.size()
-		if cell_area <= min_area:
-			continue
-		var area: float = _density_area(p, rc)
-		var n: int = int(floor(rc.r1_per_room_density * area / float(RunConfig.R1_DENSITY_AREA_UNIT)))
-		if per_room_cap > 0:
-			n = mini(n, per_room_cap)
-		n = mini(n, RunConfig.R1_DENSITY_BAND_CEILING - spawned_total)
-		if n <= 0:
-			continue
-		# The whole room's bbox (one value, repeated for each of this room's n hazards) —
-		# every density hazard in this room shares its room's bounds. Computed from the SAME
-		# sorted cells the position plan strides, so it is the real room rect in world space.
-		var room_bounds: Rect2 = _piece_floor_bounds_world(_density_sorted_cells(p))
-		for _k in n:
-			out.append(room_bounds)
-			spawned_total += 1
-	return out
-
-
-## L2 (M1.5): resolve the spawn-room bounds for a hazard placed at `world_pos` (the J2
-## spread path, which discards the chosen cell). Finds the piece whose floor_cells contain
-## the band-global cell under `world_pos` and returns its floor-cell bbox in world space
-## (the SAME _piece_floor_bounds_world projection the J3 + K5i seams use). Returns an empty
-## Rect2 if no owning piece is found → the entity falls back to chase-everywhere (RD-4).
-## Pure topology, NO RNG (never feeds fingerprint()).
-func _piece_bounds_at_world(band: Band, world_pos: Vector2) -> Rect2:
-	var cell := Vector2i((world_pos / float(_band_cell_size_px)).floor())
-	for p in band.pieces:
-		if p.depth_index < 0:
-			continue
-		if p.floor_cells.has(cell):
-			return _piece_floor_bounds_world(_density_sorted_cells(p))
-	return Rect2()
-
-
-## The deterministic per-room density PLAN: the ordered world positions of every density
-## hazard for (band, rc), with NO RNG and NO node state — so the same (band, rc) yields a
-## byte-identical list every call (the J3 determinism contract). For each eligible piece it
-## computes n = floor(r1_per_room_density * area / R1_DENSITY_AREA_UNIT), applies the per-room
-## cap + the band-wide ceiling, and strides the n hazards across THAT room's own sorted floor
-## cells. Mirrors J2's _hazard_spawn_depths split (pure plan + thin instantiate loop) so the
-## J3 test drives this directly against a hand-built graded band (test_per_room_density.gd).
-func _density_spawn_positions(band: Band, rc: RunConfig) -> Array[Vector2]:
-	var out: Array[Vector2] = []
-	if rc == null or rc.r1_per_room_density <= 0.0:
-		return out
-	var per_room_cap: int = rc.r1_density_per_room_cap   # 0 = uncapped
-	var min_area: int = maxi(rc.r1_density_min_area, 0)   # CELL-area floor (room-shape gate)
-	var spawned_total: int = 0                            # band-wide ceiling accumulator (Q E)
-
-	# Walk pieces in a stable, depth-sorted then piece-order sequence so placement (and the
-	# band-ceiling truncation) is reproducible run-to-run, independent of band.pieces order.
-	for p in _density_pieces_sorted(band):
-		if spawned_total >= RunConfig.R1_DENSITY_BAND_CEILING:
-			break
-		# Optional corridor exclusion (rooms_only): skip piece_corridor*/piece_hall_v.
-		if rc.r1_density_rooms_only and _is_corridor(p.piece_id):
-			continue
-		# Min-area gate is always on CELL area (a room-shape gate, not pixels), so corridors
-		# and small boxes stay empty until genuinely big regardless of the metric.
-		var cell_area: int = p.floor_cells.size()
-		if cell_area <= min_area:
-			continue
-		var area: float = _density_area(p, rc)            # cell_area or px_area per the metric
-		var n: int = int(floor(rc.r1_per_room_density * area / float(RunConfig.R1_DENSITY_AREA_UNIT)))
-		if per_room_cap > 0:
-			n = mini(n, per_room_cap)
-		# Band-wide ceiling truncation: never exceed the global cap even mid-room.
-		n = mini(n, RunConfig.R1_DENSITY_BAND_CEILING - spawned_total)
-		if n <= 0:
-			continue
-		# Spread the room's n hazards across ITS OWN floor cells, index-deterministic — even
-		# fractions across the sorted cells (no RNG). Reuses the same stable (y, x) cell order
-		# JunkPlacer + _hazard_spawn_position use, so the placement is reproducible.
-		var cells: Array[Vector2i] = _density_sorted_cells(p)
-		var stride: int = maxi(cells.size() / maxi(n, 1), 1)
-		for k in n:
-			var cell: Vector2i = cells[(k * stride) % cells.size()]
-			out.append(_density_cell_to_world(cell))
-			spawned_total += 1
-	return out
-
-
-## The area scalar that scales the per-room budget. cell_area (default) is floor_cells.size()
-## — SIZE-INVARIANT (a 40× room holds a fixed count per room-shape, the Director's choice).
-## px_area multiplies by lvl_size_mult^2 so density grows with the on-screen room size (a
-## swept option; the per-room + band caps keep it bounded). lvl_size_mult is a pure pixel
-## projection (it does NOT change floor_cells.size()), so px_area is the correct screen-area.
-func _density_area(p: PlacedPiece, rc: RunConfig) -> float:
-	var cells := float(p.floor_cells.size())
-	if rc.r1_density_metric == 1:                         # px_area
-		var m := rc.lvl_size_mult if rc.lvl_enabled else 1.0
-		return cells * m * m
-	return cells                                          # cell_area (size-invariant)
-
-
-## True iff `id` is a corridor piece (piece_corridor*/piece_hall_v) — used by rooms_only to
-## exclude corridors from density. Matches the ext-catalog corridor id prefixes (J3 §(a)).
-func _is_corridor(id: StringName) -> bool:
-	return String(id).begins_with("piece_corridor") or id == &"piece_hall_v"
-
-
-## Pieces in a stable, deterministic order for density placement: depth_index ascending, then
-## by offset_cell (y, x) as a tiebreak so two pieces at the same depth keep a fixed order.
-## (The band-ceiling truncation then bites the deepest/last pieces, reproducibly.)
-## M1.9 (S3): thin forwarder — the SINGLE copy lives in EncounterBuilder (§2.6.d: the
-## builder's K5 walk and the retained R1/J2/J3 lanes must not drift apart on two sort
-## lambdas). Kept, same signature, so the R1 lane + the committed golden tests
-## (test_per_room_density / test_new_hazard_spawn / test_rg1_m13_verify) call one
-## implementation unmodified.
+## Pieces in a stable, deterministic order: depth_index ascending, then by offset_cell
+## (y, x) as a tiebreak so two pieces at the same depth keep a fixed order.
+## M1.9 (S3): thin forwarder — the SINGLE copy lives in EncounterBuilder. V3b (M1.12):
+## the R1/J2/J3 density lanes were retired; this + _density_sorted_cells / _density_cell_to_world
+## now serve ONLY the K7 exit-placement candidate walk (_place_gate below).
 func _density_pieces_sorted(band: Band) -> Array[PlacedPiece]:
 	return EncounterBuilder.pieces_depth_sorted(band)
 
 
 ## A piece's walkable floor cells in the SAME stable (y, x) order JunkPlacer uses, so the
-## density placement draw is reproducible regardless of authored cell order.
+## K7 exit-placement draw is reproducible regardless of authored cell order.
 ## M1.9 (S3): thin forwarder to the hoisted single copy (see _density_pieces_sorted).
 func _density_sorted_cells(p: PlacedPiece) -> Array[Vector2i]:
 	return EncounterBuilder.piece_sorted_cells(p)
 
 
-## Band-global cell → world pixel, centred (same projection as _hazard_spawn_position).
+## Band-global cell → world pixel, centred (the K7 exit-placement projection).
 func _density_cell_to_world(cell: Vector2i) -> Vector2:
 	return Vector2(cell * _band_cell_size_px) \
 		+ Vector2(_band_cell_size_px, _band_cell_size_px) * 0.5
-
-
-## J2 (M1.3): the list of depths (one per hazard, length == rc.r1_spawn_count) the N
-## hazards spawn at. DETERMINISTIC — a pure function of band topology (depth_index /
-## band.max_depth) + the config, NO RNG. This is what makes the spread comparable run-to-
-## run AND keeps it physically downstream of fingerprint() (it reads the graded band; it
-## never writes the generator). single_gate reproduces the M1.2 single-threshold placement
-## exactly so the all-off control + M1.2-comparable cohort stay byte-identical.
-func _hazard_spawn_depths(band: Band, rc: RunConfig) -> Array[int]:
-	var max_depth := _band_max_depth(band)
-	var out: Array[int] = []
-	var n: int = rc.r1_spawn_count
-	match rc.r1_spawn_distribution:
-		1:  # even_spread (F2) — spread N across [min .. max] inclusive, as evenly as possible.
-			var lo: int = clampi(rc.r1_spread_min_depth, 0, max_depth)
-			var span: int = maxi(max_depth - lo, 0)
-			for i in n:
-				# Even fractional placement across the inclusive [lo, max] span, rounded.
-				var t: float = 0.5 if n <= 1 else float(i) / float(n - 1)
-				out.append(lo + int(round(t * float(span))))
-		2:  # curve (built but preset-OFF, §C-Q1) — bias deeper via pow(t, 1.6).
-			var lo2: int = clampi(rc.r1_spread_min_depth, 0, max_depth)
-			var span2: int = maxi(max_depth - lo2, 0)
-			for i in n:
-				var t2: float = 0.0 if n <= 1 \
-					else pow(float(i) / float(n - 1), 1.6)   # exponent > 1 → clusters deep
-				out.append(lo2 + int(round(t2 * float(span2))))
-		_:  # 0 = single_gate (default) — M1.2 behaviour: every hazard at the clamped threshold.
-			var d: int = clampi(rc.r1_depth_threshold, 0, max_depth)
-			for _i in n:
-				out.append(d)
-	return out
 
 
 ## J2 (M1.3, Phase-3 Q3): the band's deepest graded depth. DepthGrader.grade() sets
@@ -763,30 +496,6 @@ func _hazard_spawn_depths(band: Band, rc: RunConfig) -> Array[int]:
 ## here keeps the helper cheap and removes a duplicate scan.
 func _band_max_depth(band: Band) -> int:
 	return band.max_depth
-
-
-## World position to spawn hazard `index` at: a floor cell on the piece(s) at `depth`
-## (clamped to the deepest graded piece if it exceeds the band's max depth). Band-global
-## cell space shares the world origin (pieces materialise at offset_cell * cell_size), so
-## cell → world is a flat scale. Falls back to the entry spawn if no graded floor cell is
-## found. J2 (M1.3): the middle arg is now a concrete `depth` (was `depth_threshold`) so
-## _hazard_spawn_depths can target any depth; the within-depth index%cells wrap is unchanged
-## (two hazards landing on the same depth still spread across that depth's floor cells). This
-## signature is the stable internal API J3 (per-room density) reuses (§A.4 shared-seam).
-func _hazard_spawn_position(band: Band, depth: int, index: int) -> Vector2:
-	var target_depth: int = clampi(depth, 0, _band_max_depth(band))
-	# Collect floor cells of pieces at the target depth (in piece order for determinism).
-	var cells: Array[Vector2i] = []
-	for p in band.pieces:
-		if p.depth_index == target_depth:
-			for c in p.floor_cells:
-				cells.append(c)
-	if cells.is_empty():
-		return _entry_spawn_position(band)
-	# Spread multiple hazards across the available floor cells (wrap on overflow).
-	var cell: Vector2i = cells[index % cells.size()]
-	return Vector2(cell * _band_cell_size_px) \
-		+ Vector2(_band_cell_size_px, _band_cell_size_px) * 0.5
 
 
 # --- Run-end handling --------------------------------------------------------

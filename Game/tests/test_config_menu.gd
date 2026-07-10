@@ -64,16 +64,17 @@ func _run() -> int:
 	for f in exported:
 		if not generic_levers.has(f):
 			legacy_exported.append(f)
-	# V3 (M1.12): the 21 K5 hpp_/hbomb_/hspike_ knobs were RETIRED (the three hazards are
-	# now deck-driven data), so the frozen legacy surface drops 89 → 68 and the total 91 → 70.
-	if legacy_exported.size() != 68:
-		failures.append("expected 68 LEGACY exported RunConfig fields (post-V3 surface: was 89, −21 K5 knobs), got %d"
+	# V3 (M1.12): the 21 K5 hpp_/hbomb_/hspike_ knobs were RETIRED (89 → 68 / 91 → 70).
+	# V3b (M1.12): the 18 R1 r1_* knobs were RETIRED too (the pursuer is now deck-driven data),
+	# so the frozen legacy surface drops 68 → 50 and the total 70 → 52.
+	if legacy_exported.size() != 50:
+		failures.append("expected 50 LEGACY exported RunConfig fields (post-V3b surface: was 68, −18 r1_ knobs), got %d"
 			% legacy_exported.size())
 	for lever in generic_levers:
 		if not exported.has(lever):
 			failures.append("S4: generic lever '%s' missing from the exported set (promotion to @export failed?)" % lever)
-	if exported.size() != 70:
-		failures.append("expected 70 exported RunConfig fields total (68 legacy + 2 levers), schema has %d"
+	if exported.size() != 52:
+		failures.append("expected 52 exported RunConfig fields total (50 legacy + 2 levers), schema has %d"
 			% exported.size())
 
 	var bound := menu._rows.keys()   # bound controls; masters are included as CheckButtons
@@ -219,13 +220,15 @@ func _run() -> int:
 			await get_tree().process_frame
 
 	# --- 2. Edit: a master toggle + a knob set flows to the working config ------
+	# V3b (M1.12): the EDIT probe re-pointed from the retired r1_ section to r2_ (still a
+	# legacy knob section) — master toggle + a scalar knob + an enum knob, same coverage.
 	# Master on.
-	var r1_master := menu._rows["r1_enabled"] as CheckButton
-	r1_master.button_pressed = true   # emits toggled → menu writes the field
+	var r2_master := menu._rows["r2_enabled"] as CheckButton
+	r2_master.button_pressed = true   # emits toggled → menu writes the field
 	await get_tree().process_frame
-	# A scalar knob: r1_chase_speed via its SpinBox (the canonical control).
-	var speed_spin := menu._rows["r1_chase_speed"] as SpinBox
-	speed_spin.value = 40.0           # emits value_changed → menu writes the field
+	# A scalar knob: r2_cost_magnitude via its SpinBox (the canonical control).
+	var cost_spin := menu._rows["r2_cost_magnitude"] as SpinBox
+	cost_spin.value = 40.0            # emits value_changed → menu writes the field
 	# An enum knob: r2_mechanism via its OptionButton.
 	var mech := menu._rows["r2_mechanism"] as OptionButton
 	mech.select(2)
@@ -233,10 +236,10 @@ func _run() -> int:
 	await get_tree().process_frame
 
 	var edited := menu.apply_and_get_config()
-	if not edited.r1_enabled:
-		failures.append("master toggle did not set r1_enabled on the working config")
-	if not is_equal_approx(edited.r1_chase_speed, 40.0):
-		failures.append("knob set did not write r1_chase_speed=40 (got %s)" % edited.r1_chase_speed)
+	if not edited.r2_enabled:
+		failures.append("master toggle did not set r2_enabled on the working config")
+	if not is_equal_approx(edited.r2_cost_magnitude, 40.0):
+		failures.append("knob set did not write r2_cost_magnitude=40 (got %s)" % edited.r2_cost_magnitude)
 	if edited.r2_mechanism != 2:
 		failures.append("enum set did not write r2_mechanism=2 (got %d)" % edited.r2_mechanism)
 	# The same instance is what the run stages.

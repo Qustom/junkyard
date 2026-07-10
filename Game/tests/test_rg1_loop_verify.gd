@@ -165,14 +165,14 @@ func _all_off() -> RunConfig:
 
 
 func _r1_only() -> RunConfig:
+	# V3b (M1.12): the pursuer is a band_greybox deck card — its knobs ride param_overrides.
+	# base_count 1 makes the card non-neutral so a pursuer spawns + awakens (depth_threshold 0).
 	var c := RunConfigScript.new() as RunConfig
 	c.build_tag = "rg1-V1-r1-only"
-	c.r1_enabled = true
-	c.r1_depth_threshold = 0
-	c.r1_chase_speed = 40.0
-	c.r1_catch_radius = 16.0
-	c.r1_catch_kills = true
-	c.r1_spawn_count = 1
+	c.param_overrides["pursuer"] = {
+		"base_count": 1, "depth_threshold": 0, "chase_speed": 40.0,
+		"catch_radius": 16.0, "catch_kills": true,
+	}
 	return c
 
 
@@ -242,11 +242,12 @@ func _all_on() -> RunConfig:
 	c.r4_lost_proxy_threshold = r4.r4_lost_proxy_threshold
 	c.seed_override = r4.seed_override   # pinned forking seed so V5's nav row is deterministic
 	c.build_tag = "rg1-V5-all-on"
-	# Keep a hazard present so it awakens (emits opposition_event(&"awoke"), V5 needs an
+	# Keep a pursuer present so it awakens (emits opposition_event(&"awoke"), V5 needs an
 	# R1 row), but make catches NON-fatal so it can't end the run before the chosen end-cause.
-	c.r1_catch_kills = false
-	c.r1_spawn_count = 1
-	c.r1_depth_threshold = 0   # awakens immediately so the row fires within the frame budget
+	# V3b (M1.12): mutate the pursuer's deck-card param_overrides (from _r1_only).
+	c.param_overrides["pursuer"]["catch_kills"] = false
+	c.param_overrides["pursuer"]["base_count"] = 1
+	c.param_overrides["pursuer"]["depth_threshold"] = 0   # awakens immediately (row fires in budget)
 	return c
 
 

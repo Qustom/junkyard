@@ -234,16 +234,14 @@ func _i1_scale() -> RunConfig:
 
 
 ## I2: R1 hazard with the new depth-scaled catch radius (Q3) -- must catch -> death.
+## V3b (M1.12): the pursuer is a band_greybox deck card — its knobs ride param_overrides.
 func _i2_hazard() -> RunConfig:
 	var c := RunConfigScript.new() as RunConfig
 	c.build_tag = "rg1-m12-M2-i2-hazard"
-	c.r1_enabled = true
-	c.r1_depth_threshold = 0
-	c.r1_chase_speed = 40.0
-	c.r1_catch_radius = 16.0
-	c.r1_catch_radius_per_depth = 4.0   # I2 Q3: depth-scaled lunge (the new M1.2 knob)
-	c.r1_catch_kills = true
-	c.r1_spawn_count = 1
+	c.param_overrides["pursuer"] = {
+		"base_count": 1, "depth_threshold": 0, "chase_speed": 40.0,
+		"catch_radius": 16.0, "catch_radius_per_depth": 4.0, "catch_kills": true,
+	}
 	return c
 
 
@@ -312,14 +310,12 @@ func _bug5_toll() -> RunConfig:
 func _all_on() -> RunConfig:
 	var c := _i4_vision()
 	c.build_tag = "rg1-m12-M6-all-on"
-	# R1 present (awakens) but non-fatal so we control the end-cause.
-	c.r1_enabled = true
-	c.r1_depth_threshold = 0
-	c.r1_chase_speed = 40.0
-	c.r1_catch_radius = 16.0
-	c.r1_catch_radius_per_depth = 2.0
-	c.r1_catch_kills = false
-	c.r1_spawn_count = 1
+	# R1 pursuer present (awakens) but non-fatal so we control the end-cause. V3b (M1.12):
+	# deck-card param_overrides replace the r1_* knobs.
+	c.param_overrides["pursuer"] = {
+		"base_count": 1, "depth_threshold": 0, "chase_speed": 40.0,
+		"catch_radius": 16.0, "catch_radius_per_depth": 2.0, "catch_kills": false,
+	}
 	# R2 egress toll on exposure (folds in BUG5 too).
 	c.r2_enabled = true
 	c.r2_mechanism = 2
@@ -509,7 +505,10 @@ func _inspect_log() -> void:
 	# The M1.2 knobs that MUST appear in every snapshot (V13 generalised -- assert as a
 	# set against the live to_flat_dict(), and explicitly name the new M1.2 keys).
 	var expected_keys := (RunConfigScript.new() as RunConfig).to_flat_dict().keys()
-	var m12_new_keys := ["lvl_enabled", "lvl_room_count", "lvl_size_mult", "r1_catch_radius_per_depth"]
+	# V3b (M1.12): r1_catch_radius_per_depth was RETIRED with the r1_* knobs (the pursuer's
+	# depth-scaled catch now rides param_overrides.pursuer.catch_radius_per_depth). Only the
+	# level-scale keys remain as flat named snapshot keys here.
+	var m12_new_keys := ["lvl_enabled", "lvl_room_count", "lvl_size_mult"]
 
 	for r in rows:
 		var t := String(r.get("type", ""))

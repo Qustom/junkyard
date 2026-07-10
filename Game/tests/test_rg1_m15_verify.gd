@@ -56,9 +56,12 @@ const BASELINE_FP_SEED := 12345
 ## by test_run_config / test_config_menu); these are the contract-named new keys. V3 (M1.12):
 ## the 3 L5 hpp_kills/hbomb_kills/hspike_kills toggles were RETIRED with the K5 knob groups
 ## (lethality is now entity-local, default true) — only the throw_/r1_ M1.5 levers remain here.
+## V3b (M1.12): the L2 r1_spawn_room_only / r1_patrol_speed keys were RETIRED with the r1_*
+## knobs — the pursuer's room-bound patrol magnitudes now ride param_overrides["pursuer"]
+## (stamped as param_overrides.pursuer.* dotted rows), not flat named snapshot keys. Only the
+## throw_ M1.5 levers remain as flat named keys.
 const M15_NEW_KEYS := [
 	"throw_enabled", "throw_speed", "throw_max_range",
-	"r1_spawn_room_only", "r1_patrol_speed",
 ]
 
 var _failures: Array[String] = []
@@ -189,10 +192,12 @@ func _verify_default_preset_shape() -> void:
 		return
 
 	# --- M1.4 fun stack carried forward: the headline systems must stay ON. ---
+	# V3b (M1.12): the pursuer is a deck card — "on" = a non-neutral param_overrides bag.
+	var po: Dictionary = preset.param_overrides.get("pursuer", {})
 	if not preset.lvl_enabled:
 		_failures.append("RG1: default preset lvl_enabled is false (M1.4 stack wants level scale ON)")
-	if not preset.r1_enabled:
-		_failures.append("RG1: default preset r1_enabled is false (M1.4 stack wants the pursuing hazard ON)")
+	if int(po.get("base_count", 0)) <= 0 and float(po.get("count_per_depth", 0.0)) <= 0.0:
+		_failures.append("RG1: default preset pursuer deck card is neutral (M1.4 stack wants the pursuing hazard ON)")
 	if not preset.r4_enabled:
 		_failures.append("RG1: default preset r4_enabled is false (M1.4 stack wants the maze ON)")
 	if preset.r2_enabled or preset.r3_enabled:
@@ -227,17 +232,17 @@ func _verify_default_preset_shape() -> void:
 	if preset.throw_max_range <= 0.0:
 		_failures.append("RG1/L1: default preset throw_max_range<=0 (the miss rule would never trigger)")
 
-	# --- L2 room-bound pursuer lever ON: r1_spawn_room_only true, patrol speed 28.0
-	# (Director-locked ≈ half of r1_chase_speed 56). ---
-	if not preset.r1_spawn_room_only:
-		_failures.append("RG1/L2: default preset r1_spawn_room_only is false (the room-bound pursuer must be ON)")
-	if not is_equal_approx(preset.r1_patrol_speed, 28.0):
-		_failures.append("RG1/L2: default preset r1_patrol_speed=%f, expected 28.0" % preset.r1_patrol_speed)
+	# --- L2 room-bound pursuer lever ON: spawn_room_only true, patrol speed 28.0
+	# (Director-locked ≈ half of chase_speed 56). V3b (M1.12): read the pursuer deck override. ---
+	if not bool(po.get("spawn_room_only", false)):
+		_failures.append("RG1/L2: default preset pursuer spawn_room_only is false (the room-bound pursuer must be ON)")
+	if not is_equal_approx(float(po.get("patrol_speed", 0.0)), 28.0):
+		_failures.append("RG1/L2: default preset pursuer patrol_speed=%f, expected 28.0" % float(po.get("patrol_speed", 0.0)))
 	# Sanity: the patrol is the Director-locked "slow patrol" (< chase). Not a hard fail if a
 	# later sweep changes it, but the SHIPPED preset must be slower than chase.
-	if preset.r1_patrol_speed >= preset.r1_chase_speed:
-		_failures.append("RG1/L2: default preset r1_patrol_speed (%f) >= r1_chase_speed (%f) -- not a SLOW patrol"
-			% [preset.r1_patrol_speed, preset.r1_chase_speed])
+	if float(po.get("patrol_speed", 0.0)) >= float(po.get("chase_speed", 0.0)):
+		_failures.append("RG1/L2: default preset pursuer patrol_speed (%f) >= chase_speed (%f) -- not a SLOW patrol"
+			% [float(po.get("patrol_speed", 0.0)), float(po.get("chase_speed", 0.0))])
 
 	# --- Trap-free: every enabled R-opposition's load-bearing magnitude is non-inert. ---
 	var inert := preset.inert_enabled_oppositions()
@@ -251,12 +256,10 @@ func _verify_default_preset_shape() -> void:
 	# The M1.5 levers must stay at their all-off code defaults on a fresh config.
 	if fresh.throw_enabled:
 		_failures.append("RG1: a fresh RunConfig.new() has throw_enabled ON (baseline contaminated)")
-	if fresh.r1_spawn_room_only:
-		_failures.append("RG1: a fresh RunConfig.new() has r1_spawn_room_only ON (baseline contaminated)")
-	if not is_zero_approx(fresh.r1_patrol_speed):
-		_failures.append("RG1: a fresh RunConfig.new() has r1_patrol_speed != 0 (baseline contaminated)")
+	# V3b (M1.12): the r1_spawn_room_only / r1_patrol_speed fields were retired with the r1_*
+	# knobs — a fresh config's pursuer neutrality is now an empty param_overrides (checked below).
 	# V3 (M1.12): the K5 *_kills RunConfig toggles were retired; a fresh all-off config has an
-	# empty param_overrides (K5 lethality now defaults true entity-side, off a neutral deck).
+	# empty param_overrides (all deck lethality defaults true entity-side, off a neutral deck).
 	if not fresh.param_overrides.is_empty():
 		_failures.append("RG1: a fresh RunConfig.new() has non-empty param_overrides (baseline contaminated)")
 
@@ -322,11 +325,15 @@ func _verify_cfg_boots_default_preset() -> void:
 		return
 	if working.all_oppositions_disabled():
 		_human_deferred.append("RG1: CFG booted all-off rather than the default play-preset -- confirm config_menu seeds make_default_play_preset() (deferred: may be a fixture-mode boot)")
-	elif not (working.lvl_enabled and working.r1_enabled and working.r4_enabled
-			and working.timer_enabled and working.throw_enabled and working.r1_spawn_room_only):
-		_failures.append("RG1: CFG boot config is not the M1.5 fun stack (lvl=%s r1=%s r4=%s timer=%s throw=%s spawn_room_only=%s)"
-			% [str(working.lvl_enabled), str(working.r1_enabled), str(working.r4_enabled),
-				str(working.timer_enabled), str(working.throw_enabled), str(working.r1_spawn_room_only)])
+	else:
+		# V3b (M1.12): the pursuer is a deck card — its "on" + room-bound state live in the
+		# param_overrides["pursuer"] bag (has-pursuer + spawn_room_only), not r1_* fields.
+		var wpo: Dictionary = working.param_overrides.get("pursuer", {})
+		if not (working.lvl_enabled and working.param_overrides.has("pursuer") and working.r4_enabled
+				and working.timer_enabled and working.throw_enabled and bool(wpo.get("spawn_room_only", false))):
+			_failures.append("RG1: CFG boot config is not the M1.5 fun stack (lvl=%s pursuer=%s r4=%s timer=%s throw=%s spawn_room_only=%s)"
+				% [str(working.lvl_enabled), str(working.param_overrides.has("pursuer")), str(working.r4_enabled),
+					str(working.timer_enabled), str(working.throw_enabled), str(bool(wpo.get("spawn_room_only", false)))])
 
 
 # --- L1 (assembled): a thrown item flies through the assembled seam --------------
@@ -336,7 +343,8 @@ func _verify_cfg_boots_default_preset() -> void:
 ## node lands under BandContainer and travels. This is the end-to-end form of the L1 row.
 func _verify_throw_assembled() -> void:
 	var cfg := _default_preset()
-	cfg.r1_catch_kills = false   # keep R1 non-fatal so nothing pre-empts the throw exercise
+	# V3b (M1.12): the pursuer is a deck card — keep it non-fatal so nothing pre-empts the throw.
+	cfg.param_overrides["pursuer"]["catch_kills"] = false
 	_stage_menu_config(cfg)
 	_game.start_new_run()
 	await await_idle()
@@ -404,7 +412,8 @@ func _has_thrown_item(node: Node) -> bool:
 ## test_pursuing_hazard; here we confirm the assembled build materialises the pursuer.
 func _verify_room_bound_pursuer_assembled() -> void:
 	var cfg := _default_preset()
-	cfg.r1_catch_kills = false
+	# V3b (M1.12): the pursuer is a deck card — keep it non-fatal for the room-bound exercise.
+	cfg.param_overrides["pursuer"]["catch_kills"] = false
 	_stage_menu_config(cfg)
 	_game.start_new_run()
 	await await_idle()
@@ -450,8 +459,9 @@ func _default_preset() -> RunConfig:
 	var c := RunConfigScript.make_default_play_preset() as RunConfig
 	c.build_tag = "rg1-m15-M1-default-preset"
 	c.seed_override = 12345
-	# Keep R1 non-fatal for the driven run so the hazard can't pre-empt our chosen end-cause.
-	c.r1_catch_kills = false
+	# Keep the pursuer non-fatal for the driven run so it can't pre-empt our chosen end-cause.
+	# V3b (M1.12): the pursuer is a deck card — mutate its param_overrides catch_kills.
+	c.param_overrides["pursuer"]["catch_kills"] = false
 	# L5 (V3 M1.12): keep the three K5 hazards non-lethal for the driven end-cause matrix. The
 	# entities still SPAWN and behave (they are band_greybox deck cards), they just cannot end
 	# the run, so the scripted extract/timeout cause wins. Kills is now entity-local, disabled

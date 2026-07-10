@@ -24,19 +24,14 @@ extends Resource
 ## file defines no behaviour.
 
 # =============================================================================
-# J3 (M1.3) — per-room density constants (shared by run_config + main_game)
+# J3 (M1.3) — level-scale loot density constant
+# V3b (M1.12): the R1 per-room density consts (R1_DENSITY_AREA_UNIT /
+# R1_DENSITY_BAND_CEILING) were RETIRED with the main_game R1 pursuer machine —
+# the pursuer is now a band_greybox deck card (its body count rides the deck's
+# credit budget + per_band_cap, not an area formula). Only the loot-axis unit remains.
 # =============================================================================
-## Floor-cell area that earns ONE hazard-unit at density 1.0:
-##   n_room = floor(r1_per_room_density * area / R1_DENSITY_AREA_UNIT).
-## Sized so a chunky room (≈100+ cells) earns ~1 hazard at density 1.0 while corridors
-## (≈32 cells) earn 0 — i.e. density "fills rooms," not corridors, at the preset start.
-const R1_DENSITY_AREA_UNIT: int = 96
-## Belt-and-braces global ceiling on TOTAL density hazards across the whole band (Q E).
-## The per-room cap bounds each room; this bounds the band so a mis-set px_area sweep
-## (size 40× ≈ 1600× area) can never spawn an unbounded chasing-body count.
-const R1_DENSITY_BAND_CEILING: int = 64
 ## Junk floor-cell area that earns ONE base-count multiple at loot-density 1.0 (the loot
-## sub-knob's per-area unit; mirrors R1_DENSITY_AREA_UNIT for the loot axis).
+## sub-knob's per-area unit).
 const LVL_LOOT_AREA_UNIT: int = 96
 
 
@@ -53,77 +48,15 @@ const LVL_LOOT_AREA_UNIT: int = 96
 
 # =============================================================================
 # R1 — Pursuing / awakening hazard
+# V3b (M1.12): the 18 bespoke r1_* RunConfig knobs were RETIRED. The pursuer is now a
+# pure OppositionDef + deck card like the K5/modern hazards (V3 did the same for K5):
+# band_greybox authors it in its opposition_deck, its body count rides the deck credit
+# budget (opposition_credits 58) + a per_band_cap (10) on pursuer.tres, and the play
+# magnitudes ride the play preset's `param_overrides["pursuer"]` (keyed by def id, read
+# by hazard_entity.gd from spawn_ctx["params"]). "Exactly one way to add an opposition"
+# — author a def, add a deck row; no special-case knob group, no main_game spawn machine.
+# The config surface shrank 70 → 52.
 # =============================================================================
-@export_group("R1 Pursuing Hazard", "r1_")
-## Master toggle. OFF = no hazard exists; behaviour matches M1.0.
-@export var r1_enabled: bool = false
-## Within-band depth at/after which the hazard may awaken.
-@export var r1_depth_threshold: int = 0
-## Seconds of lingering (time-in-band) that also awakens the hazard.
-@export var r1_linger_seconds: float = 0.0
-## Flat chase speed once awake (px/s, greybox units).
-@export var r1_chase_speed: float = 0.0
-## Optional additive chase speed per unit of within-band depth.
-@export var r1_speed_per_depth: float = 0.0
-## Distance at which the hazard "catches" the player. FLOOR: must be >= player_r +
-## hazard_r (= 14 + 10 = 24 px with the I2 bodies) or the bodies physically collide
-## before the script distance test can ever trip (re-creates M1.1's caught=0). Suggested
-## first-sweep value ~32 (I2 §2.3). Default 0.0 = all-off (no hazard spawned anyway).
-@export var r1_catch_radius: float = 0.0
-## I2 (M1.2, Q3 accepted): additive catch-radius lunge per unit of within-band depth —
-## effective = r1_catch_radius + r1_catch_radius_per_depth * depth. Reinforces
-## "deeper = more dangerous" on the CATCH axis (the speed axis already has
-## r1_speed_per_depth). Default 0.0 = flat radius = M1.0/M1.1 behaviour (all-off control).
-@export var r1_catch_radius_per_depth: float = 0.0
-## Whether catching kills outright (death end-cause) vs. inflicting a cost.
-@export var r1_catch_kills: bool = false
-## How many hazard entities spawn.
-@export var r1_spawn_count: int = 0
-## J2 (M1.3): how the r1_spawn_count hazards are distributed over depth_index.
-##   0 = single_gate  → ALL at r1_depth_threshold (M1.2 behaviour — the all-off-equivalent)
-##   1 = even_spread  → spread evenly across [r1_spread_min_depth .. band.max_depth] (F2 fix)
-##   2 = curve        → weighted deeper via pow(t, 1.6) (built but preset-OFF, §C-Q1)
-## Default 0 (single_gate) keeps the all-off control AND the M1.2-comparable cohort
-## byte-identical (same node placement; placement is run-state, never feeds fingerprint()).
-@export_enum("single_gate", "even_spread", "curve") var r1_spawn_distribution: int = 0
-## J2 (M1.3): shallowest depth that may receive a spread hazard. Clamped to [0, max_depth].
-## Below this depth stays a safe entry ramp (the "shallow is safe, then it stirs" arc, I2 §2.4).
-## Default 0 = no shallow exclusion (M1.2-equivalent; ignored by single_gate mode).
-@export var r1_spread_min_depth: int = 0
-## J3 (M1.3): EXTRA hazards seeded PER ROOM, scaled by room size, ADDITIVE on top of
-## J2's spread budget (so big rooms aren't empty fields, G4 §5 F3b "a hazard per room").
-## n_room = floor(r1_per_room_density * area / R1_DENSITY_AREA_UNIT), capped + min-area
-## gated. 0 = OFF (M1.2 behaviour: only J2's r1_spawn_count hazards). DETERMINISTIC, no
-## RNG (the room's n hazards spread across its OWN floor cells, index-deterministic). The
-## preset sets a non-zero sweep value. NEVER mutates the all-off control (default 0).
-@export var r1_per_room_density: float = 0.0
-## J3: which area metric scales the per-room budget.
-##   0 = cell_area   (floor_cells.size(); SIZE-INVARIANT — N per room shape; perf-safe, the
-##                    Director's chosen DEFAULT — a 40× room holds a fixed count per shape)
-##   1 = px_area     (cell_area * lvl_size_mult^2; grows with lvl_size_mult — N per screenful;
-##                    a swept option, MUST be capped or a 40× room explodes — see the cap below)
-@export_enum("cell_area", "px_area") var r1_density_metric: int = 0
-## J3: only seed density hazards in ROOM pieces (id not piece_corridor*/piece_hall_v),
-## never corridors. false = any piece above the area floor is eligible.
-@export var r1_density_rooms_only: bool = false
-## J3: floor-cell area a piece must exceed before it earns ANY density hazard (so small
-## boxes/corridors stay empty until genuinely big). 0 = no floor. Measured in CELL area
-## (floor_cells.size()) regardless of metric — the floor is a room-shape gate, not pixels.
-@export var r1_density_min_area: int = 0
-## J3 hard cap on density hazards per single room (perf + fun guard). 0 = uncapped. The
-## preset MUST set this > 0 (mandatory per Q E) — combined with the global band ceiling it
-## bounds the worst case (px_area × size 40× × high density) so a sweep can't explode.
-@export var r1_density_per_room_cap: int = 0
-## L2 (M1.5): spawn-room-bound pursuer behaviour. When ON, the pursuing HazardEntity
-## paces within its spawn room and chases ONLY while the player is in that room;
-## outside, it slow-patrols (Director-locked: SLOW PATROL, not despawn/idle-freeze).
-## false = today's chase-everywhere behaviour (M1.4). Lives under r1_enabled. Pure
-## run-state behaviour branch; never feeds fingerprint(). L0 declares; L2 reads/emits.
-@export var r1_spawn_room_only: bool = false
-## L2 (M1.5): patrol speed (px/s) while the player is OUTSIDE the spawn room (the slow-
-## patrol pace, preset ≈ half of chase). 0.0 = idle-pivot (stand still when not chasing);
-## the preset sets a slow walk. All-off-neutral default; never feeds fingerprint().
-@export var r1_patrol_speed: float = 0.0
 
 # =============================================================================
 # R2 — Costlier return trip
@@ -393,7 +326,12 @@ const CORRIDOR_LONG_PIECE_ID: StringName = &"piece_corridor_long_h"
 ## opposition-orthogonal spatial axis. RG2 segments on lvl_size_mult/lvl_room_count
 ## separately; a "baseline + bigger rooms" run keeps this true.
 func all_oppositions_disabled() -> bool:
-	return not (r1_enabled or r2_enabled or r3_enabled or r4_enabled)
+	# V3b (M1.12): the r1_enabled term was dropped with the r1_* knob group. The pursuer
+	# is now a deck card whose all-off state is covered by EncounterBuilder's
+	# _deck_all_neutral fast-path (a neutral pursuer card → 0 demand → skipped), so the
+	# r2/r3/r4-only predicate is the M1.0-baseline telemetry label. A run with only a
+	# neutral deck (no param_overrides) + no r-toggles still reproduces the M1.0 loop.
+	return not (r2_enabled or r3_enabled or r4_enabled)
 
 
 ## The effective px-per-cell for materialisation, snapped to an exact integer.
@@ -427,25 +365,9 @@ func to_flat_dict() -> Dictionary:
 		# meta
 		"seed_override": seed_override,
 		"build_tag": build_tag,
-		# R1
-		"r1_enabled": r1_enabled,
-		"r1_depth_threshold": r1_depth_threshold,
-		"r1_linger_seconds": r1_linger_seconds,
-		"r1_chase_speed": r1_chase_speed,
-		"r1_speed_per_depth": r1_speed_per_depth,
-		"r1_catch_radius": r1_catch_radius,
-		"r1_catch_radius_per_depth": r1_catch_radius_per_depth,
-		"r1_catch_kills": r1_catch_kills,
-		"r1_spawn_count": r1_spawn_count,
-		# R1 — J2 (M1.3) depth-spread knobs (additive payload; RG2 reads alongside hazard rows)
-		"r1_spawn_distribution": r1_spawn_distribution,
-		"r1_spread_min_depth": r1_spread_min_depth,
-		# R1 — J3 (M1.3) per-room density knobs (additive payload; RG2 segments density)
-		"r1_per_room_density": r1_per_room_density,
-		"r1_density_metric": r1_density_metric,
-		"r1_density_rooms_only": r1_density_rooms_only,
-		"r1_density_min_area": r1_density_min_area,
-		"r1_density_per_room_cap": r1_density_per_room_cap,
+		# V3b (M1.12): the 18 R1 r1_* stamp rows were RETIRED with the knobs — the pursuer
+		# is now deck-driven data (band_greybox.opposition_deck + the play preset's
+		# param_overrides["pursuer"]), stamped via the param_overrides rows below.
 		# R2
 		"r2_enabled": r2_enabled,
 		"r2_mechanism": r2_mechanism,
@@ -508,9 +430,9 @@ func to_flat_dict() -> Dictionary:
 		"throw_enabled": throw_enabled,
 		"throw_speed": throw_speed,
 		"throw_max_range": throw_max_range,
-		# L2 (M1.5) — spawn-room pursuer behaviour knobs (additive payload)
-		"r1_spawn_room_only": r1_spawn_room_only,
-		"r1_patrol_speed": r1_patrol_speed,
+		# V3b (M1.12): the L2 r1_spawn_room_only/r1_patrol_speed stamp rows were RETIRED
+		# with the r1_* knobs — the pursuer's room-bound patrol magnitudes now ride the
+		# play preset's param_overrides["pursuer"], stamped via the param_overrides rows.
 		# V3 (M1.12): the L5 hpp_kills/hbomb_kills/hspike_kills stamp rows were RETIRED with
 		# the knobs — lethality is now entity-local (DEFAULTS.kills = true) + an optional
 		# param_overrides["<id>"]["kills"] = false, stamped via the param_overrides rows.
@@ -593,17 +515,11 @@ func inert_enabled_oppositions() -> PackedStringArray:
 	var r4_maze_active := r4_max_branch_depth > 0 and (r4_branch_chance_base > 0.0 or r4_branch_per_depth > 0.0)
 	if r4_enabled and not r4_maze_active and r4_vision_radius <= 0.0 and r4_lost_proxy_threshold <= 0.0:
 		out.append("r4_no_effect")
-	# R1 no-spawn — master on but 0 entities ever instantiated (the spawn seam skips it).
-	if r1_enabled and r1_spawn_count <= 0:
-		out.append("r1_no_spawn")
-	# R1 catch radius too small — recreates the M1.1 caught=0 defect: below the 24 px
-	# floor (player_r 14 + hazard_r 10, run_config.gd:51-54) the bodies physically
-	# collide before the script distance test can ever trip. Constant by design (no new
-	# @export knob — CFG 36-knob count pinned). Gated on spawn_count>0 so it does not
-	# double-warn with r1_no_spawn (one trap per root cause). r1_catch_radius_per_depth
-	# is additive and does not lower the BASE floor, so the check is on the base alone.
-	if r1_enabled and r1_spawn_count > 0 and r1_catch_radius < 24.0:
-		out.append("r1_catch_radius_too_small")
+	# V3b (M1.12): the two R1 traps (r1_no_spawn, r1_catch_radius_too_small) were DROPPED
+	# with the r1_* knobs — they are unreachable now that r1_enabled/r1_spawn_count/
+	# r1_catch_radius no longer exist on the config surface. The catch-radius-too-small
+	# concern is now covered, data-driven, by pursuer.tres's param_schema trap_if_neutral
+	# on catch_radius (surfaced via OppositionLint.inert_enabled_defs for enabled defs).
 	return out
 
 
@@ -661,46 +577,15 @@ static func make_default_play_preset() -> RunConfig:
 	c.quota_check_timing = 1                    # every_run_end (Q1 locked: any-run-end)
 	c.quota_basis = 1                          # cumulative_money (Q2 locked: cumulative)
 
-	# --- R1 pursuing hazard: the most-fun ba745e1 cell, verbatim (catch_radius floored). ---
-	c.r1_enabled = true
-	c.r1_depth_threshold = 1
-	c.r1_linger_seconds = 8.1
-	c.r1_chase_speed = 56.0
-	c.r1_speed_per_depth = 5.0                  # Director sweep (M1.5, was 3.0): steeper per-depth chase-speed ramp (the only chase-speed-per-depth ramp on R1 — RD-3)
-	c.r1_catch_radius = 24.0                    # unchanged — stays at the 24px collision floor so the catch test can trip and the BUG6 r1_catch_radius_too_small trap stays clear
-	c.r1_catch_radius_per_depth = 1.0           # K1 (M1.4, was 10.5): flatten the per-depth catch-radius lunge
-	c.r1_catch_kills = true
-	# J2 (M1.3): F2 fix — spread the hazards across depth instead of one gate. Director
-	# starting sweep points (a sweep, NOT a fix): count 5 (≈4–6), even_spread, min-depth 1
-	# (≈1–2 — keeps depth 0 a safe entry, the I2 §2.4 "shallow is safe, then it stirs" arc).
-	# curve mode (2) is built but preset-OFF (Director: even_spread is the most legible
-	# "danger at every depth" for the first gate). single_gate (0) stays the all-off-equivalent
-	# reachable via CFG Reset — these preset values never mutate the all-off control default.
-	c.r1_spawn_count = 5
-	c.r1_spawn_distribution = 1                 # even_spread (F2); 0=single_gate is the M1.2-equivalent
-	c.r1_spread_min_depth = 1                   # shallowest depth that may receive a spread hazard
-
-	# --- R1 per-room density (J3, M1.3): fill the big rooms (G4 §5 F3b). ---
-	# ADDITIVE on top of the J2 spread above: each big room earns extra hazards from its
-	# size. Director chose CELL-AREA (size-invariant, perf-safe — a 40× room holds a fixed
-	# count per room-shape). A non-zero density sweep START (1.0), the per-room cap MANDATORY
-	# (3) and a non-trivial min-area (64 cells → corridors/small boxes stay empty). px_area is
-	# a swept option (metric=1); the loot-per-area sub-knob ships OFF (never preset-on).
-	c.r1_per_room_density = 1.0                 # sweep start (≈1 hazard per ~96-cell room)
-	c.r1_density_metric = 0                     # cell_area (Director DEFAULT; size-invariant)
-	c.r1_density_rooms_only = false             # any piece above the min-area floor is eligible
-	c.r1_density_min_area = 64                  # floor-cell area gate: corridors/small boxes earn none
-	c.r1_density_per_room_cap = 3               # MANDATORY > 0 (Q E perf guard); sweepable in RG1
-
-	# --- L2 (M1.5): spawn-room-bound pursuer (Director-LOCKED #6 — legibility). ---
-	# Turn the chase-everywhere pursuer into a room-bound slow patrol: it paces within its
-	# spawn room and chases ONLY while the player is inside that room (else keeps patrolling).
-	# Makes the threat PLACE-BOUND and answerable (leave the room = safe; turn and throw an
-	# item — L1 — to kill it). Patrol speed ≈ half of r1_chase_speed (56) so out-manoeuvring
-	# it inside one room is plausible. The CODE-LEVEL defaults stay off/0.0 (all-off control
-	# reproduces today's chase-everywhere pursuer); only this named preset turns it on.
-	c.r1_spawn_room_only = true                 # ON = room-bound patrol + gated chase (DR-L2-1)
-	c.r1_patrol_speed = 28.0                    # slow pace (≈half of chase 56); sweepable in RG1 (DR-L2-2)
+	# --- R1 pursuer (V3b M1.12): now a band_greybox DECK card, not a knob group. ---
+	# The most-fun ba745e1 cell magnitudes (verbatim) + the J2 spawn budget (was count 5 /
+	# even_spread) + the J3 density + the L2 room-bound patrol ALL moved to the pursuer's
+	# param_overrides bag below (see c.param_overrides["pursuer"]). base_count/count_per_depth
+	# drive the deck-lane body count (tuned so the greybox pursuer total ≈ the pre-migration
+	# J2+J3 total within ±15% — small 5 / mid 9 / deep 10, per the frozen Step-0 fixture);
+	# the behaviour magnitudes (chase_speed/catch_radius/patrol/room_only/catch_kills) are read
+	# by hazard_entity.gd from spawn_ctx["params"]. The historical per-room density's big-room
+	# clustering folds to the deck's even-spread (D-RAT-3a licensed; per-type TOTAL preserved).
 
 	# --- J4 (M1.3): bias toward FEWER/SHORTER corridors (Director Q-F: big rooms + short halls). ---
 	# F3a's thesis is "huge rooms good, long hallways boring." The preset down-weights the corridor
@@ -777,6 +662,18 @@ static func make_default_play_preset() -> RunConfig:
 		# holds each room to one), 90 deg/s signed rotation, 48 px arm reach.
 		"spike": { "base_count": 1, "count_per_depth": 0.1,
 			"rotation_speed": 90.0, "arm_length": 48.0 },
+		# R1 pursuer (V3b M1.12 — the retired r1_* knob group, now a deck card). base_count 2 +
+		# count_per_depth 0.5 tuned against the frozen Step-0 J2+J3 fixture so the greybox pursuer
+		# per-type TOTAL lands within ±15% (small 5 / mid 10 / deep 10 vs fixture 5 / 9 / 10);
+		# pursuer.tres.per_band_cap (10) + opposition_credits (58 = K5 48 + pursuer 10) reserve its
+		# share regardless of deck order. Behaviour = the most-fun ba745e1 cell verbatim
+		# (depth_threshold 1 / linger 8.1 / chase 56 / speed_per_depth 5 / catch_radius 24 /
+		# catch_radius_per_depth 1 / catch_kills true) + L2 room-bound patrol (spawn_room_only
+		# true / patrol 28). Keyed by the pursuer.tres::params key names (catch_radius/catch_kills).
+		"pursuer": { "base_count": 2, "count_per_depth": 0.5,
+			"depth_threshold": 1, "linger_seconds": 8.1, "chase_speed": 56.0,
+			"speed_per_depth": 5.0, "catch_radius": 24.0, "catch_radius_per_depth": 1.0,
+			"patrol_speed": 28.0, "spawn_room_only": true, "catch_kills": true },
 	}
 
 	# --- K7 (M1.4): exits ON for this playtest (Director pre-playtest tweak, supersedes the

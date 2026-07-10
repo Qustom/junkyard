@@ -25,9 +25,16 @@ const CELL := 16
 const FIXTURE_PATH := "res://tests/goldens/greybox_k5_legacy_plan.json"
 const GREYBOX_PROFILE_PATH := "res://data/bands/band_greybox.tres"
 const K5_BANDS := preload("res://tests/k5_equivalence_bands.gd")
-const CEILING := 48
+const CEILING := 48    # the &"new_hazards" cap-group ceiling (bounds the K5 trio only)
+# V3b (M1.12): band_greybox.opposition_credits was bumped 48 → 58 so the shared credit
+# budget covers the K5 trio (≤48, cap-group bound) PLUS the pursuer (10, per_band_cap
+# bound) — the pursuer is NOT in the new_hazards cap-group (additive). K5 counts are
+# UNCHANGED (still cap-bound at 48), so this test stays green; the pursuer's own
+# equivalence is proven separately in test_pursuer_deck_equivalence.gd.
+const CREDITS := 58
 const TOLERANCE := 0.15
 const PER_ROOM_CAP := { "pingpong": 2, "bomb": 2, "spike": 1 }   # the shared-def caps
+const K5_IDS := ["pingpong", "bomb", "spike"]
 
 
 ## The plan-recording service (mirrors the capture recorder): real BUG7 filter + the real
@@ -73,9 +80,9 @@ func _run() -> int:
 	var profile := load(GREYBOX_PROFILE_PATH) as BandProfile
 	if profile == null or profile.opposition_deck.is_empty():
 		failures.append("band_greybox profile has no opposition_deck (V3 authoring missing)")
-	if profile != null and profile.opposition_credits != CEILING:
-		failures.append("band_greybox.opposition_credits = %d, expected %d (K5 density preserve)"
-			% [profile.opposition_credits, CEILING])
+	if profile != null and profile.opposition_credits != CREDITS:
+		failures.append("band_greybox.opposition_credits = %d, expected %d (K5 48 + pursuer 10, V3b)"
+			% [profile.opposition_credits, CREDITS])
 	var rc := RunConfig.make_default_play_preset()
 
 	var bands := K5_BANDS.all_bands()
@@ -130,8 +137,15 @@ func _assert_band(name: String, band: Band, legacy: Dictionary, deck: Array[Dict
 	var deck_deepest := { "pingpong": -1, "bomb": -1, "spike": -1 }
 	var per_room := {}   # "id|room_key" -> count
 	var legacy_deepest := _legacy_deepest(legacy)
+	var k5_count := 0    # V3b: count only new_hazards cap-group members against the 48 ceiling
 	for r in deck:
 		var id: String = r["id"]
+		# V3b (M1.12): the deck now also spawns the pursuer — skip it from every K5-specific
+		# assertion (its own equivalence is test_pursuer_deck_equivalence.gd). This keeps THIS
+		# proof exactly the K5 fair-share check it always was.
+		if not K5_IDS.has(id):
+			continue
+		k5_count += 1
 		deck_per_type[id] = int(deck_per_type.get(id, 0)) + 1
 		deck_deepest[id] = maxi(int(deck_deepest[id]), int(r["depth"]))
 		# (4) entry safety.
@@ -144,9 +158,9 @@ func _assert_band(name: String, band: Band, legacy: Dictionary, deck: Array[Dict
 			failures.append("(%s) %s exceeded per-room cap %d in room %s"
 				% [name, id, int(PER_ROOM_CAP.get(id, 99)), r["room_key"]])
 
-	# (5) band ceiling.
-	if deck.size() > CEILING:
-		failures.append("(%s) deck total %d > cap-group ceiling %d" % [name, deck.size(), CEILING])
+	# (5) band ceiling — the K5 trio (cap-group members) must stay within the 48 ceiling.
+	if k5_count > CEILING:
+		failures.append("(%s) K5 total %d > cap-group ceiling %d" % [name, k5_count, CEILING])
 
 	# (1) type coverage — the SET of types that spawned (>0) must match exactly.
 	var legacy_set := _nonzero_set(legacy_per_type)

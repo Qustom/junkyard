@@ -82,28 +82,24 @@ func _ready() -> void:
 ##   spike         — deterministic phase spin + arm sweep hit + PERMANENT latch (arms
 ##                   keep sweeping the player, exactly one emit).
 func _build_traces() -> void:
-	var cfg_p1 := RunConfig.new()
-	cfg_p1.r1_enabled = true
-	cfg_p1.r1_depth_threshold = 99      # depth 0 never triggers — linger is the awakener
-	cfg_p1.r1_linger_seconds = 0.5      # awake at ~frame 29
-	cfg_p1.r1_chase_speed = 90.0
-	cfg_p1.r1_speed_per_depth = 0.0
-	cfg_p1.r1_catch_radius = 40.0
-	cfg_p1.r1_catch_radius_per_depth = 0.0
-	cfg_p1.r1_catch_kills = false       # the nonfatal path (stun + cooldown)
+	# V3b (M1.12): the pursuer reads magnitudes from spawn_ctx["params"] (the deck lane's
+	# ctx-merged bag) — the retired rc.r1_* knobs are gone. The SAME magnitudes moved from
+	# cfg into ctx["params"] (keyed by the pursuer.tres::params key names catch_radius/
+	# catch_kills), so entity behaviour is byte-identical → the pre-refactor goldens
+	# (trace_pursuer_chase/room.txt) still match frame-for-frame (the value-preserving-rewire
+	# proof). cfg is now a neutral RunConfig.new() (kept only for the host null-guard).
 	_traces.append({"id": "pursuer_chase", "scene": "res://scenes/hazards/hazard_entity.tscn",
-		"frames": 300, "cfg": cfg_p1, "ctx": {}, "start_pos": Vector2.ZERO, "player_body": true})
+		"frames": 300, "cfg": RunConfig.new(),
+		"ctx": {"params": {"depth_threshold": 99, "linger_seconds": 0.5, "chase_speed": 90.0,
+			"speed_per_depth": 0.0, "catch_radius": 40.0, "catch_radius_per_depth": 0.0,
+			"catch_kills": false}},   # depth 0 never triggers — linger awakens ~frame 29; nonfatal path
+		"start_pos": Vector2.ZERO, "player_body": true})
 
-	var cfg_p2 := RunConfig.new()
-	cfg_p2.r1_enabled = true
-	cfg_p2.r1_depth_threshold = 0       # awake on the first frame (trigger=depth)
-	cfg_p2.r1_chase_speed = 90.0
-	cfg_p2.r1_catch_radius = 40.0
-	cfg_p2.r1_catch_kills = false
-	cfg_p2.r1_spawn_room_only = true
-	cfg_p2.r1_patrol_speed = 30.0
 	_traces.append({"id": "pursuer_room", "scene": "res://scenes/hazards/hazard_entity.tscn",
-		"frames": 300, "cfg": cfg_p2, "ctx": {"room_bounds": Rect2(-100, -100, 200, 200)},
+		"frames": 300, "cfg": RunConfig.new(),
+		"ctx": {"room_bounds": Rect2(-100, -100, 200, 200),
+			"params": {"depth_threshold": 0, "chase_speed": 90.0, "catch_radius": 40.0,
+				"catch_kills": false, "spawn_room_only": true, "patrol_speed": 30.0}},
 		"start_pos": Vector2.ZERO, "player_body": true})
 
 	# V3 (M1.12): the K5 entities read magnitudes from spawn_ctx["params"] (the deck lane's

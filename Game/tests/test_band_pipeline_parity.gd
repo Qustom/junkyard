@@ -165,14 +165,16 @@ func _check_profile_contract(profile: BandProfile, failures: Array[String]) -> v
 		failures.append("P0: archetype_params not empty")
 	if not profile.principles.is_empty() or not profile.flavors.is_empty():
 		failures.append("P0: principles/flavors not empty (Phase-A profile must carry no stages)")
-	# V3 (M1.12): band_greybox now carries the migrated K5 deck (pingpong/bomb/spike) +
-	# opposition_credits=48 — the legacy hpp_/hbomb_/hspike_ knob lane was retired. Layout
-	# fingerprints (P1) stay byte-identical (hazards are run-state, never feed fingerprint()).
-	if profile.opposition_deck.size() != 3:
-		failures.append("P0: opposition_deck size %d, expected 3 (V3 K5 deck: pingpong/bomb/spike)"
+	# V3 (M1.12): band_greybox carries the migrated K5 deck (pingpong/bomb/spike). V3b (M1.12):
+	# the R1 pursuer joined that deck (size 3 → 4) and opposition_credits was bumped 48 → 58
+	# (K5's 48-body budget + the pursuer's ~10-body share, per_band_cap-bound). Both the K5 and
+	# the retired r1_* knob lanes are now deck data. Layout fingerprints (P1) stay byte-identical
+	# (hazards are pure run-state, never feed fingerprint()).
+	if profile.opposition_deck.size() != 4:
+		failures.append("P0: opposition_deck size %d, expected 4 (K5 pingpong/bomb/spike + V3b pursuer)"
 			% profile.opposition_deck.size())
-	if profile.opposition_credits != 48:
-		failures.append("P0: opposition_credits %d, expected 48 (V3 K5 density preserve)"
+	if profile.opposition_credits != 58:
+		failures.append("P0: opposition_credits %d, expected 58 (K5 48 + pursuer 10, V3b)"
 			% profile.opposition_credits)
 	if profile.band_depth != 1:
 		failures.append("P0: band_depth is %d, expected 1" % profile.band_depth)
