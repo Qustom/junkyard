@@ -119,7 +119,7 @@ func _emit_row(type: String, data: Dictionary) -> void:
 	if not _enabled:
 		return
 	if _writer == null:
-		_writer = JsonlWriterScript.new(Schema.LOG_PATH)
+		_writer = JsonlWriterScript.new(Schema.LOG_PATH, Schema.MAX_LOG_BYTES)
 		if not _writer.is_open():
 			# Open failed (e.g. read-only user dir): drop the writer and bail. Never
 			# crash the game over telemetry; we retry the open on the next event.

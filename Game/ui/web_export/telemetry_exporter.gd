@@ -28,6 +28,15 @@ extends RefCounted
 ## exactly how the SellScreen wires it.
 
 ## The log we export. Single source of truth: the schema module's LOG_PATH.
+## NOTE (V7, M1.12): `JsonlWriter` now size-caps + rotates this file to a single
+## `.1` generation (`TelemetrySchema.MAX_LOG_BYTES`). This exporter reads ONLY
+## the active `LOG_PATH` (never the rolled `.1`) — an accepted, documented
+## limitation: a single web session that itself crosses the cap twice before
+## the player clicks "export" would silently lose the middle segment. Given
+## `jsonl_writer.gd`'s own "tens of lines per run" estimate, reaching the 2 MB
+## cap twice in one sitting needs hundreds of runs without an export click —
+## implausible for a real tester session. See `design/M1_12_Tasks/
+## V7_telemetry_rotation.md` Resolved Decision #3 for the full reasoning.
 const LOG_PATH: String = TelemetrySchema.LOG_PATH
 
 ## JSONL is line-delimited JSON; this MIME keeps it readable/saveable as text. The
