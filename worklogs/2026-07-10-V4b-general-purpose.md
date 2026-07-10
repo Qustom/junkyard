@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.12 (Wave-3 close-out ADDRESSING task)
 - **Branch:** feat/V4b-quota-delegate-addressed
-- **Commit:** <FILLED BELOW AFTER COMMIT>
+- **Commit:** 6e36e57faf63a757bcead168c16cc72f9a4c553a (code + worklog); SHA recorded in a follow-up commit
 
 ## What changed
 The Director dispositioned the M1.12 V4 deviation (private `GameState._evaluate_quota(sold_total)`
