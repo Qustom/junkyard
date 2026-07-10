@@ -50,14 +50,12 @@ func journal() -> Array:
 	return _journal
 
 
-func apply(band: Band, _profile: BandProfile, stage_seed: int) -> void:
+func apply(band: Band, _profile: BandProfile, rng: RandomNumberGenerator) -> void:
 	if band == null or _cfg == null or _cfg.decay_level <= 0.0:
 		return
 
-	# Local sub-stream (the JunkPlacer pattern). RNG autoload never touched.
-	var rng := RandomNumberGenerator.new()
-	rng.seed = stage_seed
-	rng.state = rng.seed
+	# rng arrives fully configured (RNG.substream_hashed, the JunkPlacer pattern);
+	# the RNG autoload is never touched.
 
 	# Pre-decay doorway snapshot (breach-created adjacencies excluded — §4.3).
 	var doorways := _enumerate_doorways(band)

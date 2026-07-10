@@ -14,9 +14,9 @@ extends RefCounted
 ## RNG DISCIPLINE: this class rolls ZERO randomness. The reseed
 ## (RNG.seed_from) happens inside BandGenerator._generate_once exactly as
 ## today; grading is RNG-free; there is no draw before/between/after stages.
-## S5 flavor stages draw ONLY from local sub-streams seeded
-## _stage_seed(band.resolved_seed, cfg.salt, index) — the JunkPlacer pattern —
-## so the grow loop's draw sequence is untouched by any stage.
+## S5 flavor stages draw ONLY from local sub-streams derived via
+## RNG.substream_hashed(band.resolved_seed, cfg.salt, index) — the JunkPlacer
+## pattern (V6) — so the grow loop's draw sequence is untouched by any stage.
 ##
 ## Stage order replicates the AS-BUILT generation block (main_game.gd:209-215):
 ## generate -> S5 flavor stages (empty flavors = zero flavor code — the
@@ -127,7 +127,7 @@ func generate(profile: BandProfile, seed: int, rc: RunConfig = null) -> Band:
 			var stage := _stage_for(fcfg)
 			if stage == null:
 				continue  # unreachable: validated above; defensive
-			stage.apply(band, profile, _stage_seed(band.resolved_seed, _stage_salt(fcfg), i))
+			stage.apply(band, profile, RNG.substream_hashed(band.resolved_seed, _stage_salt(fcfg), i))
 			if stage.mutates_pieces():
 				grader.grade(band)  # re-grade so later stages gate correctly
 			# Connectivity invariant after EVERY stage (§10 Q7): CARVE (journal
@@ -165,18 +165,3 @@ func _stage_salt(fcfg: Resource) -> int:
 	if fcfg is WearDecayConfig:
 		return (fcfg as WearDecayConfig).salt
 	return 0
-
-
-## Per-stage sub-seed: hash_combine(hash_combine(resolved_seed, salt), index)
-## using the generator's boost-style mix (band_generator.gd:352-362 — kept
-## local so band_generator.gd stays untouched). The flavors-array index
-## disambiguates two instances of the same stage in one profile.
-static func _stage_seed(resolved_seed: int, salt: int, index: int) -> int:
-	var h := _mix(resolved_seed, salt)
-	return _mix(h, index)
-
-
-static func _mix(h: int, v: int) -> int:
-	# h ^= v + 0x9e3779b9 + (h<<6) + (h>>2)  (masked to stay in 64-bit range)
-	var mixed := (v + 0x9E3779B9 + ((h << 6) & 0x7FFFFFFFFFFFFFFF) + (h >> 2))
-	return (h ^ mixed) & 0x7FFFFFFFFFFFFFFF

@@ -54,9 +54,7 @@ func plan(band: Band, curve: DepthCurve, catalog: JunkCatalog,
 		return out
 
 	# Local sub-stream — see class docstring. Deterministic from the band seed.
-	var rng := RandomNumberGenerator.new()
-	rng.seed = _substream_seed(band.resolved_seed)
-	rng.state = rng.seed
+	var rng := RNG.substream_hashed(band.resolved_seed, _JUNK_SALT)   # single mix (index omitted)
 
 	# Pre-index catalog items by tier eligibility once (templates, never mutated).
 	for p in band.pieces:
@@ -132,16 +130,6 @@ func plan_fingerprint(planned: Array) -> String:
 
 
 # --- Internals ---------------------------------------------------------------
-
-## Mix band seed + fixed salt into a distinct, deterministic sub-stream seed.
-## Boost-style integer hash-combine, masked to a valid 63-bit int (mirrors the
-## generator's _derive_seed style).
-func _substream_seed(band_seed: int) -> int:
-	var h := band_seed
-	var mixed := (_JUNK_SALT + 0x9E3779B9 + ((h << 6) & 0x7FFFFFFFFFFFFFFF) + (h >> 2))
-	h = (h ^ mixed) & 0x7FFFFFFFFFFFFFFF
-	return h
-
 
 ## Probabilistic round: integer floor + a seeded coin for the fractional part.
 func _seeded_round(x: float, rng: RandomNumberGenerator) -> int:

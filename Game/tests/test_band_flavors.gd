@@ -344,7 +344,7 @@ func _check_tree_topology_fact(failures: Array[String]) -> void:
 		var direct := BandPipeline.new().generate(control_profile, seed)
 		var stage := WearDecayStage.new(_decay_config(1.0, 0, 8))
 		stage.apply(direct, control_profile,
-				BandPipeline._stage_seed(direct.resolved_seed, 0x57454152, 0))
+				RNG.substream_hashed(direct.resolved_seed, 0x57454152, 0))
 		for op in stage.journal():
 			if op["kind"] == &"block":
 				failures.append("F5 seed %d: a block op was COMMITTED on an acyclic band" % seed)

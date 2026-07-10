@@ -40,15 +40,12 @@ func mutates_pieces() -> bool:
 	return true
 
 
-func apply(band: Band, _profile: BandProfile, stage_seed: int) -> void:
+func apply(band: Band, _profile: BandProfile, rng: RandomNumberGenerator) -> void:
 	if band == null or _cfg == null or _cfg.entries.is_empty():
 		return
 
-	# Local sub-stream (the JunkPlacer pattern, junk_placer.gd:57-59). The RNG
-	# autoload is never touched here.
-	var rng := RandomNumberGenerator.new()
-	rng.seed = stage_seed
-	rng.state = rng.seed
+	# rng arrives fully configured (RNG.substream_hashed, the JunkPlacer pattern);
+	# the RNG autoload is never touched here.
 
 	# Authoring lint (e4 / spec §3.1): a set-piece needs a scene with >= 1
 	# socket to ride the mate machinery. push_error + exclude, never fail the
