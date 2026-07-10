@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.12
 - **Branch:** feat/V3-k5-migration
-- **Commit:** 2690f24a096747caa8e9e0cf0e1f176885c61bd9   ← V3: migrate K5 fair-share lane onto the deck lane
+- **Commit:** 6e6c956233ddfabf1c5423764f3d7ad14fe67ad3   ← V3: migrate K5 fair-share lane onto the deck lane
 
 ## What changed
 
