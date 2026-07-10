@@ -74,30 +74,122 @@ jobs:
           mv ~/godot-bin/Godot_v${GODOT_VERSION}_linux.x86_64 ~/godot-bin/godot
           chmod +x ~/godot-bin/godot
 
+      # V8 (M1.12): every headless-test step below is wrapped with a before/after
+      # epoch pair, identical mechanism to ci.yml. Wrapped command lines are
+      # byte-identical to what they were before V8 — only `date`/`echo`/`exit $_rc`
+      # bash scaffolding is added, so pass/fail gating (this job gates
+      # export-and-publish via `needs: test`) is untouched. Rationale + scope:
+      # design/M1_12_Tasks/V8_ci_wallclock.md.
       - name: Import project (compile scripts)
-        run: ~/godot-bin/godot --headless --import
+        run: |
+          echo "## Headless suite wall-clock" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Step | Seconds |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          _t0=$(date +%s)
+          ~/godot-bin/godot --headless --import
+          _rc=$?
+          _t1=$(date +%s)
+          _dur=$((_t1 - _t0))
+          echo "wallclock import ${_dur}s" | tee -a /tmp/ci_wallclock.log
+          echo "| import | ${_dur}s |" >> "$GITHUB_STEP_SUMMARY"
+          exit $_rc
+
+      # V1-Q4b (delegated to V8, same wave): strengthened junk-catalog validator
+      # (res://tools/check_junk_catalog.gd) gates the build. Placed right after
+      # import per the task brief.
+      - name: Validate junk catalog (CI gate)
+        run: |
+          _t0=$(date +%s)
+          ~/godot-bin/godot --headless --script res://tools/check_junk_catalog.gd
+          _rc=$?
+          _t1=$(date +%s)
+          _dur=$((_t1 - _t0))
+          echo "wallclock junk_catalog_check ${_dur}s" | tee -a /tmp/ci_wallclock.log
+          echo "| junk_catalog_check | ${_dur}s |" >> "$GITHUB_STEP_SUMMARY"
+          exit $_rc
 
       - name: Smoke test
-        run: ~/godot-bin/godot --headless --script res://tools/ci_smoke_test.gd
+        run: |
+          _t0=$(date +%s)
+          ~/godot-bin/godot --headless --script res://tools/ci_smoke_test.gd
+          _rc=$?
+          _t1=$(date +%s)
+          _dur=$((_t1 - _t0))
+          echo "wallclock smoke_test ${_dur}s" | tee -a /tmp/ci_wallclock.log
+          echo "| smoke_test | ${_dur}s |" >> "$GITHUB_STEP_SUMMARY"
+          exit $_rc
 
       - name: Save-migration test
-        run: ~/godot-bin/godot --headless res://tests/test_save_migration.tscn
+        run: |
+          _t0=$(date +%s)
+          ~/godot-bin/godot --headless res://tests/test_save_migration.tscn
+          _rc=$?
+          _t1=$(date +%s)
+          _dur=$((_t1 - _t0))
+          echo "wallclock save_migration_test ${_dur}s" | tee -a /tmp/ci_wallclock.log
+          echo "| save_migration_test | ${_dur}s |" >> "$GITHUB_STEP_SUMMARY"
+          exit $_rc
 
       - name: Duration loop-reentry regression-lock (I5)
-        run: ~/godot-bin/godot --headless res://tests/test_duration_loop_reentry.tscn
+        run: |
+          _t0=$(date +%s)
+          ~/godot-bin/godot --headless res://tests/test_duration_loop_reentry.tscn
+          _rc=$?
+          _t1=$(date +%s)
+          _dur=$((_t1 - _t0))
+          echo "wallclock duration_loop_reentry_test ${_dur}s" | tee -a /tmp/ci_wallclock.log
+          echo "| duration_loop_reentry_test | ${_dur}s |" >> "$GITHUB_STEP_SUMMARY"
+          exit $_rc
 
       - name: Loop-drive verification (G3 full-loop gate)
-        run: ~/godot-bin/godot --headless res://tests/test_loop_drive.tscn
+        run: |
+          _t0=$(date +%s)
+          ~/godot-bin/godot --headless res://tests/test_loop_drive.tscn
+          _rc=$?
+          _t1=$(date +%s)
+          _dur=$((_t1 - _t0))
+          echo "wallclock loop_drive_verification ${_dur}s" | tee -a /tmp/ci_wallclock.log
+          echo "| loop_drive_verification | ${_dur}s |" >> "$GITHUB_STEP_SUMMARY"
+          exit $_rc
 
       - name: Main-game integration drive (G3 assembled-scene gate)
-        run: ~/godot-bin/godot --headless res://tests/test_main_game_loop.tscn
+        run: |
+          _t0=$(date +%s)
+          ~/godot-bin/godot --headless res://tests/test_main_game_loop.tscn
+          _rc=$?
+          _t1=$(date +%s)
+          _dur=$((_t1 - _t0))
+          echo "wallclock main_game_integration_drive ${_dur}s" | tee -a /tmp/ci_wallclock.log
+          echo "| main_game_integration_drive | ${_dur}s |" >> "$GITHUB_STEP_SUMMARY"
+          exit $_rc
 
       - name: GdUnit4 logic tests
         run: |
+          _t0=$(date +%s)
           ~/godot-bin/godot --headless --path . \
             -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --ignoreHeadlessMode \
             -a res://tests
+          _rc=$?
+          _t1=$(date +%s)
+          _dur=$((_t1 - _t0))
+          echo "wallclock gdunit4_logic_tests ${_dur}s" | tee -a /tmp/ci_wallclock.log
+          echo "| gdunit4_logic_tests | ${_dur}s |" >> "$GITHUB_STEP_SUMMARY"
+          exit $_rc
+
+      # V8 (M1.12): instrumentation-only, non-gating. Never fails the job (the `||`
+      # guards keep this step green even if an earlier step aborted before any
+      # timing was captured) — see design/M1_12_Tasks/V8_ci_wallclock.md Resolved
+      # Decisions #5. Prints the same per-step lines to the job log (grep-able via
+      # `gh run view --log`) AND appends a total row to the job summary table.
+      - name: Report suite wall-clock (V8 — instrumentation only, non-gating)
+        if: always()
+        run: |
+          echo "== THE FAR YARD headless suite wall-clock =="
+          cat /tmp/ci_wallclock.log || echo "(no timing captured — earlier step may have aborted the job)"
+          _total=$(awk '{sum+=$3} END {print sum+0}' /tmp/ci_wallclock.log 2>/dev/null || echo 0)
+          echo "TOTAL headless suite wallclock: ${_total}s (commit ${GITHUB_SHA})"
+          echo "| **TOTAL** | **${_total}s** |" >> "$GITHUB_STEP_SUMMARY" || true
 
   # ---------------------------------------------------------------------------
   # Export + publish job: gated on `test`. Builds the Win64 release and pushes to
