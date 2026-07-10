@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c3v3bpursuerequiv01"]
+
+[ext_resource type="Script" path="res://tests/test_pursuer_deck_equivalence.gd" id="1"]
+
+[node name="TestPursuerDeckEquivalence" type="Node"]
+script = ExtResource("1")

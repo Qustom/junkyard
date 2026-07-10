@@ -66,11 +66,11 @@ func _run() -> int:
 		if not Schema.ALL_TYPES.has(t):
 			failures.append("opposition type '%s' missing from Schema.ALL_TYPES" % t)
 
-	# --- Build a NON-default config: R1 ON + a few distinctive knob values ---
+	# --- Build a NON-default config: the pursuer deck card ON + distinctive values ---
+	# V3b (M1.12): the r1_* knobs are gone — the pursuer is deck-driven data, so a non-default
+	# pursuer config is a param_overrides["pursuer"] bag (base_count>0 makes the card non-neutral).
 	var cfg := RunConfigScript.new() as RunConfig
-	cfg.r1_enabled = true
-	cfg.r1_depth_threshold = 3
-	cfg.r1_catch_radius = 24.0
+	cfg.param_overrides["pursuer"] = { "base_count": 1, "depth_threshold": 3, "catch_radius": 24.0 }
 	cfg.seed_override = 99
 	var expected_flat := cfg.to_flat_dict()
 
@@ -130,11 +130,12 @@ func _run() -> int:
 			for k in expected_flat.keys():
 				if not snap.has(k):
 					failures.append("run_config snapshot missing key '%s'" % k)
-			# The distinctive values round-tripped correctly (JSON ints/bools/floats).
-			if bool(snap.get("r1_enabled", false)) != true:
-				failures.append("run_config.r1_enabled != true (config not reflected)")
-			if int(snap.get("r1_depth_threshold", -1)) != 3:
-				failures.append("run_config.r1_depth_threshold != 3 (got %s)" % str(snap.get("r1_depth_threshold")))
+			# The distinctive values round-tripped correctly. V3b (M1.12): the pursuer's
+			# knobs stamp as flat dotted "param_overrides.pursuer.<key>" rows now.
+			if int(snap.get("param_overrides.pursuer.base_count", 0)) != 1:
+				failures.append("run_config param_overrides.pursuer.base_count != 1 (config not reflected)")
+			if int(snap.get("param_overrides.pursuer.depth_threshold", -1)) != 3:
+				failures.append("run_config param_overrides.pursuer.depth_threshold != 3 (got %s)" % str(snap.get("param_overrides.pursuer.depth_threshold")))
 			if int(snap.get("seed_override", -1)) != 99:
 				failures.append("run_config.seed_override != 99 (got %s)" % str(snap.get("seed_override")))
 			# All other oppositions stayed off (all-off control is intact per-field).
@@ -142,16 +143,16 @@ func _run() -> int:
 				if bool(snap.get(off_key, true)) != false:
 					failures.append("run_config.%s should be false" % off_key)
 			# --- BUG6 (M1.3): additive inert_enabled_oppositions flag present + array ---
-			# This config is r1_enabled with r1_spawn_count=0 (default), so it is a
-			# trap (r1_no_spawn) — the field must be present, an Array, and contain it.
+			# V3b (M1.12): the r1_no_spawn trap was RETIRED with the r1_* knobs. This pursuer-
+			# override config has no r2/r3/r4 traps, so the flag must be present, an Array, and EMPTY.
 			if not sdata.has("inert_enabled_oppositions"):
 				failures.append("run_started.data missing additive 'inert_enabled_oppositions' flag (BUG6)")
 			else:
 				var inert: Variant = sdata["inert_enabled_oppositions"]
 				if not (inert is Array):
 					failures.append("inert_enabled_oppositions is not an Array (got %s)" % type_string(typeof(inert)))
-				elif not (inert as Array).has("r1_no_spawn"):
-					failures.append("inert_enabled_oppositions did not flag r1_no_spawn for the R1-on/0-spawn config (got %s)" % str(inert))
+				elif not (inert as Array).is_empty():
+					failures.append("inert_enabled_oppositions should be [] for a trap-free pursuer-override config (got %s)" % str(inert))
 
 	# --- Criterion 2: each opposition row present with envelope + payload ----
 	for t in OPPOSITION_ROW_FIELDS.keys():

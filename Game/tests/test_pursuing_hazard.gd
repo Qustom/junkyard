@@ -68,18 +68,20 @@ func _run() -> void:
 		get_tree().quit(1)
 
 
-## Build an R1-on config; caller overrides specific knobs after.
-func _r1_config() -> RunConfig:
-	var rc := RunConfig.new()
-	rc.r1_enabled = true
-	rc.r1_depth_threshold = 3
-	rc.r1_linger_seconds = 0.0
-	rc.r1_chase_speed = 600.0
-	rc.r1_speed_per_depth = 0.0
-	rc.r1_catch_radius = 24.0
-	rc.r1_catch_kills = true
-	rc.r1_spawn_count = 1
-	return rc
+## V3b (M1.12): the pursuer reads magnitudes from spawn_ctx["params"] (the deck lane's
+## ctx-merged bag), not rc.r1_* (retired). This builds the pursuer PARAMS bag (keyed by
+## the pursuer.tres::params key names); the caller overrides specific keys after, and
+## _make_hazard threads it via spawn_ctx. (No r1_spawn_count — that is now deck-side, not
+## an entity-behaviour param; these are ENTITY tests, driven by a directly-spawned host.)
+func _r1_config() -> Dictionary:
+	return {
+		"depth_threshold": 3,
+		"linger_seconds": 0.0,
+		"chase_speed": 600.0,
+		"speed_per_depth": 0.0,
+		"catch_radius": 24.0,
+		"catch_kills": true,
+	}
 
 
 ## A bare CharacterBody2D stub (the non-fatal knockback path sets velocity on a
@@ -91,27 +93,31 @@ func _make_player(pos: Vector2) -> CharacterBody2D:
 	return p
 
 
-func _make_hazard(pos: Vector2, rc: RunConfig, player: Node2D) -> HazardEntity:
+## V3b: threads the params bag via spawn_ctx["params"] (cfg is a neutral RunConfig.new(),
+## kept only for the host null-guard). The entity resolves its magnitudes from ctx["params"].
+func _make_hazard(pos: Vector2, params: Dictionary, player: Node2D) -> HazardEntity:
 	var hz := HazardEntity.new()
 	var tell := Polygon2D.new()
 	tell.name = "Tell"
 	hz.add_child(tell)
 	hz.global_position = pos
 	add_child(hz)
-	hz.setup(rc, player)
+	hz.setup(RunConfig.new(), player, {"params": params})
 	return hz
 
 
-## L2 (M1.5): like _make_hazard but threads spawn_ctx (the 3-arg family signature) so the
-## room-bound patrol/chase gate can be exercised.
-func _make_hazard_ctx(pos: Vector2, rc: RunConfig, player: Node2D, spawn_ctx: Dictionary) -> HazardEntity:
+## L2 (M1.5): like _make_hazard but merges an extra spawn_ctx (e.g. room_bounds) alongside
+## the params bag so the room-bound patrol/chase gate can be exercised.
+func _make_hazard_ctx(pos: Vector2, params: Dictionary, player: Node2D, spawn_ctx: Dictionary) -> HazardEntity:
 	var hz := HazardEntity.new()
 	var tell := Polygon2D.new()
 	tell.name = "Tell"
 	hz.add_child(tell)
 	hz.global_position = pos
 	add_child(hz)
-	hz.setup(rc, player, spawn_ctx)
+	var ctx := spawn_ctx.duplicate()
+	ctx["params"] = params
+	hz.setup(RunConfig.new(), player, ctx)
 	return hz
 
 
@@ -128,8 +134,8 @@ func _case_depth_awaken_chase_catch(gs: Node, failures: Array[String]) -> void:
 	gs.set_current_depth(0, 0)
 
 	var player := _make_player(Vector2(400, 0))
-	var rc := _r1_config()
-	var hz := _make_hazard(Vector2.ZERO, rc, player)
+	var p := _r1_config()
+	var hz := _make_hazard(Vector2.ZERO, p, player)
 
 	# Shallow (depth 0 < threshold 3): stay dormant, must NOT move.
 	var pos_before := hz.global_position
@@ -178,11 +184,11 @@ func _case_linger_awaken(gs: Node, failures: Array[String]) -> void:
 	gs.set_current_depth(0, 0)
 
 	var player := _make_player(Vector2(2000, 0))
-	var rc := _r1_config()
-	rc.r1_depth_threshold = 999      # depth can't trigger
-	rc.r1_linger_seconds = 0.2       # time triggers
-	rc.r1_catch_radius = 0.0         # don't catch from afar
-	var hz := _make_hazard(Vector2.ZERO, rc, player)
+	var p := _r1_config()
+	p["depth_threshold"] = 999      # depth can't trigger
+	p["linger_seconds"] = 0.2       # time triggers
+	p["catch_radius"] = 0.0         # don't catch from afar
+	var hz := _make_hazard(Vector2.ZERO, p, player)
 
 	# A couple of frames (< 0.2s of accumulated sim time): still dormant.
 	await _frames(2)
@@ -206,9 +212,9 @@ func _case_latch_no_resleep(gs: Node, failures: Array[String]) -> void:
 	gs.set_current_depth(3, 3)
 
 	var player := _make_player(Vector2(800, 0))
-	var rc := _r1_config()
-	rc.r1_catch_radius = 0.0     # never catch — isolate the latch
-	var hz := _make_hazard(Vector2.ZERO, rc, player)
+	var p := _r1_config()
+	p["catch_radius"] = 0.0     # never catch — isolate the latch
+	var hz := _make_hazard(Vector2.ZERO, p, player)
 
 	await _frames(1)   # depth 3 >= threshold → awaken
 	if _awoke_depths.size() != 1:
@@ -235,9 +241,9 @@ func _case_nonfatal_catch(gs: Node, failures: Array[String]) -> void:
 	gs.set_current_depth(3, 3)
 
 	var player := _make_player(Vector2.ZERO)
-	var rc := _r1_config()
-	rc.r1_catch_kills = false     # cost-instead-of-kill
-	var hz := _make_hazard(Vector2.ZERO, rc, player)
+	var p := _r1_config()
+	p["catch_kills"] = false     # cost-instead-of-kill
+	var hz := _make_hazard(Vector2.ZERO, p, player)
 
 	await _frames(1)              # awaken
 	player.global_position = hz.global_position   # force a catch
@@ -266,8 +272,8 @@ func _case_fatal_sustained_one_emit(gs: Node, failures: Array[String]) -> void:
 	gs.set_current_depth(3, 3)
 
 	var player := _make_player(Vector2.ZERO)
-	var rc := _r1_config()                # r1_catch_kills = true (fatal path)
-	var hz := _make_hazard(Vector2.ZERO, rc, player)
+	var p := _r1_config()                # r1_catch_kills = true (fatal path)
+	var hz := _make_hazard(Vector2.ZERO, p, player)
 
 	await _frames(1)                      # awaken (depth 3 >= threshold)
 	player.global_position = hz.global_position   # pin INSIDE radius
@@ -294,10 +300,10 @@ func _case_nonfatal_escape_recatch(gs: Node, failures: Array[String]) -> void:
 	gs.set_current_depth(3, 3)
 
 	var player := _make_player(Vector2.ZERO)
-	var rc := _r1_config()
-	rc.r1_catch_kills = false             # non-fatal so the run survives both catches
-	rc.r1_chase_speed = 0.0               # don't let the hazard chase the parked player
-	var hz := _make_hazard(Vector2.ZERO, rc, player)
+	var p := _r1_config()
+	p["catch_kills"] = false             # non-fatal so the run survives both catches
+	p["chase_speed"] = 0.0               # don't let the hazard chase the parked player
+	var hz := _make_hazard(Vector2.ZERO, p, player)
 
 	await _frames(1)                      # awaken
 	# First catch.
@@ -327,19 +333,23 @@ func _case_nonfatal_escape_recatch(gs: Node, failures: Array[String]) -> void:
 	player.queue_free()
 
 
-# === Case 5: all-off spawn gate spawns nothing ===============================
-## The spawn loop lives in MainGame, guarded by r1_enabled && r1_spawn_count > 0. We
-## assert the guard predicate on an all-off config (the loop body never runs → no
-## HazardEntity is instantiated).
+# === Case 5: all-off = an inert pursuer ======================================
+## V3b (M1.12): the pursuer spawn is now the deck lane — an all-off rc leaves the
+## band_greybox pursuer card NEUTRAL (base_count 0) → EncounterBuilder skips it (proven by
+## test_pursuer_deck_equivalence / test_greybox_deck_equivalence). What THIS entity test
+## proves is the complement: even IF a pursuer host were built with all-off params (an
+## empty ctx), the entity resolves to all-neutral magnitudes (chase 0 / catch 0 / no kill)
+## → it can never move or catch. _resolve_params({}) == the neutral DEFAULTS.
 func _case_all_off_spawns_nothing(failures: Array[String]) -> void:
-	var off := RunConfig.new()   # all-off default == M1.0 baseline
-	if off.r1_enabled and off.r1_spawn_count > 0:
-		failures.append("c5: all-off config would spawn a hazard (gate is wrong)")
-	var enabled_zero := RunConfig.new()
-	enabled_zero.r1_enabled = true
-	enabled_zero.r1_spawn_count = 0
-	if enabled_zero.r1_enabled and enabled_zero.r1_spawn_count > 0:
-		failures.append("c5: enabled+count0 would spawn (must be a no-op)")
+	var hz := HazardEntity.new()
+	var p: Dictionary = hz._resolve_params({})   # empty spawn_ctx → the neutral DEFAULTS
+	if not is_equal_approx(float(p["chase_speed"]), 0.0):
+		failures.append("c5: all-off (empty-ctx) pursuer has non-zero chase_speed %s (must be inert)" % str(p["chase_speed"]))
+	if not is_equal_approx(float(p["contact_radius"]), 0.0):
+		failures.append("c5: all-off (empty-ctx) pursuer has non-zero contact_radius %s (must be inert)" % str(p["contact_radius"]))
+	if bool(p["kills"]):
+		failures.append("c5: all-off (empty-ctx) pursuer kills=true (must be neutral)")
+	hz.free()
 
 
 # === L2 (M1.5): spawn-room-bound pursuer =====================================
@@ -350,14 +360,14 @@ const L2_ROOM := Rect2(Vector2(1000, 1000), Vector2(400, 400))   # x:[1000..1400
 
 ## L2-on config: room-bound, slow patrol, fatal catch. depth_threshold 0 so it wakes
 ## immediately at depth 0 (we don't want the awaken beat to confound the chase/patrol test).
-func _l2_config() -> RunConfig:
-	var rc := _r1_config()
-	rc.r1_depth_threshold = 0       # wake immediately
-	rc.r1_spawn_room_only = true
-	rc.r1_patrol_speed = 28.0
-	rc.r1_chase_speed = 600.0       # fast chase so the closing test is unambiguous
-	rc.r1_catch_radius = 24.0
-	return rc
+func _l2_config() -> Dictionary:
+	var p := _r1_config()
+	p["depth_threshold"] = 0        # wake immediately
+	p["spawn_room_only"] = true
+	p["patrol_speed"] = 28.0
+	p["chase_speed"] = 600.0        # fast chase so the closing test is unambiguous
+	p["catch_radius"] = 24.0
+	return p
 
 
 # === Case L2a: player IN room → chase + catch ================================
@@ -368,8 +378,8 @@ func _case_l2_in_room_chases_and_catches(gs: Node, failures: Array[String]) -> v
 
 	var center := L2_ROOM.get_center()
 	var player := _make_player(center + Vector2(150, 0))   # INSIDE the room
-	var rc := _l2_config()
-	var hz := _make_hazard_ctx(center, rc, player, { "room_bounds": L2_ROOM })
+	var p := _l2_config()
+	var hz := _make_hazard_ctx(center, p, player, { "room_bounds": L2_ROOM })
 
 	await _frames(1)   # awaken (depth 3 >= threshold 0)
 	# Player in-room → the hazard must CHASE (close distance) and emit a "chase" state mark.
@@ -404,8 +414,8 @@ func _case_l2_out_of_room_patrols_no_catch(gs: Node, failures: Array[String]) ->
 	# Player FAR outside the room rect. The hazard must NOT chase toward it.
 	var center := L2_ROOM.get_center()
 	var player := _make_player(Vector2(5000, 5000))
-	var rc := _l2_config()
-	var hz := _make_hazard_ctx(center, rc, player, { "room_bounds": L2_ROOM })
+	var p := _l2_config()
+	var hz := _make_hazard_ctx(center, p, player, { "room_bounds": L2_ROOM })
 
 	await _frames(1)   # awaken (DORMANT branch returns this frame — AWAKE runs next frame)
 	# Run many frames: the patroller must STAY inside the room rect (never leak toward the
@@ -445,9 +455,9 @@ func _case_l2_room_only_off_chases_everywhere(gs: Node, failures: Array[String])
 	# the hazard chases the distant player and never emits a pursuer-state mark.
 	var center := L2_ROOM.get_center()
 	var player := _make_player(Vector2(5000, 5000))
-	var rc := _l2_config()
-	rc.r1_spawn_room_only = false       # OFF → chase-everywhere
-	var hz := _make_hazard_ctx(center, rc, player, { "room_bounds": L2_ROOM })
+	var p := _l2_config()
+	p["spawn_room_only"] = false       # OFF → chase-everywhere
+	var hz := _make_hazard_ctx(center, p, player, { "room_bounds": L2_ROOM })
 
 	await _frames(1)   # awaken
 	var dist_before := hz.global_position.distance_to(player.global_position)
@@ -471,8 +481,8 @@ func _case_l2_empty_bounds_fallback(gs: Node, failures: Array[String]) -> void:
 	gs.set_current_depth(3, 3)
 
 	var player := _make_player(Vector2(5000, 5000))
-	var rc := _l2_config()              # r1_spawn_room_only = true
-	var hz := _make_hazard_ctx(Vector2(1000, 1000), rc, player, {})   # NO room_bounds
+	var p := _l2_config()              # r1_spawn_room_only = true
+	var hz := _make_hazard_ctx(Vector2(1000, 1000), p, player, {})   # NO room_bounds
 
 	await _frames(1)   # awaken
 	var dist_before := hz.global_position.distance_to(player.global_position)
@@ -496,9 +506,9 @@ func _case_l2_idle_pivot_zero_speed(gs: Node, failures: Array[String]) -> void:
 
 	var center := L2_ROOM.get_center()
 	var player := _make_player(Vector2(5000, 5000))   # OUT of room → patrol
-	var rc := _l2_config()
-	rc.r1_patrol_speed = 0.0            # idle-pivot: no roaming
-	var hz := _make_hazard_ctx(center, rc, player, { "room_bounds": L2_ROOM })
+	var p := _l2_config()
+	p["patrol_speed"] = 0.0            # idle-pivot: no roaming
+	var hz := _make_hazard_ctx(center, p, player, { "room_bounds": L2_ROOM })
 
 	await _frames(1)   # awaken
 	var pos_before := hz.global_position

@@ -36,26 +36,15 @@ const VALID_TYPES: Array[String] = ["bool", "int", "float", "enum"]
 ## V3 (M1.12): pingpong/bomb/spike DROPPED from the mirror — their bespoke RunConfig
 ## knobs (hpp_/hbomb_/hspike_) were retired; they are now pure deck-driven data whose
 ## params mirror NO RunConfig field (magnitudes ride the play preset's param_overrides).
-## The pursuer stays (the R1 machine + its r1_* knobs survive until V3b).
-const MIRROR := {
-	&"pursuer": {
-		"depth_threshold": "r1_depth_threshold",
-		"linger_seconds": "r1_linger_seconds",
-		"chase_speed": "r1_chase_speed",
-		"speed_per_depth": "r1_speed_per_depth",
-		"catch_radius": "r1_catch_radius",
-		"catch_radius_per_depth": "r1_catch_radius_per_depth",
-		"spawn_room_only": "r1_spawn_room_only",
-		"patrol_speed": "r1_patrol_speed",
-	},
-}
+## V3b (M1.12): the PURSUER is DROPPED too — its 18 r1_* knobs were retired, so its params
+## mirror NO RunConfig field either (magnitudes ride the play preset's param_overrides,
+## like the K5 defs). No def mirrors a RunConfig knob anymore, so the mirror map is empty.
+const MIRROR := {}
 
-## The typed `kills` def field mirrors the legacy L5 gate knob (def id → knob). V3
-## (M1.12): only the pursuer's r1_catch_kills survives; the K5 defs' `kills` no longer
-## mirrors a RunConfig knob (it is entity-local — the entities' DEFAULTS.kills = true).
-const KILLS_MIRROR := {
-	&"pursuer": "r1_catch_kills",
-}
+## The typed `kills` def field mirrored the legacy L5 gate knob (def id → knob). V3b
+## (M1.12): the pursuer's r1_catch_kills was retired with the r1_* knobs, so — like the K5
+## defs — no def's `kills` mirrors a RunConfig knob anymore (it is entity-local). Empty.
+const KILLS_MIRROR := {}
 
 ## Per-def trap_if_neutral flag (exactly one, on the mechanism-critical magnitude).
 const TRAP_FLAG := {

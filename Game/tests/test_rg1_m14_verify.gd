@@ -168,11 +168,13 @@ func _verify_default_preset_shape() -> void:
 		_failures.append("RG1: make_default_play_preset() returned null")
 		return
 
-	# --- M1.3 base carried forward: LVL + R1 + R4 on, R2/R3 OFF, quota + camera ON. ---
+	# --- M1.3 base carried forward: LVL + pursuer(deck) + R4 on, R2/R3 OFF, quota + camera ON. ---
+	# V3b (M1.12): the pursuer is a deck card — "on" = a non-neutral param_overrides bag.
+	var po: Dictionary = preset.param_overrides.get("pursuer", {})
 	if not preset.lvl_enabled:
 		_failures.append("RG1: default preset lvl_enabled is false (M1.3 base wants level scale ON)")
-	if not preset.r1_enabled:
-		_failures.append("RG1: default preset r1_enabled is false (M1.3 base wants the pursuing hazard ON)")
+	if int(po.get("base_count", 0)) <= 0 and float(po.get("count_per_depth", 0.0)) <= 0.0:
+		_failures.append("RG1: default preset pursuer deck card is neutral (M1.3 base wants the pursuing hazard ON)")
 	if not preset.r4_enabled:
 		_failures.append("RG1: default preset r4_enabled is false (M1.3 base wants the maze ON)")
 	if preset.r2_enabled or preset.r3_enabled:
@@ -354,12 +356,12 @@ func _verify_cfg_boots_default_preset() -> void:
 		_human_deferred.append("RG1: CFG booted all-off rather than the default play-preset -- confirm config_menu seeds make_default_play_preset() (deferred: may be a fixture-mode boot)")
 	# V3 (M1.12): the K5 hazards are deck-driven data (param_overrides for pingpong/bomb/spike),
 	# not hpp_/hbomb_/hspike_ masters. The fun stack is lvl/r1/r4/timer/exit ON + the K5 overrides.
-	elif not (working.lvl_enabled and working.r1_enabled and working.r4_enabled
+	elif not (working.lvl_enabled and working.param_overrides.has("pursuer") and working.r4_enabled
 			and working.timer_enabled and working.exit_enabled
 			and working.param_overrides.has("pingpong") and working.param_overrides.has("bomb")
 			and working.param_overrides.has("spike")):
-		_failures.append("RG1: CFG boot config is not the M1.4 fun stack (lvl=%s r1=%s r4=%s timer=%s exit=%s K5-overrides=%s)"
-			% [str(working.lvl_enabled), str(working.r1_enabled), str(working.r4_enabled),
+		_failures.append("RG1: CFG boot config is not the M1.4 fun stack (lvl=%s pursuer=%s r4=%s timer=%s exit=%s K5-overrides=%s)"
+			% [str(working.lvl_enabled), str(working.param_overrides.has("pursuer")), str(working.r4_enabled),
 				str(working.timer_enabled), str(working.exit_enabled),
 				str(working.param_overrides.has("pingpong") and working.param_overrides.has("bomb")
 					and working.param_overrides.has("spike"))])
@@ -372,7 +374,8 @@ func _verify_cfg_boots_default_preset() -> void:
 ## matrix "new hazards spawn" row (complements the plan-level deterministic check above).
 func _verify_new_hazards_spawn_assembled() -> void:
 	var cfg := _default_preset()
-	cfg.r1_catch_kills = false   # keep R1 non-fatal so nothing pre-empts the spawn snapshot
+	# V3b (M1.12): the pursuer is non-fatal already (via _default_preset); keep the intent explicit.
+	cfg.param_overrides["pursuer"]["catch_kills"] = false
 	_stage_menu_config(cfg)
 	_game.start_new_run()
 	await await_idle()
@@ -429,8 +432,9 @@ func _default_preset() -> RunConfig:
 	var c := RunConfigScript.make_default_play_preset() as RunConfig
 	c.build_tag = "rg1-m14-M1-default-preset"
 	c.seed_override = 12345
-	# Keep R1 non-fatal for the driven run so the hazard can't pre-empt our chosen end-cause.
-	c.r1_catch_kills = false
+	# Keep the pursuer non-fatal for the driven run so it can't pre-empt our chosen end-cause.
+	# V3b (M1.12): the pursuer is a deck card — mutate its param_overrides catch_kills.
+	c.param_overrides["pursuer"]["catch_kills"] = false
 	# L5 (V3 M1.12): keep the three K5 hazards non-lethal for the driven end-cause matrix. They
 	# still SPAWN and behave (band_greybox deck cards), they just cannot end the run, so the
 	# scripted extract/timeout cause wins. Kills is entity-local, disabled via a

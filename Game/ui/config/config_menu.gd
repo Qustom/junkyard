@@ -61,7 +61,8 @@ const RANGE_ROTATION := Vector2(-360, 360)  # hspike_rotation_speed (signed deg/
 ## field name ("" = none, Meta), whether the section is collapsible.
 const SECTIONS := [
 	{"prefix": "", "title_key": "CFG_SEC_META", "gloss_key": "", "master": "", "collapsible": false},
-	{"prefix": "r1_", "title_key": "CFG_SEC_R1", "gloss_key": "CFG_GLOSS_R1", "master": "r1_enabled", "collapsible": true},
+	# V3b (M1.12): the "r1_" section was RETIRED with the 18 r1_* knobs — the pursuer is now a
+	# deck card, edited (like every modern hazard) via the generated Oppositions tab, not a knob group.
 	{"prefix": "r2_", "title_key": "CFG_SEC_R2", "gloss_key": "CFG_GLOSS_R2", "master": "r2_enabled", "collapsible": true},
 	{"prefix": "r3_", "title_key": "CFG_SEC_R3", "gloss_key": "CFG_GLOSS_R3", "master": "r3_enabled", "collapsible": true},
 	{"prefix": "r4_", "title_key": "CFG_SEC_R4", "gloss_key": "CFG_GLOSS_R4", "master": "r4_enabled", "collapsible": true},
@@ -86,18 +87,7 @@ const SECTIONS := [
 ## field set, so no knob can go unreachable.
 const MANIFEST := {
 	"": ["seed_override", "build_tag"],
-	"r1_": [
-		"r1_enabled", "r1_depth_threshold", "r1_linger_seconds", "r1_chase_speed",
-		"r1_speed_per_depth", "r1_catch_radius", "r1_catch_radius_per_depth",
-		"r1_catch_kills", "r1_spawn_count",
-		# J2 (M1.3) — depth-spread distribution: an enum (OptionButton) + an int (slider+spin).
-		"r1_spawn_distribution", "r1_spread_min_depth",
-		# J3 (M1.3) — per-room density: a float, an enum (OptionButton), a bool, and two ints.
-		"r1_per_room_density", "r1_density_metric", "r1_density_rooms_only",
-		"r1_density_min_area", "r1_density_per_room_cap",
-		# L2 (M1.5) — spawn-room pursuer: a behaviour bool + a patrol-speed float.
-		"r1_spawn_room_only", "r1_patrol_speed",
-	],
+	# V3b (M1.12): the "r1_" manifest block (18 fields) was RETIRED with the knobs.
 	"r2_": [
 		"r2_enabled", "r2_mechanism", "r2_cost_magnitude", "r2_cost_per_depth",
 		"r2_depth_threshold", "r2_toll_resource",
@@ -199,7 +189,8 @@ const BANDS_DIR := "res://data/bands"
 ## sub-group. PURE PRESENTATION: coverage is keyed off _rows + SECTIONS masters, never
 ## off this table — regrouping into tabs cannot change the 89-field bound set.
 const TABS := [
-	{"title_key": "CFG_TAB_HAZARDS",   "sections": ["r1_"]},   # V3 (M1.12): K5 half retired (r1_ pursuer stays)
+	# V3b (M1.12): the Hazards tab was DROPPED — V3 retired its K5 half, V3b its r1_ half, so it
+	# held no sections. All hazards (K5 + pursuer) are now edited via the generated Oppositions tab.
 	{"title_key": "CFG_TAB_LEVELGEN",  "sections": ["lvl_", "r4_"]},          # r4_ here = MAZE rows only
 	{"title_key": "CFG_TAB_VISION",    "sections": [R4_VISION_KEY]},          # the split-out vision rows
 	{"title_key": "CFG_TAB_TIMEQUOTA", "sections": ["timer_", "quota_"]},
@@ -225,21 +216,7 @@ const TABS := [
 ## Per-field slider range lookup (§3.4a). Only numeric (int/float) scalar fields appear;
 ## bools/enums/strings/arrays use their own widgets. seed_override is an unbounded SpinBox.
 const FIELD_RANGE := {
-	"r1_depth_threshold": RANGE_DEPTH,
-	"r1_linger_seconds": RANGE_SECONDS,
-	"r1_chase_speed": RANGE_SPEED,
-	"r1_speed_per_depth": RANGE_MAGNITUDE,
-	"r1_catch_radius": RANGE_RADIUS,
-	"r1_catch_radius_per_depth": RANGE_MAGNITUDE,
-	"r1_spawn_count": RANGE_DEPTH,
-	# J2 (M1.3) — r1_spawn_distribution is an @export_enum (handled as an OptionButton, no
-	# numeric range); r1_spread_min_depth is an int depth (same scrub range as the thresholds).
-	"r1_spread_min_depth": RANGE_DEPTH,
-	# J3 (M1.3) — per-room density. r1_density_metric is an @export_enum (OptionButton, no
-	# range); r1_density_rooms_only is a bool (CheckButton, no range).
-	"r1_per_room_density": RANGE_DENSITY,
-	"r1_density_min_area": RANGE_AREA,
-	"r1_density_per_room_cap": RANGE_ROOM_CAP,
+	# V3b (M1.12): the 10 r1_* numeric ranges were RETIRED with the knobs.
 	"r2_cost_magnitude": RANGE_MAGNITUDE,
 	"r2_cost_per_depth": RANGE_MAGNITUDE,
 	"r2_depth_threshold": RANGE_DEPTH,
@@ -276,13 +253,11 @@ const FIELD_RANGE := {
 	"exit_base_count": RANGE_COUNT_SMALL,
 	"exit_count_per_depth": RANGE_PER_DEPTH,
 	"exit_max_count": RANGE_ROOM_CAP,
-	# M1.5 (L0) — numeric scalars only. The bools (throw_enabled, r1_spawn_room_only,
-	# hpp_kills/hbomb_kills/hspike_kills) render as CheckButtons, no range.
+	# M1.5 (L0) — numeric scalars only. throw_enabled renders as a CheckButton, no range.
 	# L1 throwing.
 	"throw_speed": RANGE_SPEED,        # px/s travel speed
 	"throw_max_range": RANGE_VIEW,     # px max travel before a miss → re-drop
-	# L2 spawn-room pursuer.
-	"r1_patrol_speed": RANGE_SPEED,    # px/s slow-patrol pace
+	# V3b (M1.12): the L2 r1_patrol_speed range was RETIRED with the r1_* knobs.
 }
 
 ## I1 (M1.2): per-field SpinBox/slider STEP override. lvl_size_mult is snapped to 0.25
@@ -290,8 +265,7 @@ const FIELD_RANGE := {
 ## pieces never gap and materialise/JunkPlacer share one integer cell size (Resolved F).
 const FIELD_STEP := {
 	"lvl_size_mult": 0.25,
-	# J3 (M1.3): density floats scrub in 0.25 steps (matches the spec's suggested step).
-	"r1_per_room_density": 0.25,
+	# V3b (M1.12): r1_per_room_density's 0.25 step was RETIRED with the r1_* knobs.
 	"lvl_loot_density_per_area": 0.25,
 	# J4 (M1.3): the corridor weight multiplier scrubs in 0.25 steps over [0, 1].
 	"lvl_corridor_weight_mult": 0.25,
@@ -1846,11 +1820,7 @@ func _refresh_section_chip(prefix: String) -> void:
 ## The one-line "most load-bearing values" summary shown on an ON section's chip.
 func _section_summary(prefix: String) -> String:
 	match prefix:
-		"r1_":
-			return tr("CFG_CHIP_R1_SUMMARY").format({
-				"depth": int(_cfg.get("r1_depth_threshold")),
-				"speed": _num(_cfg.get("r1_chase_speed")),
-			})
+		# V3b (M1.12): the "r1_" chip summary was RETIRED with the r1_* section.
 		"r2_":
 			return tr("CFG_CHIP_R2_SUMMARY").format({
 				"mechanism": _enum_label("r2_mechanism"),
@@ -1881,8 +1851,8 @@ func _refresh_summary() -> void:
 		return
 	var s := int(_cfg.get("seed_override"))
 	var seed_str := (tr("CFG_SEED_AUTO") if s < 0 else str(s))
+	# V3b (M1.12): the R1 flag dropped from the headline — the pursuer is a deck card now.
 	_summary_label.text = tr("CFG_RUN_SUMMARY").format({
-		"r1": _flag(bool(_cfg.get("r1_enabled"))),
 		"r2": _flag(bool(_cfg.get("r2_enabled"))),
 		"r3": _flag(bool(_cfg.get("r3_enabled"))),
 		"r4": _flag(bool(_cfg.get("r4_enabled"))),
@@ -1936,7 +1906,7 @@ func _num(v) -> String:
 
 
 func _prefix_of(field: String) -> String:
-	for p in ["r1_", "r2_", "r3_", "r4_", "lvl_",
+	for p in ["r2_", "r3_", "r4_", "lvl_",   # V3b (M1.12): r1_ prefix retired with the r1_* knobs
 			# M1.4 (K0): the 7 new section prefixes — without these a new knob's live
 			# chip/summary refresh would mis-route to the Meta section.
 			"quota_", "cam_", "timer_", "exit_",   # V3 (M1.12): hpp_/hbomb_/hspike_ prefixes retired

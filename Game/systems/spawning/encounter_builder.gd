@@ -107,6 +107,14 @@ static func legacy_ctx(kind: StringName, p: PlacedPiece, k: int, index: int,
 			}
 		&"spike":
 			return { "phase_salt": p.depth_index * 131 + k }
+		&"pursuer":
+			# V3b (M1.12): the pursuer's L2 spawn-room patrol needs its owning piece's
+			# floor-cell bbox. _populate_deck already computes + passes it as room_bounds
+			# (the 5th arg); this arm just threads it through so r1_spawn_room_only's
+			# room-bound mode survives (else has_area() fails → chase-everywhere degrade).
+			# Only fires for a SPAWNING (non-neutral) pursuer — band_two's pursuer is
+			# neutral → skipped upstream → never reaches here, so bands 2-4 are unchanged.
+			return { "room_bounds": room_bounds }
 		_:   # bomb (and any future kind that needs no context)
 			return {}
 

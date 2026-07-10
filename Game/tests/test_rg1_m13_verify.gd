@@ -95,12 +95,11 @@ func _run() -> int:
 	# the code-level all-off default (the load-bearing M1.3 contract, Breakdown §2).
 	_verify_default_preset_shape()
 
-	# ---- J2/J3 plan-level + J4 corridor lever (pure generator/plan, no loop) ------
-	# Build + grade a REAL band and drive the assembled build's own spawn-plan helpers,
-	# exactly as the J2/J3 unit suites do, so the multi-depth spread + density + cap are
-	# asserted EXACTLY (deterministic), not inferred from timing-sensitive runtime rows.
-	_verify_j2_spread_plan()
-	_verify_j3_density_plan()
+	# ---- J4 corridor lever (pure generator, no loop) ------------------------------
+	# V3b (M1.12): the J2 spread-plan + J3 density-plan sub-verifiers were DELETED — they drove
+	# main_game._hazard_spawn_depths / _density_spawn_positions, which the pursuer migration
+	# removed. That concern (pursuer spread + per-room density) is now the pursuer deck lane and
+	# is covered green by test_pursuer_deck_equivalence. J4 (corridors) is unaffected.
 	_verify_j4_corridor_lever()
 
 	var scene := load(MAIN_GAME_PATH) as PackedScene
@@ -155,15 +154,13 @@ func _run() -> int:
 	if _failures.is_empty():
 		print("RG1 M1.3 VERIFY OK -- assembled M1.3 build runs the full loop. All-off control is ",
 			"byte-identical to the locked baseline (fp=%s); build id is REAL; the default " % BASELINE_FP,
-			"play-preset is the trap-free F1 stack (LVL+R1 on, R4 maze-only, R2/R3 off) and does ",
-			"NOT leak into the all-off control (J1); even_spread spawns hazards at MULTIPLE depths ",
-			"while single_gate reproduces the M1.2 single-depth placement (J2); per-room density ",
-			"fills big rooms scaled by area, bounded by the per-room cap + band ceiling<=64 (J3); ",
-			"the corridor lever MOVES the band fp for a fixed seed yet the neutral default stays ",
-			"byte-identical + deterministic (J4); every run emits one corridor_summary row with ",
-			"corridor_frac in [0,1], SCHEMA_VERSION + run_ended arity unchanged; the snapshot ",
-			"carries all 46 knobs incl. the J2/J3/J4 keys; duration_s real; carry-forward + ",
-			"repeated runs with no leak. %d rows headless-verified; %d deferred."
+			"play-preset is the trap-free F1 stack (LVL+pursuer-deck on, R4 maze-only, R2/R3 off) and ",
+			"does NOT leak into the all-off control (J1); the pursuer's spread + per-room density are ",
+			"now the deck lane's business (V3b — covered by test_pursuer_deck_equivalence); the corridor ",
+			"lever MOVES the band fp for a fixed seed yet the neutral default stays byte-identical + ",
+			"deterministic (J4); every run emits one corridor_summary row with corridor_frac in [0,1], ",
+			"SCHEMA_VERSION + run_ended arity unchanged; the snapshot carries every knob incl. the J4 ",
+			"keys; duration_s real; carry-forward + repeated runs with no leak. %d rows headless-verified; %d deferred."
 			% [_headless_pass_count(), _human_deferred.size()])
 		return 0
 	for f in _failures:
@@ -218,11 +215,14 @@ func _verify_default_preset_shape() -> void:
 	if preset == null:
 		_failures.append("J1: make_default_play_preset() returned null")
 		return
-	# (a) The F1 stack: LVL + R1 on, R4 maze-only (occlusion off), R2/R3 OFF.
+	# (a) The F1 stack: LVL + pursuer(deck) on, R4 maze-only (occlusion off), R2/R3 OFF.
+	# V3b (M1.12): the pursuer is a deck card — its "on" state is a non-neutral param_overrides
+	# bag (base_count or count_per_depth > 0), not r1_enabled.
+	var po: Dictionary = preset.param_overrides.get("pursuer", {})
 	if not preset.lvl_enabled:
 		_failures.append("J1: default preset lvl_enabled is false (F1 wants level scale ON)")
-	if not preset.r1_enabled:
-		_failures.append("J1: default preset r1_enabled is false (F1 wants the pursuing hazard ON)")
+	if int(po.get("base_count", 0)) <= 0 and float(po.get("count_per_depth", 0.0)) <= 0.0:
+		_failures.append("J1: default preset pursuer deck card is neutral (F1 wants the pursuing hazard ON)")
 	if not preset.r4_enabled:
 		_failures.append("J1: default preset r4_enabled is false (F1 wants the maze ON)")
 	if preset.r2_enabled or preset.r3_enabled:
@@ -232,16 +232,15 @@ func _verify_default_preset_shape() -> void:
 		_failures.append("J1: default preset R4 occlusion/fog/lost is ON (must be maze-only / occlusion OFF)")
 	if not (preset.r4_max_branch_depth > 0 and (preset.r4_branch_chance_base > 0.0 or preset.r4_branch_per_depth > 0.0)):
 		_failures.append("J1: default preset R4 maze is not actually branching (maze-only means branching ON)")
-	# J2 wired into the preset: even_spread, count >= 4, a non-zero spread-min-depth.
-	if preset.r1_spawn_distribution != 1:
-		_failures.append("J1/J2: default preset r1_spawn_distribution != even_spread (got %d)" % preset.r1_spawn_distribution)
-	if preset.r1_spawn_count < 4:
-		_failures.append("J1/J2: default preset r1_spawn_count=%d < 4 (spread wants several hazards)" % preset.r1_spawn_count)
-	# J3 wired into the preset: density on with a MANDATORY per-room cap.
-	if preset.r1_per_room_density <= 0.0:
-		_failures.append("J1/J3: default preset r1_per_room_density<=0 (density must be ON in the preset)")
-	if preset.r1_density_per_room_cap <= 0:
-		_failures.append("J1/J3: default preset r1_density_per_room_cap<=0 (the per-room cap is MANDATORY)")
+	# J2/J3 (V3b, M1.12): the pursuer's spread + per-room density are now the deck lane's
+	# business (base_count + count_per_depth demand, bounded by the deck credit budget +
+	# per_band_cap). The r1_spawn_distribution / r1_per_room_density / r1_density_* knobs were
+	# RETIRED, so assert the deck spawn budget is non-inert instead (full spread/density
+	# equivalence is covered by test_pursuer_deck_equivalence).
+	if int(po.get("base_count", 0)) < 1:
+		_failures.append("J1/J2: default preset pursuer base_count < 1 (deck spawn budget too low)")
+	if not (float(po.get("count_per_depth", 0.0)) > 0.0):
+		_failures.append("J1/J2: default preset pursuer count_per_depth <= 0 (no depth-ramped spread)")
 	# J4 wired into the preset: corridors biased DOWN (non-neutral).
 	if preset.lvl_corridor_weight_mult >= 1.0 and not preset.lvl_short_corridors:
 		_failures.append("J1/J4: default preset does not bias corridors down (mult=%f, short=%s)"
@@ -254,114 +253,19 @@ func _verify_default_preset_shape() -> void:
 	var fresh := RunConfigScript.new() as RunConfig
 	if not fresh.all_oppositions_disabled():
 		_failures.append("J1: RunConfig.new() is NOT all-off after make_default_play_preset() -- the preset leaked into the default!")
+	# V3b (M1.12): the r1_spawn_count==0 term was dropped with the r1_* knobs; a fresh config's
+	# pursuer neutrality is now an empty param_overrides (no deck-card override).
 	if not (is_equal_approx(fresh.lvl_corridor_weight_mult, 1.0) and not fresh.lvl_short_corridors
-			and is_equal_approx(fresh.lvl_size_mult, 1.0) and fresh.r1_spawn_count == 0):
+			and is_equal_approx(fresh.lvl_size_mult, 1.0) and fresh.param_overrides.is_empty()):
 		_failures.append("J1: RunConfig.new() defaults moved after building the preset (baseline contaminated)")
 
 
-# --- J2 (plan-level): even_spread spawns at MULTIPLE distinct depths -------------
-
-## Build + grade a REAL band, then drive the assembled build's own _hazard_spawn_depths
-## plan (the same helper start_new_run() calls) and assert that:
-##   - even_spread with count>=4 spans >1 distinct depth_index (the F2 fix), and
-##   - single_gate collapses to ONE depth (the M1.2-equivalent placement).
-## This is the EXACT, deterministic form of the matrix "J2 spread takes effect" row —
-## stronger than reading timing-sensitive runtime opposition_event(&"awoke") depths.
-func _verify_j2_spread_plan() -> void:
-	var band := _graded_band(BASELINE_FP_SEED)
-	if band == null:
-		_failures.append("J2: could not build a graded band for the spread-plan check")
-		return
-	var mg = (load(MAIN_GAME_SCRIPT) as GDScript).new()
-
-	# even_spread, count 5, min-depth 1 — the preset's J2 shape.
-	var even := RunConfigScript.new() as RunConfig
-	even.r1_enabled = true
-	even.r1_spawn_count = 5
-	even.r1_spawn_distribution = 1   # even_spread
-	even.r1_spread_min_depth = 1
-	var ev: Array = mg._hazard_spawn_depths(band, even)
-	if ev.size() != 5:
-		_failures.append("J2: even_spread produced %d depths, expected 5 (== r1_spawn_count)" % ev.size())
-	var distinct := {}
-	for d in ev:
-		distinct[d] = true
-	if distinct.size() <= 1:
-		_failures.append("J2: even_spread collapsed to a single depth %s (the F2 spread did NOT take effect)" % str(ev))
-
-	# single_gate, count 5 — the M1.2-equivalent: ALL at the one threshold depth.
-	var single := RunConfigScript.new() as RunConfig
-	single.r1_enabled = true
-	single.r1_spawn_count = 5
-	single.r1_spawn_distribution = 0   # single_gate
-	single.r1_depth_threshold = 2
-	var sg: Array = mg._hazard_spawn_depths(band, single)
-	var sg_distinct := {}
-	for d in sg:
-		sg_distinct[d] = true
-	if sg_distinct.size() != 1:
-		_failures.append("J2: single_gate spread across %s -- it must reproduce the M1.2 single-depth placement" % str(sg))
-
-	mg.free()
-	_free_band(band)
-
-
-# --- J3 (plan-level): per-room density fills big rooms, bounded by the caps ------
-
-## Drive the assembled build's _density_spawn_positions plan on graded bands:
-##   - density 0  → 0 nodes (the M1.2 control), and
-##   - density > 0 → extra hazards in big rooms scaled by floor_cells area, and
-##   - the per-room cap + band ceiling (<=64) bound the worst case.
-func _verify_j3_density_plan() -> void:
-	var mg = (load(MAIN_GAME_SCRIPT) as GDScript).new()
-
-	# A real graded band: density OFF must yield zero density nodes (M1.2 control).
-	var band := _graded_band(BASELINE_FP_SEED)
-	var rc_off := RunConfigScript.new() as RunConfig
-	rc_off.r1_enabled = true
-	rc_off.r1_per_room_density = 0.0
-	var off: Array = mg._density_spawn_positions(band, rc_off)
-	if off.size() != 0:
-		_failures.append("J3: r1_per_room_density=0 produced %d density nodes -- must be 0 (M1.2 control)" % off.size())
-
-	# Density ON: a big room must earn >= 1 density hazard scaled by its floor-cell area.
-	var big := _make_graded_band([200])   # one 200-cell room
-	var rc_on := RunConfigScript.new() as RunConfig
-	rc_on.r1_enabled = true
-	rc_on.r1_per_room_density = 1.0
-	rc_on.r1_density_metric = 0          # cell_area
-	rc_on.r1_density_per_room_cap = 3
-	var on_big: Array = mg._density_spawn_positions(big, rc_on)
-	# floor(1.0 * 200 / 96) = 2, capped at 3 → expect >= 1 (rooms get filled).
-	if on_big.size() < 1:
-		_failures.append("J3: a 200-cell room earned %d density hazards at density 1.0 -- expected >=1 (rooms not filled)" % on_big.size())
-
-	# The band ceiling bounds the worst case: many huge rooms × high density, capped per room,
-	# must never exceed RunConfig.R1_DENSITY_BAND_CEILING (64).
-	var huge_areas: Array = []
-	for _i in 40:
-		huge_areas.append(400)
-	var huge := _make_graded_band(huge_areas)
-	var rc_explode := RunConfigScript.new() as RunConfig
-	rc_explode.r1_enabled = true
-	rc_explode.r1_per_room_density = 4.0
-	rc_explode.r1_density_metric = 0
-	rc_explode.r1_density_per_room_cap = 8
-	var exploded: Array = mg._density_spawn_positions(huge, rc_explode)
-	if exploded.size() > RunConfigScript.R1_DENSITY_BAND_CEILING:
-		_failures.append("J3: worst-case density spawned %d nodes > the %d band ceiling (perf guard breached)"
-			% [exploded.size(), RunConfigScript.R1_DENSITY_BAND_CEILING])
-
-	# Determinism: the plan is a pure function of (band, rc) — same inputs, same output.
-	var d1: Array = mg._density_spawn_positions(big, rc_on)
-	var d2: Array = mg._density_spawn_positions(big, rc_on)
-	if str(d1) != str(d2):
-		_failures.append("J3: density plan not deterministic (same band+rc gave different positions)")
-
-	mg.free()
-	_free_band(band)
-	_free_band(big)
-	_free_band(huge)
+# --- J2/J3 (plan-level) DELETED (V3b, M1.12) ------------------------------------
+# The J2 even_spread-vs-single_gate spread-plan check and the J3 per-room density-plan
+# check drove main_game._hazard_spawn_depths / _density_spawn_positions (+ the retired
+# RunConfig.R1_DENSITY_BAND_CEILING const). The pursuer migration removed all of that
+# machinery: the pursuer is now a band_greybox deck card whose spread + density are the
+# deck lane's business. That concern is covered green by test_pursuer_deck_equivalence.
 
 
 # --- J4: the corridor lever moves the band fp; the neutral default stays identical -
@@ -458,45 +362,36 @@ func _default_preset() -> RunConfig:
 	var c := RunConfigScript.make_default_play_preset() as RunConfig
 	c.build_tag = "rg1-m13-M1-default-preset"
 	c.seed_override = 12345   # pin so the run is reproducible
-	# r1_catch_kills=true in the preset; keep it OFF for the driven run so the hazard can't
-	# pre-empt our chosen extract end-cause -- we control the end-cause explicitly.
-	c.r1_catch_kills = false
+	# The preset's pursuer is lethal (catch_kills true); keep it OFF for the driven run so the
+	# hazard can't pre-empt our chosen extract end-cause. V3b (M1.12): mutate the deck override.
+	c.param_overrides["pursuer"]["catch_kills"] = false
 	return c
 
 
-## J2 isolation: R1 on, even_spread, count 5 (>=4), min-depth 1 -- the F2 fix, fatal so
-## the catch routes a death end-cause in the assembled loop.
+## J2 isolation: the pursuer deck card ON (fatal) so the catch routes a death end-cause in
+## the assembled loop. V3b (M1.12): even_spread/count are now the deck lane's base_count +
+## count_per_depth demand (spread equivalence lives in test_pursuer_deck_equivalence).
 func _j2_spread() -> RunConfig:
 	var c := RunConfigScript.new() as RunConfig
 	c.build_tag = "rg1-m13-M2-j2-spread"
-	c.r1_enabled = true
-	c.r1_depth_threshold = 0
-	c.r1_chase_speed = 40.0
-	c.r1_catch_radius = 24.0            # clears the 24px physical floor so it can catch
-	c.r1_catch_radius_per_depth = 4.0
-	c.r1_catch_kills = true
-	c.r1_spawn_count = 5
-	c.r1_spawn_distribution = 1         # even_spread (F2)
-	c.r1_spread_min_depth = 1
+	c.param_overrides["pursuer"] = {
+		"base_count": 2, "count_per_depth": 0.5, "depth_threshold": 0, "chase_speed": 40.0,
+		"catch_radius": 24.0, "catch_radius_per_depth": 4.0, "catch_kills": true,
+	}
 	return c
 
 
-## J3 isolation: R1 on, per-room density on with the mandatory cap (no J2 spread budget --
-## density-only), so density alone fills rooms. Non-fatal so we control the end-cause.
+## J3 isolation: the pursuer deck card ON (non-fatal) so a pursuer spawns + awakens a hazard
+## row. V3b (M1.12): per-room density is now the deck lane's business (base_count demand);
+## the r1_per_room_density / r1_density_* knobs were retired. Bigger rooms via lvl scale.
 func _j3_density() -> RunConfig:
 	var c := RunConfigScript.new() as RunConfig
 	c.build_tag = "rg1-m13-M3-j3-density"
-	c.r1_enabled = true
-	c.r1_depth_threshold = 0
-	c.r1_chase_speed = 30.0
-	c.r1_catch_radius = 24.0
-	c.r1_catch_kills = false            # non-fatal: density is about filling, not killing here
-	c.r1_spawn_count = 0                # density-only (no J2 spread budget)
-	c.r1_per_room_density = 1.0
-	c.r1_density_metric = 0             # cell_area
-	c.r1_density_per_room_cap = 3       # mandatory cap
-	c.r1_density_min_area = 64
-	# Bigger rooms so density has something to fill.
+	c.param_overrides["pursuer"] = {
+		"base_count": 2, "count_per_depth": 0.5, "depth_threshold": 0,
+		"chase_speed": 30.0, "catch_radius": 24.0, "catch_kills": false,
+	}
+	# Bigger rooms so the deck has something to fill.
 	c.lvl_enabled = true
 	c.lvl_room_count = 16
 	c.lvl_size_mult = 4.0
@@ -522,7 +417,7 @@ func _j4_corridors() -> RunConfig:
 func _all_on() -> RunConfig:
 	var c := RunConfigScript.make_default_play_preset() as RunConfig
 	c.build_tag = "rg1-m13-M5-all-on"
-	c.r1_catch_kills = false            # non-fatal so the chosen end-cause wins
+	c.param_overrides["pursuer"]["catch_kills"] = false   # V3b: non-fatal so the chosen end-cause wins
 	c.seed_override = 4242
 	# R2 + R3 on (the preset leaves them off): exercise the full opposition set together.
 	c.r2_enabled = true
@@ -652,9 +547,9 @@ func _inspect_log() -> void:
 	# The full key set MUST appear in every snapshot (V13 generalised -- assert as a SET
 	# against the live to_flat_dict(), and explicitly name the new M1.3 keys).
 	var expected_keys := (RunConfigScript.new() as RunConfig).to_flat_dict().keys()
-	var m13_new_keys := ["r1_spawn_distribution", "r1_spread_min_depth", "r1_per_room_density",
-		"r1_density_metric", "r1_density_rooms_only", "r1_density_min_area", "r1_density_per_room_cap",
-		"lvl_corridor_weight_mult", "lvl_short_corridors", "lvl_loot_density_per_area"]
+	# V3b (M1.12): the r1_spawn_*/r1_*density* snapshot keys were RETIRED with the r1_* knobs
+	# (the pursuer's spread + density are deck-driven data now). Only the lvl_ J3/J4 keys remain.
+	var m13_new_keys := ["lvl_corridor_weight_mult", "lvl_short_corridors", "lvl_loot_density_per_area"]
 
 	for r in rows:
 		var t := String(r.get("type", ""))
@@ -801,10 +696,12 @@ func _verify_carry_forward() -> void:
 	_stage_menu_config(_default_preset())
 	_game.start_new_run()
 	await_idle()
+	# V3b (M1.12): the r1_spawn_distribution / r1_per_room_density knobs were retired — assert the
+	# pursuer deck override (base_count > 0) carries forward instead.
 	var first_ok: bool = _gs.active_run_config != null \
 		and bool(_gs.active_run_config.lvl_enabled) \
-		and _gs.active_run_config.r1_spawn_distribution == 1 \
-		and _gs.active_run_config.r1_per_room_density > 0.0
+		and _gs.active_run_config.param_overrides.has("pursuer") \
+		and int((_gs.active_run_config.param_overrides.get("pursuer", {}) as Dictionary).get("base_count", 0)) > 0
 	_gs.extract_and_end_run()
 	await_idle()
 	_dismiss_sell_screen()
@@ -812,8 +709,8 @@ func _verify_carry_forward() -> void:
 	await_idle()
 	var second_ok: bool = _gs.active_run_config != null \
 		and bool(_gs.active_run_config.lvl_enabled) \
-		and _gs.active_run_config.r1_spawn_distribution == 1 \
-		and _gs.active_run_config.r1_per_room_density > 0.0
+		and _gs.active_run_config.param_overrides.has("pursuer") \
+		and int((_gs.active_run_config.param_overrides.get("pursuer", {}) as Dictionary).get("base_count", 0)) > 0
 	if not (first_ok and second_ok):
 		_failures.append("V16: the M1.3 preset config did not carry forward across Continue (first=%s second=%s)"
 			% [str(first_ok), str(second_ok)])
@@ -837,47 +734,17 @@ func _note_human_deferred() -> void:
 
 
 func _headless_pass_count() -> int:
-	# baseline-fp · build-id · default-preset-shape (J1) · J2-spread-plan · J3-density-plan ·
-	# J4-corridor-lever · persistent-wiring · CFG-boots-preset · 6 driven configs (snapshot+gating)
-	# · corridor_summary 6-row · duration-real · carry-forward · repeat/no-leak · all-off-no-opp.
-	return 16
+	# baseline-fp · build-id · default-preset-shape (J1) · J4-corridor-lever · persistent-wiring ·
+	# CFG-boots-preset · 6 driven configs (snapshot+gating) · corridor_summary 6-row · duration-real ·
+	# carry-forward · repeat/no-leak · all-off-no-opp. V3b (M1.12): the J2-spread-plan + J3-density-plan
+	# sub-verifiers were removed (pursuer deck migration → test_pursuer_deck_equivalence).
+	return 14
 
 
 # --- Helpers -------------------------------------------------------------------
-
-## Build a REAL graded band for the spawn-plan checks: generate from the baseline catalog,
-## then grade (sets depth_index + band.max_depth) exactly as main_game._build_band does.
-func _graded_band(seed: int) -> Band:
-	var cfg := load(BANDGEN_CONFIG_PATH) as BandGenConfig
-	var pc = load(PIECE_CATALOG_PATH)
-	if cfg == null or pc == null:
-		return null
-	var catalog: Array[ZonePieceData] = pc.pieces
-	var band := BandGenerator.new().generate(seed, cfg, catalog)
-	var grader := DepthGrader.new()
-	grader.grade(band)
-	return band
-
-
-## A graded linear band with the given per-piece floor-cell areas (mirrors the J3 unit
-## suite's _make_band: pieces at depth 0..N-1, generic room ids, band.max_depth set).
-func _make_graded_band(areas: Array) -> Band:
-	var band := Band.new()
-	var max_depth: int = areas.size() - 1
-	for d in areas.size():
-		var area: int = areas[d]
-		var p := PlacedPiece.new()
-		p.piece_id = StringName("piece_room_%d" % d)
-		p.offset_cell = Vector2i(d * 100, 0)
-		p.depth_index = d
-		p.depth_norm = float(d) / float(max_depth) if max_depth > 0 else 0.0
-		var cells: Array[Vector2i] = []
-		for k in area:
-			cells.append(Vector2i(d * 100 + (k % 20), k / 20))
-		p.floor_cells = cells
-		band.pieces.append(p)
-	band.max_depth = max_depth
-	return band
+# V3b (M1.12): _graded_band / _make_graded_band / _free_band were DELETED with the J2/J3
+# plan-level sub-verifiers (their only callers). The J4 corridor lever below uses its own
+# _fp helper against the generator directly.
 
 
 func _corridor_rc(mult: float, short_corridors: bool) -> RunConfig:
@@ -890,12 +757,6 @@ func _corridor_rc(mult: float, short_corridors: bool) -> RunConfig:
 func _fp(cfg: BandGenConfig, catalog: Array[ZonePieceData], rc: RunConfig, seed: int) -> String:
 	var band := BandGenerator.new().generate(seed, cfg, catalog, rc)
 	return band.fingerprint().substr(0, 12)
-
-
-## Band / PlacedPiece are ref-counted Resources -- no explicit free needed; this is a
-## readability hook mirroring the M1.2 driver so the call sites read symmetrically.
-func _free_band(_band: Band) -> void:
-	pass
 
 
 func _read_rows(path: String) -> Array:

@@ -31,7 +31,8 @@ func _ready() -> void:
 	else:
 		if not default_cfg.all_oppositions_disabled():
 			failures.append("default RunConfig has an opposition enabled (must be all-off)")
-		if default_cfg.r1_enabled or default_cfg.r2_enabled or default_cfg.r3_enabled or default_cfg.r4_enabled:
+		# V3b (M1.12): r1_enabled dropped with the r1_* knob group — only r2/r3/r4 masters remain.
+		if default_cfg.r2_enabled or default_cfg.r3_enabled or default_cfg.r4_enabled:
 			failures.append("default RunConfig opposition master toggle(s) are ON")
 		if default_cfg.seed_override != -1:
 			failures.append("default seed_override == %d, expected -1 (none)" % default_cfg.seed_override)
@@ -49,19 +50,22 @@ func _ready() -> void:
 		failures.append("no-config run did not get an all-off config (M1.0 baseline broken)")
 
 	# === Case 3: a staged config is adopted, then the staging slot is cleared =
+	# V3b (M1.12): the r1_* knobs are gone — a distinctive pursuer deck override marks the
+	# staged config instead (base_count>0 makes the pursuer card non-neutral).
 	var staged := RunConfig.new()
-	staged.r1_enabled = true
-	staged.r1_chase_speed = 99.0
+	staged.param_overrides["pursuer"] = { "base_count": 1, "chase_speed": 99.0 }
 	gs.stage_run_config(staged)
 	gs.start_run(&"near", 5678)
 	if gs.active_run_config != staged:
 		failures.append("staged config was not adopted as active_run_config")
-	elif not gs.active_run_config.r1_enabled:
-		failures.append("adopted config lost its r1_enabled=true")
+	elif not gs.active_run_config.param_overrides.has("pursuer"):
+		failures.append("adopted config lost its staged pursuer override")
 	# Next run with nothing staged must fall back to all-off (no leak).
 	gs.start_run(&"near", 9012)
 	if gs.active_run_config == null or not gs.active_run_config.all_oppositions_disabled():
 		failures.append("staged config leaked into a later run (should reset to all-off)")
+	elif not gs.active_run_config.param_overrides.is_empty():
+		failures.append("staged pursuer override leaked into a later run (should reset to all-off)")
 
 	# === Case 4: active_run_config cleared on run end (run-state boundary) ===
 	gs.start_run(&"near", 3456)
@@ -73,13 +77,8 @@ func _ready() -> void:
 	var flat := fresh.to_flat_dict()
 	var expected_keys: Array[String] = [
 		"seed_override", "build_tag",
-		"r1_enabled", "r1_depth_threshold", "r1_linger_seconds", "r1_chase_speed",
-		"r1_speed_per_depth", "r1_catch_radius", "r1_catch_radius_per_depth", "r1_catch_kills", "r1_spawn_count",
-		# J2 (M1.3) — depth-spread distribution knobs.
-		"r1_spawn_distribution", "r1_spread_min_depth",
-		# J3 (M1.3) per-room density knobs.
-		"r1_per_room_density", "r1_density_metric", "r1_density_rooms_only",
-		"r1_density_min_area", "r1_density_per_room_cap",
+		# V3b (M1.12): the 18 R1 r1_* stamp rows (incl. J2/J3 spread/density) were RETIRED —
+		# the pursuer is now deck-driven data; its magnitudes stamp as param_overrides.* rows.
 		"r2_enabled", "r2_mechanism", "r2_cost_magnitude", "r2_cost_per_depth",
 		"r2_depth_threshold", "r2_toll_resource",
 		"r3_enabled", "r3_base_climb_rate", "r3_rate_per_depth", "r3_threshold_levels",
@@ -104,8 +103,8 @@ func _ready() -> void:
 		"exit_enabled", "exit_base_count", "exit_count_per_depth", "exit_keep_one_at_spawn", "exit_max_count",
 		# L1 (M1.5) — throwing config knobs.
 		"throw_enabled", "throw_speed", "throw_max_range",
-		# L2 (M1.5) — spawn-room pursuer behaviour knobs.
-		"r1_spawn_room_only", "r1_patrol_speed",
+		# V3b (M1.12): the L2 r1_spawn_room_only/r1_patrol_speed stamp rows were RETIRED —
+		# the pursuer's room-bound patrol magnitudes ride param_overrides["pursuer"].
 		# V3 (M1.12): the L5 hpp_kills/hbomb_kills/hspike_kills toggles were RETIRED with the
 		# K5 knobs (lethality is now entity-local DEFAULTS.kills + optional param_overrides).
 		# S3 (M1.9) — generic opposition levers (plain @export since S4's Wave-4
@@ -191,21 +190,10 @@ func _ready() -> void:
 	t_r4maze.r4_max_branch_depth = 5
 	_assert_traps(t_r4maze.inert_enabled_oppositions(), [], "r4 maze-only (blessed)", failures)
 
-	# R1 no-spawn trap: enabled but spawn_count <= 0 — must report r1_no_spawn ALONE
-	# (not also r1_catch_radius_too_small, which is gated on spawn_count>0).
-	var t_r1ns := _populated_config()
-	t_r1ns.r1_spawn_count = 0
-	_assert_traps(t_r1ns.inert_enabled_oppositions(), ["r1_no_spawn"], "r1 no spawn", failures)
-
-	# R1 catch-radius-too-small trap: enabled, spawns, but radius < 24 px floor.
-	var t_r1cr := _populated_config()
-	t_r1cr.r1_catch_radius = 23.0
-	_assert_traps(t_r1cr.inert_enabled_oppositions(), ["r1_catch_radius_too_small"], "r1 radius too small", failures)
-	# Exactly 24.0 is at the floor → NOT a trap.
-	var t_r1ok := _populated_config()
-	t_r1ok.r1_catch_radius = 24.0
-	if t_r1ok.inert_enabled_oppositions().has("r1_catch_radius_too_small"):
-		failures.append("inert_enabled_oppositions(): radius exactly 24.0 flagged (floor is inclusive)")
+	# V3b (M1.12): the two R1 traps (r1_no_spawn, r1_catch_radius_too_small) were DROPPED with
+	# the r1_* knobs — they are unreachable now that the pursuer is deck-driven data. The
+	# catch-radius-too-small concern is now data-driven via pursuer.tres's param_schema
+	# trap_if_neutral on catch_radius (covered by test_opposition_def_schema).
 
 	# Union: multiple coexisting traps (R3 empty thresholds + a fully-inert R4).
 	var t_multi := _populated_config()
@@ -219,11 +207,14 @@ func _ready() -> void:
 	# The named default play-preset is the Director's most-fun M1.2 stack, built ON TOP
 	# of a fresh all-off RunConfig.new() so it NEVER mutates the control.
 	var preset := RunConfig.make_default_play_preset()
-	# F1 stack: LVL on, R1 on, R4 on, R2/R3 off.
+	# V3b (M1.12): the pursuer is a deck card — its "on" state is its param_overrides bag,
+	# not r1_enabled. A non-neutral pursuer card (base_count or count_per_depth > 0) = ON.
+	var po: Dictionary = preset.param_overrides.get("pursuer", {})
+	# F1 stack: LVL on, pursuer on (deck), R4 on, R2/R3 off.
 	if not preset.lvl_enabled:
 		failures.append("preset: lvl_enabled must be true")
-	if not preset.r1_enabled:
-		failures.append("preset: r1_enabled must be true")
+	if int(po.get("base_count", 0)) <= 0 and float(po.get("count_per_depth", 0.0)) <= 0.0:
+		failures.append("preset: pursuer deck card is neutral — the pursuer must be ON")
 	if not preset.r4_enabled:
 		failures.append("preset: r4_enabled must be true")
 	if preset.r2_enabled or preset.r3_enabled:
@@ -247,48 +238,23 @@ func _ready() -> void:
 	if not still_off.all_oppositions_disabled() or still_off.lvl_enabled:
 		failures.append("preset factory leaked into RunConfig.new() (the all-off control drifted)")
 
-	# === Case 8: J2 (M1.3) depth-spread distribution knobs ===================
-	# All-off control = the M1.2-equivalent: single_gate (0) + min-depth 0, so when the
-	# distribution knob exists but is untouched, placement is byte-identical to M1.2.
-	if fresh.r1_spawn_distribution != 0:
-		failures.append("J2: all-off r1_spawn_distribution == %d, expected 0 (single_gate)" % fresh.r1_spawn_distribution)
-	if fresh.r1_spread_min_depth != 0:
-		failures.append("J2: all-off r1_spread_min_depth == %d, expected 0" % fresh.r1_spread_min_depth)
-	# The default play-preset carries the F2 spread (Director starting sweep: even_spread,
-	# count 5, min-depth 1) — sweep values, not balanced absolutes.
-	if preset.r1_spawn_distribution != 1:
-		failures.append("J2 preset: r1_spawn_distribution == %d, expected 1 (even_spread)" % preset.r1_spawn_distribution)
-	if preset.r1_spawn_count != 5:
-		failures.append("J2 preset: r1_spawn_count == %d, expected 5 (Director starting sweep)" % preset.r1_spawn_count)
-	if preset.r1_spread_min_depth != 1:
-		failures.append("J2 preset: r1_spread_min_depth == %d, expected 1 (safe entry ramp)" % preset.r1_spread_min_depth)
+	# === Case 8: J2 (M1.3) enemy spread — now the pursuer deck spawn budget ===
+	# V3b (M1.12): r1_spawn_distribution / r1_spread_min_depth were DROPPED (no deck
+	# equivalent). The old "how many pursuers, spread how" is now the pursuer deck card's
+	# base_count / count_per_depth demand. The preset carries base_count 2, count_per_depth 0.5.
+	if int(po.get("base_count", 0)) != 2:
+		failures.append("J2 preset: pursuer base_count == %d, expected 2 (deck spawn budget)" % int(po.get("base_count", 0)))
+	if not (float(po.get("count_per_depth", 0.0)) > 0.0):
+		failures.append("J2 preset: pursuer count_per_depth must be > 0 (depth-ramped spread)")
 
-	# === Case 9: J3 (M1.3) per-room density knobs ============================
-	# All-off control = M1.2: density OFF (0.0), metric cell_area (0), no rooms-only, no
-	# floor, uncapped — so when the knobs exist but are untouched, NO density node spawns.
-	if fresh.r1_per_room_density != 0.0:
-		failures.append("J3: all-off r1_per_room_density == %f, expected 0.0 (OFF)" % fresh.r1_per_room_density)
-	if fresh.r1_density_metric != 0:
-		failures.append("J3: all-off r1_density_metric == %d, expected 0 (cell_area)" % fresh.r1_density_metric)
-	if fresh.r1_density_rooms_only:
-		failures.append("J3: all-off r1_density_rooms_only must be false")
-	if fresh.r1_density_min_area != 0:
-		failures.append("J3: all-off r1_density_min_area == %d, expected 0" % fresh.r1_density_min_area)
-	if fresh.r1_density_per_room_cap != 0:
-		failures.append("J3: all-off r1_density_per_room_cap == %d, expected 0 (uncapped)" % fresh.r1_density_per_room_cap)
+	# === Case 9: J3 (M1.3) per-room density + loot sub-knob ==================
+	# V3b (M1.12): the r1_per_room_density / r1_density_* knobs were DROPPED — per-room
+	# density folded into the pursuer deck's even-spread demand (deck credit budget +
+	# per_band_cap), so there is no RunConfig density surface left to assert. Only the
+	# lvl_ loot sub-knob (a separate presentation lever) remains.
 	if fresh.lvl_loot_density_per_area != 0.0:
 		failures.append("J3: all-off lvl_loot_density_per_area == %f, expected 0.0 (OFF)" % fresh.lvl_loot_density_per_area)
-	# The default play-preset carries the Director's density sweep: cell_area metric, a
-	# non-zero density, the MANDATORY per-room cap (> 0, Q E), a non-trivial min-area, and
-	# the loot sub-knob OFF (never preset-on — it contradicts depth_curve.gd's intent).
-	if not (preset.r1_per_room_density > 0.0):
-		failures.append("J3 preset: r1_per_room_density must be > 0 (a non-zero sweep)")
-	if preset.r1_density_metric != 0:
-		failures.append("J3 preset: r1_density_metric == %d, expected 0 (cell_area, Director default)" % preset.r1_density_metric)
-	if not (preset.r1_density_per_room_cap > 0):
-		failures.append("J3 preset: r1_density_per_room_cap must be > 0 (MANDATORY perf cap, Q E)")
-	if not (preset.r1_density_min_area > 0):
-		failures.append("J3 preset: r1_density_min_area must be > 0 (non-trivial floor so corridors stay empty)")
+	# The loot sub-knob is never preset-on (it contradicts depth_curve.gd's intent).
 	if preset.lvl_loot_density_per_area != 0.0:
 		failures.append("J3 preset: lvl_loot_density_per_area must be 0.0 (loot sub-knob NEVER preset-on)")
 
@@ -311,7 +277,7 @@ func _ready() -> void:
 
 	# === Verdict ============================================================
 	if failures.is_empty():
-		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs, BUG6 inert_enabled_oppositions() detects all 4 traps (r3_no_thresholds/r4_no_effect/r1_no_spawn/r1_catch_radius_too_small), blesses maze-only R4, and []-clean for all-off + populated, J1 make_default_play_preset() is the F1 stack (LVL/R1 on, R4 maze-only/occlusion-off, R2/R3 off, 30 rooms, size 4.0), trap-free, and does NOT leak into the all-off control." % expected_keys.size())
+		print("R0 OK — RunConfig all-off default verified (M1.0 baseline), active_run_config staged/defaulted/cleared on the run boundary, to_flat_dict() flat+JSON-safe with all %d knobs, BUG6 inert_enabled_oppositions() detects the R3/R4 traps (r3_no_thresholds/r4_no_effect), blesses maze-only R4, and []-clean for all-off + populated, J1 make_default_play_preset() is the F1 stack (LVL/pursuer-deck on, R4 maze-only/occlusion-off, R2/R3 off, 30 rooms, size 4.0), trap-free, and does NOT leak into the all-off control." % expected_keys.size())
 		get_tree().quit(0)
 	else:
 		for f in failures:
@@ -324,10 +290,8 @@ func _ready() -> void:
 ## test then zeroes one knob to provoke exactly one trap.
 func _populated_config() -> RunConfig:
 	var rc := RunConfig.new()
-	# R1 — spawns, radius above the 24 px floor.
-	rc.r1_enabled = true
-	rc.r1_spawn_count = 1
-	rc.r1_catch_radius = 32.0
+	# V3b (M1.12): the R1 populate block was dropped with the r1_* knobs (the pursuer is now
+	# deck-driven data with no RunConfig trap). Only R3/R4 remain trap-detectable here.
 	# R3 — has at least one threshold level.
 	rc.r3_enabled = true
 	rc.r3_threshold_levels = PackedFloat32Array([0.5, 1.0])
