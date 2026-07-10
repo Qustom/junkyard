@@ -30,6 +30,15 @@ var _interactable_id: StringName = &"junk"
 @onready var _greybox: Node2D = $Greybox
 @onready var _interactable: Interactable = $Interactable
 
+## M1.12 V5: id-guard + parent-check mechanism extracted to a shared helper
+## (interaction_owner.gd), constructed here in _ready() (no .tscn edit).
+## lockout_s = 0.0 is the explicit, visible opt-out: JunkPickup never debounced
+## (a rapid re-interact on a full bag is meant to re-flash-reject every time —
+## _try_pickup() is idempotent, and accept queue_free()s the node, a stronger
+## and immediate guard than a timed lockout). Preserving 0.0 here keeps this
+## refactor behavior-preserving.
+var _io: InteractionOwner
+
 ## Reject-flash state (red pulse on a full-bag interact; junk stays in the world).
 var _flashing: bool = false
 var _flash_t: float = 0.0
@@ -40,7 +49,9 @@ func _ready() -> void:
 	if _interactable != null:
 		_interactable_id = _interactable.interactable_id
 	# A2 contract: the detector announces the request; we (the owner) act on it.
-	EventBus.interaction_requested.connect(_on_interaction_requested)
+	_io = InteractionOwner.new(self, _interactable_id, 0.0)
+	add_child(_io)
+	_io.activated.connect(_on_activated)
 	# Greybox draws from item data; queue an initial paint.
 	if _greybox != null:
 		_greybox.connect("draw", _draw_greybox.bind(_greybox))
@@ -57,14 +68,9 @@ func setup(p_item: JunkItem) -> void:
 		_greybox.queue_redraw()
 
 
-## A2 contract (copied structure from ExtractGate): act only on our own id, and
-## only when WE are the focused target (the detector always passes the focused
-## Interactable, whose parent is this node).
-func _on_interaction_requested(id: StringName, target: Node) -> void:
-	if id != _interactable_id:
-		return
-	if target != null and target.get_parent() != self:
-		return
+## The pickup's one owner-specific action, run once id + parenthood pass
+## (no lockout arm — see _io comment above).
+func _on_activated(_target: Node) -> void:
 	_try_pickup()
 
 

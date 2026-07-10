@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dqx1owner5v5test"]
+
+[ext_resource type="Script" path="res://tests/test_interaction_owner.gd" id="1"]
+
+[node name="TestInteractionOwner" type="Node"]
+script = ExtResource("1")

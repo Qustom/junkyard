@@ -18,38 +18,20 @@ extends Area2D
 ## further interacts are ignored until the window elapses.
 @export var input_lockout_s: float = 0.25
 
-var _locked: bool = false
+## M1.12 V5: id-guard + parent-check + lockout mechanism extracted to a shared
+## helper (interaction_owner.gd), constructed here in _ready() (no .tscn edit).
+var _io: InteractionOwner
 
 @onready var _shop_ui: ShopUI = $ShopUI
 
 
 func _ready() -> void:
-	EventBus.interaction_requested.connect(_on_interaction_requested)
+	_io = InteractionOwner.new(self, interactable_id, input_lockout_s)
+	add_child(_io)
+	_io.activated.connect(_on_activated)
 
 
-## A2 contract: the detector announces the request; the owner (this shop) checks the id
-## and acts. We ignore requests for other interactables and our own re-presses during the
-## lockout. Mirrors departure_portal.gd:_on_interaction_requested, swapping the dive-launch
-## for opening the ShopUI.
-func _on_interaction_requested(id: StringName, target: Node) -> void:
-	if id != interactable_id:
-		return
-	if target != null and target.get_parent() != self:
-		return
-	if _locked:
-		return
-	_locked = true
-	_start_lockout()
+## The shop's one owner-specific action, run once id + parenthood + lockout all pass.
+func _on_activated(_target: Node) -> void:
 	if _shop_ui != null:
 		_shop_ui.open()
-
-
-## Arm the fat-finger lockout via a SceneTree timer (frame-rate independent, no polling).
-## Copied from departure_portal.gd:_start_lockout.
-func _start_lockout() -> void:
-	var tree := get_tree()
-	if tree == null:
-		_locked = false
-		return
-	var timer := tree.create_timer(input_lockout_s)
-	timer.timeout.connect(func() -> void: _locked = false)

@@ -45,12 +45,12 @@ extends Area2D
 ## against a held trigger double-firing a scene swap.
 @export var input_lockout_s: float = 0.25
 
-## True between an accepted interact and the lockout expiring.
-var _locked: bool = false
+## M1.12 V5: id-guard + parent-check + lockout mechanism extracted to a shared
+## helper (interaction_owner.gd), constructed here in _ready() (no .tscn edit).
+var _io: InteractionOwner
 
 
 func _ready() -> void:
-	EventBus.interaction_requested.connect(_on_interaction_requested)
 	# S8 (M1.9): push the per-instance identity down to the marker child and tint
 	# the dressing (single source at the root). With the export defaults (portal 1)
 	# every assignment writes the value already authored in the scene — a no-op.
@@ -61,37 +61,14 @@ func _ready() -> void:
 		it.display_name = display_name
 	($PortalGlow as Sprite2D).modulate = glow_tint
 	($DiveGate as Sprite2D).modulate = gate_tint
+	_io = InteractionOwner.new(self, interactable_id, input_lockout_s)
+	add_child(_io)
+	_io.activated.connect(_on_activated)
 
 
-## A2 contract: the detector announces the request; the owner (this portal) checks the
-## id and acts. We ignore requests for other interactables and our own re-presses during
-## the lockout. Mirrors extract_gate.gd:_on_interaction_requested verbatim, swapping the
-## action (dive-launch) for the gate's extract.
-func _on_interaction_requested(id: StringName, target: Node) -> void:
-	if id != interactable_id:
-		return
-	# Only respond when WE are the focused target (guards against another same-id
-	# interactable / stale id collision); the detector always passes the focused node.
-	if target != null and target.get_parent() != self:
-		return
-	if _locked:
-		return
-	_locked = true
-	_start_lockout()
-	# Launch the dive through the M0 router. The router (App) listens for dive_requested,
-	# swaps in main_game.tscn, and the dive self-starts its run. The portal does NOT call
-	# start_run — run-state is the dive's, never the hub's.
+## The portal's one owner-specific action, run once id + parenthood + lockout all pass.
+## Launch the dive through the M0 router. The router (App) listens for dive_requested,
+## swaps in main_game.tscn, and the dive self-starts its run. The portal does NOT call
+## start_run — run-state is the dive's, never the hub's.
+func _on_activated(_target: Node) -> void:
 	EventBus.dive_requested.emit(band_id)
-
-
-## Arm the fat-finger lockout via a SceneTree timer (frame-rate independent, no polling).
-## Copied from extract_gate.gd:_start_lockout. Under the persistent-root App router the
-## portal is freed on the scene swap before this fires, which is harmless (the timer/
-## callback go with it); the lockout only matters if the swap is somehow deferred.
-func _start_lockout() -> void:
-	var tree := get_tree()
-	if tree == null:
-		_locked = false
-		return
-	var timer := tree.create_timer(input_lockout_s)
-	timer.timeout.connect(func() -> void: _locked = false)
