@@ -4,7 +4,7 @@
 - **Subagent:** general-purpose
 - **Milestone:** M1.12
 - **Branch:** feat/VG1-fix-stale-tests
-- **Commit:** `<pending — see follow-up "record commit SHA in worklog" commit>`
+- **Commit:** `81f92b37d6f8251b0f4d0b8d670fbe440bb3574c`
 
 ## What changed
 VG1's regression sweep found two tests still calling APIs that V3b (`f4dddff`, the pursuer
