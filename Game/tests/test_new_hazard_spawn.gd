@@ -146,7 +146,7 @@ func _run() -> int:
 	var bnd := _make_band([40])   # one 2-row room (cells span 2 rows) so its bbox has area
 	var p0: Object = bnd.pieces[0]
 	var cells: Array[Vector2i] = mg_ctx._density_sorted_cells(p0)
-	var room_bounds: Rect2 = mg_ctx._piece_floor_bounds_world(cells)
+	var room_bounds: Rect2 = _floor_bounds_world(cells)
 	var pp_ctx: Dictionary = mg_ctx._new_hazard_spawn_ctx(&"pingpong", p0, 0, 3, room_bounds)
 	if not pp_ctx.has("room_bounds") or not (pp_ctx["room_bounds"] as Rect2).has_area():
 		failures.append("(vi) ping-pong spawn_ctx room_bounds missing or zero-area")
@@ -266,6 +266,25 @@ func _positions(mg_script: GDScript, rc: RunConfig, band: Band) -> Array[Vector2
 	mg.free()
 	_free_band(band)
 	return out
+
+
+## The encompassing Rect2 of a piece's (already-filtered, sorted) floor cells projected to
+## WORLD space at the fixed CELL size. V3b (M1.12) deleted MainGame._piece_floor_bounds_world
+## (the pursuer migration removed its only production caller); this mirrors the surviving
+## EncounterBuilder._floor_bounds_world(cells, svc) — same svc.cell_to_world formula
+## (Vector2(cell * cell_size) + Vector2(cell_size, cell_size) * 0.5, see spawn_service.gd:219-221)
+## — as a local helper so the golden K5i harness doesn't need a live SpawnService instance.
+func _floor_bounds_world(cells: Array[Vector2i]) -> Rect2:
+	if cells.is_empty():
+		return Rect2()
+	var bounds := Rect2(_cell_to_world(cells[0]), Vector2.ZERO)
+	for c in cells:
+		bounds = bounds.expand(_cell_to_world(c))
+	return bounds
+
+
+func _cell_to_world(cell: Vector2i) -> Vector2:
+	return Vector2(cell * CELL) + Vector2(CELL, CELL) * 0.5
 
 
 ## An all-off RunConfig (K0 default) — every new-hazard knob off/neutral.
