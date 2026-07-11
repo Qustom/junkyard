@@ -1,9 +1,16 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # DISABLED 2026-07-11 (Director directive): automatic push/PR CI is STOPPED — the GitHub LFS
+  # bandwidth limit was hit, and the `lfs: true` checkout below burns LFS download bandwidth on
+  # every run. Manual `workflow_dispatch` is retained so the headless import + smoke gate can be
+  # run on demand. Until CI is re-enabled, verify locally: `godot --headless --path Game --import`
+  # + `--script res://tools/ci_smoke_test.gd` (see CLAUDE.md → Commands). To re-enable automatic
+  # CI, uncomment the `push:`/`pull_request:` triggers below.
+  #   push:
+  #     branches: [main]
+  #   pull_request:
+  workflow_dispatch:
 
 env:
   GODOT_VERSION: 4.6.3-stable

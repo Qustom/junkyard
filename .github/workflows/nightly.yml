@@ -30,8 +30,13 @@ name: nightly-playtest
 # Claude did NOT invent a key or a slug — the secret above must be provisioned by a human.
 
 on:
-  schedule:
-    - cron: "0 6 * * *"   # 06:00 UTC nightly
+  # DISABLED 2026-07-11 (Director directive): the nightly cron push is STOPPED — the GitHub
+  # LFS bandwidth limit was hit. Every run does an `lfs: true` checkout (burns LFS download
+  # bandwidth) and the export-and-publish job pushes builds to itch. Manual `workflow_dispatch`
+  # is retained so a human can still run it on demand once bandwidth resets. To re-enable the
+  # nightly, uncomment the `schedule:` block below.
+  #   schedule:
+  #     - cron: "0 6 * * *"   # 06:00 UTC nightly
   workflow_dispatch: {}
 
 env:
