@@ -335,11 +335,18 @@ func _verify_cfg_boots_default_preset() -> void:
 	# The boot config must be a real play config, not the all-off control.
 	if working.all_oppositions_disabled():
 		_human_deferred.append("J1: CFG booted all-off rather than the default play-preset -- confirm config_menu seeds make_default_play_preset() (deferred: may be a fixture-mode boot)")
-	elif not (working.lvl_enabled and working.r1_enabled and working.r4_enabled
-			and not working.r2_enabled and not working.r3_enabled):
-		_failures.append("J1: CFG boot config is not the F1 stack (lvl=%s r1=%s r4=%s r2=%s r3=%s)"
-			% [str(working.lvl_enabled), str(working.r1_enabled), str(working.r4_enabled),
-				str(working.r2_enabled), str(working.r3_enabled)])
+	else:
+		# V3b (M1.12): the pursuer is a band_greybox deck card, not an rc.r1_* knob -- its
+		# "on" state is a non-neutral param_overrides["pursuer"] bag (base_count or
+		# count_per_depth > 0), mirroring _verify_default_preset_shape's `po` check above.
+		var po: Dictionary = working.param_overrides.get("pursuer", {})
+		var pursuer_on: bool = int(po.get("base_count", 0)) > 0 \
+			or float(po.get("count_per_depth", 0.0)) > 0.0
+		if not (working.lvl_enabled and pursuer_on and working.r4_enabled
+				and not working.r2_enabled and not working.r3_enabled):
+			_failures.append("J1: CFG boot config is not the F1 stack (lvl=%s pursuer_on=%s r4=%s r2=%s r3=%s)"
+				% [str(working.lvl_enabled), str(pursuer_on), str(working.r4_enabled),
+					str(working.r2_enabled), str(working.r3_enabled)])
 
 
 # --- Config factories ----------------------------------------------------------
