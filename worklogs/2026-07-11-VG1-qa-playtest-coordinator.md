@@ -4,7 +4,7 @@
 - **Subagent:** qa-playtest-coordinator
 - **Milestone:** M1.12 (Wave 5)
 - **Branch:** feat/VG1-regression-verify
-- **Commit:** <filled in after commit below>
+- **Commit:** `20e90d8`
 
 ## What changed
 Ran the full M1.12 regression/equivalence verify matrix (import + smoke + catalog check + all 67
