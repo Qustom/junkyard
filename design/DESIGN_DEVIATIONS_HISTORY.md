@@ -639,3 +639,42 @@ third's hygiene-pass routing is already recorded in the U1 worklog's follow-ups.
 
 **M1.11 Wave-3 close-out complete.** `DESIGN_DEVIATIONS.md` holds only the M1.10 TG1 entry
 (awaiting the TG3 close-out). **Next: Wave 4 (U4 — fourth hub portal + band_four routing + plaza-full pin).**
+
+---
+
+## M1.12 — Scaling Debt Paydown — CLOSED 2026-07-11 (Director dispositioned all)
+
+Behavior-preserving R2–R10 cleanup. Waves 1–4 build phase: 5 deviations total (Waves 1 = 0,
+Wave 2 = 1, Wave 3 = 1, Wave 4 = 3). DR-3 (greybox hazard-spawn migration) **signed off** by the
+Director on the equivalence evidence (K5 exact 0.0%Δ; pursuer ±15% incl. the +11.1% deep case; all 4
+layout fps + both hazard traces byte-identical).
+
+- **[V2] telemetry payload-field drop** — dropped 3 unconsumed fields (`hazard_awoke.trigger`,
+  `throw_killed_hazard.item_id`, `hazard_pursuer_state.state`) retiring the 6 dual-emit signals; generic
+  `opposition_event` carries every consumed field; no `SCHEMA_VERSION` bump. · **Verdict: Reviewed**
+  (pre-ratified via **D-RAT-7** at design lock). No design change.
+- **[V4] private `_evaluate_quota` facade delegate** — the GameState split kept a private delegate so
+  `test_quota_system`'s 6 white-box sites didn't need editing. · **Verdict: ADDRESSED** — task **V4b**
+  (`6e36e57`) rewrote the 6 sites onto `gs.quota_ladder().evaluate(...)` (new public accessors) and
+  deleted the delegate. **Reapplied to:** code (delegate gone; the public `quota_ladder()`/
+  `held_haul_value()` accessors are now the canonical seam).
+- **[V3] per_band_cap = 16 on the K5 defs** — added beyond the design letter to bound each K5 type to
+  the fair-share slice (48/3) so all three types always appear on deep bands; makes legacy→deck
+  equivalence EXACT (0.0%Δ). Inert for band_two. · **Verdict: Reviewed** — faithful reproduction of the
+  retired fair-share slice as data.
+- **[V3] rc.param_overrides cross-band leak** — the K5 play magnitudes ride the global
+  `rc.param_overrides` (required so all-off = neutral = zero hazards); the def-id-keyed lever applies to
+  any band decking pingpong/bomb/spike. Benign in M1 (band_two isn't dived under the play preset;
+  band_two profile byte-identical). · **Verdict: Reviewed. FORWARD-FLAG:** any future band sharing K5/
+  pursuer def ids inherits the global override — the intended re-tuning surface, but a landmine to note.
+- **[V3b] J3 density → even-spread fold** — the R1 pursuer's J3 area-scaled big-room clustering folds to
+  the deck lane's even-spread; per-type total preserved ±15% (the +11.1% deep case surfaces this),
+  big-room clustering not. · **Verdict: Reviewed** (the licensed **D-RAT-3a** change; **DR-3 signed off**
+  on the concrete evidence). **Reapplied to:** the as-built reality is the deck lane's even-spread for all
+  greybox hazards; the J2/J3 density machine is retired.
+
+**DR-3 sign-off (2026-07-11):** the greybox hazard-spawn behavioral change + re-pinned goldens ACCEPTED.
+band_greybox now spawns all hazards (K5 + pursuer) via the deck lane at `opposition_credits = 58`; "one
+way to add an opposition" fully delivered. Layout fps unmoved; only the play-preset hazard-spawn goldens
+changed, with proven equivalence. **D-RAT-8:** `opposition_credits` sized to preserve density (58 = K5's
+capped 48 + pursuer's ~10), not a hard-48 cap.
