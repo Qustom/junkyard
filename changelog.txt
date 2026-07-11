@@ -1,6 +1,54 @@
 THE FAR YARD — CHANGELOG
 ========================
 
+M1.12 — "Under the Hood"   (changes since M1.11)
+-------------------------------------------------
+
+This is a STABILITY release. If you played the M1.11 build, this one looks, sounds, and
+plays exactly the same — there is no new content, no new band, no new hazard, no new knob.
+M1.12 is an internal architecture cleanup: the game's engine-room systems (how hazards get
+added, how the save/economy code is organized, how randomness and telemetry are plumbed)
+were tidied up and de-duplicated so future content (M2's crafting, upgrades, and instability
+systems) can build on cleaner ground. Every change in this build was verified to reproduce
+the exact same dive layouts, the exact same hazard placements, and the exact same save data
+as M1.11, seed-for-seed.
+
+WHAT ACTUALLY CHANGED (all internal / under the hood)
+------------------------------------------------------
+* Every dive hazard — old and new alike — now spawns through ONE unified system instead of
+  three different ones. This has no visible effect (a hazard-mix equivalence check confirms
+  the same hazard types, comparable counts, and the same fairness/entry-safety guarantees as
+  before), but it means adding the NEXT hazard no longer means touching several different
+  code paths.
+* The save/economy/quota bookkeeping code was split into smaller, focused pieces instead of
+  one large file. Your save file loads and plays identically; nothing about what's saved or
+  how upgrades/money/quota work has changed.
+* The desktop telemetry log (opt-in, used for internal playtracking) now has a size cap
+  instead of growing forever across every session on a machine.
+* A handful of small internal duplications (randomness handling, some repeated interaction
+  code, a fragile "position in a list" spawn-weight scheme for junk rarity) were cleaned up
+  in ways that don't change anything you can see or feel.
+* A few small pieces of dead, never-built scaffolding (empty placeholder data folders, a
+  never-implemented save path) were removed.
+* The in-game debug config menu (P) has fewer knobs than M1.11 (52 vs. 91) — purely because
+  the hazards that used to need their own bespoke tuning knobs now tune through the same
+  generic per-hazard sliders every other hazard already used. Nothing you could tune before
+  is gone; it just lives in one consistent place now.
+
+
+NOT YET IN THIS BUILD
+----------------------
+* No new player-facing content this version — see M1.11 below for the most recent new band
+  and hazards (The Far Field, the Lobber, the Sentry).
+* The debt-paydown did not include a data-driven CSV item catalog (a bigger authoring-pipeline
+  change) — that's deferred to a future iteration.
+* Save format is UNCHANGED (meta v4) — nothing about what's saved changed.
+* The loop, hub, shop, economy, quota, and timer are otherwise unchanged from M1.11.
+
+
+====================================================================================
+
+
 M1.11 — "The Far Field"   (changes since M1.10)
 -----------------------------------------------
 
