@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `design/Junkyard_GDD.md` — game design (loop, economy, exposure, acts).
 - `design/Junkyard_Technical_Design.md` — engine/architecture decisions, **M0–M5 roadmap**, the source of truth for *how* we build.
-- `design/research/` — 13 closed research spikes feeding the decisions above.
+- `design/research/` — research spikes, grouped in dated folders (`<mmddyyyy>/`): `06152026/` holds the 13 closed pre-production spikes feeding the decisions above; `07122026/` holds M2-candidate system research (upgrades, item taxonomy, junk recipes, environmental extraction, top-down weapons).
 - `design/Role_Playbooks/` + `.claude/agents/` — the 8 non-programmer **role subagents** this orchestrator dispatches.
 
 ## Project status: **M0 reached → orchestrator mode is ACTIVE**

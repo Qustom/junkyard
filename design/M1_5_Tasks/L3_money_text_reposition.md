@@ -113,7 +113,7 @@ L3 row ("sit below the dive timer (top-right), right-aligned, legible").
   styling" (`decision_hud.gd:75`). Preserve the existing `font_color = white`, `outline_color = black`,
   `outline_size = 5`, `font_size = 22` — the largest, highest-contrast HUD treatment — so the readout
   survives any band's lighting. **Do not shrink or recolour it.**
-- **Redundant non-colour channels** (`design/research/03_readable_junk_study.md`, and the colour rules
+- **Redundant non-colour channels** (`design/research/06152026/03_readable_junk_study.md`, and the colour rules
   in the playbook): the haul readout already carries a text label prefix ("Holding:") + the numeral, so
   it is not colour-dependent — keep the textual prefix (Open Question 2).
 - **No new strings, no string change:** the text still comes from `tr("HUD_HOLDING")`; localization is

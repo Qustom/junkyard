@@ -8,7 +8,7 @@
 > Grounded in the winning concept ([`../concept_art/explorations/20260627_c/nanobanana_pro.png`](../concept_art/explorations/20260627_c/nanobanana_pro.png)
 > — golden-hour yard, warm-lit BELLWEATHER SALVAGE shed, packed dirt, walls of rusted cars/appliances,
 > a cold-violet glow deep in the scrap) and the **Band 0 / Mundane surface palette** from
-> [`../../design/research/02_band_visual_language_study.md`](../../design/research/02_band_visual_language_study.md) §7:
+> [`../../design/research/06152026/02_band_visual_language_study.md`](../../design/research/06152026/02_band_visual_language_study.md) §7:
 > *analogous rust-browns, oily grays, faded yellows, weathered teal; moderate saturation; everything
 > is what it looks like.*
 
