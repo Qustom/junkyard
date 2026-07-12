@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://c8lobber2a11ay"]
+[gd_scene format=3 uid="uid://32nxwvilsak3"]
 
 [ext_resource type="Script" path="res://scenes/hazards/lobber_hazard.gd" id="1"]
 

@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://c3v3bpursuerequiv01"]
+[gd_scene format=3 uid="uid://b3bnyg60ydx01"]
 
 [ext_resource type="Script" path="res://tests/test_pursuer_deck_equivalence.gd" id="1"]
 

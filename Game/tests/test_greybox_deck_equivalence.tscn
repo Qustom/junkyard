@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://cv3greyboxdeckequiv0"]
+[gd_scene format=3 uid="uid://c85m6vhyspt84"]
 
 [ext_resource type="Script" path="res://tests/test_greybox_deck_equivalence.gd" id="1"]
 

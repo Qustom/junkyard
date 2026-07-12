@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://cv1junkbyidtest1"]
+[gd_scene format=3 uid="uid://dsd1crg5r1jw"]
 
 [ext_resource type="Script" path="res://tests/test_junk_catalog_by_id.gd" id="1"]
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://cjsonlwriterrotationtest1"]
+[gd_scene format=3 uid="uid://b1m5aef8eotdw"]
 
 [ext_resource type="Script" path="res://tests/test_jsonl_writer_rotation.gd" id="1"]
 
