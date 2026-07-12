@@ -678,3 +678,16 @@ band_greybox now spawns all hazards (K5 + pursuer) via the deck lane at `opposit
 way to add an opposition" fully delivered. Layout fps unmoved; only the play-preset hazard-spawn goldens
 changed, with proven equivalence. **D-RAT-8:** `opposition_credits` sized to preserve density (58 = K5's
 capped 48 + pursuer's ~10), not a hard-48 cap.
+
+### M1.12 VG1 addendum (2026-07-12)
+
+- **[V3b] stale-test silent-pass** — V3b deleted `MainGame._piece_floor_bounds_world` + `RunConfig.r1_enabled`
+  but left `test_new_hazard_spawn.gd:149` + `test_rg1_m13_verify.gd:338` calling them; both threw an uncaught
+  `SCRIPT ERROR` that aborted the assertion mid-run yet auto-quit exit 0 → printed "OK" while verifying
+  nothing (V3b's self-check + per-wave greps matched the OK line, not stderr; VG1's stderr-grep caught it).
+  · **Verdict: ADDRESSED** — task **VG1-fix** (`81f92b3`, test-only) restored real coverage + audited all
+  `Game/tests/` for other stale M1.12-deleted symbols (none live). **Reapplied to:** the verification method
+  (grep stderr for `SCRIPT ERROR`, not just the OK line — folded into the QA memory + `G4_findings_M1.12.md`).
+
+**M1.12 CLOSED 2026-07-12 — Director verdict GO → M2.** Build phase (V1–V9 + V3b) + VG1-fix + regression
+gate (VG1/VG2/VG3) complete; game provably unchanged; net-negative-LOC debt paydown across R2–R10.

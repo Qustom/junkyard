@@ -86,4 +86,8 @@ The version's thesis is proven, the regression floor held, and the deferred R1 (
 
 ## Verdict (Director)
 
-*Pending the Director's disposition.* Claude's recommendation: **GO → M2.**
+**✅ GO → M2** — Director verdict, 2026-07-12. The scaling debt (R2–R10) is retired, the game is
+provably unchanged (all control fps byte-identical, full suite green), the debt ledger is net-negative
+LOC, and the seams are clean for M2 (crafting / upgrades / instability). M1.12 CLOSED. The deferred
+**R1 (CSV item catalog + importer)** is now unblocked + simpler (V1's by-id map removed the fragile
+positional column) — the natural next content-authoring iteration when M2 wants it.

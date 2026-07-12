@@ -15,8 +15,8 @@ Format: `[date] <id/area> — what changed vs. the doc · why · Claude's recomm
 
 ---
 
-*Current: **M1.12 VG1** — 1 entry (V3b stale-test silent-pass), **ADDRESSED via VG1-fix** (`81f92b3`) — archive at M1.12 final close. **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — non-blocking.*
-*Prior: **M1.12** (2026-07-11) — CLOSED: 5 deviations dispositioned (4 Reviewed + 1 Addressed via V4b), DR-3 signed off — all archived to `DESIGN_DEVIATIONS_HISTORY.md` §M1.12.*
+*Current: **M1.10 Wave 5** (TG1) — 1 entry (test-fixture), rec Reviewed — awaiting Director disposition (non-blocking; TG2 is human-gated behind the playtest anyway).*
+*Prior: **M1.12** (CLOSED 2026-07-12, verdict GO → M2) — 6 deviations dispositioned (5 Reviewed + V4 Addressed via V4b; + VG1-fix Addressed) + DR-3 signed off — all archived to `DESIGN_DEVIATIONS_HISTORY.md` §M1.12.*
 *Prior: **M1.11 Wave 3** (2026-07-08) — U3: 1 Reviewed (archived 2026-07-08).*
 *Prior: **M1.11 Wave 2** (2026-07-07) — U1: 3 Reviewed (archived 2026-07-08).*
 *Prior: **M1.11 Wave 1** (2026-07-06) — U0: 4 Reviewed (archived 2026-07-07), U2a/U2b: none.*
@@ -35,22 +35,5 @@ expectation to a per-id map (charger → band_two; splitter → band_three, band
 behavior is correct (the menu surfaces true deck membership); only the test's expectation was stale and
 not updated in the T3 wave. Test-only change; no production `.gd`/`.tres` touched. · Rec: **Reviewed** —
 test caught up to ratified product behavior; no design change.
-
----
-
-[2026-07-11] M1.12 V3b/stale-test-silent-pass — V3b deleted `MainGame._piece_floor_bounds_world` and
-`RunConfig.r1_enabled` (the R1 machine) but did not scrub two tests that still called them:
-`test_new_hazard_spawn.gd:149` and `test_rg1_m13_verify.gd:338`. Both threw an uncaught `SCRIPT ERROR`
-that aborted the assertion function mid-run YET the scene auto-quit still exited 0 — so both printed
-"OK" while verifying nothing (a silent-pass; V3b's own 67/67 self-check + the per-wave greps missed it
-because they matched the "OK" line, not stderr). VG1's regression sweep (which greps stderr for
-`SCRIPT ERROR`) caught both. · why: an incomplete test scrub when the R1 machine was deleted; the
-production refactors are correct. · **Disposition: ADDRESSED** — task **VG1-fix** (`81f92b3`, test-only)
-restored real coverage (`test_new_hazard_spawn` now builds its K5i ctx via a local `_floor_bounds_world`
-helper mirroring `EncounterBuilder`; `test_rg1_m13_verify` asserts `param_overrides["pursuer"]` instead
-of the deleted knob), + a full `Game/tests/` audit for other stale M1.12-deleted symbols (none live).
-Both now emit zero `SCRIPT ERROR` and pass for real (m13 3/3 clean). **Reapplied to:** the verification
-method — grep stderr for `SCRIPT ERROR`, not just the OK line (folded into the QA memory). Archive at
-M1.12 final close.
 
 ---

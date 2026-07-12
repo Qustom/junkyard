@@ -428,3 +428,100 @@ the "content = data" thesis proven on a second, CA-generated backend.
   `m1-20260706-d04bd13` (#1775901, FBM-A2 tuning).
 - **Open (not archived):** TG2 (telemetry) · TG3 verdict (`design/M1_10_Tasks/G4_findings_M1.10.md`) ·
   one Wave-5 test-fixture deviation (rec Reviewed) at the TG3 close-out.
+
+---
+
+## M1.12 — Scaling Debt Paydown (R2–R10) — ✓ **CLOSED 2026-07-12** (build V1–V9+V3b + VG1-fix + regression gate; Director verdict GO → M2)
+
+Implements the M1.11 systems-state report's scaling recommendations **R2–R10** (R1/CSV catalog
+Director-deferred). Master contract: **behavior-preserving** — the four control layout fps
+(`e943ac9c8bc1` + band_greybox/two/three) stay byte-identical + full suite green; the measure is the
+**debt ledger** (net LOC removed). Breakdown + Director ratifications:
+`design/M1_12_Tasks/M1.12_Breakdown.md`. Per-task designs (each with a binding `Resolved Decisions
+(Phase 3)`): `design/M1_12_Tasks/V<n>_*.md`.
+
+### Wave 1 — Isolated low-risk cleanups  *(V1 ∥ V5 ∥ V7 ∥ V8 ∥ V9, parallel worktrees, file-disjoint)*
+
+### V1 — Kill the index-aligned spawn weights (R2)
+- Milestone: M1.12 (Wave 1)   Assignee: game-director-designer + general-purpose   BlockedBy: none
+- Spec: `design/M1_12_Tasks/V1_by_id_spawn_weights.md`
+- Goal: replace `JunkCatalog.spawn_weights` (index-aligned array) with a by-id `Dictionary` (D-RAT-2); strengthen + wire the CI catalog check (V1-Q4b).
+- Done when: junk placement fp byte-identical; by-id weights resolve to current values; catalog check asserts id-coverage/no-orphans/no-dup + is invoked by `ci.yml`+`nightly.yml`; mid-list-insert regression test; suite green; worklog + debt ledger + SHA.
+
+### V5 — Extract the interaction-owner boilerplate (R6)
+- Milestone: M1.12 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_12_Tasks/V5_interaction_owner_helper.md`
+- Goal: collapse the verbatim id-guard/parent-check/lockout block (×4 owners) into an `InteractionOwner` node with a `lockout_s` param (JunkPickup opts out at 0.0).
+- Done when: 4 copies removed; all interactions fire under identical conditions; new `test_interaction_owner.tscn` covers the lockout; `.tscn` files zero-diff; suite green; worklog + debt ledger + SHA.
+
+### V7 — Telemetry log rotation + analysis-script argv (R8)
+- Milestone: M1.12 (Wave 1)   Assignee: qa-playtest-coordinator   BlockedBy: none
+- Spec: `design/M1_12_Tasks/V7_telemetry_rotation.md`
+- Goal: size-cap rotation (2 MB → `.1`) inside `jsonl_writer.gd`; `analyze_m1_2.py` takes `argv[1]` (M1.2 path default). `LOG_PATH`/exporter unchanged.
+- Done when: rotation deterministic + headless-unit-tested (`.tscn`); active-log path unchanged for a fresh session; script runs on arg + default; telemetry/consent/schema tests green; worklog + debt ledger + SHA.
+
+### V8 — Record CI test wall-clock (R9; sharding deferred)
+- Milestone: M1.12 (Wave 1)   Assignee: qa-playtest-coordinator   BlockedBy: none
+- Spec: `design/M1_12_Tasks/V8_ci_wallclock.md`
+- Goal: wrap `ci.yml`+`nightly.yml` run-steps with `date +%s`; emit per-step + total wall-clock + a `$GITHUB_STEP_SUMMARY` table; no concurrency; file the deferred-sharding follow-up (>5-min trigger).
+- Done when: CI prints suite wall-clock every run; no change to which tests run / pass-fail; `Game/tests/README.md` note + sharding follow-up; worklog + SHA.
+
+### V9 — Housekeeping: delete dead folders + run.sav path (R10)
+- Milestone: M1.12 (Wave 1)   Assignee: general-purpose   BlockedBy: none
+- Spec: `design/M1_12_Tasks/V9_housekeeping.md`
+- Goal: DELETE all four empty folders (`data/items`+`enemies`+`recipes`+`upgrades`, D-RAT-6) + the dead `run.sav` docstring; comment-mark the 7 `save_meta(0)` sites (no constant this pass — V4 coord).
+- Done when: folders/paths absent; import+smoke green (no broken `res://`); v1/v2/v3→v4 migration green; slot-0 markers present; worklog + debt ledger + SHA.
+
+### Wave 2 — Determinism-sensitive medium refactors  *(V2 ∥ V6, parallel worktrees, file-disjoint)*
+
+### V2 — Retire the dual-emit legacy opposition signals (R3)
+- Milestone: M1.12 (Wave 2)   Assignee: general-purpose   BlockedBy: none (V7 merges first)
+- Spec: `design/M1_12_Tasks/V2_retire_dual_emit.md`
+- Goal: delete the 6 legacy per-type signals + emits + consumer reads (EventBus 60→54); re-point 3 telemetry consumers onto `opposition_event`; drop 3 unconsumed payload fields (D-RAT-7); delete `_emit_family`.
+- Done when: 6 signals + emits/reads gone; `opposition_event` sole opposition telemetry source; 4 control fps byte-identical; opposition/telemetry/hazard tests re-pointed + green; worklog + debt ledger + SHA.
+
+### V6 — `RNG.substream(salt)` helper (R7)
+- Milestone: M1.12 (Wave 2)   Assignee: general-purpose   BlockedBy: none (V1 merges first)
+- Spec: `design/M1_12_Tasks/V6_rng_substream.md`
+- Goal: promote the 5 hand-rolled salted sub-streams into `RNG.substream` (XOR/`.seed`-only) + `RNG.substream_hashed` (boost-mix/`.seed`+`.state`, optional `index`); base seed always explicit.
+- Done when: 4 control fps byte-identical; every migrated site proven byte-equal (per-site golden, incl. the mandatory new pockets golden); RNG/bandgen/junk tests green; worklog + debt ledger + SHA.
+
+### Wave 3 — GameState split  *(V4 alone — highest-contention file)*
+
+### V4 — Split GameState into owned sub-objects (R5)
+- Milestone: M1.12 (Wave 3)   Assignee: general-purpose   BlockedBy: V6
+- Spec: `design/M1_12_Tasks/V4_split_gamestate.md`
+- Goal: decompose `game_state.gd` (752 LOC) into GameState-owned `Economy`/`QuotaLadder`/slim core (separate RefCounted `.gd`); facade via getter+setter forwarding (D-RAT-4); quota 4 snapshots → 1 held config ref; `POCKETS_RNG_SALT`→Economy.
+- Done when: public API unchanged (zero caller edits); meta bytes byte-identical v4; v1/v2/v3→v4 fixtures green; economy/quota/shop/loop tests green; 4 control fps byte-identical; worklog + debt ledger + SHA.
+
+### Wave 4 — Legacy hazard-lane migration  *(V3 → V3b, sequential — the sanctioned behavioral change)*
+
+### V3 — Migrate the K5 fair-share lane onto the deck lane (R4, part 1)
+- Milestone: M1.12 (Wave 4)   Assignee: general-purpose + game-director-designer   BlockedBy: V2
+- Spec: `design/M1_12_Tasks/V3_legacy_lane_migration.md`
+- Goal: give band_greybox a deck (pingpong/bomb/spike); delete `_populate_legacy` + 21 `rc.h*_*` knobs; rewire the 3 K5 entities to `spawn_ctx["params"]`; add `BandProfile.opposition_credits` (D-RAT-3b) to preserve the ~48-body budget; per-room caps 2/2/1.
+- Done when: 4 layout fps byte-identical; greybox K5 hazards spawn via deck within caps/entry-safety; equivalence proven (type coverage + ±15% + monotonic, goldens captured-before-delete + re-pinned); config 89→68/91→70 bijection green; no save bump; suite green; worklog + debt ledger + SHA.
+
+### V3b — Migrate the R1 pursuer machine onto the deck lane (R4, part 2 — Director-added D-RAT-3)
+- Milestone: M1.12 (Wave 4)   Assignee: general-purpose + game-director-designer   BlockedBy: V3
+- Spec: `design/M1_12_Tasks/V3b_pursuer_migration.md`  *(design pending — Phase-2 authoring + Phase-3 resolve in progress)*
+- Goal: fold the R1 pursuer machine (~250 LOC in `main_game.gd` + 8 `r1_*` knobs) onto the deck lane (pursuer `DeckEntry` in greybox deck); minimal deck-ctx extension (`room_bounds`); delete the machine + knobs; rewire the entity.
+- Done when: 4 layout fps byte-identical; pursuer spawns via deck within its budget/caps; equivalence proven (±15% + goldens captured-before-delete + re-pinned); bands 2–4 deck behavior unregressed by the ctx extension; no save bump; suite green; worklog + debt ledger + risk-assessment + SHA. **THREE spawn machines now unified → one way to add an opposition.**
+
+### Wave 5 — Regression gate  *(standing gate steps, regression-framed per D-RAT-1)*
+
+### VG1 — M1.12 regression build + verify + changelog + itch publish
+- Milestone: M1.12 (Wave 5)   Assignee: qa-playtest-coordinator   BlockedBy: V1–V9 + V3b all Done
+- Spec: `design/M1_12_Tasks/M1.12_Breakdown.md` §VG1
+- Goal: full regression matrix (4 control fps byte-identical · reduced knob-bijection · V3/V3b spawn-equivalence re-pins · V6 per-site determinism · V4 meta round-trip + migration · V2 single-signal-family · V1 by-id catalog · full suite); changelog "no player-facing change — internal cleanup"; publish to itch (confirm it still boots).
+- Done when: matrix all green; changelog committed; itch build published; worklog + SHA.
+
+### VG2 — M1.12 regression / equivalence analysis
+- Milestone: M1.12 (Wave 5)   Assignee: qa-playtest-coordinator   BlockedBy: VG1 (+ optional Director spot-play)
+- Goal: confirm the refactors moved nothing — 4 control fps match M1.11 values; V3/V3b greybox hazard mix within ±15% tolerance (the equivalence evidence); telemetry rows singly-counted (V2); no web perf regression from V4/V5 indirection.
+
+### VG3 — M1.12 re-gate verdict (Director decides)
+- Milestone: M1.12 (Wave 5)   Assignee: qa (assembles) → Director   BlockedBy: VG2
+- Goal: record go/iterate/pivot in `design/M1_12_Tasks/G4_findings_M1.12.md`. Natural verdict go → M2. Watch-items: the debt-ledger total; R1 (CSV) now unblocked+simpler; deferred sharding follow-up.
+
+---
